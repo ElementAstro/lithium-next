@@ -25,7 +25,7 @@ include_directories(${lithium_src_dir})
 include_directories(${lithium_thirdparty_dir})
 include_directories(${lithium_atom_dir})
 
-add_executable(lithium-next ${lithium_src_dir}/App.cpp)
+add_executable(lithium-next ${lithium_src_dir}/app.cpp)
 
 # Include compiler options
 include(cmake/compiler_options.cmake)

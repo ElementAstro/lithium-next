@@ -1,7 +1,6 @@
 #include "atom/type/json.hpp"
 #include "config/configor.hpp"
 
-
 #include <iostream>
 
 int main() {
@@ -32,14 +31,14 @@ int main() {
   }
 
   // Save configuration to a file
-  if (configManager->save("config.json")) {
+  if (configManager->save("some.json")) {
     std::cout << "Configuration saved successfully" << std::endl;
   } else {
     std::cout << "Failed to save configuration" << std::endl;
   }
 
   // Load configuration from a file
-  if (configManager->loadFromFile("config.json")) {
+  if (configManager->loadFromFile("some.json")) {
     std::cout << "Configuration file loaded successfully" << std::endl;
   } else {
     std::cout << "Failed to load configuration file" << std::endl;

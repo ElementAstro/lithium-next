@@ -333,10 +333,7 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
     return true;
 }
 
-auto INDICamera::disconnect(bool force, int timeout, int maxRetry) -> bool {
-    ATOM_UNREF_PARAM(force);
-    ATOM_UNREF_PARAM(timeout);
-    ATOM_UNREF_PARAM(maxRetry);
+auto INDICamera::disconnect() -> bool {
     if (!isConnected_.load()) {
         LOG_F(ERROR, "{} is not connected.", deviceName_);
         return false;
@@ -344,19 +341,6 @@ auto INDICamera::disconnect(bool force, int timeout, int maxRetry) -> bool {
     LOG_F(INFO, "Disconnecting from {}...", deviceName_);
     disconnectDevice(name_.c_str());
     LOG_F(INFO, "{} is disconnected.", deviceName_);
-    return true;
-}
-
-auto INDICamera::reconnect(int timeout, int maxRetry) -> bool {
-    ATOM_UNREF_PARAM(timeout);
-    ATOM_UNREF_PARAM(maxRetry);
-    if (isConnected_.load()) {
-        LOG_F(ERROR, "{} is already connected.", deviceName_);
-        return false;
-    }
-    LOG_F(INFO, "Reconnecting to {}...", deviceName_);
-    connectDevice(name_.c_str());
-    LOG_F(INFO, "{} is reconnected.", deviceName_);
     return true;
 }
 
@@ -368,7 +352,7 @@ auto INDICamera::scan() -> std::vector<std::string> {
     return devices;
 }
 
-auto INDICamera::isConnected() -> bool { return isConnected_.load(); }
+auto INDICamera::isConnected() const -> bool { return isConnected_.load(); }
 
 auto INDICamera::watchAdditionalProperty() -> bool { return true; }
 
@@ -390,7 +374,7 @@ void INDICamera::newMessage(INDI::BaseDevice baseDevice, int messageID) {
           messageID);
 }
 
-auto INDICamera::startExposure(const double &exposure) -> bool {
+auto INDICamera::startExposure(double exposure) -> bool {
     INDI::PropertyNumber exposureProperty = device_.getProperty("CCD_EXPOSURE");
     if (!exposureProperty.isValid()) {
         LOG_F(ERROR, "Error: unable to find CCD_EXPOSURE property...");
@@ -894,6 +878,66 @@ auto INDICamera::setBinning(const int &hor, const int &ver) -> bool {
     sendNewProperty(ccdBinning);
     LOG_F(INFO, "setCCDBinnign: {}, {}", hor, ver);
     return true;
+}
+
+bool INDICamera::isConnected() const {
+    return isConnected_.load();
+}
+
+bool INDICamera::disconnect() {
+    if (!isConnected_.load()) {
+        LOG_F(ERROR, "{} is not connected.", deviceName_);
+        return false;
+    }
+    LOG_F(INFO, "Disconnecting from {}...", deviceName_);
+    disconnectDevice(name_.c_str());
+    LOG_F(INFO, "{} is disconnected.", deviceName_);
+    return true;
+}
+
+bool INDICamera::isExposing() const {
+    INDI::PropertySwitch ccdExposure = device_.getProperty("CCD_EXPOSURE");
+    if (!ccdExposure.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_EXPOSURE property...");
+        return false;
+    }
+    return (ccdExposure[0].getState() == ISS_ON);
+}
+
+bool INDICamera::isCoolerOn() const {
+    INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
+    if (!ccdCooler.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_COOLER property...");
+        return false;
+    }
+    return (ccdCooler[0].getState() == ISS_ON);
+}
+
+bool INDICamera::hasCooler() const {
+    INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
+    return ccdCooler.isValid();
+}
+
+AtomCameraFrame INDICamera::getFrameInfo() const {
+    AtomCameraFrame frame;
+
+    INDI::PropertyNumber ccdInfo = device_.getProperty("CCD_INFO");
+    if (ccdInfo.isValid()) {
+        frame.resolution.max_width = ccdInfo[0].getValue();
+        frame.resolution.max_height = ccdInfo[1].getValue();
+        frame.pixel.size = ccdInfo[2].getValue();
+        frame.pixel.size_x = ccdInfo[3].getValue();
+        frame.pixel.size_y = ccdInfo[4].getValue();
+        frame.pixel.depth = ccdInfo[5].getValue();
+    }
+
+    INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
+    if (ccdFrame.isValid()) {
+        frame.resolution.width = ccdFrame[2].getValue();
+        frame.resolution.height = ccdFrame[3].getValue(); 
+    }
+
+    return frame;
 }
 
 ATOM_MODULE(camera_indi, [](Component &component) {

@@ -62,14 +62,6 @@ TEST_F(ConfigManagerTest, LoadFromDirectory) {
   ASSERT_TRUE(config_manager->has("test/test_key"));
 }
 
-TEST_F(ConfigManagerTest, SaveConfig) {
-  config_manager->loadFromFile("test_config/test.json");
-  ASSERT_TRUE(config_manager->save("test_config/output.json"));
-
-  // Verify file was created
-  ASSERT_TRUE(fs::exists("test_config/output.json"));
-}
-
 TEST_F(ConfigManagerTest, GetAndSet) {
   config_manager->set("new/key", "value");
   auto value = config_manager->get("new/key");

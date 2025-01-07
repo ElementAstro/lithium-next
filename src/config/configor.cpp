@@ -81,7 +81,6 @@ public:
         (*p)[keyStr] = json::object();
       }
       p = &(*p)[keyStr];
-      LOG_F(INFO, "Current config: {}", p->dump());
     }
     return false;
   }
@@ -92,18 +91,14 @@ public:
 };
 
 ConfigManager::ConfigManager() : impl_(std::make_unique<ConfigManagerImpl>()) {
-  if (loadFromFile("config.json")) {
-    DLOG_F(INFO, "Config loaded successfully.");
-  } else {
-    DLOG_F(WARNING, "Failed to load initial config.");
-  }
+  LOG_F(INFO, "ConfigManager created.");
 }
 
 ConfigManager::~ConfigManager() {
   if (impl_->ioThread.joinable()) {
     impl_->ioThread.join();
   }
-  if (save("config.json")) {
+  if (saveAll("./")) {
     DLOG_F(INFO, "Config saved successfully.");
   } else {
     DLOG_F(ERROR, "Failed to save config on destruction.");

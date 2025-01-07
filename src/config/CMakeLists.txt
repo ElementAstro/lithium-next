@@ -8,7 +8,7 @@ set(PROJECT_SOURCES configor.cpp)
 set(PROJECT_HEADERS configor.hpp)
 
 # Required libraries for the project
-set(PROJECT_LIBS loguru ${CMAKE_THREAD_LIBS_INIT})
+set(PROJECT_LIBS loguru ${CMAKE_THREAD_LIBS_INIT} atom)
 
 if (WIN32)
     list(APPEND PROJECT_LIBS ws2_32)

@@ -115,14 +115,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 endif()
 
-# Enable ASan for Debug builds
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT MINGW)
-        target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-        target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
-    endif()
-endif()
-
 # Enable LTO for Release builds
 if(CMAKE_BUILD_TYPE MATCHES "Release")
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

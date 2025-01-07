@@ -24,91 +24,67 @@ enum class CameraState {
 
 class INDICamera : public INDI::BaseClient, public AtomCamera {
 public:
+    static constexpr int DEFAULT_TIMEOUT_MS = 5000;  // 定义命名常量
+
     explicit INDICamera(std::string name);
     ~INDICamera() override = default;
 
+    // AtomDriver接口
     auto initialize() -> bool override;
-
     auto destroy() -> bool override;
-
-    auto connect(const std::string &deviceName, int timeout,
-                 int maxRetry) -> bool override;
-
-    auto disconnect(bool force, int timeout, int maxRetry) -> bool override;
-
-    auto reconnect(int timeout, int maxRetry) -> bool override;
-
+    auto connect(const std::string& port, int timeout = DEFAULT_TIMEOUT_MS,
+                 int maxRetry = 3) -> bool override;
+    auto disconnect() -> bool override;
+    [[nodiscard]] auto isConnected() const -> bool override;
     auto scan() -> std::vector<std::string> override;
 
-    auto isConnected() -> bool override;
-
-    auto watchAdditionalProperty() -> bool;
-
-    void setPropertyNumber(std::string_view propertyName, double value);
-
-    auto startExposure(const double &exposure) -> bool override;
+    // 曝光控制
+    auto startExposure(double duration) -> bool override;
     auto abortExposure() -> bool override;
-    auto getExposureStatus() -> bool override;
-    auto getExposureResult() -> bool override;
-    auto saveExposureResult() -> bool override;
+    [[nodiscard]] auto isExposing() const -> bool override;
+    auto getExposureResult() -> std::shared_ptr<AtomCameraFrame> override;
+    auto saveImage(const std::string& path) -> bool override;
 
+    // 视频控制
     auto startVideo() -> bool override;
     auto stopVideo() -> bool override;
-    auto getVideoResult() -> bool override;
-    auto getVideoStatus() -> bool override;
-    auto saveVideoResult() -> bool override;
+    [[nodiscard]] auto isVideoRunning() const -> bool override;
+    auto getVideoFrame() -> std::shared_ptr<AtomCameraFrame> override;
 
-    auto startCooling() -> bool override;
+    // 温度控制
+    auto startCooling(double targetTemp) -> bool override;
     auto stopCooling() -> bool override;
-    auto getCoolingStatus() -> bool override;
-    auto isCoolingAvailable() -> bool override;
+    [[nodiscard]] auto isCoolerOn() const -> bool override;
+    [[nodiscard]] auto getTemperature() const -> std::optional<double> override;
+    [[nodiscard]] auto getCoolingPower() const
+        -> std::optional<double> override;
+    [[nodiscard]] auto hasCooler() const -> bool override;
 
-    auto setTemperature(const double &value) -> bool override;
-    auto getTemperature() -> std::optional<double> override;
+    // 参数控制
+    auto setGain(int gain) -> bool override;
+    [[nodiscard]] auto getGain() -> std::optional<int> override;
+    auto setOffset(int offset) -> bool override;
+    [[nodiscard]] auto getOffset() -> std::optional<int> override;
+    auto setISO(int iso) -> bool override;
+    [[nodiscard]] auto getISO() -> std::optional<int> override;
 
-    auto getCoolingPower() -> bool override;
-    auto setCoolingPower(const double &value) -> bool override;
-
-    auto getCameraFrameInfo() -> std::optional<std::tuple<int, int, int, int>>;
-    auto setCameraFrameInfo(int x, int y, int width, int height) -> bool;
-    auto resetCameraFrameInfo() -> bool;
-
-    auto getGain() -> std::optional<double> override;
-    auto setGain(const int &value) -> bool override;
-    auto isGainAvailable() -> bool override;
-
-    auto getOffset() -> std::optional<double> override;
-    auto setOffset(const int &value) -> bool override;
-    auto isOffsetAvailable() -> bool override;
-
-    auto getISO() -> bool override;
-    auto setISO(const int &iso) -> bool override;
-    auto isISOAvailable() -> bool override;
-
-    auto getFrame() -> std::optional<std::pair<int, int>> override;
-    auto setFrame(const int &x, const int &y, const int &w,
-                  const int &h) -> bool override;
-    auto isFrameSettingAvailable() -> bool override;
-
-    auto getFrameType() -> bool override;
-
+    // 帧设置
+    auto setResolution(int posX, int posY, int width,
+                       int height) -> bool override;
+    auto setBinning(int horizontal, int vertical) -> bool override;
     auto setFrameType(FrameType type) -> bool override;
-
-    auto getUploadMode() -> bool override;
-
     auto setUploadMode(UploadMode mode) -> bool override;
+    [[nodiscard]] auto getFrameInfo() const -> AtomCameraFrame override;
 
-    auto setBinning(const int &hor, const int &ver) -> bool override;
-    auto getBinning() -> std::optional<std::tuple<int, int, int, int>> override;
-
-    auto getDeviceInstance() -> INDI::BaseDevice &;
+    // INDI特有接口
+    auto watchAdditionalProperty() -> bool;
+    auto getDeviceInstance() -> INDI::BaseDevice&;
+    void setPropertyNumber(std::string_view propertyName, double value);
 
 protected:
     void newMessage(INDI::BaseDevice baseDevice, int messageID) override;
 
 private:
-    auto setCooling(bool enable) -> bool;
-
     std::string name_;
     std::string deviceName_;
 
