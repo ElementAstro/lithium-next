@@ -1,0 +1,6 @@
+[submodule "libs/atom"]
+	path = libs/atom
+	url = https://github.com/ElementAstro/Atom
+[submodule "libs/thirdparty"]
+	path = libs/thirdparty
+	url = https://github.com/ElementAstro/LithiumLibrary
