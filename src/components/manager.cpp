@@ -375,7 +375,7 @@ auto ComponentManager::hasComponent(const std::string& component_name) -> bool {
     return impl_->hasComponent(component_name);
 }
 
-auto ComponentManager::printDependencyTree() { impl_->printDependencyTree(); }
+void ComponentManager::printDependencyTree() { impl_->printDependencyTree(); }
 
 void ComponentManager::updateDependencyGraph(
     const std::string& component_name, const std::string& version,

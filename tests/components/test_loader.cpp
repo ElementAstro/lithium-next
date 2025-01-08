@@ -114,7 +114,7 @@ TEST_F(ModuleLoaderTest, GetModuleStatus) {
 TEST_F(ModuleLoaderTest, ValidateDependencies) {
     loader->loadModule("path/to/module.so", "testModule");
     auto module = loader->getModule("testModule");
-    module->m_dependencies.push_back("dependencyModule");
+    module->dependencies.push_back("dependencyModule");
     EXPECT_FALSE(loader->validateDependencies("testModule"));
     loader->loadModule("path/to/dependency.so", "dependencyModule");
     loader->enableModule("dependencyModule");
@@ -126,7 +126,7 @@ TEST_F(ModuleLoaderTest, LoadModulesInOrder) {
     loader->loadModule("path/to/module2.so", "testModule2");
     auto module1 = loader->getModule("testModule1");
     auto module2 = loader->getModule("testModule2");
-    module1->m_dependencies.push_back("testModule2");
+    module1->dependencies.push_back("testModule2");
     EXPECT_TRUE(loader->loadModulesInOrder());
     EXPECT_TRUE(loader->isModuleEnabled("testModule1"));
     EXPECT_TRUE(loader->isModuleEnabled("testModule2"));

@@ -9,5 +9,7 @@ foreach(MAIN_CPP_FILE ${MAIN_CPP_FILES})
 
     add_executable(${TARGET_NAME} ${MAIN_CPP_FILE})
 
-    target_link_libraries(${TARGET_NAME} PRIVATE lithium_config atom)
+    target_link_libraries(${TARGET_NAME} PRIVATE lithium_config atom lithium_task)
 endforeach()
+
+add_subdirectory(components)
