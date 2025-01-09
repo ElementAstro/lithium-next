@@ -10,8 +10,8 @@
 #include <functional>
 #include <optional>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 #include "atom/type/json.hpp"
 
 namespace lithium::sequencer {
@@ -43,6 +43,8 @@ enum class TaskErrorType {
  */
 class Task {
 public:
+    using ExceptionCallback = std::function<void(const std::exception&)>;
+
     // 参数定义结构体
     struct ParamDefinition {
         std::string name;
@@ -104,7 +106,8 @@ public:
     void addDependency(const std::string& taskId);
     void removeDependency(const std::string& taskId);
     [[nodiscard]] auto hasDependency(const std::string& taskId) const -> bool;
-    [[nodiscard]] auto getDependencies() const -> const std::vector<std::string>&;
+    [[nodiscard]] auto getDependencies() const
+        -> const std::vector<std::string>&;
     [[nodiscard]] auto isDependencySatisfied() const -> bool;
     void setDependencyStatus(const std::string& taskId, bool status);
 
@@ -115,25 +118,45 @@ public:
     // 新增日志级别控制
     void setLogLevel(int level);
     [[nodiscard]] auto getLogLevel() const -> int;
-    
+
     // 新增错误处理相关
     void setErrorType(TaskErrorType type);
     [[nodiscard]] auto getErrorType() const -> TaskErrorType;
     [[nodiscard]] auto getErrorDetails() const -> std::string;
-    
+
     // 新增性能监控
     [[nodiscard]] auto getCPUUsage() const -> double;
     [[nodiscard]] auto getTaskHistory() const -> std::vector<std::string>;
     void addHistoryEntry(const std::string& entry);
 
     // 参数相关方法
-    void addParamDefinition(const std::string& name, const std::string& type, 
-                          bool required, const json& defaultValue = nullptr,
-                          const std::string& description = "");
+    void addParamDefinition(const std::string& name, const std::string& type,
+                            bool required, const json& defaultValue = nullptr,
+                            const std::string& description = "");
     void removeParamDefinition(const std::string& name);
-    [[nodiscard]] auto getParamDefinitions() const -> const std::vector<ParamDefinition>&;
+    [[nodiscard]] auto getParamDefinitions() const
+        -> const std::vector<ParamDefinition>&;
     [[nodiscard]] auto validateParams(const json& params) -> bool;
-    [[nodiscard]] auto getParamErrors() const -> const std::vector<std::string>&;
+    [[nodiscard]] auto getParamErrors() const
+        -> const std::vector<std::string>&;
+
+    // 前置任务相关方法
+    void addPreTask(std::unique_ptr<Task> task);
+    void removePreTask(std::unique_ptr<Task> task);
+    [[nodiscard]] auto getPreTasks() const
+        -> const std::vector<std::unique_ptr<Task>>&;
+    [[nodiscard]] auto arePreTasksCompleted() const -> bool;
+
+    // 后置任务相关方法
+    void addPostTask(std::unique_ptr<Task> task);
+    void removePostTask(std::unique_ptr<Task> task);
+    [[nodiscard]] auto getPostTasks() const
+        -> const std::vector<std::unique_ptr<Task>>&;
+    void triggerPostTasks();
+
+    // 异常处理回调
+    void setExceptionCallback(ExceptionCallback callback);
+    void clearExceptionCallback();
 
 private:
     std::string name_;  ///< The name of the task.
@@ -144,12 +167,12 @@ private:
     TaskStatus status_{
         TaskStatus::Pending};  ///< The current status of the task.
     std::optional<std::string>
-        error_;  ///< The error message if the task has failed.
+        error_;        ///< The error message if the task has failed.
     int priority_{5};  // 默认优先级为5
     std::vector<std::string> dependencies_;  // 任务依赖列表
-    std::unordered_map<std::string, bool> dependencyStatus_; // 依赖项完成状态
-    std::chrono::milliseconds executionTime_{0};  // 执行时间
-    size_t memoryUsage_{0};  // 内存使用量
+    std::unordered_map<std::string, bool> dependencyStatus_;  // 依赖项完成状态
+    std::chrono::milliseconds executionTime_{0};              // 执行时间
+    size_t memoryUsage_{0};                                   // 内存使用量
     int logLevel_{2};  // 默认日志级别
     TaskErrorType errorType_{TaskErrorType::None};
     std::string errorDetails_;
@@ -157,7 +180,10 @@ private:
     std::vector<std::string> taskHistory_;
     std::vector<ParamDefinition> paramDefinitions_;
     std::vector<std::string> paramErrors_;
-    
+    std::vector<std::unique_ptr<Task>> preTasks_;   // 前置任务列表
+    std::vector<std::unique_ptr<Task>> postTasks_;  // 后置任务列表
+    ExceptionCallback exceptionCallback_;           // 异常处理回调
+
     bool validateParamType(const std::string& type, const json& value) const;
 };
 

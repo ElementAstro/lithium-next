@@ -27,6 +27,11 @@ void Task::execute(const json& params) {
     auto start = std::chrono::high_resolution_clock::now();
 
     try {
+        // 检查前置任务是否完成
+        if (!arePreTasksCompleted()) {
+            throw std::runtime_error("Pre-tasks not completed");
+        }
+
         // 添加参数验证
         if (!validateParams(params)) {
             status_ = TaskStatus::Failed;
@@ -62,24 +67,35 @@ void Task::execute(const json& params) {
         }
         status_ = TaskStatus::Completed;
         addHistoryEntry("Task executed successfully");
-    } catch (const TaskTimeoutException& e) {
-        setErrorType(TaskErrorType::Timeout);
-        errorDetails_ = e.what();
-        LOG_F(ERROR, "Task {} with uuid {} failed: {}", name_, uuid_, e.what());
-        status_ = TaskStatus::Failed;
-        error_ = e.what();
-    } catch (const std::invalid_argument& e) {
-        setErrorType(TaskErrorType::InvalidParameter);
-        errorDetails_ = e.what();
-        LOG_F(ERROR, "Task {} with uuid {} failed: {}", name_, uuid_, e.what());
-        status_ = TaskStatus::Failed;
-        error_ = e.what();
+
+        // 触发后置任务
+        triggerPostTasks();
+
     } catch (const std::exception& e) {
-        setErrorType(TaskErrorType::Unknown);
-        errorDetails_ = e.what();
-        LOG_F(ERROR, "Task {} with uuid {} failed: {}", name_, uuid_, e.what());
         status_ = TaskStatus::Failed;
         error_ = e.what();
+
+        // 调用异常处理回调
+        if (exceptionCallback_) {
+            try {
+                exceptionCallback_(e);
+            } catch (const std::exception& callbackEx) {
+                LOG_F(ERROR, "Exception in callback handler: {}",
+                      callbackEx.what());
+            }
+        }
+
+        if (const auto* timeoutEx =
+                dynamic_cast<const TaskTimeoutException*>(&e)) {
+            setErrorType(TaskErrorType::Timeout);
+        } else if (const auto* invalidArgEx =
+                       dynamic_cast<const std::invalid_argument*>(&e)) {
+            setErrorType(TaskErrorType::InvalidParameter);
+        } else {
+            setErrorType(TaskErrorType::Unknown);
+        }
+        errorDetails_ = e.what();
+        LOG_F(ERROR, "Task {} with uuid {} failed: {}", name_, uuid_, e.what());
     }
     LOG_F(INFO, "Task {} with uuid {} completed", name_, uuid_);
 
@@ -207,17 +223,23 @@ auto Task::getParamDefinitions() const -> const std::vector<ParamDefinition>& {
     return paramDefinitions_;
 }
 
-bool Task::validateParamType(const std::string& type, const json& value) const {
-    if (type == "string" && !value.is_string())
+auto Task::validateParamType(const std::string& type,
+                             const json& value) const -> bool {
+    if (type == "string" && !value.is_string()) {
         return false;
-    if (type == "number" && !value.is_number())
+    }
+    if (type == "number" && !value.is_number()) {
         return false;
-    if (type == "boolean" && !value.is_boolean())
+    }
+    if (type == "boolean" && !value.is_boolean()) {
         return false;
-    if (type == "array" && !value.is_array())
+    }
+    if (type == "array" && !value.is_array()) {
         return false;
-    if (type == "object" && !value.is_object())
+    }
+    if (type == "object" && !value.is_object()) {
         return false;
+    }
     return true;
 }
 
@@ -247,6 +269,78 @@ auto Task::validateParams(const json& params) -> bool {
 
 auto Task::getParamErrors() const -> const std::vector<std::string>& {
     return paramErrors_;
+}
+
+void Task::addPreTask(std::unique_ptr<Task> task) {
+    if (task && std::find(preTasks_.begin(), preTasks_.end(), task) ==
+                    preTasks_.end()) {
+        preTasks_.push_back(std::move(task));
+        LOG_F(INFO, "Pre-task {} added to task {}", task->getUUID(), name_);
+    }
+}
+
+void Task::removePreTask(std::unique_ptr<Task> task) {
+    auto it = std::remove(preTasks_.begin(), preTasks_.end(), task);
+    if (it != preTasks_.end()) {
+        preTasks_.erase(it, preTasks_.end());
+        LOG_F(INFO, "Pre-task {} removed from task {}", task->getUUID(), name_);
+    }
+}
+
+auto Task::getPreTasks() const -> const std::vector<std::unique_ptr<Task>>& {
+    return preTasks_;
+}
+
+auto Task::arePreTasksCompleted() const -> bool {
+    return std::all_of(preTasks_.begin(), preTasks_.end(),
+                       [](const std::unique_ptr<Task>& task) {
+                           return task->getStatus() == TaskStatus::Completed;
+                       });
+}
+
+void Task::addPostTask(std::unique_ptr<Task> task) {
+    if (task && std::find(postTasks_.begin(), postTasks_.end(), task) ==
+                    postTasks_.end()) {
+        postTasks_.push_back(std::move(task));
+        LOG_F(INFO, "Post-task {} added to task {}", task->getUUID(), name_);
+    }
+}
+
+void Task::removePostTask(std::unique_ptr<Task> task) {
+    auto it = std::remove(postTasks_.begin(), postTasks_.end(), task);
+    if (it != postTasks_.end()) {
+        postTasks_.erase(it, postTasks_.end());
+        LOG_F(INFO, "Post-task {} removed from task {}", task->getUUID(),
+              name_);
+    }
+}
+
+auto Task::getPostTasks() const -> const std::vector<std::unique_ptr<Task>>& {
+    return postTasks_;
+}
+
+void Task::triggerPostTasks() {
+    if (!postTasks_.empty()) {
+        LOG_F(INFO, "Triggering {} post-tasks for task {}", postTasks_.size(),
+              name_);
+        for (auto& postTask : postTasks_) {
+            if (postTask->getStatus() == TaskStatus::Pending) {
+                LOG_F(INFO, "Post-task {} is ready to be triggered",
+                      postTask->getUUID());
+                postTask->execute({});
+            }
+        }
+    }
+}
+
+void Task::setExceptionCallback(ExceptionCallback callback) {
+    exceptionCallback_ = std::move(callback);
+    LOG_F(INFO, "Exception callback set for task {}", name_);
+}
+
+void Task::clearExceptionCallback() {
+    exceptionCallback_ = nullptr;
+    LOG_F(INFO, "Exception callback cleared for task {}", name_);
 }
 
 }  // namespace lithium::sequencer
