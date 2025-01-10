@@ -11,6 +11,7 @@
 #include "atom/log/loguru.hpp"
 #include "atom/search/lru.hpp"
 #include "atom/type/json.hpp"
+#include "string.hpp"
 
 using json = nlohmann::json;
 
@@ -635,7 +636,296 @@ public:
         }
     }
 
+    // 从CSV加载数据
+    bool loadFromCSV(const std::string& filename,
+                     const std::vector<std::string>& requiredFields,
+                     Dialect dialect) {
+        try {
+            std::ifstream input(filename);
+            DictReader reader(input, requiredFields, dialect);
+
+            std::unordered_map<std::string, std::string> row;
+            size_t count = 0;
+
+            while (reader.next(row)) {
+                processStarObjectFromCSV(row);
+                count++;
+
+                if (count % 1000 == 0) {
+                    LOG_F(INFO, "Processed {} records from CSV", count);
+                }
+            }
+
+            LOG_F(INFO, "Successfully loaded {} records from {}", count,
+                  filename);
+            return true;
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Error loading from CSV {}: {}", filename, e.what());
+            return false;
+        }
+    }
+
+    // 混合推荐实现
+    auto getHybridRecommendations(const std::string& user, int topN,
+                                  double contentWeight,
+                                  double collaborativeWeight)
+        -> std::vector<std::pair<std::string, double>> {
+        try {
+            // 获取协同过滤推荐
+            auto cfRecs = recommendationEngine_.recommendItems(user, topN * 2);
+
+            // 获取基于内容的推荐
+            auto contentRecs = getContentBasedRecommendations(user, topN * 2);
+
+            // 合并结果
+            std::unordered_map<std::string, double> hybridScores;
+
+            for (const auto& [item, score] : cfRecs) {
+                hybridScores[item] = score * collaborativeWeight;
+            }
+
+            for (const auto& [item, score] : contentRecs) {
+                hybridScores[item] += score * contentWeight;
+            }
+
+            // 转换为向量并排序
+            std::vector<std::pair<std::string, double>> results(
+                hybridScores.begin(), hybridScores.end());
+
+            std::sort(results.begin(), results.end(),
+                      [](const auto& a, const auto& b) {
+                          return a.second > b.second;
+                      });
+
+            // 截取前topN个结果
+            if (results.size() > static_cast<size_t>(topN)) {
+                results.resize(topN);
+            }
+
+            return results;
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Error in hybrid recommendations: {}", e.what());
+            return {};
+        }
+    }
+
+    // 获取用户历史交互记录
+    auto getUserHistory(const std::string& user)
+        -> std::unordered_map<std::string, double> {
+        LOG_F(INFO, "Getting history for user: {}", user);
+        try {
+            std::unordered_map<std::string, double> history;
+
+            // 从推荐引擎获取用户的评分历史
+            for (const auto& [name, star] : starObjectIndex_) {
+                auto rating = recommendationEngine_.predictRating(user, name);
+                if (rating > 0.0) {  // 只记录有效评分
+                    history[name] = rating;
+                }
+            }
+
+            LOG_F(INFO, "Retrieved {} historical items for user {}",
+                  history.size(), user);
+            return history;
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Error getting user history for {}: {}", user,
+                  e.what());
+            return {};
+        }
+    }
+
+    // 将 StarObject 转换为 CSV 行数据
+    void populateStarObjectRow(
+        const StarObject& star,
+        std::unordered_map<std::string, std::string>& row) {
+        LOG_F(INFO, "Populating row data for StarObject: {}", star.getName());
+        try {
+            // 基本信息
+            row["name"] = star.getName();
+
+            // 合并别名为分号分隔的字符串
+            if (!star.getAliases().empty()) {
+                std::stringstream ss;
+                for (size_t i = 0; i < star.getAliases().size(); ++i) {
+                    if (i > 0)
+                        ss << ";";
+                    ss << star.getAliases()[i];
+                }
+                row["aliases"] = ss.str();
+            } else {
+                row["aliases"] = "";
+            }
+
+            row["click_count"] = std::to_string(star.getClickCount());
+
+            // 天体对象信息
+            const auto& celestial = star.getCelestialObject();
+            row["ID"] = celestial.ID;
+            row["类型"] = celestial.Type;
+            row["形态"] = celestial.Morphology;
+            row["赤经(J2000)"] = celestial.RAJ2000;
+            row["赤经D(J2000)"] = std::to_string(celestial.RADJ2000);
+            row["赤纬(J2000)"] = celestial.DecJ2000;
+            row["赤纬D(J2000)"] = std::to_string(celestial.DecDJ2000);
+            row["可见光星等V"] = std::to_string(celestial.VisualMagnitudeV);
+
+            LOG_F(INFO, "Successfully populated row data for StarObject: {}",
+                  star.getName());
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Error populating row data for {}: {}", star.getName(),
+                  e.what());
+            throw;
+        }
+    }
+
+    // 导出到CSV
+    bool exportToCSV(const std::string& filename,
+                     const std::vector<std::string>& fields, Dialect dialect) {
+        try {
+            std::ofstream output(filename);
+            DictWriter writer(output, fields, dialect);
+
+            for (const auto& [name, star] : starObjectIndex_) {
+                std::unordered_map<std::string, std::string> row;
+                populateStarObjectRow(star, row);
+                writer.writeRow(row);
+            }
+
+            LOG_F(INFO, "Successfully exported data to {}", filename);
+            return true;
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Error exporting to CSV {}: {}", filename, e.what());
+            return false;
+        }
+    }
+
 private:
+    // 新增辅助方法
+    void processStarObjectFromCSV(
+        const std::unordered_map<std::string, std::string>& row) {
+        std::string name = row.at("name");
+        std::vector<std::string> aliases;
+
+        if (row.count("aliases")) {
+            std::stringstream ss(row.at("aliases"));
+            std::string alias;
+            while (std::getline(ss, alias, ';')) {
+                aliases.push_back(atom::utils::trim(alias));
+            }
+        }
+
+        StarObject star(name, aliases);
+
+        // 设置其他属性
+        if (row.count("click_count")) {
+            star.setClickCount(std::stoi(row.at("click_count")));
+        }
+
+        addStarObject(star);
+    }
+
+    auto getSimilarItems(const std::string& itemId)
+        -> std::vector<std::pair<std::string, double>> {
+        LOG_F(INFO, "Getting similar items for: {}", itemId);
+        try {
+            // 保存相似度和对应物品
+            std::vector<std::pair<std::string, double>> similarities;
+
+            // 获取源物品
+            auto sourceIt = starObjectIndex_.find(itemId);
+            if (sourceIt == starObjectIndex_.end()) {
+                LOG_F(WARNING, "Item {} not found in index", itemId);
+                return similarities;
+            }
+
+            const auto& sourceCelestial = sourceIt->second.getCelestialObject();
+
+            // 计算与其他物品的相似度
+            for (const auto& [targetId, targetStar] : starObjectIndex_) {
+                if (targetId == itemId)
+                    continue;
+
+                double similarity = 0.0;
+                const auto& targetCelestial = targetStar.getCelestialObject();
+
+                // 类型匹配权重 (0.4)
+                if (sourceCelestial.Type == targetCelestial.Type) {
+                    similarity += 0.4;
+                }
+
+                // 位置相似度权重 (0.3)
+                double raDiff = std::abs(sourceCelestial.RADJ2000 -
+                                         targetCelestial.RADJ2000);
+                double decDiff = std::abs(sourceCelestial.DecDJ2000 -
+                                          targetCelestial.DecDJ2000);
+                double posSimilarity =
+                    1.0 - std::min(1.0, std::sqrt(raDiff * raDiff +
+                                                  decDiff * decDiff) /
+                                            10.0);
+                similarity += 0.3 * posSimilarity;
+
+                // 亮度相似度权重 (0.3)
+                double magDiff = std::abs(sourceCelestial.VisualMagnitudeV -
+                                          targetCelestial.VisualMagnitudeV);
+                double magSimilarity = 1.0 - std::min(1.0, magDiff / 5.0);
+                similarity += 0.3 * magSimilarity;
+
+                if (similarity > 0.1) {  // 只保留相似度大于阈值的结果
+                    similarities.emplace_back(targetId, similarity);
+                }
+            }
+
+            // 按相似度降序排序
+            std::sort(similarities.begin(), similarities.end(),
+                      [](const auto& a, const auto& b) {
+                          return a.second > b.second;
+                      });
+
+            // 限制返回数量
+            if (similarities.size() > 20) {
+                similarities.resize(20);
+            }
+
+            LOG_F(INFO, "Found {} similar items for {}", similarities.size(),
+                  itemId);
+            return similarities;
+
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Error getting similar items for {}: {}", itemId,
+                  e.what());
+            return {};
+        }
+    }
+
+    auto getContentBasedRecommendations(const std::string& user, int count)
+        -> std::vector<std::pair<std::string, double>> {
+        std::vector<std::pair<std::string, double>> results;
+
+        // 获取用户历史记录
+        auto userHistory = getUserHistory(user);
+
+        // 基于用户历史计算推荐
+        std::unordered_map<std::string, double> scores;
+        for (const auto& historyItem : userHistory) {
+            auto similar = getSimilarItems(historyItem.first);
+            for (const auto& [item, similarity] : similar) {
+                scores[item] += similarity * historyItem.second;
+            }
+        }
+
+        // 转换为向量并排序
+        results.assign(scores.begin(), scores.end());
+        std::sort(
+            results.begin(), results.end(),
+            [](const auto& a, const auto& b) { return a.second > b.second; });
+
+        if (results.size() > static_cast<size_t>(count)) {
+            results.resize(count);
+        }
+
+        return results;
+    }
+
     std::unordered_map<std::string, StarObject>
         starObjectIndex_;  // Key: Star name
     std::unordered_multimap<std::string, std::string>
@@ -788,6 +1078,26 @@ bool SearchEngine::loadRecommendationModel(const std::string& filename) {
 void SearchEngine::trainRecommendationEngine() {
     LOG_F(INFO, "Request to train Recommendation Engine.");
     pImpl_->trainRecommendationEngine();
+}
+
+// 实现SearchEngine的新方法
+bool SearchEngine::loadFromCSV(const std::string& filename,
+                               const std::vector<std::string>& requiredFields,
+                               Dialect dialect) {
+    return pImpl_->loadFromCSV(filename, requiredFields, dialect);
+}
+
+auto SearchEngine::getHybridRecommendations(
+    const std::string& user, int topN, double contentWeight,
+    double collaborativeWeight) -> std::vector<std::pair<std::string, double>> {
+    return pImpl_->getHybridRecommendations(user, topN, contentWeight,
+                                            collaborativeWeight);
+}
+
+bool SearchEngine::exportToCSV(const std::string& filename,
+                               const std::vector<std::string>& fields,
+                               Dialect dialect) const {
+    return pImpl_->exportToCSV(filename, fields, dialect);
 }
 
 }  // namespace lithium::target

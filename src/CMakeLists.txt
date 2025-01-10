@@ -1,4 +1,6 @@
 add_subdirectory(config)
 add_subdirectory(device)
+add_subdirectory(script)
+add_subdirectory(server)
 add_subdirectory(target)
 add_subdirectory(task)

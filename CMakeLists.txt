@@ -25,6 +25,12 @@ include_directories(${lithium_src_dir})
 include_directories(${lithium_thirdparty_dir})
 include_directories(${lithium_atom_dir})
 
+include_directories(${lithium_thirdparty_dir}/oatpp)
+include_directories(${lithium_thirdparty_dir}/oatpp-zlib)
+include_directories(${lithium_thirdparty_dir}/oatpp-openssl)
+include_directories(${lithium_thirdparty_dir}/oatpp-websocket)
+include_directories(${lithium_thirdparty_dir}/oatpp-swagger)
+
 add_executable(lithium-next ${lithium_src_dir}/app.cpp)
 
 # Include compiler options

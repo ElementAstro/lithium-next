@@ -14,6 +14,7 @@
 
 // 包含偏好引擎的头文件
 #include "preference.hpp"
+#include "reader.hpp"
 
 namespace lithium::target {
 
@@ -238,6 +239,31 @@ public:
     bool saveRecommendationModel(const std::string& filename) const;
     bool loadRecommendationModel(const std::string& filename);
     void trainRecommendationEngine();
+
+    // 新增数据加载方法
+    bool loadFromCSV(const std::string& filename,
+                     const std::vector<std::string>& requiredFields,
+                     Dialect dialect = Dialect());
+
+    // 增强的推荐方法
+    auto getHybridRecommendations(const std::string& user, int topN = 5,
+                                  double contentWeight = 0.3,
+                                  double collaborativeWeight = 0.7)
+        -> std::vector<std::pair<std::string, double>>;
+
+    // 数据导出方法
+    bool exportToCSV(const std::string& filename,
+                     const std::vector<std::string>& fields,
+                     Dialect dialect = Dialect()) const;
+
+    // 批量处理方法
+    void batchProcessRatings(const std::string& csvFilename);
+    void batchUpdateStarObjects(const std::string& csvFilename);
+
+    // 新增缓存控制
+    void clearCache();
+    void setCacheSize(size_t size);
+    [[nodiscard]] auto getCacheStats() const -> std::string;
 
 private:
     class Impl;
