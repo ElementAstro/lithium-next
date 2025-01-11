@@ -2,39 +2,47 @@
 #define LITHIUM_APP_COMMAND_HPP
 
 #include <any>
+#include <chrono>
 #include <functional>
 #include <future>
 #include <memory>
 #include <optional>
+#include <queue>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <chrono>
-#include <queue>
 
 namespace lithium::app {
 
-// 新增命令执行状态枚举
+/**
+ * @brief Enum representing the status of a command execution.
+ */
 enum class CommandStatus {
-    PENDING,
-    RUNNING,
-    COMPLETED,
-    FAILED,
-    CANCELLED
+    PENDING,    ///< Command is pending execution.
+    RUNNING,    ///< Command is currently running.
+    COMPLETED,  ///< Command has completed successfully.
+    FAILED,     ///< Command has failed.
+    CANCELLED   ///< Command has been cancelled.
 };
 
-// 新增命令执行结果结构
+/**
+ * @brief Structure representing the result of a command execution.
+ */
 struct CommandResult {
-    CommandStatus status;
-    std::any result;
-    std::string error;
-    std::chrono::system_clock::time_point timestamp;
+    CommandStatus status;  ///< Status of the command execution.
+    std::any result;       ///< Result of the command execution.
+    std::string error;     ///< Error message if the command failed.
+    std::chrono::system_clock::time_point
+        timestamp;  ///< Timestamp of the command execution.
 };
 
 class EventLoop;
 
+/**
+ * @brief Class for dispatching and managing commands.
+ */
 class CommandDispatcher {
 public:
     using CommandID = std::string;
@@ -45,69 +53,195 @@ public:
     using EventCallback =
         std::function<void(const CommandID&, const std::any&)>;
 
-    // 新增配置结构
+    /**
+     * @brief Configuration structure for CommandDispatcher.
+     */
     struct Config {
-        std::size_t maxHistorySize = 100;
-        std::chrono::milliseconds defaultTimeout{5000};
-        size_t maxConcurrentCommands = 100;
-        bool enablePriority = true;
+        std::size_t maxHistorySize =
+            100;  ///< Maximum size of the command history.
+        std::chrono::milliseconds defaultTimeout{
+            5000};  ///< Default timeout for command execution.
+        size_t maxConcurrentCommands =
+            100;  ///< Maximum number of concurrent commands.
+        bool enablePriority =
+            true;  ///< Flag to enable or disable command priority.
     };
 
-    explicit CommandDispatcher(std::shared_ptr<EventLoop> eventLoop, 
-                             const Config& config);
+    /**
+     * @brief Constructs a CommandDispatcher instance.
+     *
+     * @param eventLoop Shared pointer to the event loop.
+     * @param config Configuration settings for the command dispatcher.
+     */
+    explicit CommandDispatcher(std::shared_ptr<EventLoop> eventLoop,
+                               const Config& config);
 
+    /**
+     * @brief Registers a command handler.
+     *
+     * @tparam CommandType The type of the command.
+     * @param id The ID of the command.
+     * @param handler The handler function to execute the command.
+     * @param undoHandler Optional undo handler function for the command.
+     */
     template <typename CommandType>
     void registerCommand(const CommandID& id,
                          std::function<void(const CommandType&)> handler,
                          std::optional<std::function<void(const CommandType&)>>
                              undoHandler = std::nullopt);
 
+    /**
+     * @brief Unregisters a command handler.
+     *
+     * @param id The ID of the command.
+     */
     void unregisterCommand(const CommandID& id);
 
+    /**
+     * @brief Dispatches a command for execution.
+     *
+     * @tparam CommandType The type of the command.
+     * @param id The ID of the command.
+     * @param command The command to execute.
+     * @param priority The priority of the command.
+     * @param delay Optional delay before executing the command.
+     * @param callback Optional callback function to call when the command
+     * completes.
+     * @return A future representing the result of the command execution.
+     */
     template <typename CommandType>
     auto dispatch(
         const CommandID& id, const CommandType& command, int priority = 0,
         std::optional<std::chrono::milliseconds> delay = std::nullopt,
         CommandCallback callback = nullptr) -> std::future<ResultType>;
 
-    // 批量执行命令
+    /**
+     * @brief Dispatches a batch of commands for execution.
+     *
+     * @tparam CommandType The type of the commands.
+     * @param commands A vector of command ID and command pairs.
+     * @param priority The priority of the commands.
+     * @return A vector of futures representing the results of the command
+     * executions.
+     */
     template <typename CommandType>
     auto batchDispatch(
         const std::vector<std::pair<CommandID, CommandType>>& commands,
         int priority = 0) -> std::vector<std::future<ResultType>>;
 
-    // 取消正在执行的命令
+    /**
+     * @brief Cancels a command.
+     *
+     * @param id The ID of the command to cancel.
+     */
     void cancelCommand(const CommandID& id);
 
-    // 获取命令执行状态
+    /**
+     * @brief Gets the status of a command.
+     *
+     * @param id The ID of the command.
+     * @return The status of the command.
+     */
     CommandStatus getCommandStatus(const CommandID& id) const;
 
-    // 设置命令执行超时
-    void setTimeout(const CommandID& id, 
-                   const std::chrono::milliseconds& timeout);
+    /**
+     * @brief Sets the timeout for a command.
+     *
+     * @param id The ID of the command.
+     * @param timeout The timeout duration.
+     */
+    void setTimeout(const CommandID& id,
+                    const std::chrono::milliseconds& timeout);
 
-    // 简化的快速执行接口
+    /**
+     * @brief Quickly dispatches a command for execution.
+     *
+     * @tparam CommandType The type of the command.
+     * @param id The ID of the command.
+     * @param command The command to execute.
+     * @return The result of the command execution.
+     */
     template <typename CommandType>
-    auto quickDispatch(const CommandID& id, 
-                      const CommandType& command) -> CommandType;
+    auto quickDispatch(const CommandID& id,
+                       const CommandType& command) -> CommandType;
 
+    /**
+     * @brief Gets the result of a command execution.
+     *
+     * @tparam CommandType The type of the command result.
+     * @param resultFuture The future representing the result of the command
+     * execution.
+     * @return The result of the command execution.
+     */
     template <typename CommandType>
     auto getResult(std::future<ResultType>& resultFuture) -> CommandType;
 
+    /**
+     * @brief Undoes a command.
+     *
+     * @tparam CommandType The type of the command.
+     * @param id The ID of the command.
+     * @param command The command to undo.
+     */
     template <typename CommandType>
     void undo(const CommandID& id, const CommandType& command);
 
+    /**
+     * @brief Redoes a command.
+     *
+     * @tparam CommandType The type of the command.
+     * @param id The ID of the command.
+     * @param command The command to redo.
+     */
     template <typename CommandType>
     void redo(const CommandID& id, const CommandType& command);
 
+    /**
+     * @brief Subscribes to command events.
+     *
+     * @param id The ID of the command.
+     * @param callback The callback function to execute when the command event
+     * occurs.
+     * @return A token representing the subscription.
+     */
     int subscribe(const CommandID& id, EventCallback callback);
+
+    /**
+     * @brief Unsubscribes from command events.
+     *
+     * @param id The ID of the command.
+     * @param token The token representing the subscription.
+     */
     void unsubscribe(const CommandID& id, int token);
 
+    /**
+     * @brief Gets the history of a command.
+     *
+     * @tparam CommandType The type of the command.
+     * @param id The ID of the command.
+     * @return A vector of command instances representing the history of the
+     * command.
+     */
     template <typename CommandType>
     auto getCommandHistory(const CommandID& id) -> std::vector<CommandType>;
 
+    /**
+     * @brief Clears the command history.
+     */
     void clearHistory();
+
+    /**
+     * @brief Clears the history of a specific command.
+     *
+     * @param id The ID of the command.
+     */
     void clearCommandHistory(const CommandID& id);
+
+    /**
+     * @brief Gets the list of active commands.
+     *
+     * @return A vector of command IDs representing the active commands.
+     */
     auto getActiveCommands() const -> std::vector<CommandID>;
 
 private:
@@ -124,12 +258,11 @@ private:
     std::shared_ptr<EventLoop> eventLoop_;
     int nextSubscriberId_ = 0;
 
-    // 新增成员
     Config config_;
     std::unordered_map<CommandID, CommandStatus> commandStatus_;
     std::unordered_map<CommandID, std::chrono::milliseconds> timeouts_;
     std::priority_queue<std::pair<int, CommandID>> priorityQueue_;
-    
+
     void updateCommandStatus(const CommandID& id, CommandStatus status);
     bool checkTimeout(const CommandID& id) const;
     void cleanupCommand(const CommandID& id);

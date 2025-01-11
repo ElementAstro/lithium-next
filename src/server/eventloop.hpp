@@ -26,68 +26,191 @@
 
 namespace lithium::app {
 
+/**
+ * @brief Event loop class for managing asynchronous tasks and events.
+ */
 class EventLoop {
 public:
+    using EventCallback = std::function<void()>;
+    /**
+     * @brief Constructs an EventLoop instance.
+     *
+     * @param num_threads Number of threads to use in the thread pool.
+     */
     explicit EventLoop(int num_threads = 1);
+
+    /**
+     * @brief Destructs the EventLoop instance.
+     */
     ~EventLoop();
 
+    /**
+     * @brief Starts the event loop.
+     */
     void run();
+
+    /**
+     * @brief Stops the event loop.
+     */
     void stop();
 
-    // 提交任务 (支持优先级)
+    /**
+     * @brief Posts a task to the event loop with a specified priority.
+     *
+     * @tparam F The type of the function to post.
+     * @tparam Args The types of the arguments to pass to the function.
+     * @param priority The priority of the task.
+     * @param f The function to post.
+     * @param args The arguments to pass to the function.
+     * @return A future representing the result of the task.
+     */
     template <typename F, typename... Args>
     auto post(int priority, F&& f,
               Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
 
-    // 无优先级任务提交
+    /**
+     * @brief Posts a task to the event loop with default priority.
+     *
+     * @tparam F The type of the function to post.
+     * @tparam Args The types of the arguments to pass to the function.
+     * @param f The function to post.
+     * @param args The arguments to pass to the function.
+     * @return A future representing the result of the task.
+     */
     template <typename F, typename... Args>
     auto post(F&& f,
               Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
 
-    // 延迟任务提交
+    /**
+     * @brief Posts a delayed task to the event loop with a specified priority.
+     *
+     * @tparam F The type of the function to post.
+     * @tparam Args The types of the arguments to pass to the function.
+     * @param delay The delay before the task is executed.
+     * @param priority The priority of the task.
+     * @param f The function to post.
+     * @param args The arguments to pass to the function.
+     * @return A future representing the result of the task.
+     */
     template <typename F, typename... Args>
     auto postDelayed(std::chrono::milliseconds delay, int priority, F&& f,
                      Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
+    /**
+     * @brief Posts a delayed task to the event loop with default priority.
+     *
+     * @tparam F The type of the function to post.
+     * @tparam Args The types of the arguments to pass to the function.
+     * @param delay The delay before the task is executed.
+     * @param f The function to post.
+     * @param args The arguments to pass to the function.
+     * @return A future representing the result of the task.
+     */
     template <typename F, typename... Args>
     auto postDelayed(std::chrono::milliseconds delay, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
-    // 动态调整任务优先级
+    /**
+     * @brief Adjusts the priority of a task.
+     *
+     * @param task_id The ID of the task to adjust.
+     * @param new_priority The new priority of the task.
+     * @return True if the task priority was adjusted, false otherwise.
+     */
     auto adjustTaskPriority(int task_id, int new_priority) -> bool;
 
-    // 任务依赖
+    /**
+     * @brief Posts a task with a dependency on another task.
+     *
+     * @tparam F The type of the function to post.
+     * @tparam G The type of the dependency task.
+     * @param f The function to post.
+     * @param dependency_task The dependency task.
+     */
     template <typename F, typename G>
     void postWithDependency(F&& f, G&& dependency_task);
 
-    // 定时任务
+    /**
+     * @brief Schedules a periodic task.
+     *
+     * @param interval The interval between task executions.
+     * @param priority The priority of the task.
+     * @param func The function to execute periodically.
+     */
     void schedulePeriodic(std::chrono::milliseconds interval, int priority,
                           std::function<void()> func);
 
-    // 增加任务取消支持
+    /**
+     * @brief Posts a cancelable task.
+     *
+     * @tparam F The type of the function to post.
+     * @tparam Args The types of the arguments to pass to the function.
+     * @param f The function to post.
+     * @param cancel_flag The atomic flag to check for cancellation.
+     * @return A future representing the result of the task.
+     */
     template <typename F, typename... Args>
     auto postCancelable(F&& f,
                         std::atomic<bool>& cancel_flag) -> std::future<void>;
 
-    // 定时器接口
+    /**
+     * @brief Sets a timeout for a function.
+     *
+     * @param func The function to execute after the timeout.
+     * @param delay The delay before the function is executed.
+     */
     void setTimeout(std::function<void()> func,
                     std::chrono::milliseconds delay);
+
+    /**
+     * @brief Sets an interval for a function.
+     *
+     * @param func The function to execute periodically.
+     * @param interval The interval between function executions.
+     */
     void setInterval(std::function<void()> func,
                      std::chrono::milliseconds interval);
 
-    // 事件订阅/发布
-    using EventCallback = std::function<void()>;
+    /**
+     * @brief Subscribes to an event.
+     *
+     * @param event_name The name of the event to subscribe to.
+     * @param callback The callback function to execute when the event is
+     * emitted.
+     */
     void subscribeEvent(const std::string& event_name,
                         const EventCallback& callback);
+
+    /**
+     * @brief Emits an event.
+     *
+     * @param event_name The name of the event to emit.
+     */
     void emitEvent(const std::string& event_name);
 
-    // 文件描述符的支持（epoll 或 select）
 #ifdef __linux__
+    /**
+     * @brief Adds a file descriptor to the epoll instance.
+     *
+     * @param fd The file descriptor to add.
+     */
     void addEpollFd(int fd) const;
-    void addSignalHandler(int signal,
-                          std::function<void()> handler);  // 增加信号处理
+
+    /**
+     * @brief Adds a signal handler.
+     *
+     * @param signal The signal to handle.
+     * @param handler The handler function to execute when the signal is
+     * received.
+     */
+    void addSignalHandler(int signal, std::function<void()> handler);
 #elif _WIN32
+    /**
+     * @brief Adds a socket file descriptor.
+     *
+     * @param fd The socket file descriptor to add.
+     */
     void add_socket_fd(SOCKET fd);
 #endif
 
@@ -98,6 +221,13 @@ private:
         std::chrono::steady_clock::time_point execTime;
         int taskId;
 
+        /**
+         * @brief Compares two tasks based on their priority and execution time.
+         *
+         * @param other The other task to compare to.
+         * @return True if this task has lower priority or later execution time,
+         * false otherwise.
+         */
         auto operator<(const Task& other) const -> bool;
     };
 
@@ -105,30 +235,35 @@ private:
     std::mutex queue_mutex_;
     std::condition_variable condition_;
     std::atomic<bool> stop_flag_;
-    std::vector<std::jthread> thread_pool_;  // 线程池支持
+    std::vector<std::jthread> thread_pool_;
 
     std::unordered_map<std::string, std::vector<EventCallback>>
-        event_subscribers_;  // 事件订阅者
-    std::unordered_map<int, std::function<void()>>
-        signal_handlers_;  // 信号处理
+        event_subscribers_;
+    std::unordered_map<int, std::function<void()>> signal_handlers_;
     int next_task_id_ = 0;
 
 #ifdef USE_ASIO
     boost::asio::io_context io_context_;
-    std::vector<std::unique_ptr<boost::asio::steady_timer>>
-        timers_;  // 定时器列表
+    std::vector<std::unique_ptr<boost::asio::steady_timer>> timers_;
 #endif
 
 #ifdef __linux__
     int epoll_fd_;
     std::vector<struct epoll_event> epoll_events_;
-    int signal_fd_;  // 用于监听系统信号
+    int signal_fd_;
 #elif _WIN32
     fd_set read_fds;
 #endif
 
-    void workerThread();  // 用于线程池中的工作线程
-    void wakeup();        // 用于唤醒 `epoll` 或 `select` 处理
+    /**
+     * @brief Worker thread function for processing tasks.
+     */
+    void workerThread();
+
+    /**
+     * @brief Wakes up the event loop.
+     */
+    void wakeup();
 };
 
 template <typename F, typename... Args>
@@ -146,7 +281,7 @@ auto EventLoop::post(int priority, F&& f, Args&&... args)
 #ifdef USE_ASIO
     io_context_.post(task { (*task)(); });
 #else
-    condition_.notify_one();  // 通知等待中的线程
+    condition_.notify_one();
 #endif
     return result;
 }
@@ -199,8 +334,8 @@ void EventLoop::postWithDependency(F&& f, G&& dependency_task) {
     std::future<void> dependency = dependency_task.get_future();
     std::thread([this, f = std::forward<F>(f),
                  dependency = std::move(dependency)]() mutable {
-        dependency.wait();   // 等待依赖任务完成
-        post(std::move(f));  // 执行依赖任务完成后的任务
+        dependency.wait();
+        post(std::move(f));
     }).detach();
 }
 

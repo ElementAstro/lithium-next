@@ -5,6 +5,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <iomanip>
 #include <sstream>
 #include <vector>
 
@@ -15,6 +16,46 @@
 #include "atom/log/loguru.hpp"
 
 namespace lithium::tools {
+/// Convert system time to Julian Date
+double timeToJD(const std::chrono::system_clock::time_point& time) {
+    auto duration = time.time_since_epoch();
+    auto seconds =
+        std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+    return JD_EPOCH + (seconds / 86400.0);
+}
+
+/// Convert Julian Date to Modified Julian Date
+double jdToMJD(double jd) { return jd - MJD_OFFSET; }
+
+/// Convert Modified Julian Date to Julian Date
+double mjdToJD(double mjd) { return mjd + MJD_OFFSET; }
+
+/// Calculate Barycentric Julian Date (BJD) from JD
+/// @param jd Julian Date
+/// @param ra Right Ascension in degrees
+/// @param dec Declination in degrees
+/// @param longitude Observer longitude in degrees
+/// @param latitude Observer latitude in degrees
+/// @param elevation Observer elevation in meters
+/// @return Barycentric Julian Date
+double calculateBJD(double jd, double ra, double dec, double longitude,
+                    double latitude, double elevation) {
+    // Convert coordinates to radians
+    using namespace std::numbers;
+    double raRad = ra * pi / 180.0;
+    double decRad = dec * pi / 180.0;
+    double lonRad = longitude * pi / 180.0;
+    double latRad = latitude * pi / 180.0;
+
+    // Calculate light travel time (simplified)
+    double earthRadius = EARTHRADIUSEQUATORIAL;
+    double altitude = elevation + earthRadius;
+    double lightTime = altitude * std::sin(decRad) / LIGHTSPEED;
+
+    // Convert to BJD
+    return jd + lightTime / 86400.0;
+}
+
 constexpr double K_SECONDS_IN_MINUTE = 60.0;
 constexpr double K_SECONDS_IN_HOUR = 3600.0;
 
@@ -62,9 +103,8 @@ void printDMS(double angle) {
     LOG_F(INFO, "{}° {}' {:.2f}\"", degrees, minutes, seconds);
 }
 
-inline std::string formatTime(const std::chrono::system_clock::time_point& time,
-                              bool isLocal,
-                              const std::string& format = "%H:%M:%S") {
+std::string formatTime(const std::chrono::system_clock::time_point& time,
+                       bool isLocal, const std::string& format) {
     std::time_t tt = std::chrono::system_clock::to_time_t(time);
     std::tm tm = isLocal ? *std::localtime(&tt) : *std::gmtime(&tt);
     std::stringstream ss;

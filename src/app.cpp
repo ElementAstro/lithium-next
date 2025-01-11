@@ -12,6 +12,7 @@
 #include "atom/system/crash.hpp"
 #include "atom/utils/argsview.hpp"
 
+#include "debug/terminal.hpp"
 #include "server/controller/config.hpp"
 #include "server/controller/python.hpp"
 #include "server/controller/script.hpp"
@@ -180,7 +181,20 @@ int main(int argc, char *argv[]) {
         app.port(port).multithreaded().run();
     });
 
+    std::thread *debugTerminalThread = nullptr;
+    if (program.get<bool>("debug").value_or(false)) {
+        LOG_F(INFO, "Debug mode enabled, starting debug terminal...");
+        debugTerminalThread = new std::thread([]() {
+            lithium::debug::ConsoleTerminal terminal;
+            terminal.run();
+        });
+    }
+
     serverThread.join();
+    if (debugTerminalThread) {
+        debugTerminalThread->join();
+        delete debugTerminalThread;
+    }
 
     return 0;
 }

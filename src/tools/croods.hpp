@@ -1,12 +1,36 @@
 #ifndef LITHIUM_SEARCH_CROODS_HPP
 #define LITHIUM_SEARCH_CROODS_HPP
 
+#include <chrono>
 #include <cmath>
 #include <concepts>
 #include <numbers>
 #include <span>
 
 namespace lithium::tools {
+// Julian Date calculations
+constexpr double JD_EPOCH = 2440587.5;  // Unix epoch in JD
+constexpr double MJD_OFFSET = 2400000.5;
+double timeToJD(const std::chrono::system_clock::time_point& time);
+double jdToMJD(double jd);
+double mjdToJD(double mjd);
+double calculateBJD(double jd, double ra, double dec, double longitude,
+                    double latitude, double elevation);
+std::string formatTime(const std::chrono::system_clock::time_point& time,
+                       bool isLocal, const std::string& format = "%H:%M:%S");
+auto getInfoTextA(const std::chrono::system_clock::time_point& localTime,
+                  double raDegree, double decDegree, double dRaDegree,
+                  double dDecDegree, const std::string& mountStatus,
+                  const std::string& guideStatus) -> std::string;
+auto getInfoTextB(const std::chrono::system_clock::time_point& utcTime,
+                  double azRad, double altRad, const std::string& camStatus,
+                  double camTemp, double camTargetTemp, int camX, int camY,
+                  int cfwPos, const std::string& cfwName,
+                  const std::string& cfwStatus) -> std::string;
+auto getInfoTextC(int cpuTemp, int cpuLoad, double diskFree,
+                  double longitudeRad, double latitudeRad, double raJ2000,
+                  double decJ2000, double az, double alt,
+                  const std::string& objName) -> std::string;
 auto periodBelongs(double value, double min, double max, double period,
                    bool minequ, bool maxequ) -> bool;
 constexpr double EARTHRADIUSEQUATORIAL = 6378137.0;
@@ -267,6 +291,69 @@ struct GeographicCoords {
     T latitude;
     T longitude;
 };
+
+/// Precession matrix elements for J2000 to given epoch
+template <std::floating_point T>
+auto precessionMatrix(T epoch) -> std::array<std::array<T, 3>, 3> {
+    constexpr T T0 = 2451545.0;  // J2000.0
+    T t = (epoch - T0) / 36525.0;
+
+    // Precession angles in arcseconds
+    T zeta = (2306.2181 + 1.39656 * t - 0.000139 * t * t) * t;
+    T z = zeta + 0.30188 * t * t + 0.017998 * t * t * t;
+    T theta = (2004.3109 - 0.85330 * t - 0.000217 * t * t) * t;
+
+    // Convert to radians
+    using namespace std::numbers;
+    zeta *= pi_v<T> / (180.0 * 3600.0);
+    z *= pi_v<T> / (180.0 * 3600.0);
+    theta *= pi_v<T> / (180.0 * 3600.0);
+
+    // Precession matrix
+    std::array<std::array<T, 3>, 3> P = {
+        {{std::cos(zeta) * std::cos(theta) * std::cos(z) -
+              std::sin(zeta) * std::sin(z),
+          -std::cos(zeta) * std::cos(theta) * std::sin(z) -
+              std::sin(zeta) * std::cos(z),
+          -std::cos(zeta) * std::sin(theta)},
+         {std::sin(zeta) * std::cos(theta) * std::cos(z) +
+              std::cos(zeta) * std::sin(z),
+          -std::sin(zeta) * std::cos(theta) * std::sin(z) +
+              std::cos(zeta) * std::cos(z),
+          -std::sin(zeta) * std::sin(theta)},
+         {std::sin(theta) * std::cos(z), -std::sin(theta) * std::sin(z),
+          std::cos(theta)}}};
+
+    return P;
+}
+
+/// Transform equatorial coordinates between epochs using precession
+template <std::floating_point T>
+auto precessEquatorial(const CelestialCoords<T>& coords, T fromEpoch,
+                       T toEpoch) -> CelestialCoords<T> {
+    // Convert to Cartesian coordinates
+    T raRad = coords.ra * std::numbers::pi / 12.0;
+    T decRad = coords.dec * std::numbers::pi / 180.0;
+
+    T x = std::cos(decRad) * std::cos(raRad);
+    T y = std::cos(decRad) * std::sin(raRad);
+    T z = std::sin(decRad);
+
+    // Get precession matrices
+    auto P1 = precessionMatrix(fromEpoch);
+    auto P2 = precessionMatrix(toEpoch);
+
+    // Transform coordinates
+    T xp = P2[0][0] * x + P2[0][1] * y + P2[0][2] * z;
+    T yp = P2[1][0] * x + P2[1][1] * y + P2[1][2] * z;
+    T zp = P2[2][0] * x + P2[2][1] * y + P2[2][2] * z;
+
+    // Convert back to spherical coordinates
+    T dec = std::asin(zp) * 180.0 / std::numbers::pi;
+    T ra = std::atan2(yp, xp) * 12.0 / std::numbers::pi;
+
+    return {range24(ra), dec};
+}
 
 template <std::floating_point T>
 auto equatorialToEcliptic(const CelestialCoords<T>& coords,
