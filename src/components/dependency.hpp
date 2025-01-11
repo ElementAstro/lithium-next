@@ -178,6 +178,19 @@ public:
     auto getGroupDependencies(const std::string& groupName) const
         -> std::vector<Node>;
 
+    /**
+     * @brief Clears the dependency cache.
+     */
+    void clearCache();
+
+    /**
+     * @brief Parses a package.json file.
+     * @param path The path to the package.json file
+     * @return A pair containing the package name and a map of dependencies
+     */
+    static auto parsePackageJson(const Node& path)
+        -> std::pair<Node, std::unordered_map<Node, Version>>;
+
 private:
     mutable std::shared_mutex mutex_;
     std::unordered_map<Node, std::unordered_set<Node>>
@@ -192,25 +205,56 @@ private:
     mutable std::unordered_map<Node, std::vector<Node>>
         dependencyCache_;  // 依赖缓存
 
+    /**
+     * @brief Utility function to check for cycles in the graph.
+     * @param node The current node being visited
+     * @param visited A set of visited nodes
+     * @param recStack A set of nodes in the recursion stack
+     * @return True if a cycle is detected, false otherwise
+     */
     auto hasCycleUtil(const Node& node, std::unordered_set<Node>& visited,
                       std::unordered_set<Node>& recStack) const -> bool;
 
+    /**
+     * @brief Utility function to perform topological sort.
+     * @param node The current node being visited
+     * @param visited A set of visited nodes
+     * @param stack A stack to store the topological order
+     * @return True if the sort is successful, false otherwise
+     */
     auto topologicalSortUtil(const Node& node,
                              std::unordered_set<Node>& visited,
                              std::stack<Node>& stack) const -> bool;
 
+    /**
+     * @brief Utility function to get all dependencies of a node.
+     * @param node The node for which to get dependencies
+     * @param allDependencies A set to store all dependencies
+     */
     void getAllDependenciesUtil(
         const Node& node, std::unordered_set<Node>& allDependencies) const;
 
+    /**
+     * @brief Utility function to remove duplicates from a vector of nodes.
+     * @param input The input vector of nodes
+     * @return A vector of unique nodes
+     */
     static auto removeDuplicates(const std::vector<Node>& input)
         -> std::vector<Node>;
 
-    static auto parsePackageJson(const Node& path)
-        -> std::pair<Node, std::unordered_map<Node, Version>>;
-
+    /**
+     * @brief Parses a package.json file.
+     * @param path The path to the package.json file
+     * @return A pair containing the package name and a map of dependencies
+     */
     static auto parsePackageXml(const Node& path)
         -> std::pair<Node, std::unordered_map<Node, Version>>;
 
+    /**
+     * @brief Parses a package.yaml file.
+     * @param path The path to the package.yaml file
+     * @return A pair containing the package name and a map of dependencies
+     */
     static auto parsePackageYaml(const std::string& path)
         -> std::pair<std::string, std::unordered_map<std::string, Version>>;
 
@@ -225,7 +269,12 @@ private:
     void validateVersion(const Node& from, const Node& to,
                          const Version& requiredVersion) const;
 
-    void clearCache();  // 清除缓存
+    /**
+     * @brief Resolves dependencies in parallel.
+     *
+     * @param batch A vector of nodes to resolve in parallel.
+     * @return A vector of resolved nodes.
+     */
     auto resolveParallelBatch(const std::vector<Node>& batch)
         -> std::vector<Node>;
 };

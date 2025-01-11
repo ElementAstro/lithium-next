@@ -4,21 +4,22 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#ifndef LITHIUM_ASYNC_SCRIPT_CONTROLLER_HPP
-#define LITHIUM_ASYNC_SCRIPT_CONTROLLER_HPP
+#ifndef LITHIUM_SERVER_CONTROLLER_CONFIG_HPP
+#define LITHIUM_SERVER_CONTROLLER_CONFIG_HPP
 
-#include <crow.h>
-#include <crow/app.h>
+#include "controller.hpp"
+
 #include <functional>
 #include <memory>
 #include <string>
+
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "config/configor.hpp"
 #include "constant/constant.hpp"
 
-class ConfigController {
+class ConfigController : public Controller {
 private:
     static std::weak_ptr<lithium::ConfigManager> mConfigManager;
 
@@ -81,7 +82,7 @@ private:
     }
 
 public:
-    explicit ConfigController(crow::SimpleApp& app) {
+    void registerRoutes(crow::SimpleApp& app) override {
         // Create a weak pointer to the ConfigManager
         GET_OR_CREATE_WEAK_PTR(mConfigManager, lithium::ConfigManager,
                                Constants::CONFIG_MANAGER);
@@ -269,4 +270,4 @@ public:
     }
 };
 
-#endif  // LITHIUM_ASYNC_SCRIPT_CONTROLLER_HPP
+#endif  // LITHIUM_SERVER_CONTROLLER_CONFIG_HPP

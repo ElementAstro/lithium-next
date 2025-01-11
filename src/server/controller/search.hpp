@@ -1,5 +1,5 @@
 /*
- * SearchEngineController.hpp
+ * SearchController.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -7,11 +7,11 @@
 #ifndef LITHIUM_ASYNC_SEARCH_ENGINE_CONTROLLER_HPP
 #define LITHIUM_ASYNC_SEARCH_ENGINE_CONTROLLER_HPP
 
-#include <crow.h>
+#include "controller.hpp"
+
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
@@ -19,7 +19,7 @@
 #include "constant/constant.hpp"
 #include "target/engine.hpp"
 
-class SearchEngineController {
+class SearchController : public Controller {
 private:
     static std::weak_ptr<lithium::target::SearchEngine> mSearchEngine;
 
@@ -88,57 +88,52 @@ private:
     }
 
 public:
-    explicit SearchEngineController(crow::SimpleApp& app) {
+    void registerRoutes(crow::SimpleApp& app) override {
         // Create a weak pointer to the SearchEngine
         GET_OR_CREATE_WEAK_PTR(mSearchEngine, lithium::target::SearchEngine,
                                Constants::SEARCH_ENGINE);
         // Define the routes
         CROW_ROUTE(app, "/search_engine/addStarObject")
-            .methods("POST"_method)(&SearchEngineController::addStarObject);
+            .methods("POST"_method)(&SearchController::addStarObject);
         CROW_ROUTE(app, "/search_engine/searchStarObject")
-            .methods("POST"_method)(&SearchEngineController::searchStarObject);
+            .methods("POST"_method)(&SearchController::searchStarObject);
         CROW_ROUTE(app, "/search_engine/fuzzySearchStarObject")
-            .methods("POST"_method)(
-                &SearchEngineController::fuzzySearchStarObject);
+            .methods("POST"_method)(&SearchController::fuzzySearchStarObject);
         CROW_ROUTE(app, "/search_engine/autoCompleteStarObject")
-            .methods("POST"_method)(
-                &SearchEngineController::autoCompleteStarObject);
+            .methods("POST"_method)(&SearchController::autoCompleteStarObject);
         CROW_ROUTE(app, "/search_engine/filterSearch")
-            .methods("POST"_method)(&SearchEngineController::filterSearch);
+            .methods("POST"_method)(&SearchController::filterSearch);
         CROW_ROUTE(app, "/search_engine/loadFromNameJson")
-            .methods("POST"_method)(&SearchEngineController::loadFromNameJson);
+            .methods("POST"_method)(&SearchController::loadFromNameJson);
         CROW_ROUTE(app, "/search_engine/loadFromCelestialJson")
-            .methods("POST"_method)(
-                &SearchEngineController::loadFromCelestialJson);
+            .methods("POST"_method)(&SearchController::loadFromCelestialJson);
         CROW_ROUTE(app, "/search_engine/initializeRecommendationEngine")
             .methods("POST"_method)(
-                &SearchEngineController::initializeRecommendationEngine);
+                &SearchController::initializeRecommendationEngine);
         CROW_ROUTE(app, "/search_engine/addUserRating")
-            .methods("POST"_method)(&SearchEngineController::addUserRating);
+            .methods("POST"_method)(&SearchController::addUserRating);
         CROW_ROUTE(app, "/search_engine/recommendItems")
-            .methods("POST"_method)(&SearchEngineController::recommendItems);
+            .methods("POST"_method)(&SearchController::recommendItems);
         CROW_ROUTE(app, "/search_engine/saveRecommendationModel")
-            .methods("POST"_method)(
-                &SearchEngineController::saveRecommendationModel);
+            .methods("POST"_method)(&SearchController::saveRecommendationModel);
         CROW_ROUTE(app, "/search_engine/loadRecommendationModel")
-            .methods("POST"_method)(
-                &SearchEngineController::loadRecommendationModel);
+            .methods("POST"_method)(&SearchController::loadRecommendationModel);
         CROW_ROUTE(app, "/search_engine/trainRecommendationEngine")
             .methods("POST"_method)(
-                &SearchEngineController::trainRecommendationEngine);
+                &SearchController::trainRecommendationEngine);
         CROW_ROUTE(app, "/search_engine/loadFromCSV")
-            .methods("POST"_method)(&SearchEngineController::loadFromCSV);
+            .methods("POST"_method)(&SearchController::loadFromCSV);
         CROW_ROUTE(app, "/search_engine/getHybridRecommendations")
             .methods("POST"_method)(
-                &SearchEngineController::getHybridRecommendations);
+                &SearchController::getHybridRecommendations);
         CROW_ROUTE(app, "/search_engine/exportToCSV")
-            .methods("POST"_method)(&SearchEngineController::exportToCSV);
+            .methods("POST"_method)(&SearchController::exportToCSV);
         CROW_ROUTE(app, "/search_engine/clearCache")
-            .methods("POST"_method)(&SearchEngineController::clearCache);
+            .methods("POST"_method)(&SearchController::clearCache);
         CROW_ROUTE(app, "/search_engine/setCacheSize")
-            .methods("POST"_method)(&SearchEngineController::setCacheSize);
+            .methods("POST"_method)(&SearchController::setCacheSize);
         CROW_ROUTE(app, "/search_engine/getCacheStats")
-            .methods("GET"_method)(&SearchEngineController::getCacheStats);
+            .methods("GET"_method)(&SearchController::getCacheStats);
     }
 
     // Endpoint to add a star object
@@ -146,8 +141,12 @@ public:
         auto body = crow::json::load(req.body);
         res = handleSearchEngineAction(
             req, body, "addStarObject", [&](auto searchEngine) {
-                lithium::target::StarObject starObject(body["name"].s(), body["aliases"].array(),
-                                      body["clickCount"].i());
+                std::vector<std::string> aliases;
+                for (const auto& alias : body["aliases"]) {
+                    aliases.push_back(alias.s());
+                }
+                lithium::target::StarObject starObject(
+                    body["name"].s(), aliases, body["clickCount"].i());
                 searchEngine->addStarObject(starObject);
                 return true;
             });
@@ -316,9 +315,16 @@ public:
         auto body = crow::json::load(req.body);
         res = handleSearchEngineAction(
             req, body, "loadFromCSV", [&](auto searchEngine) {
-                searchEngine->loadFromCSV(body["filename"].s(),
-                                          body["requiredFields"].array(),
-                                          body["dialect"]);
+                std::vector<std::string> requiredFields;
+                for (const auto& field : body["requiredFields"]) {
+                    requiredFields.push_back(field.s());
+                }
+                lithium::target::Dialect dialect;
+                if (body.has("dialect")) {
+                    // TODO: Implement dialect parsing
+                }
+                searchEngine->loadFromCSV(body["filename"].s(), requiredFields,
+                                          dialect);
                 return true;
             });
     }
@@ -346,9 +352,16 @@ public:
         auto body = crow::json::load(req.body);
         res = handleSearchEngineAction(
             req, body, "exportToCSV", [&](auto searchEngine) {
-                searchEngine->exportToCSV(body["filename"].s(),
-                                          body["fields"].lo(),
-                                          body["dialect"]);
+                std::vector<std::string> fields;
+                for (const auto& field : body["fields"]) {
+                    fields.push_back(field.s());
+                }
+                lithium::target::Dialect dialect;
+                if (body.has("dialect")) {
+                    // TODO: Implement dialect parsing
+                }
+                searchEngine->exportToCSV(body["filename"].s(), fields,
+                                          dialect);
                 return true;
             });
     }

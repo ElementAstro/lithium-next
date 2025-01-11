@@ -7,7 +7,8 @@
 #ifndef LITHIUM_ASYNC_PYTHON_CONTROLLER_HPP
 #define LITHIUM_ASYNC_PYTHON_CONTROLLER_HPP
 
-#include <crow.h>
+#include "controller.hpp"
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -19,7 +20,7 @@
 #include "constant/constant.hpp"
 #include "script/python_caller.hpp"
 
-class PythonController {
+class PythonController : public Controller {
 private:
     static std::weak_ptr<lithium::PythonWrapper> mPythonWrapper;
 
@@ -87,7 +88,7 @@ private:
     }
 
 public:
-    explicit PythonController(crow::SimpleApp& app) {
+    void registerRoutes(crow::SimpleApp& app) override {
         // Create a weak pointer to the PythonWrapper
         GET_OR_CREATE_WEAK_PTR(mPythonWrapper, lithium::PythonWrapper,
                                Constants::PYTHON_WRAPPER);

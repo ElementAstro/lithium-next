@@ -31,7 +31,15 @@ include_directories(${lithium_thirdparty_dir}/oatpp-openssl)
 include_directories(${lithium_thirdparty_dir}/oatpp-websocket)
 include_directories(${lithium_thirdparty_dir}/oatpp-swagger)
 
+set(CMAKE_CXX_STANDARD 23)
+
+find_package(Python 3.7 COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
+
 add_executable(lithium-next ${lithium_src_dir}/app.cpp)
+
+target_link_libraries(lithium-next PRIVATE pybind11::module pybind11::lto)
+target_include_directories(lithium-next PRIVATE ${Python_INCLUDE_DIRS})
 
 # Include compiler options
 include(cmake/compiler_options.cmake)

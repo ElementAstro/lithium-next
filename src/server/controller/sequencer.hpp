@@ -1,5 +1,5 @@
 /*
- * ExposureSequenceController.hpp
+ * SequenceController.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -7,7 +7,8 @@
 #ifndef LITHIUM_ASYNC_EXPOSURE_SEQUENCE_CONTROLLER_HPP
 #define LITHIUM_ASYNC_EXPOSURE_SEQUENCE_CONTROLLER_HPP
 
-#include <crow.h>
+#include "controller.hpp"
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -18,7 +19,7 @@
 #include "constant/constant.hpp"
 #include "task/sequencer.hpp"
 
-class ExposureSequenceController {
+class SequenceController : public Controller {
 private:
     static std::weak_ptr<lithium::sequencer::ExposureSequence>
         mExposureSequence;
@@ -100,73 +101,61 @@ private:
     }
 
 public:
-    explicit ExposureSequenceController(crow::SimpleApp& app) {
+    void registerRoutes(crow::SimpleApp& app) override {
         // Create a weak pointer to the ExposureSequence
         GET_OR_CREATE_WEAK_PTR(mExposureSequence,
                                lithium::sequencer::ExposureSequence,
                                Constants::EXPOSURE_SEQUENCE);
         // Define the routes
         CROW_ROUTE(app, "/exposure_sequence/addTarget")
-            .methods("POST"_method)(&ExposureSequenceController::addTarget);
+            .methods("POST"_method)(&SequenceController::addTarget);
         CROW_ROUTE(app, "/exposure_sequence/removeTarget")
-            .methods("POST"_method)(&ExposureSequenceController::removeTarget);
+            .methods("POST"_method)(&SequenceController::removeTarget);
         CROW_ROUTE(app, "/exposure_sequence/modifyTarget")
-            .methods("POST"_method)(&ExposureSequenceController::modifyTarget);
+            .methods("POST"_method)(&SequenceController::modifyTarget);
         CROW_ROUTE(app, "/exposure_sequence/executeAll")
-            .methods("POST"_method)(&ExposureSequenceController::executeAll);
+            .methods("POST"_method)(&SequenceController::executeAll);
         CROW_ROUTE(app, "/exposure_sequence/stop")
-            .methods("POST"_method)(&ExposureSequenceController::stop);
+            .methods("POST"_method)(&SequenceController::stop);
         CROW_ROUTE(app, "/exposure_sequence/pause")
-            .methods("POST"_method)(&ExposureSequenceController::pause);
+            .methods("POST"_method)(&SequenceController::pause);
         CROW_ROUTE(app, "/exposure_sequence/resume")
-            .methods("POST"_method)(&ExposureSequenceController::resume);
+            .methods("POST"_method)(&SequenceController::resume);
         CROW_ROUTE(app, "/exposure_sequence/saveSequence")
-            .methods("POST"_method)(&ExposureSequenceController::saveSequence);
+            .methods("POST"_method)(&SequenceController::saveSequence);
         CROW_ROUTE(app, "/exposure_sequence/loadSequence")
-            .methods("POST"_method)(&ExposureSequenceController::loadSequence);
+            .methods("POST"_method)(&SequenceController::loadSequence);
         CROW_ROUTE(app, "/exposure_sequence/getTargetNames")
-            .methods("GET"_method)(&ExposureSequenceController::getTargetNames);
+            .methods("GET"_method)(&SequenceController::getTargetNames);
         CROW_ROUTE(app, "/exposure_sequence/getTargetStatus")
-            .methods("POST"_method)(
-                &ExposureSequenceController::getTargetStatus);
+            .methods("POST"_method)(&SequenceController::getTargetStatus);
         CROW_ROUTE(app, "/exposure_sequence/getProgress")
-            .methods("GET"_method)(&ExposureSequenceController::getProgress);
+            .methods("GET"_method)(&SequenceController::getProgress);
         CROW_ROUTE(app, "/exposure_sequence/setSchedulingStrategy")
-            .methods("POST"_method)(
-                &ExposureSequenceController::setSchedulingStrategy);
+            .methods("POST"_method)(&SequenceController::setSchedulingStrategy);
         CROW_ROUTE(app, "/exposure_sequence/setRecoveryStrategy")
-            .methods("POST"_method)(
-                &ExposureSequenceController::setRecoveryStrategy);
+            .methods("POST"_method)(&SequenceController::setRecoveryStrategy);
         CROW_ROUTE(app, "/exposure_sequence/addAlternativeTarget")
-            .methods("POST"_method)(
-                &ExposureSequenceController::addAlternativeTarget);
+            .methods("POST"_method)(&SequenceController::addAlternativeTarget);
         CROW_ROUTE(app, "/exposure_sequence/setMaxConcurrentTargets")
             .methods("POST"_method)(
-                &ExposureSequenceController::setMaxConcurrentTargets);
+                &SequenceController::setMaxConcurrentTargets);
         CROW_ROUTE(app, "/exposure_sequence/setGlobalTimeout")
-            .methods("POST"_method)(
-                &ExposureSequenceController::setGlobalTimeout);
+            .methods("POST"_method)(&SequenceController::setGlobalTimeout);
         CROW_ROUTE(app, "/exposure_sequence/getFailedTargets")
-            .methods("GET"_method)(
-                &ExposureSequenceController::getFailedTargets);
+            .methods("GET"_method)(&SequenceController::getFailedTargets);
         CROW_ROUTE(app, "/exposure_sequence/retryFailedTargets")
-            .methods("POST"_method)(
-                &ExposureSequenceController::retryFailedTargets);
+            .methods("POST"_method)(&SequenceController::retryFailedTargets);
         CROW_ROUTE(app, "/exposure_sequence/getExecutionStats")
-            .methods("GET"_method)(
-                &ExposureSequenceController::getExecutionStats);
+            .methods("GET"_method)(&SequenceController::getExecutionStats);
         CROW_ROUTE(app, "/exposure_sequence/setTargetTaskParams")
-            .methods("POST"_method)(
-                &ExposureSequenceController::setTargetTaskParams);
+            .methods("POST"_method)(&SequenceController::setTargetTaskParams);
         CROW_ROUTE(app, "/exposure_sequence/getTargetTaskParams")
-            .methods("POST"_method)(
-                &ExposureSequenceController::getTargetTaskParams);
+            .methods("POST"_method)(&SequenceController::getTargetTaskParams);
         CROW_ROUTE(app, "/exposure_sequence/setTargetParams")
-            .methods("POST"_method)(
-                &ExposureSequenceController::setTargetParams);
+            .methods("POST"_method)(&SequenceController::setTargetParams);
         CROW_ROUTE(app, "/exposure_sequence/getTargetParams")
-            .methods("POST"_method)(
-                &ExposureSequenceController::getTargetParams);
+            .methods("POST"_method)(&SequenceController::getTargetParams);
     }
 
     // Endpoint to add a target

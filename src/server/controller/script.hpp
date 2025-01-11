@@ -4,22 +4,25 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#ifndef LITHIUM_ASYNC_SHELLER_CONTROLLER_HPP
-#define LITHIUM_ASYNC_SHELLER_CONTROLLER_HPP
+#ifndef LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP
+#define LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP
 
-#include <crow.h>
+#include "controller.hpp"
+
 #include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
+
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "constant/constant.hpp"
+#include "script/check.hpp"
 #include "script/sheller.hpp"
 
-class ScriptController {
+class ScriptController : public Controller {
 private:
     static std::weak_ptr<lithium::ScriptManager> mScriptManager;
 
@@ -86,8 +89,73 @@ private:
         return crow::response(200, res);
     }
 
+    static std::weak_ptr<lithium::ScriptAnalyzer> mScriptAnalyzer;
+
+    // Utility function to handle all script analyzer actions
+    static auto handleAnalyzerAction(
+        const crow::request& req, const crow::json::rvalue& body,
+        const std::string& command,
+        std::function<bool(std::shared_ptr<lithium::ScriptAnalyzer>)> func) {
+        crow::json::wvalue res;
+        res["command"] = command;
+
+        try {
+            auto scriptAnalyzer = mScriptAnalyzer.lock();
+            if (!scriptAnalyzer) {
+                res["status"] = "error";
+                res["code"] = 500;
+                res["error"] =
+                    "Internal Server Error: ScriptAnalyzer instance is null.";
+                LOG_F(ERROR,
+                      "ScriptAnalyzer instance is null. Unable to proceed with "
+                      "command: {}",
+                      command);
+                return crow::response(500, res);
+            } else {
+                bool success = func(scriptAnalyzer);
+                if (success) {
+                    res["status"] = "success";
+                    res["code"] = 200;
+                } else {
+                    res["status"] = "error";
+                    res["code"] = 404;
+                    res["error"] = "Not Found: The specified operation failed.";
+                }
+            }
+        } catch (const std::invalid_argument& e) {
+            res["status"] = "error";
+            res["code"] = 400;
+            res["error"] =
+                std::string("Bad Request: Invalid argument - ") + e.what();
+            LOG_F(ERROR,
+                  "Invalid argument while executing command: {}. Exception: {}",
+                  command, e.what());
+        } catch (const std::runtime_error& e) {
+            res["status"] = "error";
+            res["code"] = 500;
+            res["error"] =
+                std::string("Internal Server Error: Runtime error - ") +
+                e.what();
+            LOG_F(ERROR,
+                  "Runtime error while executing command: {}. Exception: {}",
+                  command, e.what());
+        } catch (const std::exception& e) {
+            res["status"] = "error";
+            res["code"] = 500;
+            res["error"] =
+                std::string("Internal Server Error: Exception occurred - ") +
+                e.what();
+            LOG_F(
+                ERROR,
+                "Exception occurred while executing command: {}. Exception: {}",
+                command, e.what());
+        }
+
+        return crow::response(200, res);
+    }
+
 public:
-    explicit ScriptController(crow::SimpleApp& app) {
+    void registerRoutes(crow::SimpleApp& app) override {
         // Create a weak pointer to the ScriptManager
         GET_OR_CREATE_WEAK_PTR(mScriptManager, lithium::ScriptManager,
                                Constants::SCRIPT_MANAGER);
@@ -112,6 +180,28 @@ public:
             .methods("GET"_method)(&ScriptController::listScripts);
         CROW_ROUTE(app, "/script/info")
             .methods("POST"_method)(&ScriptController::getScriptInfo);
+
+        // Create a weak pointer to the ScriptAnalyzer
+        GET_OR_CREATE_WEAK_PTR(mScriptAnalyzer, lithium::ScriptAnalyzer,
+                               Constants::SCRIPT_ANALYZER);
+        // Define the routes
+        CROW_ROUTE(app, "/analyzer/analyze")
+            .methods("POST"_method)(&ScriptController::analyzeScript);
+        CROW_ROUTE(app, "/analyzer/analyzeWithOptions")
+            .methods("POST"_method)(
+                &ScriptController::analyzeScriptWithOptions);
+        CROW_ROUTE(app, "/analyzer/updateConfig")
+            .methods("POST"_method)(&ScriptController::updateConfig);
+        CROW_ROUTE(app, "/analyzer/addCustomPattern")
+            .methods("POST"_method)(&ScriptController::addCustomPattern);
+        CROW_ROUTE(app, "/analyzer/validateScript")
+            .methods("POST"_method)(&ScriptController::validateScript);
+        CROW_ROUTE(app, "/analyzer/getSafeVersion")
+            .methods("POST"_method)(&ScriptController::getSafeVersion);
+        CROW_ROUTE(app, "/analyzer/getTotalAnalyzed")
+            .methods("GET"_method)(&ScriptController::getTotalAnalyzed);
+        CROW_ROUTE(app, "/analyzer/getAverageAnalysisTime")
+            .methods("GET"_method)(&ScriptController::getAverageAnalysisTime);
     }
 
     // Endpoint to register a script
@@ -291,6 +381,143 @@ public:
                 return false;
             });
     }
+
+    // Endpoint to analyze a script
+    void analyzeScript(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleAnalyzerAction(
+            req, body, "analyzeScript", [&](auto scriptAnalyzer) {
+                scriptAnalyzer->analyze(
+                    std::string(body["script"].s()), body["output_json"].b(),
+                    static_cast<lithium::ReportFormat>(body["format"].i()));
+                return true;
+            });
+    }
+
+    // Endpoint to analyze a script with options
+    void analyzeScriptWithOptions(const crow::request& req,
+                                  crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleAnalyzerAction(
+            req, body, "analyzeScriptWithOptions", [&](auto scriptAnalyzer) {
+                lithium::AnalyzerOptions options;
+                options.async_mode = body["options"]["async_mode"].b();
+                options.deep_analysis = body["options"]["deep_analysis"].b();
+                options.thread_count = body["options"]["thread_count"].i();
+                options.timeout_seconds =
+                    body["options"]["timeout_seconds"].i();
+                for (const auto& pattern : body["options"]["ignore_patterns"]) {
+                    options.ignore_patterns.push_back(pattern.s());
+                }
+                auto result = scriptAnalyzer->analyzeWithOptions(
+                    std::string(body["script"].s()), options);
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["complexity"] = result.complexity;
+                response["execution_time"] = result.execution_time;
+                response["timeout_occurred"] = result.timeout_occurred;
+                response["dangers"] = crow::json::wvalue::list();
+                std::vector<lithium::DangerItem> dangers;
+                for (const auto& danger : result.dangers) {
+                    crow::json::wvalue danger_item;
+                    danger_item["category"] = danger.category;
+                    danger_item["command"] = danger.command;
+                    danger_item["reason"] = danger.reason;
+                    danger_item["line"] = danger.line;
+                    danger_item["context"] = danger.context.value_or("");
+                    dangers.push_back(danger);
+                }
+                response["dangers"] = dangers;
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to update the configuration
+    void updateConfig(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleAnalyzerAction(
+            req, body, "updateConfig", [&](auto scriptAnalyzer) {
+                scriptAnalyzer->updateConfig(
+                    std::string(body["config_file"].s()));
+                return true;
+            });
+    }
+
+    // Endpoint to add a custom pattern
+    void addCustomPattern(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleAnalyzerAction(req, body, "addCustomPattern",
+                                   [&](auto scriptAnalyzer) {
+                                       scriptAnalyzer->addCustomPattern(
+                                           std::string(body["pattern"].s()),
+                                           std::string(body["category"].s()));
+                                       return true;
+                                   });
+    }
+
+    // Endpoint to validate a script
+    void validateScript(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleAnalyzerAction(
+            req, body, "validateScript", [&](auto scriptAnalyzer) {
+                bool isValid = scriptAnalyzer->validateScript(
+                    std::string(body["script"].s()));
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["is_valid"] = isValid;
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to get the safe version of a script
+    void getSafeVersion(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleAnalyzerAction(
+            req, body, "getSafeVersion", [&](auto scriptAnalyzer) {
+                std::string safeScript = scriptAnalyzer->getSafeVersion(
+                    std::string(body["script"].s()));
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["safe_script"] = safeScript;
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to get the total number of analyzed scripts
+    void getTotalAnalyzed(const crow::request& req, crow::response& res) {
+        res = handleAnalyzerAction(
+            req, crow::json::rvalue{}, "getTotalAnalyzed",
+            [&](auto scriptAnalyzer) {
+                size_t totalAnalyzed = scriptAnalyzer->getTotalAnalyzed();
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["total_analyzed"] = totalAnalyzed;
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to get the average analysis time
+    void getAverageAnalysisTime(const crow::request& req, crow::response& res) {
+        res = handleAnalyzerAction(
+            req, crow::json::rvalue{}, "getAverageAnalysisTime",
+            [&](auto scriptAnalyzer) {
+                double avgTime = scriptAnalyzer->getAverageAnalysisTime();
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["average_analysis_time"] = avgTime;
+                res.write(response.dump());
+                return true;
+            });
+    }
 };
 
-#endif  // LITHIUM_ASYNC_SHELLER_CONTROLLER_HPP
+#endif  // LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP

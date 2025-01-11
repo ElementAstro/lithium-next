@@ -1,0 +1,82 @@
+
+{
+    "packageManagers": [
+        {
+            "name": "apt",
+            "checkCommand": "dpkg -l {name}",
+            "installCommand": "sudo apt-get install -y {name}",
+            "uninstallCommand": "sudo apt-get remove -y {name}",
+            "searchCommand": "apt-cache search {name}"
+        },
+        {
+            "name": "dnf",
+            "checkCommand": "rpm -q {name}",
+            "installCommand": "sudo dnf install -y {name}",
+            "uninstallCommand": "sudo dnf remove -y {name}",
+            "searchCommand": "dnf search {name}"
+        },
+        {
+            "name": "pacman",
+            "checkCommand": "pacman -Qs {name}",
+            "installCommand": "sudo pacman -S --noconfirm {name}",
+            "uninstallCommand": "sudo pacman -R --noconfirm {name}",
+            "searchCommand": "pacman -Ss {name}"
+        },
+        {
+            "name": "zypper",
+            "checkCommand": "rpm -q {name}",
+            "installCommand": "sudo zypper install -y {name}",
+            "uninstallCommand": "sudo zypper remove -y {name}",
+            "searchCommand": "zypper search {name}"
+        },
+        {
+            "name": "flatpak",
+            "checkCommand": "flatpak list | grep {name}",
+            "installCommand": "flatpak install -y {name}",
+            "uninstallCommand": "flatpak uninstall -y {name}",
+            "searchCommand": "flatpak search {name}"
+        },
+        {
+            "name": "snap",
+            "checkCommand": "snap list {name}",
+            "installCommand": "sudo snap install {name}",
+            "uninstallCommand": "sudo snap remove {name}",
+            "searchCommand": "snap find {name}"
+        },
+        {
+            "name": "brew",
+            "checkCommand": "brew list {name}",
+            "installCommand": "brew install {name}",
+            "uninstallCommand": "brew uninstall {name}",
+            "searchCommand": "brew search {name}"
+        },
+        {
+            "name": "port",
+            "checkCommand": "port installed {name}",
+            "installCommand": "sudo port install {name}",
+            "uninstallCommand": "sudo port uninstall {name}",
+            "searchCommand": "port search {name}"
+        },
+        {
+            "name": "choco",
+            "checkCommand": "choco list --local-only {name}",
+            "installCommand": "choco install {name} -y",
+            "uninstallCommand": "choco uninstall {name} -y",
+            "searchCommand": "choco search {name}"
+        },
+        {
+            "name": "scoop",
+            "checkCommand": "scoop list {name}",
+            "installCommand": "scoop install {name}",
+            "uninstallCommand": "scoop uninstall {name}",
+            "searchCommand": "scoop search {name}"
+        },
+        {
+            "name": "winget",
+            "checkCommand": "winget list {name}",
+            "installCommand": "winget install -e --id {name}",
+            "uninstallCommand": "winget uninstall -e --id {name}",
+            "searchCommand": "winget search {name}"
+        }
+    ]
+}
