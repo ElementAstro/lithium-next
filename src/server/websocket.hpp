@@ -10,8 +10,11 @@
 #include <vector>
 
 #include "atom/async/message_bus.hpp"
+#include "atom/async/pool.hpp"
 #include "atom/type/json_fwd.hpp"
+
 #include "command.hpp"
+#include "rate_limiter.hpp"
 #include "crow.h"
 
 /**
@@ -36,6 +39,15 @@ public:
             false;  ///< Flag to enable or disable compression.
         size_t max_connections =
             1000;  ///< Maximum number of concurrent connections.
+
+        // 新增配置选项
+        size_t thread_pool_size = 4;       // 线程池大小
+        size_t message_queue_size = 1000;  // 消息队列大小
+        bool enable_ssl = false;           // 是否启用SSL
+        std::string ssl_cert;              // SSL证书路径
+        std::string ssl_key;               // SSL密钥路径
+        size_t ping_interval = 30;         // 心跳间隔(秒)
+        size_t connection_timeout = 60;    // 连接超时(秒)
     };
 
     /**
@@ -58,11 +70,30 @@ public:
     void start();
 
     /**
+     * @brief Stops the WebSocket server.
+     */
+    void stop();
+
+    /**
+     * @brief Checks if the WebSocket server is running.
+     *
+     * @return True if the server is running, false otherwise.
+     */
+    bool is_running() const;
+
+    /**
      * @brief Broadcasts a message to all connected clients.
      *
      * @param msg The message to broadcast.
      */
     void broadcast(const std::string& msg);
+
+    /**
+     * @brief Broadcasts a batch of messages to all connected clients.
+     *
+     * @param messages The messages to broadcast.
+     */
+    void broadcast_batch(const std::vector<std::string>& messages);
 
     /**
      * @brief Sends a message to a specific client.
@@ -154,6 +185,28 @@ public:
      */
     std::vector<std::string> get_subscribed_topics() const;
 
+    /**
+     * @brief Sets the rate limit for connections.
+     *
+     * @param messages_per_second The maximum number of messages per second.
+     */
+    void set_rate_limit(size_t messages_per_second);
+
+    /**
+     * @brief Gets the performance statistics.
+     *
+     * @return A JSON object containing the performance statistics.
+     */
+    auto get_stats() const -> nlohmann::json;
+
+    /**
+     * @brief Sets the compression settings for messages.
+     *
+     * @param enable Flag to enable or disable compression.
+     * @param level The compression level (default is 6).
+     */
+    void set_compression(bool enable, int level = 6);
+
 private:
     void on_open(crow::websocket::connection& conn);
     void on_close(crow::websocket::connection& conn, const std::string& reason,
@@ -192,6 +245,18 @@ private:
     std::unordered_map<std::string, atom::async::MessageBus::Token>
         bus_subscriptions_;
 
+    std::atomic<bool> running_{false};
+    std::thread server_thread_;
+    std::unique_ptr<atom::async::ThreadPool<>> thread_pool_;
+
+    std::atomic<size_t> total_messages_{0};
+    std::atomic<size_t> error_count_{0};
+
+    std::unique_ptr<RateLimiter> rate_limiter_;
+
+    bool compression_enabled_{false};
+    int compression_level_{6};
+
     void setup_message_bus_handlers();
     void setup_command_handlers();
     void handle_client_message(crow::websocket::connection& conn,
@@ -203,6 +268,10 @@ private:
     bool validate_message_format(const nlohmann::json& message);
     void handle_connection_error(crow::websocket::connection& conn,
                                  const std::string& error);
+
+    void run_server();        // 服务器主循环
+    void check_timeouts();    // 检查超时连接
+    void handle_ping_pong();  // 处理心跳
 };
 
 /**

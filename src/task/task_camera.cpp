@@ -331,4 +331,61 @@ void SmartExposureTask::execute(const json& params) {
     }
 }
 
+auto CameraSettingsTask::taskName() -> std::string { return "CameraSettings"; }
+
+void CameraSettingsTask::execute(const json& params) {
+    LOG_F(INFO, "Executing CameraSettings task with params: {}",
+          params.dump(4));
+
+#ifdef MOCK_CAMERA
+    std::shared_ptr<MockCamera> camera = std::make_shared<MockCamera>();
+#else
+    std::shared_ptr<AtomCamera> camera =
+        GetPtr<AtomCamera>(Constants::MAIN_CAMERA).value();
+#endif
+
+    if (!camera) {
+        LOG_F(ERROR, "Main camera not set");
+        THROW_RUNTIME_ERROR("Main camera not set");
+    }
+
+    if (params.contains("gain")) {
+        int gain = params["gain"].get<int>();
+        LOG_F(INFO, "Setting camera gain to {}", gain);
+        camera->setGain(gain);
+    }
+
+    if (params.contains("offset")) {
+        int offset = params["offset"].get<int>();
+        LOG_F(INFO, "Setting camera offset to {}", offset);
+        camera->setOffset(offset);
+    }
+
+    if (params.contains("binning")) {
+        int binning = params["binning"].get<int>();
+        LOG_F(INFO, "Setting camera binning to {}x{}", binning, binning);
+        camera->setBinning(binning, binning);
+    }
+}
+
+auto CameraPreviewTask::taskName() -> std::string { return "CameraPreview"; }
+
+void CameraPreviewTask::execute(const json& params) {
+    LOG_F(INFO, "Executing CameraPreview task with params: {}", params.dump(4));
+
+    double time = params.at("exposure").get<double>();
+    int binning = params.value("binning", 1);
+    int gain = params.value("gain", 0);
+    int offset = params.value("offset", 0);
+
+    json previewParams = {{"exposure", time},
+                          {"type", "snapshot"},
+                          {"binning", binning},
+                          {"gain", gain},
+                          {"offset", offset}};
+
+    LOG_F(INFO, "Taking preview image with exposure {} seconds", time);
+    TakeExposureTask::execute(previewParams);
+}
+
 }  // namespace lithium::sequencer::task

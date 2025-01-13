@@ -17,6 +17,8 @@ set(lithium_src_dir ${CMAKE_SOURCE_DIR}/src)
 set(lithium_thirdparty_dir ${CMAKE_SOURCE_DIR}/libs/thirdparty)
 set(lithium_atom_dir ${CMAKE_SOURCE_DIR}/libs/atom)
 
+set(CROW_ENABLE_COMPRESSION ON)
+
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/")
 

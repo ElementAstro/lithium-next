@@ -2,22 +2,36 @@
 #include <thread>
 #include <vector>
 
+#include "crow/compression.h"
+
+#include "components/loader.hpp"
+#include "components/manager.hpp"
+
+#include "device/manager.hpp"
+
+#include "script/check.hpp"
+#include "script/python_caller.hpp"
+#include "script/sheller.hpp"
+
 #include "config/configor.hpp"
 #include "constant/constant.hpp"
+#include "server/command.hpp"
 #include "server/controller/controller.hpp"
-#include "server/middleware.hpp"
 
+#include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/utils/argsview.hpp"
 
 #include "debug/terminal.hpp"
+
 #include "server/controller/config.hpp"
 #include "server/controller/python.hpp"
 #include "server/controller/script.hpp"
 #include "server/controller/search.hpp"
 #include "server/controller/sequencer.hpp"
+#include "server/websocket.hpp"
 
 using namespace std::string_literals;
 
@@ -53,6 +67,41 @@ void setupLogFile() {
     });
 }
 
+void injectPtr() {
+    LOG_F(INFO, "Injecting global pointers...");
+
+    AddPtr<atom::async::MessageBus>(
+        Constants::MESSAGE_BUS, std::make_shared<atom::async::MessageBus>());
+    auto eventLoop = std::make_shared<lithium::app::EventLoop>();
+    AddPtr<lithium::app::EventLoop>(Constants::EVENT_LOOP, eventLoop);
+    AddPtr<lithium::app::CommandDispatcher>(
+        Constants::COMMAND_DISPATCHER,
+        std::make_shared<lithium::app::CommandDispatcher>(
+            eventLoop, lithium::app::CommandDispatcher::Config{}));
+
+    AddPtr<lithium::ConfigManager>(Constants::CONFIG_MANAGER,
+                                   std::make_shared<lithium::ConfigManager>());
+
+    AddPtr<lithium::ComponentManager>(
+        Constants::COMPONENT_MANAGER,
+        std::make_shared<lithium::ComponentManager>());
+    AddPtr<lithium::ModuleLoader>(Constants::MODULE_LOADER,
+                                  std::make_shared<lithium::ModuleLoader>());
+
+    AddPtr<lithium::DeviceManager>(Constants::DEVICE_MANAGER,
+                                   std::make_shared<lithium::DeviceManager>());
+
+    AddPtr<lithium::PythonWrapper>(Constants::PYTHON_WRAPPER,
+                                   std::make_shared<lithium::PythonWrapper>());
+    AddPtr<lithium::ScriptManager>(Constants::SCRIPT_MANAGER,
+                                   std::make_shared<lithium::ScriptManager>());
+    AddPtr<lithium::ScriptAnalyzer>(
+        Constants::SCRIPT_ANALYZER,
+        std::make_shared<lithium::ScriptAnalyzer>());
+
+    LOG_F(INFO, "Global pointers injected.");
+}
+
 int main(int argc, char *argv[]) {
 #if LITHIUM_ENABLE_CPPTRACE
     cpptrace::init();
@@ -70,6 +119,8 @@ int main(int argc, char *argv[]) {
     // Set log file
     setupLogFile();
     loguru::init(argc, argv);
+
+    injectPtr();
 
     atom::utils::ArgumentParser program("Lithium Server"s);
 
@@ -156,6 +207,9 @@ int main(int argc, char *argv[]) {
 
     crow::SimpleApp app;
 
+    // TODO: Add compression support
+    // app.use_compression(crow::compression::algorithm::GZIP);
+
     std::vector<std::shared_ptr<Controller>> controllers;
     controllers.push_back(std::make_shared<ConfigController>());
     controllers.push_back(std::make_shared<PythonController>());
@@ -180,6 +234,13 @@ int main(int argc, char *argv[]) {
         LOG_F(INFO, "Server is running on {}", port);
         app.port(port).multithreaded().run();
     });
+
+    WebSocketServer ws_server(
+        app, GetPtr<atom::async::MessageBus>(Constants::MESSAGE_BUS).value(),
+        GetPtr<lithium::app::CommandDispatcher>(Constants::COMMAND_DISPATCHER)
+            .value(),
+        {});
+    ws_server.start();
 
     std::thread *debugTerminalThread = nullptr;
     if (program.get<bool>("debug").value_or(false)) {

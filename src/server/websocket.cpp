@@ -112,6 +112,40 @@ void WebSocketServer::forward_to_message_bus(const std::string& topic,
 
 // 启动 WebSocket 服务器
 void WebSocketServer::start() {
+    if (running_) {
+        return;
+    }
+
+    // 初始化线程池
+    thread_pool_ =
+        std::make_unique<atom::async::ThreadPool<>>(config_.thread_pool_size);
+
+    // 启动服务器线程
+    running_ = true;
+    server_thread_ = std::thread(&WebSocketServer::run_server, this);
+
+    LOG_F(INFO, "WebSocket server started in background thread");
+}
+
+void WebSocketServer::stop() {
+    if (!running_) {
+        return;
+    }
+
+    running_ = false;
+
+    if (server_thread_.joinable()) {
+        server_thread_.join();
+    }
+
+    // 清理资源
+    thread_pool_.reset();
+
+    LOG_F(INFO, "WebSocket server stopped");
+}
+
+void WebSocketServer::run_server() {
+    // 设置路由
     auto& route =
         CROW_WEBSOCKET_ROUTE(app_, "/ws")
             .onopen(
@@ -128,35 +162,68 @@ void WebSocketServer::start() {
                 on_error(conn, error_message);
             });
 
-    // 设置最大负载大小
-    if (max_payload_size_ != UINT64_MAX) {
-        route.max_payload(max_payload_size_);
-        LOG_F(INFO, "Set max payload size: {}", max_payload_size_);
+    // SSL配置
+    if (config_.enable_ssl) {
+        app_.ssl_file(config_.ssl_cert, config_.ssl_key);
     }
 
-    // 设置子协议
-    if (!subprotocols_.empty()) {
-        route.subprotocols(subprotocols_);
-        LOG_F(INFO, "Set subprotocols: {}", subprotocols_);
-    }
+    // 启动心跳检测
+    std::thread ping_thread([this]() {
+        while (running_) {
+            handle_ping_pong();
+            std::this_thread::sleep_for(
+                std::chrono::seconds(config_.ping_interval));
+        }
+    });
 
-    // 订阅MessageBus消息用于广播
-    message_bus_->subscribe<std::string>(
-        "broadcast",
-        [this](const std::string& message) { broadcast(message); });
-    LOG_F(INFO, "WebSocket server started");
+    // 启动超时检查
+    std::thread timeout_thread([this]() {
+        while (running_) {
+            check_timeouts();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    });
+
+    ping_thread.detach();
+    timeout_thread.detach();
 }
 
-// 广播消息到所有客户端
 void WebSocketServer::broadcast(const std::string& msg) {
-    std::lock_guard<std::mutex> lock(conn_mutex_);
-    LOG_F(INFO, "Broadcasting message to all clients: {}", msg);
-    for (auto* conn : clients_) {
-        conn->send_text(msg);
+    if (!running_)
+        return;
+
+    // 限流检查
+    if (rate_limiter_ && !rate_limiter_->allow_request()) {
+        LOG_F(WARNING, "Broadcast rate limit exceeded");
+        return;
     }
+
+    // 压缩
+    std::string compressed_msg = msg;
+
+    std::shared_lock lock(conn_mutex_);
+
+    // 使用线程池并发发送
+    std::vector<std::future<void>> futures;
+    for (auto* conn : clients_) {
+        futures.emplace_back(thread_pool_->enqueue(
+            [conn, compressed_msg]() { conn->send_text(compressed_msg); }));
+    }
+
+    // 等待所有发送完成
+    for (auto& f : futures) {
+        f.wait();
+    }
+
+    total_messages_++;
 }
 
-// 向特定客户端发送消息
+auto WebSocketServer::get_stats() const -> nlohmann::json {
+    return {{"total_messages", total_messages_.load()},
+            {"error_count", error_count_.load()},
+            {"active_connections", clients_.size()}};
+}
+
 void WebSocketServer::send_to_client(crow::websocket::connection& conn,
                                      const std::string& msg) {
     LOG_F(INFO, "Sending message to client {}: {}", &conn, msg);

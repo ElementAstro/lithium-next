@@ -59,6 +59,24 @@ public:
     static void execute(const json& params);
 };
 
+/**
+ * @brief Derived class for creating CameraSettings tasks.
+ */
+class CameraSettingsTask : public TaskCreator<CameraSettingsTask> {
+public:
+    static auto taskName() -> std::string;
+    static void execute(const json& params);
+};
+
+/**
+ * @brief Derived class for creating CameraPreview tasks.
+ */
+class CameraPreviewTask : public TaskCreator<CameraPreviewTask> {
+public:
+    static auto taskName() -> std::string;
+    static void execute(const json& params);
+};
+
 }  // namespace lithium::sequencer::task
 
 #endif  // LITHIUM_TASK_SIMPLE_TASK_CAMERA_HPP
