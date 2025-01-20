@@ -16,6 +16,12 @@ public:
     explicit INDIFilterwheel(std::string name);
     ~INDIFilterwheel() override = default;
 
+    auto initialize() -> bool override;
+
+    auto destroy() -> bool override;
+
+    auto isConnected() const -> bool override;
+
     auto connect(const std::string &deviceName, int timeout,
                  int maxRetry) -> bool override;
 

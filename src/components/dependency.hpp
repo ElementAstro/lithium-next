@@ -191,6 +191,13 @@ public:
     static auto parsePackageJson(const Node& path)
         -> std::pair<Node, std::unordered_map<Node, Version>>;
 
+    /**
+     * @brief 验证一个节点的所有依赖是否有效
+     * @param node 要验证的节点名称
+     * @return 如果所有依赖都有效返回true,否则返回false
+     */
+    auto validateDependencies(const Node& node) const -> bool;
+
 private:
     mutable std::shared_mutex mutex_;
     std::unordered_map<Node, std::unordered_set<Node>>

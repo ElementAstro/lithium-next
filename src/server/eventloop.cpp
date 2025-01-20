@@ -63,61 +63,81 @@ void EventLoop::run() {
 }
 
 void EventLoop::workerThread() {
-    while (!stop_flag_.load()) {
-        std::function<void()> task;
+    // 使用线程本地存储来缓存任务
+    thread_local std::vector<Task> local_tasks;
+    thread_local int idle_count = 0;
+    local_tasks.reserve(64);  // 预分配空间
+
+    while (!stop_flag_.load(std::memory_order_relaxed)) {
+        Task task;
+        bool has_task = false;
+
+        // 批量获取任务到本地队列
         {
-            std::unique_lock lock(queue_mutex_);
-            if (!tasks_.empty()) {
-                auto currentTime = std::chrono::steady_clock::now();
-                if (tasks_.top().execTime <= currentTime) {
-                    task = tasks_.top().func;
-                    tasks_.pop();
+            const int batch_size = 16;
+            for (int i = 0; i < batch_size && task_queue_.pop(task); ++i) {
+                auto current_time = std::chrono::steady_clock::now();
+                if (task.execTime <= current_time && task.is_active) {
+                    local_tasks.push_back(std::move(task));
+                } else {
+                    task_queue_.push(std::move(task));
                 }
             }
         }
 
-        if (task) {
-            task();
-        } else {
+        // 执行本地任务
+        for (auto& t : local_tasks) {
+            if (t.is_active) {
+                t.func();
+            }
+            // 如果是周期性任务，重新入队
+            if (t.type == Task::Type::Periodic) {
+                t.execTime +=
+                    std::chrono::milliseconds(100);  // 假设100ms为周期
+                task_queue_.push(std::move(t));
+            }
+        }
+        local_tasks.clear();
+
+        // 进行 IO 多路复用
 #ifdef __linux__
-            int nfds = epoll_wait(epoll_fd_, epoll_events_.data(),
-                                  epoll_events_.size(), 10);
-            if (nfds == -1) {
-                ABORT_F("Epoll wait failed");
-            } else if (nfds > 0) {
-                for (int i = 0; i < nfds; ++i) {
-                    int fd = epoll_events_[i].data.fd;
-                    if (fd == signal_fd_) {
-                        // 处理信号事件
-                        uint64_t sigVal;
-                        read(signal_fd_, &sigVal, sizeof(uint64_t));
-                        auto it = signal_handlers_.find(sigVal);
-                        if (it != signal_handlers_.end()) {
-                            it->second();
-                        }
-                    } else {
-                        // 处理文件描述符事件
-                    }
-                }
+        epoll_event events[16];
+        int nfds = epoll_wait(epoll_fd_, events, 16, 1);
+        if (nfds > 0) {
+            for (int i = 0; i < nfds; ++i) {
+                // 处理 IO 事件
+                handleEpollEvent(events[i]);
             }
-#elif _WIN32
-            timeval timeout;
-            timeout.tv_sec = 0;
-            timeout.tv_usec = 10000;  // 10ms
-            fd_set tmp_fds = read_fds;
-            int result = select(0, &tmp_fds, nullptr, nullptr, &timeout);
-            if (result > 0) {
-                for (u_int i = 0; i < tmp_fds.fd_count; ++i) {
-                    SOCKET fd = tmp_fds.fd_array[i];
-                    // 处理 socket 事件
-                }
-            }
+        }
 #endif
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(10));  // Idle time
+
+        // 使用指数退避算法进行休眠
+        if (!has_task) {
+            static thread_local int idle_count = 0;
+            if (++idle_count > 10) {
+                std::this_thread::sleep_for(std::chrono::microseconds(
+                    std::min(1000, idle_count * 100)));
+            }
+        } else {
+            idle_count = 0;
         }
     }
 }
+
+// 添加事件处理辅助函数
+#ifdef __linux__
+void EventLoop::handleEpollEvent(const epoll_event& event) {
+    if (event.data.fd == signal_fd_) {
+        uint64_t sigVal;
+        if (read(signal_fd_, &sigVal, sizeof(uint64_t)) > 0) {
+            auto it = signal_handlers_.find(sigVal);
+            if (it != signal_handlers_.end()) {
+                post(0, it->second);
+            }
+        }
+    }
+}
+#endif
 
 void EventLoop::stop() {
     stop_flag_.store(true);

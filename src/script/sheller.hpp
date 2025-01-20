@@ -15,10 +15,12 @@ Description: System Script Manager
 #ifndef LITHIUM_SCRIPT_SHELLER_HPP
 #define LITHIUM_SCRIPT_SHELLER_HPP
 
+#include <chrono>
 #include <functional>
 #include <future>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -27,7 +29,22 @@ Description: System Script Manager
 using Script = std::string;
 
 namespace lithium {
+struct ScriptProgress {
+    float percentage;
+    std::string status;
+    std::chrono::system_clock::time_point timestamp;
+};
 
+struct ScriptMetadata {
+    std::string description;
+    std::vector<std::string> tags;
+    std::chrono::system_clock::time_point createdAt;
+    std::chrono::system_clock::time_point lastModified;
+    size_t version;
+    std::unordered_map<std::string, std::string> parameters;
+};
+
+enum class RetryStrategy { None, Linear, Exponential, Custom };
 /**
  * @brief Forward declaration of the implementation class for ScriptManager.
  */
@@ -273,6 +290,35 @@ public:
      */
     [[nodiscard]] auto getScriptInfo(std::string_view name) const
         -> std::string;
+
+    // 新增方法:
+
+    /**
+     * @brief 批量导入脚本
+     */
+    void importScripts(std::span<const std::pair<std::string, Script>> scripts);
+
+    /**
+     * @brief 获取脚本元数据
+     */
+    [[nodiscard]] auto getScriptMetadata(std::string_view name) const
+        -> std::optional<ScriptMetadata>;
+
+    /**
+     * @brief 设置脚本超时处理器
+     */
+    void setTimeoutHandler(std::string_view name,
+                           std::function<void()> handler);
+
+    /**
+     * @brief 设置脚本重试策略
+     */
+    void setRetryStrategy(std::string_view name, RetryStrategy strategy);
+
+    /**
+     * @brief 获取正在运行的脚本列表
+     */
+    [[nodiscard]] auto getRunningScripts() const -> std::vector<std::string>;
 };
 
 }  // namespace lithium

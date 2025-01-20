@@ -68,6 +68,8 @@ struct ModuleInfo {
     std::chrono::system_clock::time_point
         loadTime;  ///< The time when the module was loaded.
 
+    std::size_t hash;  ///< 模块哈希值
+
     /**
      * @brief Represents the status of the module.
      */
@@ -92,6 +94,10 @@ struct ModuleInfo {
         size_t errors{0};  ///< The number of errors encountered by the module.
         double avgResponseTime{
             0.0};              ///< The average response time of the module.
+        double averageLoadTime;     ///< 平均加载时间
+        std::size_t loadCount;      ///< 加载次数
+        std::size_t failureCount;   ///< 失败次数
+        std::chrono::system_clock::time_point lastAccess;  ///< 最后访问时间
     } ATOM_ALIGNAS(32) stats;  ///< Statistics about the module.
 } ATOM_ALIGNAS(128);
 

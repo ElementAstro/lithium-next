@@ -1,5 +1,7 @@
 add_subdirectory(client)
+add_subdirectory(components)
 add_subdirectory(config)
+add_subdirectory(debug)
 add_subdirectory(device)
 add_subdirectory(script)
 add_subdirectory(server)

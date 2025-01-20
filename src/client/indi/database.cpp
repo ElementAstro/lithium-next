@@ -89,7 +89,7 @@ std::optional<std::string> Database::getAutoProfile() const {
     LOG_F(INFO, "Fetching auto-start profile");
     for (const auto& profile : db_["profiles"]) {
         if (profile["autostart"].get<bool>()) {
-            LOG_F(INFO, "Auto-start profile found: {}", profile["name"]);
+            LOG_F(INFO, "Auto-start profile found: {}", profile["name"].dump());
             return profile["name"];
         }
     }

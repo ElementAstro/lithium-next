@@ -17,6 +17,20 @@
 
 INDIFilterwheel::INDIFilterwheel(std::string name) : AtomFilterWheel(name) {}
 
+auto INDIFilterwheel::initialize() -> bool {
+    // Implement initialization logic here
+    return true;
+}
+
+auto INDIFilterwheel::destroy() -> bool {
+    // Implement destruction logic here
+    return true;
+}
+
+auto INDIFilterwheel::isConnected() const -> bool {
+    return isConnected_.load();
+}
+
 auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
                               int maxRetry) -> bool {
     if (isConnected_.load()) {

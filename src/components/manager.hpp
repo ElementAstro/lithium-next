@@ -14,14 +14,16 @@ Description: Component Manager (the core of the plugin system)
 
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 #include <unordered_map>
-#include <functional>
+#include <vector>
 
 #include "atom/components/component.hpp"
+#include "atom/memory/memory.hpp"
+#include "atom/memory/object.hpp"
 #include "atom/type/json_fwd.hpp"
 
 using json = nlohmann::json;
@@ -31,7 +33,7 @@ namespace lithium {
 // 组件事件类型
 enum class ComponentEvent {
     PreLoad,
-    PostLoad, 
+    PostLoad,
     PreUnload,
     PostUnload,
     ConfigChanged,
@@ -175,9 +177,9 @@ public:
     void printDependencyTree();
 
     // 简化的组件创建接口
-    template<typename T>
-    auto createComponent(const std::string& name, 
-                        const ComponentOptions& options = {}) 
+    template <typename T>
+    auto createComponent(const std::string& name,
+                         const ComponentOptions& options = {})
         -> std::shared_ptr<T>;
 
     // 组件生命周期管理
@@ -185,9 +187,10 @@ public:
     auto stopComponent(const std::string& name) -> bool;
     auto pauseComponent(const std::string& name) -> bool;
     auto resumeComponent(const std::string& name) -> bool;
-    
+
     // 事件监听
-    using EventCallback = std::function<void(const std::string&, ComponentEvent, const json&)>;
+    using EventCallback =
+        std::function<void(const std::string&, ComponentEvent, const json&)>;
     void addEventListener(ComponentEvent event, EventCallback callback);
     void removeEventListener(ComponentEvent event);
 
@@ -197,14 +200,15 @@ public:
 
     // 组件状态查询
     auto getComponentState(const std::string& name) -> ComponentState;
-    
+
     // 配置管理
     void updateConfig(const std::string& name, const json& config);
     auto getConfig(const std::string& name) -> json;
 
     // 组件分组管理
     void addToGroup(const std::string& name, const std::string& group);
-    auto getGroupComponents(const std::string& group) -> std::vector<std::string>;
+    auto getGroupComponents(const std::string& group)
+        -> std::vector<std::string>;
 
     // 性能监控
     auto getPerformanceMetrics() -> json;
@@ -233,18 +237,23 @@ private:
     std::unique_ptr<ComponentManagerImpl> impl_;
 
     // 新增私有成员
-    std::unordered_map<ComponentEvent, std::vector<EventCallback>> eventListeners_;
+    std::unordered_map<ComponentEvent, std::vector<EventCallback>>
+        eventListeners_;
     std::unordered_map<std::string, ComponentState> componentStates_;
     std::unordered_map<std::string, ComponentOptions> componentOptions_;
     std::unordered_map<std::string, std::vector<std::string>> componentGroups_;
-    
+
     std::string lastError_;
     bool performanceMonitoringEnabled_{false};
-    
+
+    // 新增内存池相关成员
+    std::shared_ptr<atom::memory::ObjectPool<std::shared_ptr<Component>>>
+        component_pool_;
+    std::unique_ptr<MemoryPool<char, 4096>> memory_pool_;
+
     // 内部辅助方法
-    void notifyListeners(const std::string& component, 
-                        ComponentEvent event,
-                        const json& data = {});
+    void notifyListeners(const std::string& component, ComponentEvent event,
+                         const json& data = {});
     auto validateComponentOperation(const std::string& name) -> bool;
     void updateComponentState(const std::string& name, ComponentState state);
     auto initializeComponent(const std::string& name) -> bool;

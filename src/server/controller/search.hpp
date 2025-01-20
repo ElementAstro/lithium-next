@@ -7,6 +7,7 @@
 #ifndef LITHIUM_ASYNC_SEARCH_ENGINE_CONTROLLER_HPP
 #define LITHIUM_ASYNC_SEARCH_ENGINE_CONTROLLER_HPP
 
+#include <crow/json.h>
 #include "controller.hpp"
 
 #include <functional>
@@ -94,46 +95,51 @@ public:
                                Constants::SEARCH_ENGINE);
         // Define the routes
         CROW_ROUTE(app, "/search_engine/addStarObject")
-            .methods("POST"_method)(&SearchController::addStarObject);
+            .methods("POST"_method)(&SearchController::addStarObject, this);
         CROW_ROUTE(app, "/search_engine/searchStarObject")
-            .methods("POST"_method)(&SearchController::searchStarObject);
+            .methods("POST"_method)(&SearchController::searchStarObject, this);
         CROW_ROUTE(app, "/search_engine/fuzzySearchStarObject")
-            .methods("POST"_method)(&SearchController::fuzzySearchStarObject);
+            .methods("POST"_method)(&SearchController::fuzzySearchStarObject,
+                                    this);
         CROW_ROUTE(app, "/search_engine/autoCompleteStarObject")
-            .methods("POST"_method)(&SearchController::autoCompleteStarObject);
+            .methods("POST"_method)(&SearchController::autoCompleteStarObject,
+                                    this);
         CROW_ROUTE(app, "/search_engine/filterSearch")
-            .methods("POST"_method)(&SearchController::filterSearch);
+            .methods("POST"_method)(&SearchController::filterSearch, this);
         CROW_ROUTE(app, "/search_engine/loadFromNameJson")
-            .methods("POST"_method)(&SearchController::loadFromNameJson);
+            .methods("POST"_method)(&SearchController::loadFromNameJson, this);
         CROW_ROUTE(app, "/search_engine/loadFromCelestialJson")
-            .methods("POST"_method)(&SearchController::loadFromCelestialJson);
+            .methods("POST"_method)(&SearchController::loadFromCelestialJson,
+                                    this);
         CROW_ROUTE(app, "/search_engine/initializeRecommendationEngine")
             .methods("POST"_method)(
-                &SearchController::initializeRecommendationEngine);
+                &SearchController::initializeRecommendationEngine, this);
         CROW_ROUTE(app, "/search_engine/addUserRating")
-            .methods("POST"_method)(&SearchController::addUserRating);
+            .methods("POST"_method)(&SearchController::addUserRating, this);
         CROW_ROUTE(app, "/search_engine/recommendItems")
-            .methods("POST"_method)(&SearchController::recommendItems);
+            .methods("POST"_method)(&SearchController::recommendItems, this);
         CROW_ROUTE(app, "/search_engine/saveRecommendationModel")
-            .methods("POST"_method)(&SearchController::saveRecommendationModel);
+            .methods("POST"_method)(&SearchController::saveRecommendationModel,
+                                    this);
         CROW_ROUTE(app, "/search_engine/loadRecommendationModel")
-            .methods("POST"_method)(&SearchController::loadRecommendationModel);
+            .methods("POST"_method)(&SearchController::loadRecommendationModel,
+                                    this);
         CROW_ROUTE(app, "/search_engine/trainRecommendationEngine")
             .methods("POST"_method)(
-                &SearchController::trainRecommendationEngine);
+                &SearchController::trainRecommendationEngine, this);
         CROW_ROUTE(app, "/search_engine/loadFromCSV")
-            .methods("POST"_method)(&SearchController::loadFromCSV);
+            .methods("POST"_method)(&SearchController::loadFromCSV, this);
         CROW_ROUTE(app, "/search_engine/getHybridRecommendations")
-            .methods("POST"_method)(
-                &SearchController::getHybridRecommendations);
+            .methods("POST"_method)(&SearchController::getHybridRecommendations,
+                                    this);
         CROW_ROUTE(app, "/search_engine/exportToCSV")
-            .methods("POST"_method)(&SearchController::exportToCSV);
+            .methods("POST"_method)(&SearchController::exportToCSV, this);
         CROW_ROUTE(app, "/search_engine/clearCache")
-            .methods("POST"_method)(&SearchController::clearCache);
+            .methods("POST"_method)(&SearchController::clearCache, this);
         CROW_ROUTE(app, "/search_engine/setCacheSize")
-            .methods("POST"_method)(&SearchController::setCacheSize);
+            .methods("POST"_method)(&SearchController::setCacheSize, this);
         CROW_ROUTE(app, "/search_engine/getCacheStats")
-            .methods("GET"_method)(&SearchController::getCacheStats);
+            .methods("GET"_method)(&SearchController::getCacheStats, this);
     }
 
     // Endpoint to add a star object
@@ -152,6 +158,55 @@ public:
             });
     }
 
+    auto to_json(const lithium::target::CelestialObject& celestialObject) {
+        crow::json::wvalue obj;
+        obj["ID"] = celestialObject.ID;
+        obj["Identifier"] = celestialObject.Identifier;
+        obj["MIdentifier"] = celestialObject.MIdentifier;
+        obj["ExtensionName"] = celestialObject.ExtensionName;
+        obj["Component"] = celestialObject.Component;
+        obj["ClassName"] = celestialObject.ClassName;
+        obj["AmateurRank"] = celestialObject.AmateurRank;
+        obj["ChineseName"] = celestialObject.ChineseName;
+        obj["Type"] = celestialObject.Type;
+        obj["DuplicateType"] = celestialObject.DuplicateType;
+        obj["Morphology"] = celestialObject.Morphology;
+        obj["ConstellationZh"] = celestialObject.ConstellationZh;
+        obj["ConstellationEn"] = celestialObject.ConstellationEn;
+        obj["RAJ2000"] = celestialObject.RAJ2000;
+        obj["RADJ2000"] = celestialObject.RADJ2000;
+        obj["DecJ2000"] = celestialObject.DecJ2000;
+        obj["DecDJ2000"] = celestialObject.DecDJ2000;
+        obj["VisualMagnitudeV"] = celestialObject.VisualMagnitudeV;
+        obj["PhotographicMagnitudeB"] = celestialObject.PhotographicMagnitudeB;
+        obj["BMinusV"] = celestialObject.BMinusV;
+        obj["SurfaceBrightness"] = celestialObject.SurfaceBrightness;
+        obj["MajorAxis"] = celestialObject.MajorAxis;
+        obj["MinorAxis"] = celestialObject.MinorAxis;
+        obj["PositionAngle"] = celestialObject.PositionAngle;
+        obj["DetailedDescription"] = celestialObject.DetailedDescription;
+        obj["BriefDescription"] = celestialObject.BriefDescription;
+
+        return obj;
+    }
+
+    auto to_json(const lithium::target::StarObject& starObject) {
+        crow::json::wvalue obj;
+        obj["name"] = starObject.getName();
+        obj["aliases"] = starObject.getAliases();
+        obj["clickCount"] = starObject.getClickCount();
+        obj["celestialObject"] = to_json(starObject.getCelestialObject());
+        return obj;
+    }
+
+    auto to_json(const std::vector<lithium::target::StarObject>& starObjects) {
+        crow::json::wvalue arr;
+        for (size_t i = 0; i < starObjects.size(); i++) {
+            arr[i] = to_json(starObjects[i]);
+        }
+        return arr;
+    }
+
     // Endpoint to search for a star object
     void searchStarObject(const crow::request& req, crow::response& res) {
         auto body = crow::json::load(req.body);
@@ -162,7 +217,7 @@ public:
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
-                response["results"] = results;
+                response["results"] = to_json(results);
                 res.write(response.dump());
                 return true;
             });
@@ -178,7 +233,7 @@ public:
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
-                response["results"] = results;
+                response["results"] = to_json(results);
                 res.write(response.dump());
                 return true;
             });
@@ -194,7 +249,9 @@ public:
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
-                response["results"] = results;
+                for (size_t i = 0; i < results.size(); i++) {
+                    response[i] = results[i];
+                }
                 res.write(response.dump());
                 return true;
             });
@@ -211,7 +268,7 @@ public:
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
-                response["results"] = results;
+                response["results"] = to_json(results);
                 res.write(response.dump());
                 return true;
             });
@@ -261,6 +318,15 @@ public:
             });
     }
 
+    auto to_json(const std::vector<std::pair<std::string, double>>& results) {
+        crow::json::wvalue arr;
+        for (size_t i = 0; i < results.size(); i++) {
+            arr[i]["item"] = results[i].first;
+            arr[i]["rating"] = results[i].second;
+        }
+        return arr;
+    }
+
     // Endpoint to recommend items for a user
     void recommendItems(const crow::request& req, crow::response& res) {
         auto body = crow::json::load(req.body);
@@ -271,7 +337,7 @@ public:
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
-                response["results"] = results;
+                response["results"] = to_json(results);
                 res.write(response.dump());
                 return true;
             });
@@ -341,7 +407,7 @@ public:
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
-                response["results"] = results;
+                response["results"] = to_json(results);
                 res.write(response.dump());
                 return true;
             });

@@ -229,7 +229,80 @@ private:
          * false otherwise.
          */
         auto operator<(const Task& other) const -> bool;
+
+        // 添加任务池相关字段
+        Task* next_pooled = nullptr;
+        bool is_active = true;
+        
+        // 添加任务类型标识
+        enum class Type {
+            Normal,
+            Delayed,
+            Periodic,
+            Cancelable
+        } type = Type::Normal;
+        
+        // 对象池分配器
+        static void* operator new(size_t size) {
+            return task_pool.allocate();
+        }
+        
+        static void operator delete(void* ptr) {
+            task_pool.deallocate(static_cast<Task*>(ptr));
+        }
     };
+
+    // 添加任务对象池
+    class TaskPool {
+    public:
+        Task* allocate() {
+            std::lock_guard<std::mutex> lock(pool_mutex_);
+            if (free_list_ == nullptr) {
+                return new Task();
+            }
+            Task* task = free_list_;
+            free_list_ = free_list_->next_pooled;
+            return task;
+        }
+        
+        void deallocate(Task* task) {
+            std::lock_guard<std::mutex> lock(pool_mutex_);
+            task->next_pooled = free_list_;
+            free_list_ = task;
+        }
+        
+    private:
+        Task* free_list_ = nullptr;
+        std::mutex pool_mutex_;
+    };
+    
+    static TaskPool task_pool;
+    
+    // 添加高性能任务队列
+    struct TaskQueue {
+        std::array<std::priority_queue<Task>, 3> priority_queues;  // 高中低三个优先级队列
+        std::mutex mutex;
+        
+        void push(Task&& task) {
+            std::lock_guard<std::mutex> lock(mutex);
+            int queue_index = task.priority > 0 ? 0 : (task.priority < 0 ? 2 : 1);
+            priority_queues[queue_index].push(std::move(task));
+        }
+        
+        bool pop(Task& task) {
+            std::lock_guard<std::mutex> lock(mutex);
+            for (auto& queue : priority_queues) {
+                if (!queue.empty()) {
+                    task = std::move(const_cast<Task&>(queue.top()));
+                    queue.pop();
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+    
+    TaskQueue task_queue_;
 
     std::priority_queue<Task> tasks_;
     std::mutex queue_mutex_;
@@ -251,6 +324,8 @@ private:
     int epoll_fd_;
     std::vector<struct epoll_event> epoll_events_;
     int signal_fd_;
+
+    void handleEpollEvent(const epoll_event& event);
 #elif _WIN32
     fd_set read_fds;
 #endif
@@ -275,7 +350,7 @@ auto EventLoop::post(int priority, F&& f, Args&&... args)
     std::future<return_type> result = task->get_future();
     {
         std::unique_lock lock(queue_mutex_);
-        tasks_.emplace(Task{(*task)(), priority,
+        tasks_.emplace(Task{[task]() { (*task)(); }, priority,
                             std::chrono::steady_clock::now(), next_task_id_++});
     }
 #ifdef USE_ASIO

@@ -31,8 +31,12 @@ public:
         : moduleLoader_(ModuleLoader::createShared()),
           fileTracker_(std::make_unique<FileTracker>(
               "/components", "package.json",
-              std::vector<std::string>{".so", ".dll"})) {
-        LOG_F(INFO, "ComponentManager initialized");
+              std::vector<std::string>{".so", ".dll"})),
+          component_pool_(std::make_shared<
+                          atom::memory::ObjectPool<std::shared_ptr<Component>>>(
+              100, 10)),
+          memory_pool_(std::make_unique<MemoryPool<char, 4096>>()) {
+        LOG_F(INFO, "ComponentManager initialized with memory pools");
     }
 
     ~ComponentManagerImpl() {
@@ -73,6 +77,20 @@ public:
     auto loadComponent(const json& params) -> bool {
         try {
             std::string name = params.at("name").get<std::string>();
+
+            // 使用对象池分配Component实例
+            auto instance = component_pool_->acquire();
+            if (!instance) {
+                THROW_FAIL_TO_LOAD_COMPONENT(
+                    "Failed to acquire component instance from pool for ",
+                    name);
+            }
+
+            // 使用内存池分配其他小型数据结构
+            ComponentOptions* options = reinterpret_cast<ComponentOptions*>(
+                memory_pool_->allocate(sizeof(ComponentOptions)));
+            new (options) ComponentOptions();  // placement new
+
             std::string path = params.at("path").get<std::string>();
             std::string version = params.value("version", "1.0.0");
 
@@ -105,7 +123,8 @@ public:
             }
 
             // Get component instance
-            auto instance = moduleLoader_->getInstance<Component>(
+
+            *instance = moduleLoader_->getInstance<Component>(
                 name, params, "createComponent");
             if (!instance) {
                 THROW_FAIL_TO_LOAD_COMPONENT(
@@ -114,18 +133,20 @@ public:
 
             // Store component
             {
-                std::lock_guard<std::mutex> lock(mutex_);
-                components_[name] = instance;
+                std::lock_guard lock(mutex_);
+                components_[name] = *instance;
 
                 // 初始化组件选项
-                ComponentOptions options;
                 if (params.contains("config")) {
-                    options.config = params["config"];
+                    options->config = params["config"];
                 }
-                options.priority = params.value("priority", 0);
-                options.autoStart = params.value("autoStart", false);
-                componentOptions_[name] = options;
+                options->priority = params.value("priority", 0);
+                options->autoStart = params.value("autoStart", false);
+                componentOptions_[name] = *options;
             }
+
+            memory_pool_->deallocate(reinterpret_cast<char*>(options),
+                                     sizeof(ComponentOptions));
 
             LOG_F(INFO, "Component {} loaded successfully", name);
             return true;
@@ -166,7 +187,8 @@ public:
 
             // Remove component and its options
             {
-                std::lock_guard<std::mutex> lock(mutex_);
+                std::lock_guard lock(mutex_);
+                // Component实例会自动返回对象池
                 components_.erase(name);
                 componentOptions_.erase(name);
             }
@@ -209,7 +231,7 @@ public:
 
     auto getComponent(const std::string& component_name)
         -> std::optional<std::weak_ptr<Component>> {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         if (auto it = components_.find(component_name);
             it != components_.end()) {
             return it->second;
@@ -261,7 +283,7 @@ public:
     }
 
     auto hasComponent(const std::string& component_name) -> bool {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         return components_.contains(component_name);
     }
 
@@ -479,16 +501,19 @@ private:
     std::mutex mutex_;       // Protects access to components_
     std::string lastError_;  // 最后错误信息
     bool performanceMonitoringEnabled_ = true;
+    std::shared_ptr<atom::memory::ObjectPool<std::shared_ptr<Component>>>
+        component_pool_;
+    std::unique_ptr<MemoryPool<char, 4096>> memory_pool_;
 
     // 新增方法
     void updateComponentState(const std::string& name,
                               ComponentState newState) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         componentStates_[name] = newState;
     }
 
     bool validateComponentOperation(const std::string& name) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         if (!components_.contains(name)) {
             LOG_F(ERROR, "Component {} does not exist", name);
             return false;

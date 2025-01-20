@@ -25,7 +25,8 @@ Description: C++20 and Modules Loader
 
 #include "atom/function/ffi.hpp"
 #include "atom/type/json_fwd.hpp"
-
+#include "atom/async/pool.hpp"
+#include "dependency.hpp"  // 添加依赖图头文件
 #include "module.hpp"
 
 using json = nlohmann::json;
@@ -241,11 +242,34 @@ public:
      */
     auto validateDependencies(const std::string& name) const -> bool;
 
+    /**
+     * @brief Sets the size of the thread pool.
+     * @param size The size of the thread pool.
+     */
+    void setThreadPoolSize(size_t size);
+
+    /**
+     * @brief Asynchronously loads multiple modules.
+     * @param modules A vector of pairs containing the paths and names of the modules.
+     * @return A vector of futures representing the loading results.
+     */
+    auto loadModulesAsync(const std::vector<std::pair<std::string, std::string>>& modules)
+        -> std::vector<std::future<bool>>;
+
+    /**
+     * @brief Gets a module by its hash.
+     * @param hash The hash of the module.
+     * @return A shared pointer to the ModuleInfo of the module, or nullptr if not found.
+     */
+    auto getModuleByHash(std::size_t hash) -> std::shared_ptr<ModuleInfo>;
+
 private:
     std::unordered_map<std::string, std::shared_ptr<ModuleInfo>>
         modules_;  ///< Map of module names to ModuleInfo objects.
     mutable std::shared_mutex
         sharedMutex_;  ///< Mutex for thread-safe access to modules.
+    std::shared_ptr<atom::async::ThreadPool<>> threadPool_;
+    DependencyGraph dependencyGraph_;  // 添加依赖图成员
 
     auto loadModuleFunctions(const std::string& name)
         -> std::vector<std::unique_ptr<FunctionInfo>>;
@@ -253,11 +277,25 @@ private:
         -> std::shared_ptr<atom::meta::DynamicLibrary>;
     auto checkModuleExists(const std::string& name) const -> bool;
 
-    std::unordered_map<std::string, std::vector<std::string>>
-        dependencyGraph_;  ///< Dependency graph of modules.
     auto buildDependencyGraph() -> void;
     auto topologicalSort() const -> std::vector<std::string>;
     auto updateModuleStatistics(const std::string& name) -> void;
+
+    /**
+     * @brief Computes the hash of a module.
+     * @param path The path to the module.
+     * @return The hash of the module.
+     */
+    auto computeModuleHash(const std::string& path) -> std::size_t;
+
+    /**
+     * @brief Asynchronously loads a module.
+     * @param path The path to the module.
+     * @param name The name of the module.
+     * @return A future representing the loading result.
+     */
+    auto loadModuleAsync(const std::string& path, const std::string& name) 
+        -> std::future<bool>;
 };
 
 template <typename T>

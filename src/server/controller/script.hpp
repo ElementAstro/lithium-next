@@ -7,6 +7,7 @@
 #ifndef LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP
 #define LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP
 
+#include <crow/json.h>
 #include "controller.hpp"
 
 #include <functional>
@@ -161,47 +162,49 @@ public:
                                Constants::SCRIPT_MANAGER);
         // Define the routes
         CROW_ROUTE(app, "/script/register")
-            .methods("POST"_method)(&ScriptController::registerScript);
+            .methods("POST"_method)(&ScriptController::registerScript, this);
         CROW_ROUTE(app, "/script/delete")
-            .methods("POST"_method)(&ScriptController::deleteScript);
+            .methods("POST"_method)(&ScriptController::deleteScript, this);
         CROW_ROUTE(app, "/script/update")
-            .methods("POST"_method)(&ScriptController::updateScript);
+            .methods("POST"_method)(&ScriptController::updateScript, this);
         CROW_ROUTE(app, "/script/run")
-            .methods("POST"_method)(&ScriptController::runScript);
+            .methods("POST"_method)(&ScriptController::runScript, this);
         CROW_ROUTE(app, "/script/runAsync")
-            .methods("POST"_method)(&ScriptController::runScriptAsync);
+            .methods("POST"_method)(&ScriptController::runScriptAsync, this);
         CROW_ROUTE(app, "/script/output")
-            .methods("POST"_method)(&ScriptController::getScriptOutput);
+            .methods("POST"_method)(&ScriptController::getScriptOutput, this);
         CROW_ROUTE(app, "/script/status")
-            .methods("POST"_method)(&ScriptController::getScriptStatus);
+            .methods("POST"_method)(&ScriptController::getScriptStatus, this);
         CROW_ROUTE(app, "/script/logs")
-            .methods("POST"_method)(&ScriptController::getScriptLogs);
+            .methods("POST"_method)(&ScriptController::getScriptLogs, this);
         CROW_ROUTE(app, "/script/list")
-            .methods("GET"_method)(&ScriptController::listScripts);
+            .methods("GET"_method)(&ScriptController::listScripts, this);
         CROW_ROUTE(app, "/script/info")
-            .methods("POST"_method)(&ScriptController::getScriptInfo);
+            .methods("POST"_method)(&ScriptController::getScriptInfo, this);
 
-        // Create a weak pointer to the ScriptAnalyzer
-        GET_OR_CREATE_WEAK_PTR(mScriptAnalyzer, lithium::ScriptAnalyzer,
-                               Constants::SCRIPT_ANALYZER);
+        // Get a weak pointer to the ScriptAnalyzer
+        mScriptAnalyzer =
+            GetWeakPtr<lithium::ScriptAnalyzer>(Constants::SCRIPT_ANALYZER);
+
         // Define the routes
         CROW_ROUTE(app, "/analyzer/analyze")
-            .methods("POST"_method)(&ScriptController::analyzeScript);
+            .methods("POST"_method)(&ScriptController::analyzeScript, this);
         CROW_ROUTE(app, "/analyzer/analyzeWithOptions")
-            .methods("POST"_method)(
-                &ScriptController::analyzeScriptWithOptions);
+            .methods("POST"_method)(&ScriptController::analyzeScriptWithOptions,
+                                    this);
         CROW_ROUTE(app, "/analyzer/updateConfig")
-            .methods("POST"_method)(&ScriptController::updateConfig);
+            .methods("POST"_method)(&ScriptController::updateConfig, this);
         CROW_ROUTE(app, "/analyzer/addCustomPattern")
-            .methods("POST"_method)(&ScriptController::addCustomPattern);
+            .methods("POST"_method)(&ScriptController::addCustomPattern, this);
         CROW_ROUTE(app, "/analyzer/validateScript")
-            .methods("POST"_method)(&ScriptController::validateScript);
+            .methods("POST"_method)(&ScriptController::validateScript, this);
         CROW_ROUTE(app, "/analyzer/getSafeVersion")
-            .methods("POST"_method)(&ScriptController::getSafeVersion);
+            .methods("POST"_method)(&ScriptController::getSafeVersion, this);
         CROW_ROUTE(app, "/analyzer/getTotalAnalyzed")
-            .methods("GET"_method)(&ScriptController::getTotalAnalyzed);
+            .methods("GET"_method)(&ScriptController::getTotalAnalyzed, this);
         CROW_ROUTE(app, "/analyzer/getAverageAnalysisTime")
-            .methods("GET"_method)(&ScriptController::getAverageAnalysisTime);
+            .methods("GET"_method)(&ScriptController::getAverageAnalysisTime,
+                                   this);
     }
 
     // Endpoint to register a script
@@ -394,6 +397,25 @@ public:
             });
     }
 
+    crow::json::wvalue to_json(const lithium::DangerItem& item) {
+        crow::json::wvalue json;
+        // Assuming DangerItem has fields like 'id' and 'name'
+        json["category"] = item.category;
+        json["command"] = item.command;
+        json["reason"] = item.reason;
+        json["line"] = item.line;
+        json["context"] = item.context.value_or("");
+        return json;
+    }
+
+    crow::json::wvalue to_json(const std::vector<lithium::DangerItem>& items) {
+        crow::json::wvalue json;
+        for (size_t i = 0; i < items.size(); i++) {
+            json[i] = to_json(items[i]);
+        }
+        return json;
+    }
+
     // Endpoint to analyze a script with options
     void analyzeScriptWithOptions(const crow::request& req,
                                   crow::response& res) {
@@ -428,7 +450,7 @@ public:
                     danger_item["context"] = danger.context.value_or("");
                     dangers.push_back(danger);
                 }
-                response["dangers"] = dangers;
+                response["dangers"] = to_json(dangers);
                 res.write(response.dump());
                 return true;
             });
@@ -519,5 +541,7 @@ public:
             });
     }
 };
+
+inline std::weak_ptr<lithium::ScriptManager> ScriptController::mScriptManager;
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP

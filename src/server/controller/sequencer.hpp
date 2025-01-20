@@ -108,54 +108,62 @@ public:
                                Constants::EXPOSURE_SEQUENCE);
         // Define the routes
         CROW_ROUTE(app, "/exposure_sequence/addTarget")
-            .methods("POST"_method)(&SequenceController::addTarget);
+            .methods("POST"_method)(&SequenceController::addTarget, this);
         CROW_ROUTE(app, "/exposure_sequence/removeTarget")
-            .methods("POST"_method)(&SequenceController::removeTarget);
+            .methods("POST"_method)(&SequenceController::removeTarget, this);
         CROW_ROUTE(app, "/exposure_sequence/modifyTarget")
-            .methods("POST"_method)(&SequenceController::modifyTarget);
+            .methods("POST"_method)(&SequenceController::modifyTarget, this);
         CROW_ROUTE(app, "/exposure_sequence/executeAll")
-            .methods("POST"_method)(&SequenceController::executeAll);
+            .methods("POST"_method)(&SequenceController::executeAll, this);
         CROW_ROUTE(app, "/exposure_sequence/stop")
-            .methods("POST"_method)(&SequenceController::stop);
+            .methods("POST"_method)(&SequenceController::stop, this);
         CROW_ROUTE(app, "/exposure_sequence/pause")
-            .methods("POST"_method)(&SequenceController::pause);
+            .methods("POST"_method)(&SequenceController::pause, this);
         CROW_ROUTE(app, "/exposure_sequence/resume")
-            .methods("POST"_method)(&SequenceController::resume);
+            .methods("POST"_method)(&SequenceController::resume, this);
         CROW_ROUTE(app, "/exposure_sequence/saveSequence")
-            .methods("POST"_method)(&SequenceController::saveSequence);
+            .methods("POST"_method)(&SequenceController::saveSequence, this);
         CROW_ROUTE(app, "/exposure_sequence/loadSequence")
-            .methods("POST"_method)(&SequenceController::loadSequence);
+            .methods("POST"_method)(&SequenceController::loadSequence, this);
         CROW_ROUTE(app, "/exposure_sequence/getTargetNames")
-            .methods("GET"_method)(&SequenceController::getTargetNames);
+            .methods("GET"_method)(&SequenceController::getTargetNames, this);
         CROW_ROUTE(app, "/exposure_sequence/getTargetStatus")
-            .methods("POST"_method)(&SequenceController::getTargetStatus);
+            .methods("POST"_method)(&SequenceController::getTargetStatus, this);
         CROW_ROUTE(app, "/exposure_sequence/getProgress")
-            .methods("GET"_method)(&SequenceController::getProgress);
+            .methods("GET"_method)(&SequenceController::getProgress, this);
         CROW_ROUTE(app, "/exposure_sequence/setSchedulingStrategy")
-            .methods("POST"_method)(&SequenceController::setSchedulingStrategy);
+            .methods("POST"_method)(&SequenceController::setSchedulingStrategy,
+                                    this);
         CROW_ROUTE(app, "/exposure_sequence/setRecoveryStrategy")
-            .methods("POST"_method)(&SequenceController::setRecoveryStrategy);
+            .methods("POST"_method)(&SequenceController::setRecoveryStrategy,
+                                    this);
         CROW_ROUTE(app, "/exposure_sequence/addAlternativeTarget")
-            .methods("POST"_method)(&SequenceController::addAlternativeTarget);
+            .methods("POST"_method)(&SequenceController::addAlternativeTarget,
+                                    this);
         CROW_ROUTE(app, "/exposure_sequence/setMaxConcurrentTargets")
             .methods("POST"_method)(
-                &SequenceController::setMaxConcurrentTargets);
+                &SequenceController::setMaxConcurrentTargets, this);
         CROW_ROUTE(app, "/exposure_sequence/setGlobalTimeout")
-            .methods("POST"_method)(&SequenceController::setGlobalTimeout);
+            .methods("POST"_method)(&SequenceController::setGlobalTimeout,
+                                    this);
         CROW_ROUTE(app, "/exposure_sequence/getFailedTargets")
-            .methods("GET"_method)(&SequenceController::getFailedTargets);
+            .methods("GET"_method)(&SequenceController::getFailedTargets, this);
         CROW_ROUTE(app, "/exposure_sequence/retryFailedTargets")
-            .methods("POST"_method)(&SequenceController::retryFailedTargets);
+            .methods("POST"_method)(&SequenceController::retryFailedTargets,
+                                    this);
         CROW_ROUTE(app, "/exposure_sequence/getExecutionStats")
-            .methods("GET"_method)(&SequenceController::getExecutionStats);
+            .methods("GET"_method)(&SequenceController::getExecutionStats,
+                                   this);
         CROW_ROUTE(app, "/exposure_sequence/setTargetTaskParams")
-            .methods("POST"_method)(&SequenceController::setTargetTaskParams);
+            .methods("POST"_method)(&SequenceController::setTargetTaskParams,
+                                    this);
         CROW_ROUTE(app, "/exposure_sequence/getTargetTaskParams")
-            .methods("POST"_method)(&SequenceController::getTargetTaskParams);
+            .methods("POST"_method)(&SequenceController::getTargetTaskParams,
+                                    this);
         CROW_ROUTE(app, "/exposure_sequence/setTargetParams")
-            .methods("POST"_method)(&SequenceController::setTargetParams);
+            .methods("POST"_method)(&SequenceController::setTargetParams, this);
         CROW_ROUTE(app, "/exposure_sequence/getTargetParams")
-            .methods("POST"_method)(&SequenceController::getTargetParams);
+            .methods("POST"_method)(&SequenceController::getTargetParams, this);
     }
 
     // Endpoint to add a target

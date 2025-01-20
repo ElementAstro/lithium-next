@@ -112,9 +112,9 @@ void SS::abortAndWait() {
 }
 
 void SS::setParameterProfile(SSolver::Parameters::ParametersProfile profile) {
-    LOG_SCOPE_FUNCTION(INFO);
+    // LOG_SCOPE_FUNCTION(INFO);
     solver->setParameterProfile(profile);
-    LOG_F(INFO, "Set parameter profile to {}", profile);
+    // LOG_F(INFO, "Set parameter profile to {}", profile);
 }
 
 void SS::setSearchScale(double fovLow, double fovHigh,
@@ -129,7 +129,7 @@ void SS::setSearchScale(double fovLow, double fovHigh,
                         SSolver::ScaleUnits units) {
     LOG_SCOPE_FUNCTION(INFO);
     solver->setSearchScale(fovLow, fovHigh, units);
-    LOG_F(INFO, "Set search scale to {} - {} units {}", fovLow, fovHigh, units);
+    LOG_F(INFO, "Set search scale to {} - {}", fovLow, fovHigh);
 }
 
 void SS::setSearchPositionRaDec(double ra, double dec) {

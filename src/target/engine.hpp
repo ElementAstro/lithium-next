@@ -113,6 +113,8 @@ public:
     StarObject(std::string name, std::vector<std::string> aliases,
                int clickCount = 0);
 
+    StarObject() : name_(""), aliases_({}), clickCount_(0) {}
+
     // 访问器方法
     [[nodiscard]] const std::string& getName() const;
     [[nodiscard]] const std::vector<std::string>& getAliases() const;

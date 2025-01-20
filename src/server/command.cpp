@@ -99,154 +99,61 @@ CommandStatus CommandDispatcher::getCommandStatus(const CommandID& id) const {
 
 void CommandDispatcher::updateCommandStatus(const CommandID& id,
                                             CommandStatus status) {
+    auto now = std::chrono::system_clock::now();
+    auto timeout = timeouts_.find(id) != timeouts_.end()
+                       ? timeouts_[id]
+                       : config_.defaultTimeout;
+
+    commandInfo_[id] = {status, now, timeout};
+
     commandStatus_[id] = status;
-    // 通知状态变化
     notifySubscribers(id, status);
+
+    if (status == CommandStatus::COMPLETED || status == CommandStatus::FAILED ||
+        status == CommandStatus::CANCELLED) {
+        cleanupCommand(id);
+    }
 }
 
 bool CommandDispatcher::checkTimeout(const CommandID& id) const {
-    auto it = timeouts_.find(id);
-    auto timeout = it != timeouts_.end() ? it->second : config_.defaultTimeout;
-    // 检查命令是否超时
-    // ... 实现超时检查逻辑 ...
-    return false;
+    auto it = commandInfo_.find(id);
+    if (it == commandInfo_.end()) {
+        return false;
+    }
+
+    auto now = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - it->second.startTime);
+
+    return duration > it->second.timeout;
 }
 
 void CommandDispatcher::cleanupCommand(const CommandID& id) {
     timeouts_.erase(id);
     commandStatus_.erase(id);
-}
+    commandInfo_.erase(id);
 
-// Template implementations
-template <typename CommandType>
-void CommandDispatcher::registerCommand(
-    const CommandID& id, std::function<void(const CommandType&)> handler,
-    std::optional<std::function<void(const CommandType&)>> undoHandler) {
-    std::unique_lock lock(mutex_);
-    handlers_[id] = [handler](const std::any& cmd) {
-        handler(std::any_cast<const CommandType&>(cmd));
-    };
-    if (undoHandler) {
-        undoHandlers_[id] = [undoHandler](const std::any& cmd) {
-            (*undoHandler)(std::any_cast<const CommandType&>(cmd));
-        };
+    // 清理相关的内存和资源
+    auto historyIt = history_.find(id);
+    if (historyIt != history_.end() && !historyIt->second.empty()) {
+        // 保留最后一条历史记录
+        auto lastRecord = historyIt->second.back();
+        historyIt->second.clear();
+        historyIt->second.push_back(std::move(lastRecord));
     }
-    LOG_F(INFO, "Registered command: {}", id);
-}
 
-template <typename CommandType>
-auto CommandDispatcher::dispatch(
-    const CommandID& id, const CommandType& command, int priority,
-    std::optional<std::chrono::milliseconds> delay,
-    CommandCallback callback) -> std::future<ResultType> {
-    LOG_F(INFO, "Dispatching command: {} with priority: {}", id, priority);
-
-    updateCommandStatus(id, CommandStatus::PENDING);
-
-    auto task = [this, id, command, callback]() -> ResultType {
-        try {
-            updateCommandStatus(id, CommandStatus::RUNNING);
-
-            if (checkTimeout(id)) {
-                throw std::runtime_error("Command timeout");
-            }
-
-            std::shared_lock lock(mutex_);
-            auto it = handlers_.find(id);
-            if (it != handlers_.end()) {
-                it->second(command);
-                recordHistory(id, command);
-                notifySubscribers(id, command);
-
-                updateCommandStatus(id, CommandStatus::COMPLETED);
-
-                ResultType result = command;
-                if (callback) {
-                    callback(id, result);
-                }
-                return result;
-            } else {
-                throw std::runtime_error("Command not found: " + id);
-            }
-        } catch (const std::exception& e) {
-            updateCommandStatus(id, CommandStatus::FAILED);
-            auto ex = std::current_exception();
-            if (callback) {
-                callback(id, ex);
-            }
-            LOG_F(ERROR, "Command {} failed: {}", id, e.what());
-            return ex;
-        }
-    };
-
-    if (delay) {
-        return eventLoop_->postDelayed(*delay, priority, std::move(task));
-    } else {
-        return eventLoop_->post(priority, std::move(task));
-    }
-}
-
-template <typename CommandType>
-auto CommandDispatcher::getResult(std::future<ResultType>& resultFuture)
-    -> CommandType {
-    LOG_F(INFO, "Getting result for command");
-    auto result = resultFuture.get();
-    if (std::holds_alternative<std::any>(result)) {
-        return std::any_cast<CommandType>(std::get<std::any>(result));
-    } else {
-        std::rethrow_exception(std::get<std::exception_ptr>(result));
-    }
-}
-
-template <typename CommandType>
-void CommandDispatcher::undo(const CommandID& id, const CommandType& command) {
-    std::unique_lock lock(mutex_);
-    auto it = undoHandlers_.find(id);
-    if (it != undoHandlers_.end()) {
-        it->second(command);
-        LOG_F(INFO, "Undo command: {}", id);
-    }
-}
-
-template <typename CommandType>
-void CommandDispatcher::redo(const CommandID& id, const CommandType& command) {
-    LOG_F(INFO, "Redo command: {}", id);
-    dispatch(id, command, 0, std::nullopt).get();
-}
-
-template <typename CommandType>
-auto CommandDispatcher::getCommandHistory(const CommandID& id)
-    -> std::vector<CommandType> {
-    std::shared_lock lock(mutex_);
-    std::vector<CommandType> history;
-    if (auto it = history_.find(id); it != history_.end()) {
-        for (const auto& cmd : it->second) {
-            history.push_back(std::any_cast<CommandType>(cmd));
+    // 清理优先队列中的相关命令
+    std::priority_queue<std::pair<int, CommandID>> tempQueue;
+    while (!priorityQueue_.empty()) {
+        auto item = priorityQueue_.top();
+        priorityQueue_.pop();
+        if (item.second != id) {
+            tempQueue.push(item);
         }
     }
-    LOG_F(INFO, "Retrieved command history for: {}", id);
-    return history;
-}
+    priorityQueue_ = std::move(tempQueue);
 
-template <typename CommandType>
-auto CommandDispatcher::batchDispatch(
-    const std::vector<std::pair<CommandID, CommandType>>& commands,
-    int priority) -> std::vector<std::future<ResultType>> {
-    std::vector<std::future<ResultType>> results;
-    results.reserve(commands.size());
-
-    for (const auto& [id, cmd] : commands) {
-        results.push_back(dispatch(id, cmd, priority));
-    }
-
-    return results;
-}
-
-template <typename CommandType>
-auto CommandDispatcher::quickDispatch(
-    const CommandID& id, const CommandType& command) -> CommandType {
-    auto future = dispatch(id, command);
-    return getResult<CommandType>(future);
+    LOG_F(INFO, "Cleaned up resources for command: {}", id);
 }
 
 }  // namespace lithium::app

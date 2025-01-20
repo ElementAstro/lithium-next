@@ -18,6 +18,7 @@ set(lithium_thirdparty_dir ${CMAKE_SOURCE_DIR}/libs/thirdparty)
 set(lithium_atom_dir ${CMAKE_SOURCE_DIR}/libs/atom)
 
 set(CROW_ENABLE_COMPRESSION ON)
+set(CROW_ENABLE_SSL ON)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/")
@@ -34,13 +35,33 @@ include_directories(${lithium_thirdparty_dir}/oatpp-websocket)
 include_directories(${lithium_thirdparty_dir}/oatpp-swagger)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Python 3.7 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
+find_package(Readline REQUIRED)
+find_package(Curses REQUIRED)
 
 add_executable(lithium-next ${lithium_src_dir}/app.cpp)
 
-target_link_libraries(lithium-next PRIVATE pybind11::module pybind11::lto)
+target_link_libraries(lithium-next PRIVATE 
+    pybind11::module
+    pybind11::lto
+    lithium_components
+    lithium_config
+    lithium_debug
+    lithium_device
+    lithium_script
+    lithium_server
+    lithium_target
+    lithium_task
+    lithium_tools
+    atom
+    loguru
+    ${Readline_LIBRARIES}
+    ${CURSES_LIBRARIES}
+)
 target_include_directories(lithium-next PRIVATE ${Python_INCLUDE_DIRS})
 
 # Include compiler options

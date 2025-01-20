@@ -799,7 +799,6 @@ public:
         }
     }
 
-private:
     // 新增辅助方法
     void processStarObjectFromCSV(
         const std::unordered_map<std::string, std::string>& row) {
@@ -1098,6 +1097,141 @@ bool SearchEngine::exportToCSV(const std::string& filename,
                                const std::vector<std::string>& fields,
                                Dialect dialect) const {
     return pImpl_->exportToCSV(filename, fields, dialect);
+}
+
+// 补全批量处理评分的方法
+void SearchEngine::batchProcessRatings(const std::string& csvFilename) {
+    LOG_F(INFO, "Starting batch processing of ratings from {}", csvFilename);
+    try {
+        std::ifstream file(csvFilename);
+        if (!file.is_open()) {
+            LOG_F(ERROR, "Failed to open ratings file: {}", csvFilename);
+            return;
+        }
+
+        std::string line;
+        // 跳过标题行
+        std::getline(file, line);
+
+        while (std::getline(file, line)) {
+            std::stringstream ss(line);
+            std::string user, item, ratingStr;
+
+            // 假设CSV格式为: user,item,rating
+            std::getline(ss, user, ',');
+            std::getline(ss, item, ',');
+            std::getline(ss, ratingStr, ',');
+
+            try {
+                double rating = std::stod(ratingStr);
+                addUserRating(user, item, rating);
+                LOG_F(INFO, "Processed rating: {} -> {} = {}", user, item,
+                      rating);
+            } catch (const std::exception& e) {
+                LOG_F(ERROR, "Error processing rating: {}", e.what());
+                continue;
+            }
+        }
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Error in batch processing ratings: {}", e.what());
+    }
+}
+
+// 补全批量更新天体对象的方法
+void SearchEngine::batchUpdateStarObjects(const std::string& csvFilename) {
+    LOG_F(INFO, "Starting batch update of StarObjects from {}", csvFilename);
+    try {
+        std::ifstream file(csvFilename);
+        if (!file.is_open()) {
+            LOG_F(ERROR, "Failed to open update file: {}", csvFilename);
+            return;
+        }
+
+        std::string line;
+        // 跳过标题行
+        std::getline(file, line);
+
+        while (std::getline(file, line)) {
+            std::stringstream ss(line);
+            std::unordered_map<std::string, std::string> fields;
+            std::string field;
+            size_t fieldIndex = 0;
+
+            while (std::getline(ss, field, ',')) {
+                // 基本字段：name,aliases,type,magnitude
+                switch (fieldIndex) {
+                    case 0:
+                        fields["name"] = field;
+                        break;
+                    case 1:
+                        fields["aliases"] = field;
+                        break;
+                    case 2:
+                        fields["type"] = field;
+                        break;
+                    case 3:
+                        fields["magnitude"] = field;
+                        break;
+                    default:
+                        break;
+                }
+                fieldIndex++;
+            }
+
+            try {
+                // 解析别名
+                std::vector<std::string> aliases;
+                std::stringstream aliasStream(fields["aliases"]);
+                std::string alias;
+                while (std::getline(aliasStream, alias, ';')) {
+                    aliases.push_back(alias);
+                }
+
+                // 创建或更新 StarObject
+                StarObject star(fields["name"], aliases);
+
+                // 设置其他属性
+                if (!fields["type"].empty()) {
+                    CelestialObject celestial = star.getCelestialObject();
+                    celestial.Type = fields["type"];
+                    if (!fields["magnitude"].empty()) {
+                        celestial.VisualMagnitudeV =
+                            std::stod(fields["magnitude"]);
+                    }
+                    star.setCelestialObject(celestial);
+                }
+
+                addStarObject(star);
+                LOG_F(INFO, "Updated StarObject: {}", fields["name"]);
+            } catch (const std::exception& e) {
+                LOG_F(ERROR, "Error updating StarObject: {}", e.what());
+                continue;
+            }
+        }
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Error in batch updating StarObjects: {}", e.what());
+    }
+}
+
+// 补全缓存控制方法
+void SearchEngine::clearCache() {
+    LOG_F(INFO, "Clearing search engine cache");
+    pImpl_->queryCache_.clear();
+}
+
+void SearchEngine::setCacheSize(size_t size) {
+    LOG_F(INFO, "Setting cache size to {}", size);
+    pImpl_->queryCache_.resize(size);
+}
+
+auto SearchEngine::getCacheStats() const -> std::string {
+    const auto& cache = pImpl_->queryCache_;
+    std::stringstream ss;
+    ss << "Cache Statistics:\n"
+       << "Size: " << cache.size() << "\n";
+
+    LOG_F(INFO, "Retrieved cache statistics");
+    return ss.str();
 }
 
 }  // namespace lithium::target

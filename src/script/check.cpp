@@ -73,7 +73,6 @@ public:
         }
     }
 
-private:
     json config_;
     mutable std::shared_mutex config_mutex_;
 
@@ -576,6 +575,55 @@ size_t ScriptAnalyzer::getTotalAnalyzed() const {
 
 double ScriptAnalyzer::getAverageAnalysisTime() const {
     return impl_->getAverageAnalysisTime();
+}
+
+bool ScriptAnalyzer::validateScript(const std::string& script) {
+    return impl_->validateScript(script);
+}
+
+std::string ScriptAnalyzer::getSafeVersion(const std::string& script) {
+    if (!validateScript(script)) {
+        THROW_INVALID_FORMAT("Script contains unsafe patterns");
+    }
+
+    // 创建一个临时分析结果
+    AnalyzerOptions options;
+    options.deep_analysis = true;
+    auto result = analyzeWithOptions(script, options);
+
+    // 如果没有发现危险项，返回原始脚本
+    if (result.dangers.empty()) {
+        return script;
+    }
+
+    // 否则返回经过处理的安全版本
+    return impl_->sanitizeScript(script);
+}
+
+void ScriptAnalyzer::addCustomPattern(const std::string& pattern,
+                                      const std::string& category) {
+    if (pattern.empty() || category.empty()) {
+        THROW_INVALID_FORMAT("Pattern and category cannot be empty");
+    }
+    try {
+        std::regex test(pattern);
+    } catch (const std::regex_error& e) {
+        THROW_INVALID_FORMAT("Invalid regex pattern: " + std::string(e.what()));
+    }
+
+    // 添加到配置中
+    json pattern_obj;
+    pattern_obj["pattern"] = pattern;
+    pattern_obj["category"] = category;
+    pattern_obj["reason"] = "Custom pattern match";
+
+    std::lock_guard<std::shared_mutex> lock(impl_->config_mutex_);
+    impl_->config_["custom_patterns"].push_back(pattern_obj);
+}
+
+AnalysisResult ScriptAnalyzer::analyzeWithOptions(
+    const std::string& script, const AnalyzerOptions& options) {
+    return impl_->analyzeWithOptions(script, options);
 }
 
 }  // namespace lithium

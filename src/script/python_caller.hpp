@@ -6,10 +6,18 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <barrier>
 #include <chrono>
+#include <concepts>
+#include <coroutine>
 #include <fstream>
 #include <future>
+#include <latch>
 #include <memory>
+#include <ranges>
+#include <semaphore>
+#include <shared_mutex>
+#include <span>
 #include <string>
 #include <thread>
 #include <vector>
@@ -19,6 +27,13 @@
 namespace py = pybind11;
 
 namespace lithium {
+
+// 新增: 类型约束
+template <typename T>
+concept PythonConvertible = requires(T a) {
+    { py::cast(a) } -> std::convertible_to<py::object>;
+    { py::cast<T>(py::object()) } -> std::same_as<T>;
+};
 
 /**
  * @class PythonWrapper
@@ -39,10 +54,6 @@ public:
     // Disable copy
     PythonWrapper(const PythonWrapper&) = delete;
     PythonWrapper& operator=(const PythonWrapper&) = delete;
-
-    // Enable move
-    PythonWrapper(PythonWrapper&&) noexcept;
-    PythonWrapper& operator=(PythonWrapper&&) noexcept;
 
     /**
      * @brief Loads a Python script and assigns it an alias.
@@ -288,25 +299,26 @@ public:
     void configure_performance(const PerformanceConfig& config);
 
     // 新增: 异步执行 Python 函数
-    template<typename ReturnType>
-    std::future<ReturnType> async_call_function(const std::string& alias,
-                                               const std::string& function_name);
+    template <typename ReturnType>
+    std::future<ReturnType> async_call_function(
+        const std::string& alias, const std::string& function_name);
 
     // 新增: 批量执行 Python 函数
-    template<typename ReturnType>
-    std::vector<ReturnType> batch_execute(const std::string& alias,
-                                         const std::vector<std::string>& function_names);
+    template <typename ReturnType>
+    std::vector<ReturnType> batch_execute(
+        const std::string& alias,
+        const std::vector<std::string>& function_names);
 
     // 新增: Python对象生命周期管理
     void manage_object_lifecycle(const std::string& alias,
-                               const std::string& object_name,
-                               bool auto_cleanup = true);
+                                 const std::string& object_name,
+                                 bool auto_cleanup = true);
 
     // 新增: 数据类型转换支持
-    template<typename T>
+    template <typename T>
     py::object cpp_to_python(const T& value);
 
-    template<typename T>
+    template <typename T>
     T python_to_cpp(const py::object& obj);
 
     // 新增: 内存管理优化
@@ -316,26 +328,93 @@ public:
     // 新增: 调试支持
     void enable_debug_mode(bool enable = true);
     void set_breakpoint(const std::string& alias, int line_number);
-    
+
     // 新增: Python包管理
     bool install_package(const std::string& package_name);
     bool uninstall_package(const std::string& package_name);
-    
+
     // 新增: 环境隔离
     void create_virtual_environment(const std::string& env_name);
     void activate_virtual_environment(const std::string& env_name);
+
+    // 新增: 协程支持
+    template <typename T>
+    struct AsyncGenerator {
+        struct promise_type {
+            T value;
+            AsyncGenerator get_return_object() {
+                return AsyncGenerator{handle_type::from_promise(*this)};
+            }
+            std::suspend_always initial_suspend() { return {}; }
+            std::suspend_always final_suspend() noexcept { return {}; }
+            void return_void() {}
+            std::suspend_always yield_value(T v) {
+                value = v;
+                return {};
+            }
+            void unhandled_exception() { throw; }
+        };
+
+        using handle_type = std::coroutine_handle<promise_type>;
+        handle_type handle;
+
+        AsyncGenerator(handle_type h) : handle(h) {}
+        ~AsyncGenerator() {
+            if (handle)
+                handle.destroy();
+        }
+        T current_value() { return handle.promise().value; }
+        bool move_next() {
+            handle.resume();
+            return !handle.done();
+        }
+    };
+
+    // 新增: 基于ranges的批处理操作
+    template <std::ranges::range R>
+        requires PythonConvertible<std::ranges::range_value_t<R>>
+    void batch_process(const std::string& alias,
+                       const std::string& function_name, R&& range);
+
+    // 新增: 支持span的接口
+    template <typename T>
+    void process_data(const std::string& alias,
+                      const std::string& function_name, std::span<T> data);
+
+    // 新增: 线程安全的资源获取
+    template <typename T>
+    std::shared_ptr<T> get_shared_resource(const std::string& resource_name);
+
+    // 新增: 支持Python异步操作
+    AsyncGenerator<py::object> async_execute(const std::string& script);
 
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;
 
-    // 新增: 性能优化相关
-    void optimize_gil_usage();
-    void setup_thread_pool();
-    
-    // 新增: 缓存管理
-    void manage_function_cache();
-    void clear_function_cache();
+    // 新增: 并发控制
+    mutable std::shared_mutex resource_mutex_;
+    std::counting_semaphore<> task_semaphore_{10};  // 限制并发任务数
+    std::barrier<> sync_point_{2};                  // 用于同步操作
+    std::latch completion_latch_{1};                // 用于等待操作完成
+};
+
+// 新增: 智能指针自定义删除器
+struct PythonObjectDeleter {
+    void operator()(py::object* obj) {
+        py::gil_scoped_acquire gil;
+        delete obj;
+    }
+};
+
+// 新增: RAII风格的GIL管理器
+class GILManager {
+public:
+    GILManager() : gil_state_(PyGILState_Ensure()) {}
+    ~GILManager() { PyGILState_Release(gil_state_); }
+
+private:
+    PyGILState_STATE gil_state_;
 };
 
 }  // namespace lithium

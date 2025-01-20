@@ -1,28 +1,28 @@
-# CMakeLists.txt for Lithium-Target
+# CMakeLists.txt for Lithium-Debug
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Lithium-Target
+# Project Name: Lithium-Debug
 # Description: The official config module for lithium server
 # Author: Max Qian
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(lithium_target VERSION 1.0.0 LANGUAGES C CXX)
+project(lithium_debug VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources and Headers
 set(PROJECT_FILES
-    engine.cpp
-    preference.cpp
-    reader.cpp
+    check.cpp
+    suggestion.cpp
+    terminal.cpp
 )
 
 # Required libraries
 set(PROJECT_LIBS
     atom
-    atom-utils
     lithium_config
     loguru
     yaml-cpp
+    pybind11::embed
     ${CMAKE_THREAD_LIBS_INIT}
 )
 

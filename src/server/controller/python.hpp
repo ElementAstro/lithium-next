@@ -94,23 +94,23 @@ public:
                                Constants::PYTHON_WRAPPER);
         // Define the routes
         CROW_ROUTE(app, "/python/load")
-            .methods("POST"_method)(&PythonController::loadScript);
+            .methods("POST"_method)(&PythonController::loadScript, this);
         CROW_ROUTE(app, "/python/unload")
-            .methods("POST"_method)(&PythonController::unloadScript);
+            .methods("POST"_method)(&PythonController::unloadScript, this);
         CROW_ROUTE(app, "/python/reload")
-            .methods("POST"_method)(&PythonController::reloadScript);
+            .methods("POST"_method)(&PythonController::reloadScript, this);
         CROW_ROUTE(app, "/python/call")
-            .methods("POST"_method)(&PythonController::callFunction);
+            .methods("POST"_method)(&PythonController::callFunction, this);
         CROW_ROUTE(app, "/python/getVariable")
-            .methods("POST"_method)(&PythonController::getVariable);
+            .methods("POST"_method)(&PythonController::getVariable, this);
         CROW_ROUTE(app, "/python/setVariable")
-            .methods("POST"_method)(&PythonController::setVariable);
+            .methods("POST"_method)(&PythonController::setVariable, this);
         CROW_ROUTE(app, "/python/functions")
-            .methods("POST"_method)(&PythonController::getFunctionList);
+            .methods("POST"_method)(&PythonController::getFunctionList, this);
         CROW_ROUTE(app, "/python/eval")
-            .methods("POST"_method)(&PythonController::evalExpression);
+            .methods("POST"_method)(&PythonController::evalExpression, this);
         CROW_ROUTE(app, "/python/list")
-            .methods("GET"_method)(&PythonController::listScripts);
+            .methods("GET"_method)(&PythonController::listScripts, this);
     }
 
     // Endpoint to load a Python script

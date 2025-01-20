@@ -17,17 +17,19 @@
 #include "constant/constant.hpp"
 #include "server/command.hpp"
 #include "server/controller/controller.hpp"
+#include "server/eventloop.hpp"
 
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/crash.hpp"
+#include "atom/system/env.hpp"
 #include "atom/utils/argsview.hpp"
 
 #include "debug/terminal.hpp"
 
 #include "server/controller/config.hpp"
-#include "server/controller/python.hpp"
+// #include "server/controller/python.hpp"
 #include "server/controller/script.hpp"
 #include "server/controller/search.hpp"
 #include "server/controller/sequencer.hpp"
@@ -70,34 +72,49 @@ void setupLogFile() {
 void injectPtr() {
     LOG_F(INFO, "Injecting global pointers...");
 
+    auto ioContext = atom::memory::makeShared<asio::io_context>();
     AddPtr<atom::async::MessageBus>(
-        Constants::MESSAGE_BUS, std::make_shared<atom::async::MessageBus>());
-    auto eventLoop = std::make_shared<lithium::app::EventLoop>();
+        Constants::MESSAGE_BUS,
+        atom::memory::makeShared<atom::async::MessageBus>(*ioContext));
+    auto eventLoop = atom::memory::makeShared<lithium::app::EventLoop>(4);
     AddPtr<lithium::app::EventLoop>(Constants::EVENT_LOOP, eventLoop);
     AddPtr<lithium::app::CommandDispatcher>(
         Constants::COMMAND_DISPATCHER,
-        std::make_shared<lithium::app::CommandDispatcher>(
+        atom::memory::makeShared<lithium::app::CommandDispatcher>(
             eventLoop, lithium::app::CommandDispatcher::Config{}));
 
-    AddPtr<lithium::ConfigManager>(Constants::CONFIG_MANAGER,
-                                   std::make_shared<lithium::ConfigManager>());
+    AddPtr<lithium::ConfigManager>(
+        Constants::CONFIG_MANAGER,
+        atom::memory::makeShared<lithium::ConfigManager>());
+
+    auto env = atom::memory::makeShared<atom::utils::Env>();
+    AddPtr<atom::utils::Env>(Constants::ENVIRONMENT, env);
+    auto moduleDir = env->getEnv("LITHIUM_MODULE_DIR");
 
     AddPtr<lithium::ComponentManager>(
         Constants::COMPONENT_MANAGER,
-        std::make_shared<lithium::ComponentManager>());
-    AddPtr<lithium::ModuleLoader>(Constants::MODULE_LOADER,
-                                  std::make_shared<lithium::ModuleLoader>());
+        atom::memory::makeShared<lithium::ComponentManager>());
+    AddPtr<lithium::ModuleLoader>(
+        Constants::MODULE_LOADER,
+        atom::memory::makeShared<lithium::ModuleLoader>(
+            moduleDir.empty() ? "modules"s : moduleDir));
 
-    AddPtr<lithium::DeviceManager>(Constants::DEVICE_MANAGER,
-                                   std::make_shared<lithium::DeviceManager>());
+    AddPtr<lithium::DeviceManager>(
+        Constants::DEVICE_MANAGER,
+        atom::memory::makeShared<lithium::DeviceManager>());
 
-    AddPtr<lithium::PythonWrapper>(Constants::PYTHON_WRAPPER,
-                                   std::make_shared<lithium::PythonWrapper>());
-    AddPtr<lithium::ScriptManager>(Constants::SCRIPT_MANAGER,
-                                   std::make_shared<lithium::ScriptManager>());
+    AddPtr<lithium::PythonWrapper>(
+        Constants::PYTHON_WRAPPER,
+        atom::memory::makeShared<lithium::PythonWrapper>());
+    AddPtr<lithium::ScriptManager>(
+        Constants::SCRIPT_MANAGER,
+        atom::memory::makeShared<lithium::ScriptManager>());
+
+    auto scriptDir = env->getEnv("LITHIUM_SCRIPT_DIR");
     AddPtr<lithium::ScriptAnalyzer>(
         Constants::SCRIPT_ANALYZER,
-        std::make_shared<lithium::ScriptAnalyzer>());
+        atom::memory::makeShared<lithium::ScriptAnalyzer>(
+            scriptDir.empty() ? "scripts"s : scriptDir));
 
     LOG_F(INFO, "Global pointers injected.");
 }
@@ -167,7 +184,7 @@ int main(int argc, char *argv[]) {
             DLOG_F(INFO, "Set server host to {}", cmdHost.value());
         }
         if (cmdPort != 8000) {
-            DLOG_F(INFO, "Command line server port : {}", cmdPort);
+            DLOG_F(INFO, "Command line server port : {}", cmdPort.value());
 
             auto port = configManager.value()->get("/lithium/server/port");
             if (port && port.value() != cmdPort) {
@@ -211,14 +228,15 @@ int main(int argc, char *argv[]) {
     // app.use_compression(crow::compression::algorithm::GZIP);
 
     std::vector<std::shared_ptr<Controller>> controllers;
-    controllers.push_back(std::make_shared<ConfigController>());
-    controllers.push_back(std::make_shared<PythonController>());
-    controllers.push_back(std::make_shared<ScriptController>());
-    controllers.push_back(std::make_shared<SearchController>());
-    controllers.push_back(std::make_shared<SequenceController>());
+    controllers.push_back(atom::memory::makeShared<ConfigController>());
+    // controllers.push_back(atom::memory::makeShared<PythonController>());
+    controllers.push_back(atom::memory::makeShared<ScriptController>());
+    controllers.push_back(atom::memory::makeShared<SearchController>());
+    controllers.push_back(atom::memory::makeShared<SequenceController>());
 
-    AddPtr<lithium::ConfigManager>(Constants::CONFIG_MANAGER,
-                                   std::make_shared<lithium::ConfigManager>());
+    AddPtr<lithium::ConfigManager>(
+        Constants::CONFIG_MANAGER,
+        atom::memory::makeShared<lithium::ConfigManager>());
 
     std::thread serverThread([&app, &controllers]() {
         registerControllers(app, controllers);

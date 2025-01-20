@@ -16,6 +16,7 @@ find_package(pybind11 CONFIG)
 set(PROJECT_FILES
     check.cpp
     python_caller.cpp
+    sheller.cpp
 )
 
 # Required libraries

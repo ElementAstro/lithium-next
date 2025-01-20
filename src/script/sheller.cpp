@@ -15,9 +15,15 @@ Description: System Script Manager
 #include "sheller.hpp"
 
 #include <future>
+#include <iostream>
 #include <mutex>
+#include <ranges>
 #include <shared_mutex>
+#include <span>
 #include <stdexcept>
+#include <stop_token>
+#include <syncstream>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -70,6 +76,18 @@ public:
                        bool safe, std::optional<int> timeoutMs, int retryCount)
         -> std::optional<std::pair<std::string, int>>;
 
+    // 新增成员变量
+    mutable std::shared_mutex mMetadataMutex_;
+    std::unordered_map<std::string, ScriptMetadata> scriptMetadata_;
+    std::unordered_map<std::string, std::jthread> runningScripts_;
+    std::unordered_map<std::string, std::function<void()>> timeoutHandlers_;
+    std::unordered_map<std::string, RetryStrategy> retryStrategies_;
+
+    // 使用C++20 atomic等待
+    std::atomic_flag scriptAborted_;
+
+    std::osyncstream syncOut_{std::cout.rdbuf()};
+
 public:
     void registerScript(std::string_view name, const Script& script);
     void registerPowerShellScript(std::string_view name, const Script& script);
@@ -120,6 +138,59 @@ public:
 
     [[nodiscard]] auto getScriptInfo(std::string_view name) const
         -> std::string;
+
+    // 新增方法实现
+    template <typename T>
+        requires std::ranges::range<T>
+    void importScripts(T&& scripts) {
+        std::unique_lock lock(mSharedMutex_);
+        for (const auto& [name, script] : scripts) {
+            registerScript(name, script);
+        }
+    }
+
+    auto getScriptMetadata(std::string_view name) const
+        -> std::optional<ScriptMetadata> {
+        std::shared_lock lock(mMetadataMutex_);
+        if (auto it = scriptMetadata_.find(std::string(name));
+            it != scriptMetadata_.end()) {
+            return it->second;
+        }
+        return std::nullopt;
+    }
+
+private:
+    // 新增辅助方法
+    auto handleRetry(std::string_view name,
+                     const std::unordered_map<std::string, std::string>& args,
+                     bool safe, std::optional<int> timeoutMs, int retryCount)
+        -> std::optional<std::pair<std::string, int>> {
+        auto strategy = retryStrategies_[std::string(name)];
+        std::chrono::milliseconds delay(100);
+
+        for (int i = 0; i < retryCount; ++i) {
+            switch (strategy) {
+                case RetryStrategy::Linear:
+                    delay += std::chrono::milliseconds(100);
+                    break;
+                case RetryStrategy::Exponential:
+                    delay *= 2;
+                    break;
+                default:
+                    break;
+            }
+
+            std::this_thread::sleep_for(delay);
+
+            try {
+                return runScriptImpl(name, args, safe, timeoutMs, 0);
+            } catch (...) {
+                if (i == retryCount - 1)
+                    throw;
+            }
+        }
+        return std::nullopt;
+    }
 };
 
 ScriptManager::ScriptManager()
@@ -416,7 +487,36 @@ auto ScriptManagerImpl::runScript(
     std::optional<int> timeoutMs,
     int retryCount) -> std::optional<std::pair<std::string, int>> {
     try {
-        return runScriptImpl(name, args, safe, timeoutMs, retryCount);
+        // 使用stop_token支持取消
+        std::stop_source stopSource;
+        auto future = std::async(
+            std::launch::async,
+            [this, name, args, &stopSource, safe, timeoutMs, retryCount]() {
+                return runScriptImpl(name, args, safe, timeoutMs, retryCount);
+            });
+
+        // 超时处理
+        if (timeoutMs) {
+            if (future.wait_for(std::chrono::milliseconds(*timeoutMs)) ==
+                std::future_status::timeout) {
+                stopSource.request_stop();
+                if (auto handler = timeoutHandlers_.find(std::string(name));
+                    handler != timeoutHandlers_.end()) {
+                    handler->second();
+                }
+                return std::nullopt;
+            }
+        }
+
+        try {
+            return future.get();
+        } catch (const std::exception& e) {
+            // 重试逻辑
+            if (retryCount > 0) {
+                return handleRetry(name, args, safe, timeoutMs, retryCount);
+            }
+            throw;
+        }
     } catch (const ScriptException& e) {
         LOG_F(ERROR, "ScriptException: {}", e.what());
         throw;
@@ -598,6 +698,17 @@ auto ScriptManagerImpl::getScriptInfo(std::string_view name) const
     }
 
     return info.dump();
+}
+
+// 实现新的公共接口
+void ScriptManager::importScripts(
+    std::span<const std::pair<std::string, Script>> scripts) {
+    pImpl_->importScripts(scripts);
+}
+
+auto ScriptManager::getScriptMetadata(std::string_view name) const
+    -> std::optional<ScriptMetadata> {
+    return pImpl_->getScriptMetadata(name);
 }
 
 }  // namespace lithium

@@ -22,15 +22,15 @@ bool RateLimiter::allow_request() {
         int new_tokens =
             static_cast<int>(elapsed_time.count() / refill_interval_.count());
         tokens_ = std::min(max_tokens_, tokens_ + new_tokens);
-        LOG_F(INFO, "Tokens refilled: added %d tokens, current tokens: %d",
-              new_tokens, tokens_);
+        LOG_F(INFO, "Tokens refilled: added {} tokens, current tokens: {}",
+              new_tokens, tokens_.load());
         last_refill_time_ = now;
     }
 
     if (tokens_ > 0) {
         tokens_--;
         record_request_time(now);
-        LOG_F(INFO, "Request allowed, remaining tokens: %d", tokens_);
+        LOG_F(INFO, "Request allowed, remaining tokens: {}", tokens_.load());
         return true;
     } else {
         LOG_F(WARNING, "Request denied, no tokens available");
@@ -80,16 +80,56 @@ bool RateLimiter::allow_request_with_limit(const std::string& user_id,
                    max_requests_per_minute;
     if (allowed) {
         LOG_F(INFO,
-              "User request allowed for {} (requests in last minute: %zu/%d)",
+              "User request allowed for {} (requests in last minute: %zu/{})",
               user_id, user_limiter.request_times.size(),
               max_requests_per_minute);
     } else {
         LOG_F(WARNING,
-              "User request denied for {} - rate limit exceeded (%zu/%d)",
+              "User request denied for {} - rate limit exceeded (%zu/{})",
               user_id, user_limiter.request_times.size(),
               max_requests_per_minute);
     }
     return allowed;
+}
+
+int RateLimiter::get_request_count(std::chrono::seconds window) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto now = std::chrono::steady_clock::now();
+
+    // 清理超出时间窗口的请求记录
+    request_times_.erase(
+        std::remove_if(
+            request_times_.begin(), request_times_.end(),
+            [now, window](const auto& t) {
+                return std::chrono::duration_cast<std::chrono::seconds>(
+                           now - t) >= window;
+            }),
+        request_times_.end());
+
+    return static_cast<int>(request_times_.size());
+}
+
+int RateLimiter::get_remaining_tokens() {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // 在获取剩余令牌前先进行补充计算
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - last_refill_time_);
+
+    if (elapsed_time >= refill_interval_) {
+        int new_tokens =
+            static_cast<int>(elapsed_time.count() / refill_interval_.count());
+        tokens_ = std::min(max_tokens_, tokens_ + new_tokens);
+        last_refill_time_ = now;
+    }
+
+    return tokens_.load();
+}
+
+void RateLimiter::record_request_time(
+    std::chrono::steady_clock::time_point now) {
+    request_times_.push_back(now);
 }
 
 bool RateLimiter::IpRateLimiter::allow_request() {

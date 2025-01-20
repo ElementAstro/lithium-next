@@ -11,6 +11,9 @@ project(lithium_server VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources and Headers
 set(PROJECT_FILES
+    command.cpp
+    eventloop.cpp
+    rate_limiter.cpp
     websocket.cpp
 )
 

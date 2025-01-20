@@ -5,6 +5,10 @@
 #include <unordered_map>
 #include <vector>
 
+// 新增头文件
+#include <execution>
+#include <memory_resource>
+
 namespace py = pybind11;
 
 namespace lithium {
@@ -26,6 +30,10 @@ struct CacheEntry {
 // Implementation class
 class PythonWrapper::Impl {
 public:
+    static thread_local std::pmr::synchronized_pool_resource memory_pool;
+
+    std::vector<std::jthread> worker_threads_;
+
     Impl() { LOG_F(INFO, "Initializing Python interpreter."); }
 
     ~Impl() { LOG_F(INFO, "Shutting down Python interpreter."); }
@@ -382,6 +390,84 @@ public:
         }
     }
 
+    // 新增: 实现基于ranges的批处理
+    template <std::ranges::range R>
+        requires PythonConvertible<std::ranges::range_value_t<R>>
+    void batchProcess(const std::string& alias,
+                      const std::string& function_name, R&& range) {
+        std::vector<std::future<void>> futures;
+
+        auto chunks =
+            std::ranges::views::chunk(range, 1000);  // 每1000个元素一批
+        for (const auto& chunk : chunks) {
+            futures.push_back(std::async(std::launch::async, [&, chunk] {
+                py::gil_scoped_acquire gil;
+                auto iter = scripts_.find(alias);
+                if (iter != scripts_.end()) {
+                    iter->second.attr(function_name.c_str())(chunk);
+                }
+            }));
+        }
+
+        for (auto& future : futures) {
+            future.wait();
+        }
+    }
+
+    // 新增: 实现span接口
+    template <typename T>
+    void processData(const std::string& alias, const std::string& function_name,
+                     std::span<T> data) {
+        std::for_each(std::execution::par_unseq, data.begin(), data.end(),
+                      [&](auto& item) {
+                          py::gil_scoped_acquire gil;
+                          auto iter = scripts_.find(alias);
+                          if (iter != scripts_.end()) {
+                              iter->second.attr(function_name.c_str())(item);
+                          }
+                      });
+    }
+
+    // 新增: 实现协程支持
+    AsyncGenerator<py::object> asyncExecute(const std::string& script) {
+        py::gil_scoped_acquire gil;
+        py::module_ asyncio = py::module_::import("asyncio");
+
+        while (true) {
+            try {
+                py::object result = py::eval(script);
+                co_yield result;
+            } catch (const py::error_already_set& e) {
+                break;
+            }
+        }
+    }
+
+    // 新增: 实现线程安全的资源管理
+    template <typename T>
+    std::shared_ptr<T> getSharedResource(const std::string& resource_name) {
+        std::shared_lock read_lock(resource_mutex_);
+        if (auto it = resources_.find(resource_name); it != resources_.end()) {
+            return std::static_pointer_cast<T>(it->second);
+        }
+
+        read_lock.unlock();
+        std::unique_lock write_lock(resource_mutex_);
+
+        // 双重检查锁定
+        if (auto it = resources_.find(resource_name); it != resources_.end()) {
+            return std::static_pointer_cast<T>(it->second);
+        }
+
+        auto resource = std::make_shared<T>();
+        resources_[resource_name] = resource;
+        return resource;
+    }
+
+    // 新增: 资源管理
+    std::unordered_map<std::string, std::shared_ptr<void>> resources_;
+    std::shared_mutex resource_mutex_;
+
     PerformanceConfig config_;
     ErrorHandlingStrategy error_strategy_ =
         ErrorHandlingStrategy::THROW_EXCEPTION;
@@ -397,16 +483,15 @@ public:
     std::unordered_map<std::string, py::module> scripts_;
 };
 
+// 静态成员初始化
+thread_local std::pmr::synchronized_pool_resource
+    PythonWrapper::Impl::memory_pool;
+
 // PythonWrapper Implementation
 
 PythonWrapper::PythonWrapper() : pImpl(std::make_unique<Impl>()) {}
 
 PythonWrapper::~PythonWrapper() = default;
-
-PythonWrapper::PythonWrapper(PythonWrapper&&) noexcept = default;
-
-auto PythonWrapper::operator=(PythonWrapper&&) noexcept -> PythonWrapper& =
-                                                               default;
 
 void PythonWrapper::load_script(const std::string& script_name,
                                 const std::string& alias) {

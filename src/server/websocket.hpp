@@ -225,7 +225,7 @@ private:
     std::shared_ptr<atom::async::MessageBus> message_bus_;
     std::shared_ptr<lithium::app::CommandDispatcher> command_dispatcher_;
     std::unordered_set<crow::websocket::connection*> clients_;
-    std::mutex conn_mutex_;
+    std::shared_mutex conn_mutex_;
 
     uint64_t max_payload_size_ = UINT64_MAX;
     std::vector<std::string> subprotocols_;
@@ -256,6 +256,17 @@ private:
 
     bool compression_enabled_{false};
     int compression_level_{6};
+
+    // 记录每个连接的最后活动时间
+    std::unordered_map<crow::websocket::connection*, 
+        std::chrono::steady_clock::time_point> last_activity_times_;
+    
+    // 更新连接的最后活动时间
+    void update_activity_time(crow::websocket::connection* conn);
+    
+    // 获取连接的最后活动时间
+    std::chrono::steady_clock::time_point get_last_activity_time(
+        crow::websocket::connection* conn) const;
 
     void setup_message_bus_handlers();
     void setup_command_handlers();

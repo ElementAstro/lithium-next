@@ -10,10 +10,10 @@
 #include <utility>
 
 #include "atom/error/exception.hpp"
-#include "extra/tinyxml2/tinyxml2.h"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/container.hpp"
+#include "extra/tinyxml2/tinyxml2.h"
 
 #if __has_include(<yaml-cpp/yaml.h>)
 #include <yaml-cpp/yaml.h>
@@ -589,6 +589,51 @@ auto DependencyGraph::resolveParallelBatch(const std::vector<Node>& batch)
         batchResult.insert(batchResult.end(), deps.begin(), deps.end());
     }
     return batchResult;
+}
+
+auto DependencyGraph::validateDependencies(const Node& node) const -> bool {
+    std::shared_lock lock(mutex_);
+    DLOG_F(INFO, "Validating dependencies for node: {}", node);
+
+    // 检查节点是否存在
+    if (adjList_.find(node) == adjList_.end()) {
+        LOG_F(ERROR, "Node {} not found in dependency graph", node);
+        return false;
+    }
+
+    // 获取该节点的所有依赖
+    auto deps = getAllDependencies(node);
+
+    // 验证每个依赖
+    for (const auto& dep : deps) {
+        // 检查依赖节点是否存在
+        if (adjList_.find(dep) == adjList_.end()) {
+            LOG_F(ERROR, "Dependency {} not found for node {}", dep, node);
+            return false;
+        }
+
+        // 检查是否存在版本冲突
+        if (nodeVersions_.find(dep) != nodeVersions_.end()) {
+            try {
+                for (const auto& [otherNode, otherDeps] : adjList_) {
+                    if (otherDeps.contains(dep)) {
+                        // 验证版本兼容性
+                        const auto& requiredVersion = nodeVersions_.at(dep);
+                        validateVersion(node, dep, requiredVersion);
+                    }
+                }
+            } catch (const std::exception& e) {
+                LOG_F(ERROR,
+                      "Version validation failed for dependency {} of node {}: "
+                      "{}",
+                      dep, node, e.what());
+                return false;
+            }
+        }
+    }
+
+    DLOG_F(INFO, "All dependencies validated successfully for node {}", node);
+    return true;
 }
 
 }  // namespace lithium
