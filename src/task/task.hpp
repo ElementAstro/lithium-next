@@ -158,6 +158,8 @@ public:
     void setExceptionCallback(ExceptionCallback callback);
     void clearExceptionCallback();
 
+    json toJson() const;
+
 private:
     std::string name_;  ///< The name of the task.
     std::string uuid_;  ///< The unique identifier of the task.

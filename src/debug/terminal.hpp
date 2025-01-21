@@ -8,7 +8,8 @@
 #include <vector>
 
 namespace lithium::debug {
-
+class CommandChecker;
+class SuggestionEngine;
 /**
  * @brief Class representing a console terminal for debugging purposes.
  */
@@ -100,6 +101,26 @@ public:
      */
     void loadConfig(const std::string& configPath);
 
+    /**
+     * @brief 设置命令检查器
+     */
+    void setCommandChecker(std::shared_ptr<CommandChecker> checker);
+
+    /**
+     * @brief 设置建议引擎
+     */
+    void setSuggestionEngine(std::shared_ptr<SuggestionEngine> engine);
+
+    /**
+     * @brief 启用或禁用命令检查
+     */
+    void enableCommandCheck(bool enable);
+
+    /**
+     * @brief 获取命令补全建议
+     */
+    std::vector<std::string> getCommandSuggestions(const std::string& prefix);
+
 private:
     /**
      * @brief Implementation class for ConsoleTerminal.
@@ -119,6 +140,9 @@ private:
         true};  ///< Flag indicating whether syntax highlighting is enabled.
     std::chrono::milliseconds commandTimeout_{
         5000};  ///< Command execution timeout duration.
+    bool commandCheckEnabled_{true};
+    std::shared_ptr<CommandChecker> commandChecker_;
+    std::shared_ptr<SuggestionEngine> suggestionEngine_;
 };
 
 /**

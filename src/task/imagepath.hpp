@@ -2,11 +2,14 @@
 #define LITHIUM_TASK_IMAGEPATH_HPP
 
 #include <atomic>
+#include <filesystem>
 #include <functional>
 #include <future>
 #include <memory>
 #include <optional>
+#include <shared_mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "atom/macro.hpp"
@@ -30,6 +33,10 @@ struct ImageInfo {
         sensorTemp;  ///< Sensor temperature when the image was taken.
     std::optional<std::string> exposureTime;  ///< Exposure time of the image.
     std::optional<std::string> frameNr;       ///< Frame number of the image.
+    std::optional<std::string> cameraModel;   ///< Camera model
+    std::optional<uint32_t> gain;             ///< Gain value
+    std::optional<double> focalLength;        ///< Focal length
+    std::optional<std::string> target;        ///< Shooting target
 
     /**
      * @brief Convert the ImageInfo to a JSON object.
@@ -45,6 +52,24 @@ struct ImageInfo {
     static auto fromJson(const json& j) -> ImageInfo;
 
     bool operator==(const ImageInfo&) const = default;
+
+    /**
+     * @brief Compute a hash value for the ImageInfo.
+     * @return Hash value.
+     */
+    [[nodiscard]] auto hash() const -> size_t;
+
+    /**
+     * @brief Check if the ImageInfo is complete.
+     * @return True if complete, false otherwise.
+     */
+    [[nodiscard]] auto isComplete() const noexcept -> bool;
+
+    /**
+     * @brief Merge with another ImageInfo.
+     * @param other The other ImageInfo to merge with.
+     */
+    auto mergeWith(const ImageInfo& other) -> void;
 } ATOM_ALIGNAS(128);
 
 /**
@@ -96,12 +121,6 @@ public:
      */
     [[nodiscard]] auto parseFilenameAsync(const std::string& filename)
         -> std::future<std::optional<ImageInfo>>;
-
-    /**
-     * @brief Get performance statistics of the parser.
-     * @return JSON object containing performance statistics.
-     */
-    [[nodiscard]] auto getPerformanceStats() const -> json;
 
     /**
      * @brief Enable caching of parsed results.
@@ -181,6 +200,58 @@ public:
      */
     [[nodiscard]] auto getPatterns() const -> std::vector<std::string>;
 
+    /**
+     * @brief Check if a filename is valid.
+     * @param filename The filename to check.
+     * @return True if valid, false otherwise.
+     */
+    [[nodiscard]] auto isValidFilename(std::string_view filename) const noexcept
+        -> bool;
+
+    /**
+     * @brief Get a batch processor for processing files in batches.
+     * @param batchSize The size of the batch.
+     * @return Unique pointer to the batch processor.
+     */
+    [[nodiscard]] auto getBatchProcessor(size_t batchSize)
+        -> std::unique_ptr<class BatchProcessor>;
+
+    /**
+     * @brief Find files in a directory.
+     * @param dir The directory to search.
+     * @param filter The filter function.
+     * @return Vector of ImageInfo for the found files.
+     */
+    template <typename T>
+    [[nodiscard]] auto findFilesInDirectory(
+        const std::filesystem::path& dir, T&& filter = [](const auto&) {
+            return true;
+        }) const -> std::vector<ImageInfo>;
+
+    /**
+     * @brief Create a file namer based on a pattern.
+     * @param pattern The pattern to use.
+     * @return Function to generate filenames.
+     */
+    [[nodiscard]] auto createFileNamer(const std::string& pattern) const
+        -> std::function<std::string(const ImageInfo&)>;
+
+    /**
+     * @brief Set a validator for a specific field.
+     * @param field The field to validate.
+     * @param validator The validator function.
+     */
+    auto setFieldValidator(const std::string& field,
+                           std::function<bool(const std::string&)> validator)
+        -> void;
+
+    /**
+     * @brief Set a pre-processor for filenames.
+     * @param processor The pre-processor function.
+     */
+    auto setPreProcessor(std::function<std::string(std::string)> processor)
+        -> void;
+
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;  ///< Pointer to implementation.
@@ -192,6 +263,10 @@ private:
     mutable std::string lastError_;              ///< Last error message.
     std::function<void(const std::string&)>
         errorHandler_;  ///< Custom error handler.
+    mutable std::shared_mutex cacheMutex_;
+    std::unordered_map<std::string, std::function<bool(const std::string&)>>
+        fieldValidators_;
+    std::function<std::string(std::string)> preProcessor_;
 };
 
 }  // namespace lithium

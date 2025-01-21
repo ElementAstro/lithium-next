@@ -6,11 +6,11 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <string>
-#include <vector>
 #include <unordered_map>
-#include <optional>
+#include <vector>
 
 #include "atom/async/safetype.hpp"
 #include "task.hpp"
@@ -149,7 +149,7 @@ public:
      */
     void execute();
 
-     /**
+    /**
      * @brief Loads tasks from a JSON array.
      * @param tasksJson The JSON array containing task definitions.
      */
@@ -171,27 +171,39 @@ public:
      * @param taskUUID The UUID of the task
      * @return The task parameters
      */
-    [[nodiscard]] auto getTaskParams(const std::string& taskUUID) const -> std::optional<json>;
+    [[nodiscard]] auto getTaskParams(const std::string& taskUUID) const
+        -> std::optional<json>;
 
     /**
      * @brief Sets parameters for all tasks in this target
      * @param params The parameters in JSON format
      */
     void setParams(const json& params);
-    
+
     /**
      * @brief Gets the parameters for this target's tasks
      * @return The current parameters
      */
     [[nodiscard]] auto getParams() const -> const json&;
 
+    /**
+     * @brief Converts the target to a JSON object.
+     * @return The JSON object representing the target.
+     */
+    [[nodiscard]] auto toJson() const -> json;
+
+    /**
+     * @brief Converts a JSON object to a target.
+     * @param data The JSON object to convert.
+     */
+    auto fromJson(const json& data) -> void;
+
 private:
     std::string name_;  ///< The name of the target.
     std::string uuid_;  ///< The unique identifier of the target.
     std::vector<std::unique_ptr<Task>>
         tasks_;  ///< The list of tasks to be executed by the target.
-    std::vector<std::string>
-        dependencies_;  ///< The list of task dependencies.
+    std::vector<std::string> dependencies_;  ///< The list of task dependencies.
     std::chrono::seconds
         cooldown_;        ///< The cooldown period between task executions.
     bool enabled_{true};  ///< Indicates whether the target is enabled.

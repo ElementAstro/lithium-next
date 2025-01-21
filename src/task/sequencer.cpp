@@ -32,7 +32,24 @@ using json = nlohmann::json;
 // ExposureSequence Implementation
 
 ExposureSequence::ExposureSequence() {
-    AddPtr(Constants::TASK_QUEUE, std::make_shared<atom::async::LockFreeHashTable<std::string, json>>());
+    // 初始化数据库连接
+    try {
+        db_ = std::make_shared<database::Database>("sequences.db");
+        sequenceTable_ = std::make_unique<database::Table<SequenceModel>>(*db_);
+        sequenceTable_->createTable();
+        LOG_F(INFO, "Database initialized successfully");
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to initialize database: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to initialize database: " +
+                            std::string(e.what()));
+    }
+
+    AddPtr(
+        Constants::TASK_QUEUE,
+        std::make_shared<atom::async::LockFreeHashTable<std::string, json>>());
+
+    taskGenerator_ = TaskGenerator::createShared();
+    initializeDefaultMacros();
 }
 
 ExposureSequence::~ExposureSequence() { stop(); }
@@ -209,16 +226,17 @@ void ExposureSequence::loadSequence(const std::string& filename) {
     }
 
     for (const auto& targetJson : j["targets"]) {
-        if (!targetJson.contains("name") || !targetJson.contains("enabled")) {
-            LOG_F(ERROR, "Invalid target format in sequence file");
-            THROW_RUNTIME_ERROR("Invalid target format in sequence file");
-        }
-        std::string name = targetJson["name"].get<std::string>();
-        bool enabled = targetJson["enabled"].get<bool>();
+        // 在创建目标之前处理 JSON
+        json processedJson = targetJson;
+        processJsonWithGenerator(processedJson);
+
+        std::string name = processedJson["name"].get<std::string>();
+        bool enabled = processedJson["enabled"].get<bool>();
         auto target = std::make_unique<Target>(name);
         target->setEnabled(enabled);
-        if (targetJson.contains("tasks") && targetJson["tasks"].is_array()) {
-            target->loadTasksFromJson(targetJson["tasks"]);
+        if (processedJson.contains("tasks") &&
+            processedJson["tasks"].is_array()) {
+            target->loadTasksFromJson(processedJson["tasks"]);
         }
         targets_.push_back(std::move(target));
     }
@@ -671,13 +689,12 @@ auto ExposureSequence::getExecutionStats() const -> json {
 }
 
 void ExposureSequence::setTargetTaskParams(const std::string& targetName,
-                                          const std::string& taskUUID,
-                                          const json& params) {
+                                           const std::string& taskUUID,
+                                           const json& params) {
     std::shared_lock lock(mutex_);
-    auto target = std::find_if(targets_.begin(), targets_.end(),
-                              [&](const auto& t) { 
-                                  return t->getName() == targetName; 
-                              });
+    auto target =
+        std::find_if(targets_.begin(), targets_.end(),
+                     [&](const auto& t) { return t->getName() == targetName; });
     if (target == targets_.end()) {
         THROW_RUNTIME_ERROR("Target not found: " + targetName);
     }
@@ -685,26 +702,24 @@ void ExposureSequence::setTargetTaskParams(const std::string& targetName,
 }
 
 auto ExposureSequence::getTargetTaskParams(const std::string& targetName,
-                                         const std::string& taskUUID) const 
+                                           const std::string& taskUUID) const
     -> std::optional<json> {
     std::shared_lock lock(mutex_);
-    auto target = std::find_if(targets_.begin(), targets_.end(),
-                              [&](const auto& t) { 
-                                  return t->getName() == targetName; 
-                              });
+    auto target =
+        std::find_if(targets_.begin(), targets_.end(),
+                     [&](const auto& t) { return t->getName() == targetName; });
     if (target == targets_.end()) {
         return std::nullopt;
     }
     return (*target)->getTaskParams(taskUUID);
 }
 
-void ExposureSequence::setTargetParams(const std::string& targetName, 
-                                     const json& params) {
+void ExposureSequence::setTargetParams(const std::string& targetName,
+                                       const json& params) {
     std::shared_lock lock(mutex_);
-    auto target = std::find_if(targets_.begin(), targets_.end(),
-                              [&](const auto& t) { 
-                                  return t->getName() == targetName; 
-                              });
+    auto target =
+        std::find_if(targets_.begin(), targets_.end(),
+                     [&](const auto& t) { return t->getName() == targetName; });
     if (target != targets_.end()) {
         (*target)->setParams(params);
     } else {
@@ -713,16 +728,269 @@ void ExposureSequence::setTargetParams(const std::string& targetName,
     }
 }
 
-auto ExposureSequence::getTargetParams(const std::string& targetName) const 
+auto ExposureSequence::getTargetParams(const std::string& targetName) const
     -> std::optional<json> {
     std::shared_lock lock(mutex_);
-    auto target = std::find_if(targets_.begin(), targets_.end(),
-                              [&](const auto& t) { 
-                                  return t->getName() == targetName; 
-                              });
+    auto target =
+        std::find_if(targets_.begin(), targets_.end(),
+                     [&](const auto& t) { return t->getName() == targetName; });
     if (target != targets_.end()) {
         return (*target)->getParams();
     }
     return std::nullopt;
 }
+
+void ExposureSequence::saveToDatabase() {
+    if (!db_ || !sequenceTable_) {
+        LOG_F(ERROR, "Database not initialized");
+        THROW_RUNTIME_ERROR("Database not initialized");
+    }
+
+    try {
+        db_->beginTransaction();
+
+        SequenceModel model;
+        model.uuid = uuid_;
+        model.name = "Sequence_" + uuid_;
+        model.data = serializeToJson().dump();
+        model.createdAt = std::to_string(
+            std::chrono::system_clock::now().time_since_epoch().count());
+
+        sequenceTable_->insert(model);
+
+        db_->commit();
+        LOG_F(INFO, "Sequence saved to database with UUID: {}", uuid_);
+    } catch (const std::exception& e) {
+        db_->rollback();
+        LOG_F(ERROR, "Failed to save sequence to database: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to save sequence to database: " +
+                            std::string(e.what()));
+    }
+}
+
+void ExposureSequence::loadFromDatabase(const std::string& uuid) {
+    if (!db_ || !sequenceTable_) {
+        LOG_F(ERROR, "Database not initialized");
+        THROW_RUNTIME_ERROR("Database not initialized");
+    }
+
+    try {
+        auto results = sequenceTable_->query("uuid = '" + uuid + "'", 1);
+        if (results.empty()) {
+            LOG_F(ERROR, "Sequence with UUID {} not found", uuid);
+            THROW_RUNTIME_ERROR("Sequence not found: " + uuid);
+        }
+
+        const auto& model = results[0];
+        uuid_ = model.uuid;
+        json data = json::parse(model.data);
+        deserializeFromJson(data);
+
+        LOG_F(INFO, "Sequence loaded from database: {}", uuid);
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to load sequence from database: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to load sequence from database: " +
+                            std::string(e.what()));
+    }
+}
+
+auto ExposureSequence::listSequences() -> std::vector<SequenceModel> {
+    if (!db_ || !sequenceTable_) {
+        LOG_F(ERROR, "Database not initialized");
+        THROW_RUNTIME_ERROR("Database not initialized");
+    }
+
+    try {
+        return sequenceTable_->query();
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to list sequences: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to list sequences: " +
+                            std::string(e.what()));
+    }
+}
+
+void ExposureSequence::deleteFromDatabase(const std::string& uuid) {
+    if (!db_ || !sequenceTable_) {
+        LOG_F(ERROR, "Database not initialized");
+        THROW_RUNTIME_ERROR("Database not initialized");
+    }
+
+    try {
+        db_->beginTransaction();
+        sequenceTable_->remove("uuid = '" + uuid + "'");
+        db_->commit();
+        LOG_F(INFO, "Sequence deleted from database: {}", uuid);
+    } catch (const std::exception& e) {
+        db_->rollback();
+        LOG_F(ERROR, "Failed to delete sequence from database: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to delete sequence from database: " +
+                            std::string(e.what()));
+    }
+}
+
+json ExposureSequence::serializeToJson() const {
+    json j;
+    std::shared_lock lock(mutex_);
+
+    j["uuid"] = uuid_;
+    j["state"] = static_cast<int>(state_.load());
+    j["maxConcurrentTargets"] = maxConcurrentTargets_;
+    j["globalTimeout"] = globalTimeout_.count();
+
+    j["targets"] = json::array();
+    for (const auto& target : targets_) {
+        j["targets"].push_back(target->toJson());
+    }
+
+    j["dependencies"] = targetDependencies_;
+    j["executionStats"] = {
+        {"totalExecutions", stats_.totalExecutions},
+        {"successfulExecutions", stats_.successfulExecutions},
+        {"failedExecutions", stats_.failedExecutions},
+        {"averageExecutionTime", stats_.averageExecutionTime}};
+
+    return j;
+}
+
+void ExposureSequence::deserializeFromJson(const json& data) {
+    std::unique_lock lock(mutex_);
+
+    uuid_ = data["uuid"].get<std::string>();
+    state_ = static_cast<SequenceState>(data["state"].get<int>());
+    maxConcurrentTargets_ = data["maxConcurrentTargets"].get<size_t>();
+    globalTimeout_ = std::chrono::seconds(data["globalTimeout"].get<int64_t>());
+
+    targets_.clear();
+    for (const auto& targetJson : data["targets"]) {
+        auto target =
+            std::make_unique<Target>(targetJson["name"].get<std::string>());
+        target->fromJson(targetJson);
+        targets_.push_back(std::move(target));
+    }
+
+    targetDependencies_ =
+        data["dependencies"]
+            .get<std::unordered_map<std::string, std::vector<std::string>>>();
+
+    const auto& statsJson = data["executionStats"];
+    stats_.totalExecutions = statsJson["totalExecutions"].get<size_t>();
+    stats_.successfulExecutions =
+        statsJson["successfulExecutions"].get<size_t>();
+    stats_.failedExecutions = statsJson["failedExecutions"].get<size_t>();
+    stats_.averageExecutionTime =
+        statsJson["averageExecutionTime"].get<double>();
+
+    updateTargetReadyStatus();
+}
+
+void ExposureSequence::initializeDefaultMacros() {
+    // 添加一些默认宏用于任务处理
+    taskGenerator_->addMacro(
+        "target.uuid",
+        [this](const std::vector<std::string>& args) -> std::string {
+            if (args.empty())
+                return "";
+            auto target = std::find_if(
+                targets_.begin(), targets_.end(),
+                [&args](const auto& t) { return t->getName() == args[0]; });
+            return target != targets_.end() ? (*target)->getUUID() : "";
+        });
+
+    taskGenerator_->addMacro(
+        "target.status",
+        [this](const std::vector<std::string>& args) -> std::string {
+            if (args.empty())
+                return "Unknown";
+            return std::to_string(static_cast<int>(getTargetStatus(args[0])));
+        });
+
+    taskGenerator_->addMacro(
+        "sequence.progress",
+        [this](const std::vector<std::string>&) -> std::string {
+            return std::to_string(getProgress());
+        });
+}
+
+void ExposureSequence::setTaskGenerator(
+    std::shared_ptr<TaskGenerator> generator) {
+    if (!generator) {
+        LOG_F(ERROR, "Cannot set null task generator");
+        THROW_INVALID_ARGUMENT("Cannot set null task generator");
+    }
+    std::unique_lock lock(mutex_);
+    taskGenerator_ = std::move(generator);
+}
+
+auto ExposureSequence::getTaskGenerator() const
+    -> std::shared_ptr<TaskGenerator> {
+    std::shared_lock lock(mutex_);
+    return taskGenerator_;
+}
+
+void ExposureSequence::processTargetWithMacros(const std::string& targetName) {
+    std::shared_lock lock(mutex_);
+    auto target = std::find_if(
+        targets_.begin(), targets_.end(),
+        [&targetName](const auto& t) { return t->getName() == targetName; });
+
+    if (target == targets_.end()) {
+        LOG_F(ERROR, "Target not found: {}", targetName);
+        THROW_RUNTIME_ERROR("Target not found: " + targetName);
+    }
+
+    try {
+        json targetData = (*target)->toJson();
+        taskGenerator_->processJsonWithJsonMacros(targetData);
+        (*target)->fromJson(targetData);
+        LOG_F(INFO, "Successfully processed target {} with macros", targetName);
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to process target {} with macros: {}", targetName,
+              e.what());
+        THROW_RUNTIME_ERROR("Failed to process target with macros: " +
+                            std::string(e.what()));
+    }
+}
+
+void ExposureSequence::processAllTargetsWithMacros() {
+    std::shared_lock lock(mutex_);
+    for (const auto& target : targets_) {
+        try {
+            json targetData = target->toJson();
+            taskGenerator_->processJsonWithJsonMacros(targetData);
+            target->fromJson(targetData);
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Failed to process target {} with macros: {}",
+                  target->getName(), e.what());
+            THROW_RUNTIME_ERROR("Failed to process target with macros: " +
+                                std::string(e.what()));
+        }
+    }
+    LOG_F(INFO, "Successfully processed all targets with macros");
+}
+
+void ExposureSequence::processJsonWithGenerator(json& data) {
+    try {
+        taskGenerator_->processJsonWithJsonMacros(data);
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to process JSON with generator: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to process JSON with generator: " +
+                            std::string(e.what()));
+    }
+}
+
+void ExposureSequence::addMacro(const std::string& name, MacroValue value) {
+    std::unique_lock lock(mutex_);
+    taskGenerator_->addMacro(name, std::move(value));
+}
+
+void ExposureSequence::removeMacro(const std::string& name) {
+    std::unique_lock lock(mutex_);
+    taskGenerator_->removeMacro(name);
+}
+
+auto ExposureSequence::listMacros() const -> std::vector<std::string> {
+    std::shared_lock lock(mutex_);
+    return taskGenerator_->listMacros();
+}
+
 }  // namespace lithium::sequencer

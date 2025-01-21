@@ -179,7 +179,8 @@ void Target::setTaskParams(const std::string& taskUUID, const json& params) {
     LOG_F(INFO, "Parameters set for task {}", taskUUID);
 }
 
-auto Target::getTaskParams(const std::string& taskUUID) const -> std::optional<json> {
+auto Target::getTaskParams(const std::string& taskUUID) const
+    -> std::optional<json> {
     std::shared_lock lock(paramsMutex_);
     auto it = taskParams_.find(taskUUID);
     if (it != taskParams_.end()) {
@@ -203,24 +204,24 @@ void Target::execute() {
     paramsLock.unlock();
 
     for (auto& task : tasks_) {
-        if (status_ == TargetStatus::Failed || 
+        if (status_ == TargetStatus::Failed ||
             status_ == TargetStatus::Skipped) {
             break;
         }
 
         try {
-            LOG_F(INFO, "Executing task {} in target {}", 
-                  task->getName(), name_);
+            LOG_F(INFO, "Executing task {} in target {}", task->getName(),
+                  name_);
             // 使用存储的参数直接执行任务
             task->execute(currentParams);
-            
+
             if (task->getStatus() == TaskStatus::Failed) {
                 status_ = TargetStatus::Failed;
                 break;
             }
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Task {} failed in target {}: {}", 
-                  task->getName(), name_, e.what());
+            LOG_F(ERROR, "Task {} failed in target {}: {}", task->getName(),
+                  name_, e.what());
             status_ = TargetStatus::Failed;
             break;
         }
@@ -277,5 +278,23 @@ auto Target::getDependencies() -> std::vector<std::string> {
 auto Target::getTasks() -> const std::vector<std::unique_ptr<Task>>& {
     std::shared_lock lock(mutex_);
     return tasks_;
+}
+
+auto Target::toJson() const -> json {
+    std::shared_lock lock(paramsMutex_);
+    json j;
+    j["name"] = name_;
+    j["uuid"] = uuid_;
+    j["cooldown"] = cooldown_.count();
+    j["maxRetries"] = maxRetries_;
+    j["enabled"] = enabled_;
+    j["status"] = static_cast<int>(status_.load());
+    j["progress"] = getProgress();
+    j["params"] = params_;
+    j["tasks"] = json::array();
+    for (const auto& task : tasks_) {
+        j["tasks"].push_back(task->toJson());
+    }
+    return j;
 }
 }  // namespace lithium::sequencer

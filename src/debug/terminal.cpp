@@ -59,7 +59,6 @@ public:
     void callCommand(std::string_view name, const std::vector<std::any>& args);
     void run();
 
-private:
     void initializeNcurses();
     void shutdownNcurses() const;
     std::string readInput();
@@ -94,6 +93,8 @@ private:
     bool syntaxHighlightEnabled_ = false;
     std::chrono::milliseconds commandTimeout_ =
         std::chrono::milliseconds(DEFAULT_COMMAND_TIMEOUT_MS);
+
+    bool commandCheckEnabled_{true};
 };
 
 ConsoleTerminal::ConsoleTerminal()
@@ -317,16 +318,11 @@ void ConsoleTerminal::ConsoleTerminalImpl::printErrors(
         // Print each error with its severity and location
         for (const auto& error : errors) {
             std::string severityColor =
-                error.severity == CommandChecker::ErrorSeverity::WARNING
-                    ? YELLOW
-                    : RED;
+                error.severity == ErrorSeverity::WARNING ? YELLOW : RED;
 
             std::cout << severityColor
-                      << (error.severity ==
-                                  CommandChecker::ErrorSeverity::WARNING
-                              ? "Warning"
-                          : error.severity ==
-                                  CommandChecker::ErrorSeverity::ERROR
+                      << (error.severity == ErrorSeverity::WARNING ? "Warning"
+                          : error.severity == ErrorSeverity::ERROR
                               ? "Error"
                               : "Critical Error")
                       << " at line " << error.line << ", column "
@@ -431,17 +427,40 @@ auto ConsoleTerminal::ConsoleTerminalImpl::processToken(
 
 void ConsoleTerminal::ConsoleTerminalImpl::handleInput(
     const std::string& input) {
-    std::istringstream iss(input);
-    std::string command;
-    iss >> command;
-    std::string argsStr(std::istreambuf_iterator<char>(iss), {});
-
-    if (!commandChecker_->check(input).empty()) {
-        std::cout << "Command '" << command << "' is dangerous.\n";
-        return;
+    if (commandCheckEnabled_ && commandChecker_) {
+        auto errors = commandChecker_->check(input);
+        if (!errors.empty()) {
+            printErrors(errors, input, true);
+            // 提供命令建议
+            if (suggestionEngine_) {
+                auto suggestions = suggestionEngine_->suggest(input);
+                if (!suggestions.empty()) {
+                    std::cout << "\nDid you mean:\n";
+                    for (const auto& suggestion : suggestions) {
+                        std::cout << "  " << suggestion << "\n";
+                    }
+                }
+            }
+            return;
+        }
     }
-    auto args = parseArguments(argsStr);
-    callCommand(command, args);
+
+    // 解析和执行命令
+    try {
+        auto args = parseArguments(input);
+
+        // 使用超时控制执行命令
+        auto future = std::async(std::launch::async, [this, &input, &args]() {
+            callCommand(input, args);
+        });
+
+        if (future.wait_for(commandTimeout_) == std::future_status::timeout) {
+            std::cout << "Command execution timed out\n";
+            return;
+        }
+    } catch (const std::exception& e) {
+        std::cout << "Error executing command: " << e.what() << "\n";
+    }
 }
 
 char** ConsoleTerminal::ConsoleTerminalImpl::commandCompletion(const char* text,
@@ -453,7 +472,13 @@ char** ConsoleTerminal::ConsoleTerminalImpl::commandCompletion(const char* text,
     return nullptr;
 #else
     rl_attempted_completion_over = 1;  // Disable default filename completion
-    return rl_completion_matches(text, commandGenerator);
+    if (suggestionEngine_) {
+        std::string prefix(text);
+        auto suggestions = suggestionEngine_->suggest(prefix);
+        // 转换建议为readline需要的格式
+        // ...remaining completion code...
+    }
+    return nullptr;
 #endif
 }
 
@@ -492,6 +517,28 @@ char* ConsoleTerminal::ConsoleTerminalImpl::commandGenerator(const char* text,
 
 void ConsoleTerminal::ConsoleTerminalImpl::displayPrompt() const {
     std::cout << "\n> ";
+}
+
+void ConsoleTerminal::setCommandChecker(
+    std::shared_ptr<CommandChecker> checker) {
+    impl_->commandChecker_ = checker;
+}
+
+void ConsoleTerminal::setSuggestionEngine(
+    std::shared_ptr<SuggestionEngine> engine) {
+    impl_->suggestionEngine_ = engine;
+}
+
+void ConsoleTerminal::enableCommandCheck(bool enable) {
+    impl_->commandCheckEnabled_ = enable;
+}
+
+std::vector<std::string> ConsoleTerminal::getCommandSuggestions(
+    const std::string& prefix) {
+    if (impl_->suggestionEngine_) {
+        return impl_->suggestionEngine_->suggest(prefix);
+    }
+    return {};
 }
 
 }  // namespace lithium::debug

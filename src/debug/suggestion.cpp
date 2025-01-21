@@ -19,16 +19,20 @@ public:
         buildIndex();
     }
 
-    std::vector<std::string> suggest(std::string_view input, MatchType matchType);
+    std::vector<std::string> suggest(std::string_view input,
+                                     MatchType matchType);
     void updateDataset(const std::vector<std::string>& newItems);
     void setWeight(const std::string& item, float weight);
     void addFilter(FilterFunction filter);
     void clearCache();
+    void setFuzzyMatchThreshold(float threshold);
+    void updateFromHistory(const std::vector<std::string>& history);
+    std::vector<SuggestionDetail> getSuggestionDetails(std::string_view input);
 
 private:
     void buildIndex();
     bool matches(const std::string& input, const std::string& item,
-                MatchType matchType);
+                 MatchType matchType);
     int calculateScore(const std::string& input, const std::string& item);
     int calculateEditDistance(const std::string& s1, const std::string& s2);
 
@@ -40,18 +44,22 @@ private:
     std::vector<FilterFunction> filters_;
     std::unordered_map<std::string, std::vector<std::string>> cache_;
     static constexpr size_t MAX_CACHE_SIZE = 1000;
+    float fuzzyMatchThreshold_ = 0.5F;
+    std::unordered_map<std::string, int> historyFrequency_;
+    static constexpr float HISTORY_WEIGHT_FACTOR = 1.5F;
 };
 
 // 构造函数和析构函数
 SuggestionEngine::SuggestionEngine(const std::vector<std::string>& dataset,
-                                 int maxSuggestions)
+                                   int maxSuggestions)
     : impl_(std::make_unique<Implementation>(dataset, maxSuggestions)) {}
 
 SuggestionEngine::~SuggestionEngine() = default;
 
 // 移动构造和赋值
 SuggestionEngine::SuggestionEngine(SuggestionEngine&&) noexcept = default;
-SuggestionEngine& SuggestionEngine::operator=(SuggestionEngine&&) noexcept = default;
+SuggestionEngine& SuggestionEngine::operator=(SuggestionEngine&&) noexcept =
+    default;
 
 // 委托函数
 auto SuggestionEngine::suggest(std::string_view input, MatchType matchType)
@@ -71,13 +79,29 @@ void SuggestionEngine::addFilter(FilterFunction filter) {
     impl_->addFilter(std::move(filter));
 }
 
-void SuggestionEngine::clearCache() {
-    impl_->clearCache();
+void SuggestionEngine::clearCache() { impl_->clearCache(); }
+
+void SuggestionEngine::setFuzzyMatchThreshold(float threshold) {
+    if (threshold < 0.0F || threshold > 1.0F) {
+        throw SuggestionException(
+            "Fuzzy match threshold must be between 0.0 and 1.0");
+    }
+    impl_->setFuzzyMatchThreshold(threshold);
+}
+
+void SuggestionEngine::updateFromHistory(
+    const std::vector<std::string>& history) {
+    impl_->updateFromHistory(history);
+}
+
+auto SuggestionEngine::getSuggestionDetails(std::string_view input)
+    -> std::vector<SuggestionDetail> {
+    return impl_->getSuggestionDetails(input);
 }
 
 // Implementation 类方法实现
-auto SuggestionEngine::Implementation::suggest(std::string_view input, MatchType matchType)
-    -> std::vector<std::string> {
+auto SuggestionEngine::Implementation::suggest(
+    std::string_view input, MatchType matchType) -> std::vector<std::string> {
     try {
         if (input.empty()) {
             throw SuggestionException("Empty input string");
@@ -168,7 +192,8 @@ auto SuggestionEngine::Implementation::suggest(std::string_view input, MatchType
     }
 }
 
-void SuggestionEngine::Implementation::updateDataset(const std::vector<std::string>& newItems) {
+void SuggestionEngine::Implementation::updateDataset(
+    const std::vector<std::string>& newItems) {
     std::lock_guard<std::mutex> lock(mutex_);
     dataset_.insert(dataset_.end(), newItems.begin(), newItems.end());
     buildIndex();
@@ -184,8 +209,8 @@ void SuggestionEngine::Implementation::buildIndex() {
 }
 
 bool SuggestionEngine::Implementation::matches(const std::string& input,
-                               const std::string& item,
-                               MatchType matchType) {
+                                               const std::string& item,
+                                               MatchType matchType) {
     switch (matchType) {
         case MatchType::Prefix:
             return item.starts_with(input);
@@ -196,7 +221,7 @@ bool SuggestionEngine::Implementation::matches(const std::string& input,
 }
 
 int SuggestionEngine::Implementation::calculateScore(const std::string& input,
-                                      const std::string& item) {
+                                                     const std::string& item) {
     int score = 0;
     size_t inputPos = 0;
     for (char character : item) {
@@ -210,8 +235,8 @@ int SuggestionEngine::Implementation::calculateScore(const std::string& input,
     return score;
 }
 
-int SuggestionEngine::Implementation::calculateEditDistance(const std::string& str1,
-                                             const std::string& str2) {
+int SuggestionEngine::Implementation::calculateEditDistance(
+    const std::string& str1, const std::string& str2) {
     const size_t LENGTH1 = str1.length();
     const size_t LENGTH2 = str2.length();
     std::vector<std::vector<int>> dp(LENGTH1 + 1,
@@ -239,7 +264,8 @@ int SuggestionEngine::Implementation::calculateEditDistance(const std::string& s
     return dp[LENGTH1][LENGTH2];
 }
 
-void SuggestionEngine::Implementation::setWeight(const std::string& item, float weight) {
+void SuggestionEngine::Implementation::setWeight(const std::string& item,
+                                                 float weight) {
     std::lock_guard<std::mutex> lock(mutex_);
     weights_[item] = weight;
 }
@@ -252,6 +278,77 @@ void SuggestionEngine::Implementation::addFilter(FilterFunction filter) {
 void SuggestionEngine::Implementation::clearCache() {
     std::lock_guard<std::mutex> lock(mutex_);
     cache_.clear();
+}
+
+void SuggestionEngine::Implementation::setFuzzyMatchThreshold(float threshold) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    fuzzyMatchThreshold_ = threshold;
+    clearCache();
+}
+
+void SuggestionEngine::Implementation::updateFromHistory(
+    const std::vector<std::string>& history) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // 更新历史频率
+    for (const auto& cmd : history) {
+        historyFrequency_[cmd]++;
+    }
+
+    // 基于历史更新权重
+    for (const auto& [cmd, freq] : historyFrequency_) {
+        float historyWeight = 1.0F + (freq * HISTORY_WEIGHT_FACTOR /
+                                      static_cast<float>(history.size()));
+        weights_[cmd] = historyWeight;
+    }
+
+    clearCache();
+}
+
+auto SuggestionEngine::Implementation::getSuggestionDetails(
+    std::string_view input) -> std::vector<SuggestionDetail> {
+    std::vector<SuggestionDetail> details;
+    std::string inputLower(input.size(), '\0');
+    std::transform(input.begin(), input.end(), inputLower.begin(), ::tolower);
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    for (const auto& [lowerItem, originalItem] : index_) {
+        if (matches(inputLower, lowerItem, MatchType::Substring)) {
+            float editScore =
+                1.0F / (calculateEditDistance(inputLower, lowerItem) + 1.0F);
+
+            if (editScore >= fuzzyMatchThreshold_) {
+                float baseScore = calculateScore(inputLower, lowerItem);
+                float weight = weights_.contains(originalItem)
+                                   ? weights_[originalItem]
+                                   : 1.0F;
+                float confidence = baseScore * editScore * weight;
+
+                details.push_back(
+                    {.suggestion = originalItem,
+                     .confidence = confidence,
+                     .editDistance = static_cast<float>(
+                         calculateEditDistance(inputLower, lowerItem)),
+                     .matchType = lowerItem.starts_with(inputLower)
+                                      ? "Prefix"
+                                      : "Substring"});
+            }
+        }
+    }
+
+    // 按置信度降序排序
+    std::sort(details.begin(), details.end(),
+              [](const SuggestionDetail& a, const SuggestionDetail& b) {
+                  return a.confidence > b.confidence;
+              });
+
+    // 只返回前 maxSuggestions_ 个结果
+    if (details.size() > static_cast<size_t>(maxSuggestions_)) {
+        details.resize(maxSuggestions_);
+    }
+
+    return details;
 }
 
 }  // namespace lithium::debug

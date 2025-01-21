@@ -32,6 +32,16 @@ public:
 };
 
 /**
+ * @brief 建议详细信息结构体
+ */
+struct SuggestionDetail {
+    std::string suggestion;  ///< 建议的文本
+    float confidence;        ///< 置信度分数
+    float editDistance;      ///< 编辑距离
+    std::string matchType;   ///< 匹配类型描述
+};
+
+/**
  * @brief SuggestionEngine class for generating command suggestions.
  */
 class SuggestionEngine {
@@ -103,6 +113,27 @@ public:
      * @brief Clear the suggestion cache.
      */
     void clearCache();
+
+    /**
+     * @brief Set the fuzzy match threshold
+     * @param threshold The threshold range [0.0, 1.0]
+     * @throw SuggestionException if the threshold is out of range
+     */
+    void setFuzzyMatchThreshold(float threshold);
+
+    /**
+     * @brief Optimize suggestions based on user history
+     * @param history List of user history commands
+     */
+    void updateFromHistory(const std::vector<std::string>& history);
+
+    /**
+     * @brief Get detailed information about suggestions
+     * @param input Input string
+     * @return List of suggestion details
+     */
+    [[nodiscard]] auto getSuggestionDetails(std::string_view input)
+        -> std::vector<SuggestionDetail>;
 
 private:
     class Implementation;

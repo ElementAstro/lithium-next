@@ -389,15 +389,15 @@ void printErrors(const std::vector<CommandChecker::Error>& errors,
         std::string severityStr;
         std::string colorCode;
         switch (error.severity) {
-            case CommandChecker::ErrorSeverity::WARNING:
+            case ErrorSeverity::WARNING:
                 severityStr = "warning";
                 colorCode = "\033[33m";
                 break;
-            case CommandChecker::ErrorSeverity::ERROR:
+            case ErrorSeverity::ERROR:
                 severityStr = "error";
                 colorCode = "\033[31m";
                 break;
-            case CommandChecker::ErrorSeverity::CRITICAL:
+            case ErrorSeverity::CRITICAL:
                 severityStr = "CRITICAL";
                 colorCode = "\033[35m";
                 break;

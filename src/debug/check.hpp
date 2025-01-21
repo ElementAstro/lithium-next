@@ -1,32 +1,39 @@
 #ifndef LITHIUM_DEBUG_CHECK_HPP
 #define LITHIUM_DEBUG_CHECK_HPP
 
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
-#include "atom/type/json_fwd.hpp"
 #include "atom/macro.hpp"
+#include "atom/type/concurrent_vector.hpp"
+#include "atom/type/json_fwd.hpp"
 using json = nlohmann::json;
 
 namespace lithium::debug {
+/**
+ * @brief Enum representing the severity of an error.
+ */
+enum class ErrorSeverity {
+    WARNING,  ///< Warning level error
+    ERROR,    ///< Error level error
+    CRITICAL  ///< Critical level error
+};
 
+template <typename T>
+concept CheckRule = requires(T t) {
+    { t.check(std::string{}) } -> std::convertible_to<bool>;
+    { t.severity() } -> std::convertible_to<ErrorSeverity>;
+};
 /**
  * @brief Class for checking commands against a set of rules.
  */
 class CommandChecker {
 public:
-    /**
-     * @brief Enum representing the severity of an error.
-     */
-    enum class ErrorSeverity {
-        WARNING,  ///< Warning level error
-        ERROR,    ///< Error level error
-        CRITICAL  ///< Critical level error
-    };
-
     /**
      * @brief Struct representing an error found during command checking.
      */
@@ -129,6 +136,22 @@ public:
      */
     void setResourceLimits(size_t maxMemoryMB, size_t maxFileSize);
 
+    // 新增安全检查功能
+    /**
+     * @brief 设置命令沙箱模式
+     */
+    void enableSandbox(bool enable);
+
+    /**
+     * @brief 添加自定义安全检查规则
+     */
+    void addSecurityRule(std::function<bool(const std::string&)> rule);
+
+    /**
+     * @brief 设置命令超时限制
+     */
+    void setTimeoutLimit(std::chrono::milliseconds timeout);
+
 private:
     /**
      * @brief Implementation class for CommandChecker.
@@ -136,6 +159,10 @@ private:
     class CommandCheckerImpl;
     std::unique_ptr<CommandCheckerImpl>
         impl_;  ///< Pointer to the implementation
+
+    // 线程安全的规则容器
+    std::shared_mutex ruleMutex_;
+    atom::type::concurrent_vector<std::unique_ptr<CheckRule>> rules_;
 };
 
 /**

@@ -343,4 +343,34 @@ void Task::clearExceptionCallback() {
     LOG_F(INFO, "Exception callback cleared for task {}", name_);
 }
 
+json Task::toJson() const {
+    auto paramDefs = json::array();
+    for (const auto& def : paramDefinitions_) {
+        paramDefs.push_back({
+            {"name", def.name},
+            {"type", def.type},
+            {"required", def.required},
+            {"defaultValue", def.defaultValue},
+            {"description", def.description},
+        });
+    }
+    return {
+        {"name", name_},
+        {"uuid", uuid_},
+        {"status", static_cast<int>(status_)},
+        {"error", error_.value_or("")},
+        {"priority", priority_},
+        {"dependencies", dependencies_},
+        {"executionTime", executionTime_.count()},
+        {"memoryUsage", memoryUsage_},
+        {"logLevel", logLevel_},
+        {"errorType", static_cast<int>(errorType_)},
+        {"errorDetails", errorDetails_},
+        {"cpuUsage", cpuUsage_},
+        {"taskHistory", taskHistory_},
+        {"paramDefinitions", paramDefs},
+        {"preTasks", json::array()},
+        {"postTasks", json::array()},
+    };
+}
 }  // namespace lithium::sequencer

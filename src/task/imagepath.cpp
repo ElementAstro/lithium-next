@@ -37,40 +37,39 @@ auto ImageInfo::fromJson(const json& jsonObj) -> ImageInfo {
     return info;
 }
 
+auto ImageInfo::hash() const -> size_t {
+    return std::hash<std::string>{}(path);
+}
+
+auto ImageInfo::isComplete() const noexcept -> bool {
+    return dateTime.has_value() && imageType.has_value() && 
+           filter.has_value() && exposureTime.has_value();
+}
+
+auto ImageInfo::mergeWith(const ImageInfo& other) -> void {
+    if (!dateTime && other.dateTime) dateTime = other.dateTime;
+    if (!imageType && other.imageType) imageType = other.imageType;
+    if (!filter && other.filter) filter = other.filter;
+    if (!sensorTemp && other.sensorTemp) sensorTemp = other.sensorTemp;
+    if (!exposureTime && other.exposureTime) exposureTime = other.exposureTime;
+    if (!frameNr && other.frameNr) frameNr = other.frameNr;
+    if (!cameraModel && other.cameraModel) cameraModel = other.cameraModel;
+    if (!gain && other.gain) gain = other.gain;
+    if (!focalLength && other.focalLength) focalLength = other.focalLength;
+    if (!target && other.target) target = other.target;
+}
+
 class ImagePatternParser::Impl {
 public:
     explicit Impl(const std::string& pattern) { parsePattern(pattern); }
 
     [[nodiscard]] auto parseFilename(const std::string& filename) const
         -> std::optional<ImageInfo> {
-            LOG_F(INFO, "Parsing filename: {}", filename);
-        ++parseCount_;
-
-        // 检查缓存
-        if (cache_) {
-            if (auto cached = cache_->get(filename)) {
-                ++cacheHits_;
-                return cached;
-            }
+        if (preProcessor_) {
+            auto processed = preProcessor_(filename);
+            return parseFilenameImpl(processed);
         }
-
-        try {
-            // 现有的解析代码...
-            if (auto result = parseFilenameImpl(filename)) {
-                if (cache_) {
-                    cache_->put(filename, *result);
-                }
-                return result;
-            }
-        } catch (const std::exception& e) {
-            lastError_ = e.what();
-            if (errorHandler_) {
-                errorHandler_(lastError_);
-            }
-            LOG_F(ERROR, "Parse error: {}", lastError_);
-        }
-
-        return std::nullopt;
+        return parseFilenameImpl(filename);
     }
 
     void addCustomParser(const std::string& key, FieldParser parser) {
@@ -127,6 +126,15 @@ public:
                 {"cacheHitRate", cache_ ? cache_->hitRate() : 0.0f}};
     }
 
+    auto setFieldValidator(const std::string& field,
+        std::function<bool(const std::string&)> validator) -> void {
+        fieldValidators_[field] = std::move(validator);
+    }
+    
+    auto setPreProcessor(std::function<std::string(std::string)> processor) -> void {
+        preProcessor_ = std::move(processor);
+    }
+
 private:
     std::vector<std::string> fieldKeys_;
     std::vector<std::string> patterns_;
@@ -140,6 +148,9 @@ private:
     mutable std::atomic<size_t> cacheHits_{0};
     mutable std::string lastError_;
     std::function<void(const std::string&)> errorHandler_;
+    std::unordered_map<std::string, std::function<bool(const std::string&)>> fieldValidators_;
+    std::function<std::string(std::string)> preProcessor_;
+    mutable std::shared_mutex cacheMutex_;
 
     void parsePattern(const std::string& pattern) {
         static const std::regex TOKEN_REGEX(R"(\$(\w+))");
@@ -246,6 +257,17 @@ private:
 
     [[nodiscard]] auto parseFilenameImpl(const std::string& filename) const
         -> std::optional<ImageInfo> {
+        using namespace std::views;
+        using namespace std::ranges;
+        
+        std::shared_lock lock(cacheMutex_);
+        if (cache_) {
+            if (auto cached = cache_->get(filename)) {
+                return cached;
+            }
+        }
+        lock.unlock();
+        
         std::smatch matchResult;
         if (!std::regex_match(filename, matchResult, fullRegexPattern_)) {
             LOG_F(ERROR, "Filename does not match the pattern: {}", filename);
@@ -255,19 +277,48 @@ private:
         ImageInfo info;
         info.path = fs::absolute(fs::path(filename)).string();
 
-        for (size_t i = 0; i < fieldKeys_.size(); ++i) {
-            const auto& key = fieldKeys_[i];
-            const std::string VALUE = matchResult[i + 1];
+        auto processField = [this, &info](const auto& key, const auto& value) {
+            if (auto validator = fieldValidators_.find(key);
+                validator != fieldValidators_.end() && !validator->second(value)) {
+                return false;
+            }
+            
+            if (auto parser = parsers_.find(key); parser != parsers_.end()) {
+                parser->second(info, value);
+            }
+            return true;
+        };
 
-            if (auto parserIter = parsers_.find(key);
-                parserIter != parsers_.end()) {
-                parserIter->second(info, VALUE);
-            } else {
-                LOG_F(ERROR, "No parser for key: {}", key);
+        for (size_t i = 0; i < fieldKeys_.size(); ++i) {
+            if (!processField(fieldKeys_[i], matchResult[i + 1].str())) {
+                return std::nullopt;
             }
         }
 
+        std::unique_lock writeLock(cacheMutex_);
+        if (cache_) {
+            cache_->put(filename, info);
+        }
+        
         return info;
+    }
+
+    template<typename T>
+    [[nodiscard]] auto findFilesInDirectoryImpl(const std::filesystem::path& dir, T&& filter) const
+        -> std::vector<ImageInfo> {
+        std::vector<ImageInfo> results;
+        
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(dir)) {
+            if (!entry.is_regular_file()) continue;
+            
+            if (auto info = parseFilename(entry.path().string())) {
+                if (filter(*info)) {
+                    results.push_back(std::move(*info));
+                }
+            }
+        }
+        
+        return results;
     }
 };
 
@@ -328,10 +379,6 @@ auto ImagePatternParser::parseFilenames(
 auto ImagePatternParser::parseFilenameAsync(const std::string& filename)
     -> std::future<std::optional<ImageInfo>> {
     return pImpl->parseFilenameAsync(filename);
-}
-
-auto ImagePatternParser::getPerformanceStats() const -> json {
-    return pImpl->getPerformanceStats();
 }
 
 void ImagePatternParser::enableCache(size_t maxSize) {
