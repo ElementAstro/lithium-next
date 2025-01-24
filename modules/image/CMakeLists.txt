@@ -16,6 +16,8 @@ set(SOURCES
     src/thumbhash.cpp
 )
 
+include_directories(src)
+
 # 创建共享库
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_include_directories(${PROJECT_NAME} 
@@ -38,3 +40,5 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
 )
+
+add_subdirectory(examples)
