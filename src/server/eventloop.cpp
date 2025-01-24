@@ -11,6 +11,13 @@
 #include "atom/log/loguru.hpp"
 
 namespace lithium::app {
+auto EventLoop::Task::operator<(const Task& other) const -> bool {
+    if (priority != other.priority) {
+        return priority < other.priority;
+    }
+    return execTime > other.execTime;
+}
+
 EventLoop::EventLoop(int num_threads) : stop_flag_(false) {
 #ifdef __linux__
     epoll_fd_ = epoll_create1(0);

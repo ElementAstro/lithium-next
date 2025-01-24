@@ -466,4 +466,6 @@ public:
     }
 };
 
+inline std::weak_ptr<lithium::target::SearchEngine> SearchController::mSearchEngine;
+
 #endif  // LITHIUM_ASYNC_SEARCH_ENGINE_CONTROLLER_HPP

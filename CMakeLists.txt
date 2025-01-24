@@ -28,15 +28,10 @@ include_directories(${lithium_src_dir})
 include_directories(${lithium_thirdparty_dir})
 include_directories(${lithium_atom_dir})
 
-include_directories(${lithium_thirdparty_dir}/oatpp)
-include_directories(${lithium_thirdparty_dir}/oatpp-zlib)
-include_directories(${lithium_thirdparty_dir}/oatpp-openssl)
-include_directories(${lithium_thirdparty_dir}/oatpp-websocket)
-include_directories(${lithium_thirdparty_dir}/oatpp-swagger)
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(Python 3.7 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
@@ -50,6 +45,7 @@ target_link_libraries(lithium-next PRIVATE
     pybind11::lto
     lithium_components
     lithium_config
+    lithium_database
     lithium_debug
     lithium_device
     lithium_script
@@ -69,6 +65,7 @@ include(cmake/compiler_options.cmake)
 
 # Add subdirectories
 add_subdirectory(libs)
+add_subdirectory(modules)
 add_subdirectory(src)
 add_subdirectory(example)
 add_subdirectory(tests)

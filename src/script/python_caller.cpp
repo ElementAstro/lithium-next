@@ -1,13 +1,10 @@
 #include "python_caller.hpp"
 
+#include <memory_resource>
 #include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-// 新增头文件
-#include <execution>
-#include <memory_resource>
 
 namespace py = pybind11;
 
@@ -418,14 +415,13 @@ public:
     template <typename T>
     void processData(const std::string& alias, const std::string& function_name,
                      std::span<T> data) {
-        std::for_each(std::execution::par_unseq, data.begin(), data.end(),
-                      [&](auto& item) {
-                          py::gil_scoped_acquire gil;
-                          auto iter = scripts_.find(alias);
-                          if (iter != scripts_.end()) {
-                              iter->second.attr(function_name.c_str())(item);
-                          }
-                      });
+        std::for_each(data.begin(), data.end(), [&](auto& item) {
+            py::gil_scoped_acquire gil;
+            auto iter = scripts_.find(alias);
+            if (iter != scripts_.end()) {
+                iter->second.attr(function_name.c_str())(item);
+            }
+        });
     }
 
     // 新增: 实现协程支持

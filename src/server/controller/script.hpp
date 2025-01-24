@@ -543,5 +543,6 @@ public:
 };
 
 inline std::weak_ptr<lithium::ScriptManager> ScriptController::mScriptManager;
+inline std::weak_ptr<lithium::ScriptAnalyzer> ScriptController::mScriptAnalyzer;
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP

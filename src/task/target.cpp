@@ -3,13 +3,9 @@
 #include "task_camera.hpp"
 
 #include <mutex>
-#include <stdexcept>
-#include <thread>
 
 #include "atom/async/safetype.hpp"
-#include "config/configor.hpp"
 
-#include "atom/async/message_bus.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
@@ -296,5 +292,20 @@ auto Target::toJson() const -> json {
         j["tasks"].push_back(task->toJson());
     }
     return j;
+}
+
+auto Target::fromJson(const json& data) -> void {
+    std::unique_lock lock(paramsMutex_);
+    name_ = data["name"].get<std::string>();
+    uuid_ = data["uuid"].get<std::string>();
+    cooldown_ = std::chrono::seconds(data["cooldown"].get<int>());
+    maxRetries_ = data["maxRetries"].get<int>();
+    enabled_ = data["enabled"].get<bool>();
+    status_ = static_cast<TargetStatus>(data["status"].get<int>());
+    params_ = data["params"];
+    tasks_.clear();
+    if (data.contains("tasks") && data["tasks"].is_array()) {
+        loadTasksFromJson(data["tasks"]);
+    }
 }
 }  // namespace lithium::sequencer

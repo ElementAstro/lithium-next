@@ -346,12 +346,15 @@ private:
                 output_ << dialect_.delimiter;
             }
             if (encoding_ == Encoding::UTF16) {
+                // TODO: This will cause a strange linking error
+                /*
                 std::u16string field = atom::utils::utf8toUtF16(line[i]);
                 if (quote_all_ || needsQuotes(line[i])) {
                     field.insert(field.begin(), dialect_.quotechar);
                     field.push_back(dialect_.quotechar);
                 }
                 output_ << atom::utils::utf16toUtF8(field);
+                */
             } else {
                 std::string field = line[i];
                 if (quote_all_ || needsQuotes(field)) {

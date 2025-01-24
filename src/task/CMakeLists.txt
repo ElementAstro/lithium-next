@@ -11,10 +11,12 @@ project(lithium_task VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources and Headers
 set(PROJECT_FILES
+    generator.cpp
     sequencer.cpp
     target.cpp
     task.cpp
     task_camera.cpp
+    generator.hpp
     sequencer.hpp
     target.hpp
     task.hpp
@@ -25,6 +27,7 @@ set(PROJECT_FILES
 set(PROJECT_LIBS
     atom
     lithium_config
+    lithium_database
     loguru
     yaml-cpp
     ${CMAKE_THREAD_LIBS_INIT}

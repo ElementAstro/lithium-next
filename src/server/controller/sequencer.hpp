@@ -470,4 +470,7 @@ public:
     }
 };
 
+inline std::weak_ptr<lithium::sequencer::ExposureSequence>
+    SequenceController::mExposureSequence;
+
 #endif  // LITHIUM_ASYNC_EXPOSURE_SEQUENCE_CONTROLLER_HPP
