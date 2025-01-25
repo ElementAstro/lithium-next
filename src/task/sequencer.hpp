@@ -14,6 +14,12 @@
 #include "../database/orm.hpp"
 #include "generator.hpp"
 #include "target.hpp"
+#include "task_script.hpp"
+#include "task_celestial_search.hpp"
+#include "task_config_management.hpp"
+#include "task_utility.hpp"
+#include "task_combined_script_celestial.hpp"
+#include "task_combined_config_utility.hpp"
 
 namespace lithium::sequencer {
 using namespace lithium::database;
