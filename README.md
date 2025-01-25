@@ -87,3 +87,33 @@ To set up the development environment for Lithium-Next, follow these steps:
    cmake -DCMAKE_CXX_COMPILER=g++ ..
    make
    ```
+
+## New Shooting Functionalities
+
+The project has been enhanced to include specific project requirements for shooting functions, ensuring efficient invocation and execution. The following new functionalities have been added:
+
+1. **Script Module Integration**: A new task class for the script module has been created by extending the `Task` class. The task logic has been implemented in the `execute` method, and the new task class has been added to the appropriate targets in the `ExposureSequence` class.
+
+2. **Celestial Search Module Integration**: A new task class for the celestial search module has been created by extending the `Task` class. The task logic has been implemented in the `execute` method, and the new task class has been added to the appropriate targets in the `ExposureSequence` class.
+
+3. **Configuration Management Integration**: A new task class for the configuration management module has been created by extending the `Task` class. The task logic has been implemented in the `execute` method, and the new task class has been added to the appropriate targets in the `ExposureSequence` class.
+
+4. **Utility Functions Integration**: New task classes for each utility function module have been created by extending the `Task` class. The task logic has been implemented in the `execute` method, and the new task classes have been added to the appropriate targets in the `ExposureSequence` class.
+
+5. **Combined Script and Celestial Search Modules**: A new task class that combines the script and celestial search modules has been created by extending the `Task` class. The combined task logic has been implemented in the `execute` method, and the new task class has been added to the appropriate targets in the `ExposureSequence` class.
+
+6. **Combined Configuration Management and Utility Functions**: A new task class that combines the configuration management and utility function modules has been created by extending the `Task` class. The combined task logic has been implemented in the `execute` method, and the new task class has been added to the appropriate targets in the `ExposureSequence` class.
+
+## Task Generation Processes
+
+The task generation processes have been updated to reflect the new shooting functionalities. The following changes have been made:
+
+1. **Enhanced `src/task/task_camera.cpp`**: The file has been updated to include specific project requirements for shooting functions, ensuring efficient invocation and execution.
+
+2. **Updated `src/device/indi/camera.cpp`**: The file has been updated to support new shooting tasks and goals, optimizing camera control based on project needs.
+
+3. **Modified `src/task/sequencer.cpp`**: The file has been updated to manage and sequence new shooting tasks, ensuring efficient execution.
+
+4. **New Functions in `modules/image/src/binning.cpp`**: New functions have been added to handle specific image processing requirements for the project.
+
+5. **Updated Documentation**: The documentation has been updated to reflect the new shooting functionalities and task generation processes.
