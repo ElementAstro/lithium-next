@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up build environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc g++ cmake libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev gettext
+
+    - name: Install GCC 13 and G++ 13
+      if: matrix.compiler == 'gcc'
+      run: |
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+        sudo apt-get update
+        sudo apt-get install -y gcc-13 g++-13
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 60
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 60
+
+    - name: Install Clang 18
+      if: matrix.compiler == 'clang'
+      run: |
+        sudo apt-get install -y clang-18
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 60
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 60
+
+    - name: Build project
+      run: |
+        mkdir build
+        cd build
+        cmake -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}++ ..
+        make
+
+    - name: Run tests
+      run: |
+        cd build
+        ctest
+
+    - name: Package project
+      run: |
+        cd build
+        make package
