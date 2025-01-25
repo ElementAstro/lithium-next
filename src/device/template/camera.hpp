@@ -46,6 +46,8 @@ public:
         -> std::optional<double> = 0;
     [[nodiscard]] virtual auto hasCooler() const -> bool = 0;
 
+    [[nodiscard]] virtual auto isColor() const -> bool = 0;
+
     // 参数控制
     virtual auto setGain(int gain) -> bool = 0;
     [[nodiscard]] virtual auto getGain() -> std::optional<int> = 0;
@@ -55,7 +57,8 @@ public:
     [[nodiscard]] virtual auto getISO() -> std::optional<int> = 0;
 
     // 帧设置
-    virtual auto getResolution() -> std::optional<AtomCameraFrame::Resolution> = 0;
+    virtual auto getResolution()
+        -> std::optional<AtomCameraFrame::Resolution> = 0;
     virtual auto setResolution(int x, int y, int width, int height) -> bool = 0;
     virtual auto getBinning() -> std::optional<AtomCameraFrame::Binning> = 0;
     virtual auto setBinning(int horizontal, int vertical) -> bool = 0;

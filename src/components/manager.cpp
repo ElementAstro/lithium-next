@@ -282,6 +282,24 @@ public:
         }
     }
 
+    auto getComponentDoc(const std::string& component_name) -> std::string {
+        try {
+            if (!components_.contains(component_name)) {
+                return "";
+            }
+
+            if (auto mod = moduleLoader_->getModule(component_name)) {
+                return mod->description;
+            }
+
+            return "";
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Failed to get component doc for {}: {}",
+                  component_name, e.what());
+            return "";
+        }
+    }
+
     auto hasComponent(const std::string& component_name) -> bool {
         std::lock_guard lock(mutex_);
         return components_.contains(component_name);
@@ -441,7 +459,6 @@ public:
         return metrics;
     }
 
-private:
     void handleError(const std::string& name, const std::string& operation,
                      const std::exception& e) {
         lastError_ = std::format("{}: {}", operation, e.what());
@@ -576,6 +593,11 @@ auto ComponentManager::getComponentList() -> std::vector<std::string> {
     return impl_->getComponentList();
 }
 
+auto ComponentManager::getComponentDoc(const std::string& component_name)
+    -> std::string {
+    return impl_->getComponentDoc(component_name);
+}
+
 auto ComponentManager::hasComponent(const std::string& component_name) -> bool {
     return impl_->hasComponent(component_name);
 }
@@ -589,5 +611,138 @@ void ComponentManager::updateDependencyGraph(
     impl_->updateDependencyGraph(component_name, version, dependencies,
                                  dependencies_version);
 }
+
+template <typename T>
+auto ComponentManager::createComponent(const std::string& name,
+                                       const ComponentOptions& options)
+    -> std::shared_ptr<T> {
+    json params;
+    params["name"] = name;
+    params["config"] = options.config;
+    params["autoStart"] = options.autoStart;
+    params["priority"] = options.priority;
+
+    if (loadComponent(params)) {
+        if (auto comp = getComponent(name)) {
+            return std::dynamic_pointer_cast<T>(comp->lock());
+        }
+    }
+    return nullptr;
+}
+
+auto ComponentManager::startComponent(const std::string& name) -> bool {
+    return impl_->startComponent(name);
+}
+
+auto ComponentManager::stopComponent(const std::string& name) -> bool {
+    if (auto comp = getComponent(name)) {
+        auto component = comp->lock();
+        if (component) {
+            // TODO: What is the stop method?
+            // component->stop();
+            impl_->updateComponentState(name, ComponentState::Stopped);
+            return true;
+        }
+    }
+    return false;
+}
+
+auto ComponentManager::pauseComponent(const std::string& name) -> bool {
+    if (auto comp = getComponent(name)) {
+        auto component = comp->lock();
+        if (component) {
+            // TODO: What is the pause method?
+            // component->pause();
+            impl_->updateComponentState(name, ComponentState::Paused);
+            return true;
+        }
+    }
+    return false;
+}
+
+auto ComponentManager::resumeComponent(const std::string& name) -> bool {
+    if (auto comp = getComponent(name)) {
+        auto component = comp->lock();
+        if (component) {
+            // TODO: What is the resume method?
+            // component->resume();
+            impl_->updateComponentState(name, ComponentState::Running);
+            return true;
+        }
+    }
+    return false;
+}
+
+void ComponentManager::addEventListener(ComponentEvent event,
+                                        EventCallback callback) {
+    impl_->eventListeners_[event].push_back(callback);
+}
+
+void ComponentManager::removeEventListener(ComponentEvent event) {
+    impl_->eventListeners_.erase(event);
+}
+
+auto ComponentManager::batchLoad(const std::vector<std::string>& components)
+    -> bool {
+    return impl_->batchLoad(components);
+}
+
+auto ComponentManager::batchUnload(const std::vector<std::string>& components)
+    -> bool {
+    bool success = true;
+    for (const auto& name : components) {
+        json params;
+        params["name"] = name;
+        success &= unloadComponent(params);
+    }
+    return success;
+}
+
+auto ComponentManager::getComponentState(const std::string& name)
+    -> ComponentState {
+    if (impl_->componentStates_.contains(name)) {
+        return impl_->componentStates_[name];
+    }
+    return ComponentState::Error;
+}
+
+void ComponentManager::updateConfig(const std::string& name,
+                                    const json& config) {
+    impl_->updateConfig(name, config);
+}
+
+auto ComponentManager::getConfig(const std::string& name) -> json {
+    if (impl_->componentOptions_.contains(name)) {
+        return impl_->componentOptions_[name].config;
+    }
+    return json{};
+}
+
+void ComponentManager::addToGroup(const std::string& name,
+                                  const std::string& group) {
+    componentGroups_[group].push_back(name);
+}
+
+auto ComponentManager::getGroupComponents(const std::string& group)
+    -> std::vector<std::string> {
+    if (componentGroups_.contains(group)) {
+        return componentGroups_[group];
+    }
+    return {};
+}
+
+auto ComponentManager::getPerformanceMetrics() -> json {
+    return impl_->getPerformanceMetrics();
+}
+
+void ComponentManager::enablePerformanceMonitoring(bool enable) {
+    impl_->performanceMonitoringEnabled_ = enable;
+}
+
+auto ComponentManager::getLastError() -> std::string {
+    return impl_->lastError_;
+}
+
+void ComponentManager::clearErrors() { impl_->lastError_.clear(); }
 
 }  // namespace lithium

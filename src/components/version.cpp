@@ -91,7 +91,7 @@ auto operator<<(std::ostream& outputStream,
 
 auto checkVersion(
     const Version& actualVersion, const std::string& requiredVersionStr,
-    VersionCompareStrategy strategy = VersionCompareStrategy::Strict) -> bool {
+    VersionCompareStrategy strategy) -> bool {
     size_t opLength = 1;
     if (requiredVersionStr.size() > 1 &&
         (requiredVersionStr[1] == '=' || requiredVersionStr[1] == '>')) {
@@ -218,6 +218,36 @@ auto VersionRange::parse(std::string_view rangeStr) -> VersionRange {
 
     return {Version::parse(minStr), Version::parse(maxStr), includeMin,
             includeMax};
+}
+
+auto VersionRange::from(Version minVer) -> VersionRange {
+    return {std::move(minVer), Version{999, 999, 999}, true, false};
+}
+
+auto VersionRange::upTo(Version maxVer) -> VersionRange {
+    return {Version{0, 0, 0}, std::move(maxVer), true, true};
+}
+
+auto VersionRange::toString() const -> std::string {
+    return std::format("{}{}.{}.{}, {}.{}.{}{}", includeMin ? "[" : "(",
+                       min.major, min.minor, min.patch, max.major, max.minor,
+                       max.patch, includeMax ? "]" : ")");
+}
+
+auto VersionRange::overlaps(const VersionRange& other) const -> bool {
+    if (max < other.min || other.max < min) {
+        return false;
+    }
+
+    if (max == other.min) {
+        return includeMax && other.includeMin;
+    }
+
+    if (min == other.max) {
+        return includeMin && other.includeMax;
+    }
+
+    return true;
 }
 
 }  // namespace lithium

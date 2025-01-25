@@ -2,9 +2,11 @@
 
 #include "elf.hpp"
 
+#include <cxxabi.h>
 #include <elf.h>
 #include <algorithm>
 #include <fstream>
+#include <regex>
 #include <unordered_map>
 
 #include "atom/error/exception.hpp"
@@ -34,7 +36,8 @@ public:
         file.read(reinterpret_cast<char*>(fileContent_.data()), fileSize_);
 
         bool result = parseElfHeader() && parseProgramHeaders() &&
-                      parseSectionHeaders() && parseSymbolTable();
+                      parseSectionHeaders() && parseSymbolTable() &&
+                      parseDynamicEntries() && parseRelocationEntries();
         if (result) {
             LOG_F(INFO, "Successfully parsed ELF file: {}", filePath_);
         } else {
@@ -189,10 +192,11 @@ public:
         LOG_F(INFO, "Clearing parser cache");
         symbolCache_.clear();
         addressCache_.clear();
+        relocationEntries_.clear();
+        dynamicEntries_.clear();
         verified_ = false;
     }
 
-private:
     std::string filePath_;
     std::vector<uint8_t> fileContent_;
     size_t fileSize_{};
@@ -201,6 +205,8 @@ private:
     std::vector<ProgramHeader> programHeaders_;
     std::vector<SectionHeader> sectionHeaders_;
     std::vector<Symbol> symbolTable_;
+    std::vector<RelocationEntry> relocationEntries_;
+    std::vector<DynamicEntry> dynamicEntries_;
 
     mutable std::unordered_map<std::string, Symbol> symbolCache_;
     mutable std::unordered_map<uint64_t, Symbol> addressCache_;
@@ -321,6 +327,59 @@ private:
         return true;
     }
 
+    auto parseDynamicEntries() -> bool {
+        LOG_F(INFO, "Parsing dynamic entries");
+        auto dynamicSection = std::ranges::find_if(
+            sectionHeaders_,
+            [](const auto& section) { return section.type == SHT_DYNAMIC; });
+
+        if (dynamicSection == sectionHeaders_.end()) {
+            LOG_F(INFO, "No dynamic section found");
+            return true;  // Not an error, just no dynamic entries
+        }
+
+        const auto* dyn = reinterpret_cast<const Elf64_Dyn*>(
+            fileContent_.data() + dynamicSection->offset);
+        size_t numEntries = dynamicSection->size / sizeof(Elf64_Dyn);
+
+        for (size_t i = 0; i < numEntries && dyn[i].d_tag != DT_NULL; ++i) {
+            dynamicEntries_.push_back(
+                DynamicEntry{.tag = static_cast<uint64_t>(dyn[i].d_tag),
+                             .d_un = {.val = dyn[i].d_un.d_val}});
+        }
+
+        LOG_F(INFO, "Parsed {} dynamic entries", dynamicEntries_.size());
+        return true;
+    }
+
+    auto parseRelocationEntries() -> bool {
+        LOG_F(INFO, "Parsing relocation entries");
+        std::vector<SectionHeader> relaSections;
+
+        // 收集所有重定位节
+        for (const auto& section : sectionHeaders_) {
+            if (section.type == SHT_RELA) {
+                relaSections.push_back(section);
+            }
+        }
+
+        for (const auto& relaSection : relaSections) {
+            const auto* rela = reinterpret_cast<const Elf64_Rela*>(
+                fileContent_.data() + relaSection.offset);
+            size_t numEntries = relaSection.size / sizeof(Elf64_Rela);
+
+            for (size_t i = 0; i < numEntries; ++i) {
+                relocationEntries_.push_back(
+                    RelocationEntry{.offset = rela[i].r_offset,
+                                    .info = rela[i].r_info,
+                                    .addend = rela[i].r_addend});
+            }
+        }
+
+        LOG_F(INFO, "Parsed {} relocation entries", relocationEntries_.size());
+        return true;
+    }
+
     auto findSymbolInCache(std::string_view name) const
         -> std::optional<Symbol> {
         auto it = symbolCache_.find(std::string(name));
@@ -418,6 +477,177 @@ auto ElfParser::verifyIntegrity() const -> bool {
 void ElfParser::clearCache() {
     LOG_F(INFO, "ElfParser::clearCache called");
     pImpl_->clearCache();
+}
+
+auto ElfParser::demangleSymbolName(const std::string& name) const
+    -> std::string {
+    // 使用 abi::__cxa_demangle 进行符号名称解除修饰
+    int status;
+    char* demangled =
+        abi::__cxa_demangle(name.c_str(), nullptr, nullptr, &status);
+    if (status == 0 && demangled != nullptr) {
+        std::string result(demangled);
+        free(demangled);
+        return result;
+    }
+    return name;
+}
+
+auto ElfParser::getSymbolVersion(const Symbol& symbol) const
+    -> std::optional<std::string> {
+    auto section = findSection(".gnu.version");
+    if (!section) {
+        return std::nullopt;
+    }
+    // 实现符号版本查找逻辑
+    return std::nullopt;
+}
+
+// 符号相关查询
+auto ElfParser::getWeakSymbols() const -> std::vector<Symbol> {
+    std::vector<Symbol> weakSymbols;
+    for (const auto& symbol : getSymbolTable()) {
+        if (symbol.bind == STB_WEAK) {
+            weakSymbols.push_back(symbol);
+        }
+    }
+    return weakSymbols;
+}
+
+auto ElfParser::getSymbolsByType(unsigned char type) const
+    -> std::vector<Symbol> {
+    std::vector<Symbol> result;
+    for (const auto& symbol : getSymbolTable()) {
+        if (symbol.type == type) {
+            result.push_back(symbol);
+        }
+    }
+    return result;
+}
+
+auto ElfParser::getExportedSymbols() const -> std::vector<Symbol> {
+    std::vector<Symbol> result;
+    for (const auto& symbol : getSymbolTable()) {
+        if (symbol.bind == STB_GLOBAL && symbol.shndx != SHN_UNDEF) {
+            result.push_back(symbol);
+        }
+    }
+    return result;
+}
+
+auto ElfParser::getImportedSymbols() const -> std::vector<Symbol> {
+    std::vector<Symbol> result;
+    for (const auto& symbol : getSymbolTable()) {
+        if (symbol.shndx == SHN_UNDEF) {
+            result.push_back(symbol);
+        }
+    }
+    return result;
+}
+
+auto ElfParser::findSymbolsByPattern(const std::string& pattern) const
+    -> std::vector<Symbol> {
+    std::vector<Symbol> result;
+    std::regex regexPattern(pattern);
+    for (const auto& symbol : getSymbolTable()) {
+        if (std::regex_match(symbol.name, regexPattern)) {
+            result.push_back(symbol);
+        }
+    }
+    return result;
+}
+
+// 节和段相关
+auto ElfParser::getSectionsByType(uint32_t type) const
+    -> std::vector<SectionHeader> {
+    if (auto it = sectionTypeCache_.find(type); it != sectionTypeCache_.end()) {
+        return it->second;
+    }
+
+    std::vector<SectionHeader> result;
+    for (const auto& section : getSectionHeaders()) {
+        if (section.type == type) {
+            result.push_back(section);
+        }
+    }
+    sectionTypeCache_[type] = result;
+    return result;
+}
+
+auto ElfParser::getSegmentPermissions(const ProgramHeader& header) const
+    -> std::string {
+    std::string perms;
+    perms += (header.flags & PF_R) ? "r" : "-";
+    perms += (header.flags & PF_W) ? "w" : "-";
+    perms += (header.flags & PF_X) ? "x" : "-";
+    return perms;
+}
+
+// 工具方法
+auto ElfParser::calculateChecksum() const -> uint64_t {
+    if (!verifyIntegrity()) {
+        return 0;
+    }
+    // 简单的校验和实现
+    uint64_t checksum = 0;
+    for (const auto& byte : pImpl_->fileContent_) {
+        checksum = ((checksum << 5) + checksum) + byte;
+    }
+    return checksum;
+}
+
+auto ElfParser::isStripped() const -> bool {
+    return getSymbolTable().empty() || !findSection(".symtab").has_value();
+}
+
+auto ElfParser::getDependencies() const -> std::vector<std::string> {
+    std::vector<std::string> deps;
+    auto dynstr = findSection(".dynstr");
+    auto dynamic = findSection(".dynamic");
+    if (!dynstr || !dynamic) {
+        return deps;
+    }
+    // 解析动态链接依赖
+    auto dynstrData = getSectionData(*dynstr);
+    auto dynamicData = getSectionData(*dynamic);
+    // TODO: 实现具体的依赖解析逻辑
+    return deps;
+}
+
+// 缓存控制
+void ElfParser::enableCache(bool enable) {
+    if (!enable) {
+        clearCache();
+    }
+}
+
+void ElfParser::setParallelProcessing(bool enable) {
+    useParallelProcessing_ = enable;
+}
+
+void ElfParser::setCacheSize(size_t size) {
+    maxCacheSize_ = size;
+    if (symbolCache_.size() > maxCacheSize_) {
+        clearCache();
+    }
+}
+
+void ElfParser::preloadSymbols() {
+    for (const auto& symbol : getSymbolTable()) {
+        symbolCache_[symbol.name] = symbol;
+        addressCache_[symbol.value] = symbol;
+    }
+}
+
+auto ElfParser::getRelocationEntries() const
+    -> std::span<const RelocationEntry> {
+    LOG_F(INFO, "ElfParser::getRelocationEntries called");
+    return pImpl_->relocationEntries_;
+}
+
+auto ElfParser::getDynamicEntries() const -> std::span<const DynamicEntry> {
+    LOG_F(INFO, "ElfParser::getDynamicEntries called");
+    return pImpl_->dynamicEntries_;
 }
 
 }  // namespace lithium

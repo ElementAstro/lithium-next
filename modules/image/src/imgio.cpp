@@ -1,12 +1,18 @@
 #include "imgio.hpp"
+#include "binning.hpp"
+
 #include <fitsio.h>
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
+
 #include "atom/log/loguru.hpp"
+#include "atom/system/command.hpp"
+#include "atom/utils/uuid.hpp"
 
 namespace fs = std::filesystem;
 
@@ -350,4 +356,112 @@ auto saveMatToFits(const cv::Mat& image,
         LOG_F(ERROR, "Error during FITS conversion: {}", e.what());
         return false;
     }
+}
+
+int saveFitsAsPNG(const std::string& fitsFileName, bool isColor, int cameraBin,
+                  bool processBin, const std::string& imagePath) {
+    cv::Mat image;
+    cv::Mat OriginImage;
+    LOG_F(INFO, "Starting FITS to PNG conversion for file: {}", fitsFileName);
+    LOG_F(DEBUG, "Parameters - isColor: {}, cameraBin: {}, processBin: {}",
+          isColor, cameraBin, processBin);
+
+    image = loadImage(fitsFileName, cv::IMREAD_UNCHANGED);
+    if (image.empty()) {
+        LOG_F(ERROR, "Failed to load image from file: {}", fitsFileName);
+        return -1;
+    }
+    LOG_F(DEBUG, "Successfully loaded image: {}x{}", image.cols, image.rows);
+
+    if (processBin && cameraBin != 1) {
+        LOG_F(INFO, "Performing image binning with factor {}", cameraBin);
+        image =
+            processMatWithBinAvg(image, cameraBin, cameraBin, isColor, false);
+        LOG_F(INFO, "Binning complete. New image dimensions: {}x{}", image.cols,
+              image.rows);
+    }
+
+    cv::Mat srcImage = image.clone();
+    cv::Mat dstImage;
+    LOG_F(DEBUG, "Applying median blur filter with kernel size 3");
+    cv::medianBlur(srcImage, dstImage, 3);
+    LOG_F(DEBUG, "Median blur filtering completed successfully");
+
+    std::string solveImageFileName = "SolveImage.tiff";
+    LOG_F(DEBUG, "Saving intermediate TIFF file: {}", solveImageFileName);
+    if (!cv::imwrite(solveImageFileName, dstImage)) {
+        LOG_F(ERROR, "Failed to save intermediate TIFF file");
+        return -1;
+    }
+    LOG_F(DEBUG, "Successfully saved intermediate TIFF file");
+
+    LOG_F(DEBUG, "Saving image as FITS format");
+    if (!saveMatToFits(image)) {
+        LOG_F(ERROR, "Failed to save image in FITS format");
+        return -1;
+    }
+
+    LOG_F(DEBUG, "Preparing image data for binary storage. Dimensions: {}x{}",
+          image.cols, image.rows);
+    std::vector<unsigned char> imageData(image.total() * image.channels() * 2);
+    std::memcpy(imageData.data(), image.data, imageData.size());
+
+    auto uniqueId = atom::utils::generateUniqueUUID();
+    LOG_F(DEBUG, "Generated unique ID for new image: {}", uniqueId);
+
+    fs::path directory(imagePath);
+    std::vector<std::string> fileList;
+    LOG_F(DEBUG, "Scanning directory for existing capture images: {}",
+          imagePath);
+
+    for (const auto& entry : fs::directory_iterator(directory)) {
+        if (entry.is_regular_file() &&
+            entry.path().filename().string().find("CaptureImage") !=
+                std::string::npos) {
+            fileList.push_back(entry.path().string());
+        }
+    }
+
+    LOG_F(INFO, "Cleaning up {} previous capture files", fileList.size());
+    for (const auto& file : fileList) {
+        LOG_F(DEBUG, "Removing old capture file: {}", file);
+        fs::remove(file);
+    }
+
+    std::string fileName = "CaptureImage_" + uniqueId + ".bin";
+    std::string filePath = imagePath + fileName;
+    LOG_F(INFO, "Creating new capture file: {}", filePath);
+
+    std::ofstream outFile(filePath, std::ios::binary);
+    if (!outFile) {
+        LOG_F(ERROR, "Failed to open output file for writing: {}", filePath);
+        throw std::runtime_error("Failed to open file for writing.");
+    }
+
+    LOG_F(DEBUG, "Writing {} bytes of image data", imageData.size());
+    outFile.write(reinterpret_cast<const char*>(imageData.data()),
+                  imageData.size());
+    if (!outFile) {
+        LOG_F(ERROR, "Failed to write image data to file: {}", filePath);
+        throw std::runtime_error("Failed to write data to file.");
+    }
+
+    outFile.close();
+    if (!outFile) {
+        LOG_F(ERROR, "Failed to properly close output file: {}", filePath);
+        throw std::runtime_error("Failed to close the file properly.");
+    }
+    LOG_F(DEBUG, "Successfully wrote and closed binary file");
+
+    std::string command = "ln -sf " + filePath + " " + imagePath + fileName;
+    if (!atom::system::executeCommandSimple(command)) {
+        LOG_F(ERROR, "Failed to create symbolic link: {} -> {}", filePath,
+              imagePath + fileName);
+        return -1;
+    }
+    LOG_F(DEBUG, "Successfully created symbolic link for capture file");
+
+    LOG_F(INFO, "Image processing and saving completed successfully: {}",
+          fileName);
+    return 0;
 }

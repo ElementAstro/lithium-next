@@ -52,7 +52,7 @@ TEST_F(ElfParserTest, Constructor) { EXPECT_NE(parser, nullptr); }
 TEST_F(ElfParserTest, ParseSuccess) { EXPECT_TRUE(parser->parse()); }
 
 TEST_F(ElfParserTest, GetElfHeader) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto header = parser->getElfHeader();
     ASSERT_TRUE(header.has_value());
     EXPECT_EQ(header->type, 2);
@@ -61,55 +61,55 @@ TEST_F(ElfParserTest, GetElfHeader) {
 }
 
 TEST_F(ElfParserTest, GetProgramHeaders) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto headers = parser->getProgramHeaders();
     EXPECT_EQ(headers.size(), 1);
 }
 
 TEST_F(ElfParserTest, GetSectionHeaders) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto headers = parser->getSectionHeaders();
     EXPECT_TRUE(headers.empty());
 }
 
 TEST_F(ElfParserTest, GetSymbolTable) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto symbols = parser->getSymbolTable();
     EXPECT_TRUE(symbols.empty());
 }
 
 TEST_F(ElfParserTest, GetDynamicEntries) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto entries = parser->getDynamicEntries();
     EXPECT_TRUE(entries.empty());
 }
 
 TEST_F(ElfParserTest, GetRelocationEntries) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto entries = parser->getRelocationEntries();
     EXPECT_TRUE(entries.empty());
 }
 
 TEST_F(ElfParserTest, FindSymbolByName) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto symbol = parser->findSymbolByName("test_symbol");
     EXPECT_FALSE(symbol.has_value());
 }
 
 TEST_F(ElfParserTest, FindSymbolByAddress) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto symbol = parser->findSymbolByAddress(0x400000);
     EXPECT_FALSE(symbol.has_value());
 }
 
 TEST_F(ElfParserTest, FindSection) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto section = parser->findSection(".text");
     EXPECT_FALSE(section.has_value());
 }
 
 TEST_F(ElfParserTest, GetSectionData) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto headers = parser->getSectionHeaders();
     if (!headers.empty()) {
         auto data = parser->getSectionData(headers[0]);
@@ -118,24 +118,24 @@ TEST_F(ElfParserTest, GetSectionData) {
 }
 
 TEST_F(ElfParserTest, GetSymbolsInRange) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto symbols = parser->getSymbolsInRange(0x400000, 0x401000);
     EXPECT_TRUE(symbols.empty());
 }
 
 TEST_F(ElfParserTest, GetExecutableSegments) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     auto segments = parser->getExecutableSegments();
     EXPECT_TRUE(segments.empty());
 }
 
 TEST_F(ElfParserTest, VerifyIntegrity) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     EXPECT_TRUE(parser->verifyIntegrity());
 }
 
 TEST_F(ElfParserTest, ClearCache) {
-    parser->parse();
+    EXPECT_TRUE(parser->parse());
     parser->clearCache();
     // No direct way to verify, but ensure no exceptions are thrown
 }

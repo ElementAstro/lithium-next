@@ -1,9 +1,13 @@
 #ifndef LITHIUM_SERVER_MIDDLEWARE_IMAGE_HPP
 #define LITHIUM_SERVER_MIDDLEWARE_IMAGE_HPP
 
+#include <memory>
+#include "device/template/camera.hpp"
 #include "usb.hpp"
 
+#include "components/manager.hpp"
 #include "config/configor.hpp"
+#include "device/manager.hpp"
 
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
@@ -124,6 +128,30 @@ inline auto parseString(const std::string& input,
         }
     }
     return paths;
+}
+
+inline std::string escapeSpecialChars(const std::string& input) {
+    std::string result;
+    for (char c : input) {
+        switch (c) {
+            case ' ':
+                result += "\\ ";  // 转义空格
+                break;
+            case '[':
+                result += "\\[";  // 转义左方括号
+                break;
+            case ']':
+                result += "\\]";  // 转义右方括号
+                break;
+            case ',':
+                result += "\\,";  // 转义逗号
+                break;
+            default:
+                result += c;  // 保留其他字符
+                break;
+        }
+    }
+    return result;
 }
 }  // namespace internal
 
@@ -322,8 +350,82 @@ inline void deleteFile(const std::string& path) {
     LOG_F(INFO, "deleteFile: Exiting function");
 }
 
-inline void readImageFile() {
+inline void readImageFile(const std::string& message) {
+    LOG_F(INFO, "Starting readImageFile operation with message: {}", message);
+    auto imagePath = message;
 
+    // 处理路径
+    size_t pos = imagePath.find("ReadImageFile:");
+    if (pos != std::string::npos) {
+        LOG_F(DEBUG, "Replacing 'ReadImageFile:' with 'image/' in path");
+        imagePath.replace(pos, 14, "image/");
+    }
+    LOG_F(DEBUG, "Processed image path: {}", imagePath);
+
+    imagePath = internal::escapeSpecialChars(imagePath);
+    LOG_F(DEBUG, "Escaped image path: {}", imagePath);
+
+    // 获取必要组件
+    LOG_F(DEBUG, "Retrieving required components");
+    LITHIUM_GET_REQUIRED_PTR(componentManager, lithium::ComponentManager,
+                             Constants::COMPONENT_MANAGER);
+    LITHIUM_GET_REQUIRED_PTR(messageBus, atom::async::MessageBus,
+                             Constants::MESSAGE_BUS);
+    LITHIUM_GET_REQUIRED_PTR(configManager, lithium::ConfigManager,
+                             Constants::CONFIG_MANAGER);
+    LITHIUM_GET_REQUIRED_PTR(deviceManager, lithium::DeviceManager,
+                             Constants::DEVICE_MANAGER);
+
+    // 获取配置
+    std::string vueImagePath = configManager->get("/quarcs/image/vueImagePath")
+                                   .value_or("image")
+                                   .get<std::string>();
+    LOG_F(DEBUG, "Vue image path from config: {}", vueImagePath);
+
+    // 获取相机信息
+    auto camera = std::dynamic_pointer_cast<AtomCamera>(
+        deviceManager->getPrimaryDevice("Camera"));
+    if (!camera) {
+        LOG_F(ERROR, "Failed to get primary camera device");
+        return;
+    }
+
+    auto cameraBin = camera->getBinning();
+    auto isColor = camera->isColor();
+    auto processBin = false;
+    LOG_F(DEBUG, "Camera settings - Binning: {}, IsColor: {}, ProcessBin: {}", 
+          cameraBin, isColor, processBin);
+
+    // 检查组件
+    if (!componentManager->hasComponent("lithium_image")) {
+        LOG_F(ERROR, "Component 'lithium_image' not found");
+        return;
+    }
+    LOG_F(DEBUG, "Found lithium_image component");
+
+    try {
+        LOG_F(INFO, "Attempting to save FITS as PNG");
+        auto component = componentManager->getComponent("lithium_image")
+                            .value()
+                            .lock();
+        auto result = std::any_cast<int>(
+            component->dispatch("save_fits_as_png", imagePath, isColor, cameraBin,
+                              processBin, vueImagePath));
+                              
+        if (result == -1) {
+            LOG_F(ERROR, "Failed to save FITS as PNG - Operation returned -1");
+            return;
+        }
+        LOG_F(INFO, "Successfully saved FITS as PNG");
+    } catch (const std::bad_any_cast& e) {
+        LOG_F(ERROR, "Component cast failed: {}", e.what());
+        return;
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Unexpected error while saving FITS: {}", e.what());
+        return;
+    }
+    
+    LOG_F(INFO, "readImageFile operation completed successfully");
 }
 }  // namespace lithium::middleware
 

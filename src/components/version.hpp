@@ -11,6 +11,14 @@
 #include "atom/macro.hpp"
 
 namespace lithium {
+/**
+ * @brief Strategies for comparing versions.
+ */
+enum class VersionCompareStrategy {
+    Strict,  ///< Compare full version including prerelease and build metadata
+    IgnorePrerelease,  ///< Ignore prerelease information
+    OnlyMajorMinor     ///< Compare only major and minor versions
+};
 
 /**
  * @brief Represents a semantic version.
@@ -153,8 +161,9 @@ auto operator<<(std::ostream& outputStream,
  * @return True if the actual version satisfies the required version, false
  * otherwise
  */
-auto checkVersion(const Version& actualVersion,
-                  const std::string& requiredVersionStr) -> bool;
+auto checkVersion(
+    const Version& actualVersion, const std::string& requiredVersionStr,
+    VersionCompareStrategy strategy = VersionCompareStrategy::Strict) -> bool;
 
 /**
  * @brief Checks if the actual date version satisfies the required date version
@@ -322,15 +331,33 @@ struct VersionRange {
      * @throws std::invalid_argument if the version range string is invalid
      */
     static VersionRange parse(std::string_view rangeStr);
-};
 
-/**
- * @brief Strategies for comparing versions.
- */
-enum class VersionCompareStrategy {
-    Strict,  ///< Compare full version including prerelease and build metadata
-    IgnorePrerelease,  ///< Ignore prerelease information
-    OnlyMajorMinor     ///< Compare only major and minor versions
+    /**
+     * @brief 创建一个从指定版本开始的开放范围
+     * @param minVer 最小版本
+     * @return 版本范围对象
+     */
+    static VersionRange from(Version minVer);
+
+    /**
+     * @brief 创建一个到指定版本为止的开放范围
+     * @param maxVer 最大版本
+     * @return 版本范围对象
+     */
+    static VersionRange upTo(Version maxVer);
+
+    /**
+     * @brief 将范围转换为字符串表示
+     * @return 范围的字符串表示
+     */
+    [[nodiscard]] std::string toString() const;
+
+    /**
+     * @brief 检查两个版本范围是否有交集
+     * @param other 另一个版本范围
+     * @return 如果有交集返回true，否则返回false
+     */
+    [[nodiscard]] bool overlaps(const VersionRange& other) const;
 };
 
 }  // namespace lithium

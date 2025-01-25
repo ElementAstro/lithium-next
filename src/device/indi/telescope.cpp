@@ -121,7 +121,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                     }
                 }
             },
-            INDI::BaseDevice::WATCH_NEW_OR_UPDATE); 
+            INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
 
         device_.watchProperty(
             "BAUD_RATE",
@@ -403,9 +403,9 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
     return true;
 }
 
-auto INDITelescope::disconnect() -> bool {}
+auto INDITelescope::disconnect() -> bool { return true; }
 
-auto INDITelescope::watchAdditionalProperty() -> bool {}
+auto INDITelescope::watchAdditionalProperty() -> bool { return true; }
 
 void INDITelescope::setPropertyNumber(std::string_view propertyName,
                                       double value) {}
