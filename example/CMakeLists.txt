@@ -11,5 +11,3 @@ foreach(MAIN_CPP_FILE ${MAIN_CPP_FILES})
 
     target_link_libraries(${TARGET_NAME} PRIVATE lithium_config atom lithium_task)
 endforeach()
-
-add_subdirectory(components)

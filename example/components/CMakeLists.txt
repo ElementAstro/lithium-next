@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(example.component C CXX)
+project(example_component C CXX)  # 修改项目名称，避免与目录名称冲突
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
@@ -30,7 +30,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC .)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${VERSION_STRING}
     SOVERSION ${SOVERSION}
-    OUTPUT_NAME logger
+    OUTPUT_NAME example_component  # 修改输出名称，避免与目录名称冲突
 )
 
 # Install

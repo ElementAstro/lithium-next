@@ -1,0 +1,63 @@
+{
+    "powershell_danger_patterns": [
+        {
+            "pattern": "Remove-Item -Recurse -Force",
+            "reason": "Potentially dangerous command that can delete files recursively and forcefully."
+        },
+        {
+            "pattern": "Stop-Process -Force",
+            "reason": "Potentially dangerous command that can forcefully stop processes."
+        }
+    ],
+    "windows_cmd_danger_patterns": [
+        {
+            "pattern": "del /s /q",
+            "reason": "Potentially dangerous command that can delete files recursively and quietly."
+        },
+        {
+            "pattern": "taskkill /F",
+            "reason": "Potentially dangerous command that can forcefully terminate tasks."
+        }
+    ],
+    "python_danger_patterns": [
+        {
+            "pattern": "import os",
+            "reason": "Potentially dangerous module that can execute system commands."
+        },
+        {
+            "pattern": "exec\\(",
+            "reason": "Potentially dangerous function that can execute arbitrary code."
+        }
+    ],
+    "ruby_danger_patterns": [
+        {
+            "pattern": "require ",
+            "reason": "Potentially dangerous module that can load external libraries."
+        },
+        {
+            "pattern": "system\\(",
+            "reason": "Potentially dangerous function that can execute system commands."
+        }
+    ],
+    "bash_danger_patterns": [
+        {
+            "pattern": "rm -rf /",
+            "reason": "Potentially dangerous command that can delete the root directory."
+        },
+        {
+            "pattern": "kill -9",
+            "reason": "Potentially dangerous command that can forcefully terminate processes."
+        }
+    ],
+    "custom_patterns": [
+        {
+            "pattern": "eval\\(",
+            "category": "Custom",
+            "reason": "Potentially dangerous function that can execute arbitrary code."
+        }
+    ],
+    "safe_replacements": {
+        "rm -rf /": "find . -type f -delete",
+        "kill -9": "kill -TERM"
+    }
+}

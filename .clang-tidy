@@ -1,0 +1,4 @@
+Checks:          '*, -llvm-header-guard, -google-runtime-references'
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
+FormatStyle:     file

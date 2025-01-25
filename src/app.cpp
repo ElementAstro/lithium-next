@@ -110,11 +110,11 @@ void injectPtr() {
         Constants::SCRIPT_MANAGER,
         atom::memory::makeShared<lithium::ScriptManager>());
 
-    auto scriptDir = env->getEnv("LITHIUM_SCRIPT_DIR");
+    auto scriptDir = env->getEnv("LITHIUM_SCRIPT_ANALYSIS_PATH");
     AddPtr<lithium::ScriptAnalyzer>(
         Constants::SCRIPT_ANALYZER,
         atom::memory::makeShared<lithium::ScriptAnalyzer>(
-            scriptDir.empty() ? "scripts"s : scriptDir));
+            scriptDir.empty() ? "./config/script/analysis.json"s : scriptDir));
 
     LOG_F(INFO, "Global pointers injected.");
 }
