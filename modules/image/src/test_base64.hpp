@@ -43,8 +43,8 @@ TEST_F(Base64Test, EncodeStandardString) {
 // RFC 4648 Test Vectors
 TEST_F(Base64Test, EncodeRFCTestVectors) {
     for (const auto& [input, expected] : testVectors) {
-        EXPECT_EQ(base64Encode(reinterpret_cast<const unsigned char*>(input.c_str()), 
-                              input.length()), 
+        EXPECT_EQ(base64Encode(reinterpret_cast<const unsigned char*>(input.c_str()),
+                              input.length()),
                   expected);
     }
 }
@@ -74,7 +74,7 @@ TEST_F(Base64Test, DecodeRFCTestVectors) {
     }
 }
 
-// Padding Tests 
+// Padding Tests
 TEST_F(Base64Test, HandlePadding) {
     EXPECT_EQ(base64Decode("YQ=="), "a");     // 1 byte, 2 padding chars
     EXPECT_EQ(base64Decode("YWI="), "ab");    // 2 bytes, 1 padding char
@@ -102,7 +102,7 @@ TEST_F(Base64Test, RoundtripStrings) {
 TEST_F(Base64Test, RoundtripBinaryData) {
     std::string encoded = base64Encode(binaryData.data(), binaryData.size());
     std::string decoded = base64Decode(encoded);
-    EXPECT_EQ(std::vector<unsigned char>(decoded.begin(), decoded.end()), 
+    EXPECT_EQ(std::vector<unsigned char>(decoded.begin(), decoded.end()),
               binaryData);
 }
 

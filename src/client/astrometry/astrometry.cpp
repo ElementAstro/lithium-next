@@ -21,7 +21,7 @@
 static auto astrometrySolver =
     std::make_shared<AstrometrySolver>("solver.astrometry");
 
-AstrometrySolver::AstrometrySolver(std::string name) 
+AstrometrySolver::AstrometrySolver(std::string name)
     : AtomSolver(std::move(name)) {
     DLOG_F(INFO, "Initializing Astrometry Solver...");
 }
@@ -440,10 +440,10 @@ PlateSolveResult AstrometrySolver::solve(
     const std::string& imageFilePath,
     const std::optional<Coordinates>& initialCoordinates,
     double fovW, double fovH, int imageWidth, int imageHeight) {
-    
+
     std::string command = buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
     std::string output;
-    
+
     try {
         output = atom::system::executeCommand(command);
     } catch (const std::exception& e) {
@@ -458,10 +458,10 @@ std::future<PlateSolveResult> AstrometrySolver::async_solve(
     const std::string& imageFilePath,
     const std::optional<Coordinates>& initialCoordinates,
     double fovW, double fovH, int imageWidth, int imageHeight) {
-    
+
     return std::async(std::launch::async,
         [this, imageFilePath, initialCoordinates, fovW, fovH, imageWidth, imageHeight]() {
-            return this->solve(imageFilePath, initialCoordinates, 
+            return this->solve(imageFilePath, initialCoordinates,
                              fovW, fovH, imageWidth, imageHeight);
         });
 }
@@ -496,7 +496,7 @@ std::string AstrometrySolver::buildCommand(
     const std::string& imageFilePath,
     const std::optional<Coordinates>& coords,
     double fovW, double fovH) {
-    
+
     std::ostringstream cmd;
     cmd << "solve-field"
         << " --overwrite"
@@ -518,7 +518,7 @@ std::string AstrometrySolver::buildCommand(
 
 PlateSolveResult AstrometrySolver::parseSolveOutput(const std::string& output) {
     PlateSolveResult result;
-    
+
     // 使用wcsinfo来解析WCS文件
     std::string wcsFile = getOutputPath(output);
     if (!std::filesystem::exists(wcsFile)) {
@@ -527,10 +527,10 @@ PlateSolveResult AstrometrySolver::parseSolveOutput(const std::string& output) {
     }
 
     std::string wcsinfo = atom::system::executeCommand("wcsinfo " + wcsFile);
-    
+
     // 解析wcsinfo输出...
     // 这里需要添加实际的解析逻辑来设置result的各个字段
-    
+
     result.success = true;
     return result;
 }

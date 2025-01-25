@@ -77,14 +77,14 @@ public:
 
     // 新增方法
     bool initSolver(const QString& configFile = QString());
-    
+
     // 异步处理方法
     void extractAsync(bool calculateHFR = false);
     void solveAsync();
-    
+
     // 批量处理
     bool batchProcess(const QStringList& files);
-    
+
     // 性能监控
     struct PerformanceStats {
         double extractionTime;
@@ -120,7 +120,7 @@ private:
     std::vector<uint8_t> bufferData_;
     QString lastError_;
     PerformanceStats perfStats_;
-    
+
     void processError(const QString& error);
     void updatePerformanceStats();
 };

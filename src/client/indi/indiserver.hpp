@@ -116,7 +116,7 @@ public:
      * @param mode The running mode.
      * @return True if the agent was started successfully, false otherwise.
      */
-    bool startIndiHub(const std::string& profile, 
+    bool startIndiHub(const std::string& profile,
                       const std::string& mode = INDIHUB_AGENT_DEFAULT_MODE);
 
     /**

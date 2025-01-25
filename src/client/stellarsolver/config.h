@@ -11,10 +11,10 @@ public:
     void setQuickMode();      // 快速模式,精度较低
     void setPreciseMode();    // 精确模式,耗时较长
     void setBalancedMode();   // 平衡模式
-    
+
     // 自定义配置
     void setCustomParameters(const SSolver::Parameters& params);
-    
+
     // 获取当前配置
     const SSolver::Parameters& getParameters() const;
 

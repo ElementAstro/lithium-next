@@ -294,7 +294,7 @@ private:
      * @param name The name of the module.
      * @return A future representing the loading result.
      */
-    auto loadModuleAsync(const std::string& path, const std::string& name) 
+    auto loadModuleAsync(const std::string& path, const std::string& name)
         -> std::future<bool>;
 };
 

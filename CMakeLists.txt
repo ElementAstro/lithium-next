@@ -40,7 +40,7 @@ find_package(Curses REQUIRED)
 
 add_executable(lithium-next ${lithium_src_dir}/app.cpp)
 
-target_link_libraries(lithium-next PRIVATE 
+target_link_libraries(lithium-next PRIVATE
     pybind11::module
     pybind11::lto
     lithium_components

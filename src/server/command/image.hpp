@@ -393,7 +393,7 @@ inline void readImageFile(const std::string& message) {
     auto cameraBin = camera->getBinning();
     auto isColor = camera->isColor();
     auto processBin = false;
-    LOG_F(DEBUG, "Camera settings - Binning: {}, IsColor: {}, ProcessBin: {}", 
+    LOG_F(DEBUG, "Camera settings - Binning: {}, IsColor: {}, ProcessBin: {}",
           cameraBin, isColor, processBin);
 
     // 检查组件
@@ -411,7 +411,7 @@ inline void readImageFile(const std::string& message) {
         auto result = std::any_cast<int>(
             component->dispatch("save_fits_as_png", imagePath, isColor, cameraBin,
                               processBin, vueImagePath));
-                              
+
         if (result == -1) {
             LOG_F(ERROR, "Failed to save FITS as PNG - Operation returned -1");
             return;
@@ -424,7 +424,7 @@ inline void readImageFile(const std::string& message) {
         LOG_F(ERROR, "Unexpected error while saving FITS: {}", e.what());
         return;
     }
-    
+
     LOG_F(INFO, "readImageFile operation completed successfully");
 }
 }  // namespace lithium::middleware

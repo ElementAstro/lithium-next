@@ -12,7 +12,7 @@ curl -X POST $API_URL/config/get \
   -d '{"path":"'$TEST_CONFIG_PATH'"}'
 echo -e "\n\n"
 
-# Test SET config  
+# Test SET config
 echo "Testing SET config..."
 curl -X POST $API_URL/config/set \
   -H "Content-Type: application/json" \

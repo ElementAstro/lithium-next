@@ -13,7 +13,7 @@ curl -X POST $BASE_URL/script/register \
       }'
 echo -e "\n\n"
 
-# Test delete script endpoint  
+# Test delete script endpoint
 echo "Testing /script/delete"
 curl -X POST $BASE_URL/script/delete \
   -H "Content-Type: application/json" \

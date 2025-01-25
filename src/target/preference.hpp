@@ -118,12 +118,12 @@ public:
     // 简化的公共接口
     void addRatings(const std::vector<std::tuple<std::string, std::string, double>>& ratings);
     void addItems(const std::vector<std::pair<std::string, std::vector<std::string>>>& items);
-    
-    auto recommend(const std::string& user, int topN = 5) 
+
+    auto recommend(const std::string& user, int topN = 5)
         -> std::vector<std::pair<std::string, double>>;
-    
+
     auto predict(const std::string& user, const std::string& item) -> double;
-    
+
     // 新增方法
     void optimize();
     void clear();

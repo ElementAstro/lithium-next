@@ -58,7 +58,7 @@ auto ModuleLoader::loadModule(const std::string& path,
                               const std::string& name) -> bool {
     DLOG_F(INFO, "Loading module: {} from path: {}", name, path);
     std::unique_lock lock(sharedMutex_);
-    
+
     if (hasModule(name)) {
         LOG_F(ERROR, "Module {} already loaded", name);
         return false;
@@ -80,7 +80,7 @@ auto ModuleLoader::loadModule(const std::string& path,
         LOG_F(ERROR, "Failed to load module {}: {}", name, ex.what());
         return false;
     }
-    
+
     LOG_F(INFO, "Module {} loaded successfully", name);
     return true;
 }
@@ -295,7 +295,7 @@ auto ModuleLoader::getModuleByHash(std::size_t hash)
     return nullptr;
 }
 
-auto ModuleLoader::getDependencies(const std::string& name) const 
+auto ModuleLoader::getDependencies(const std::string& name) const
     -> std::vector<std::string> {
     return dependencyGraph_.getDependencies(name);
 }
