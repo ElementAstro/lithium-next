@@ -12,9 +12,9 @@ protected:
 TEST_F(CalculateTest, CalculateVector) {
     CartesianCoordinates pointA{1.0, 2.0, 3.0};
     CartesianCoordinates pointB{4.0, 6.0, 8.0};
-    
+
     auto result = calculateVector(pointA, pointB);
-    
+
     EXPECT_NEAR(result.x, 3.0, EPSILON);
     EXPECT_NEAR(result.y, 4.0, EPSILON);
     EXPECT_NEAR(result.z, 5.0, EPSILON);
@@ -23,9 +23,9 @@ TEST_F(CalculateTest, CalculateVector) {
 TEST_F(CalculateTest, CalculatePointC) {
     CartesianCoordinates pointA{1.0, 2.0, 3.0};
     CartesianCoordinates vector{2.0, 3.0, 4.0};
-    
+
     auto result = calculatePointC(pointA, vector);
-    
+
     EXPECT_NEAR(result.x, 3.0, EPSILON);
     EXPECT_NEAR(result.y, 5.0, EPSILON);
     EXPECT_NEAR(result.z, 7.0, EPSILON);
@@ -35,9 +35,9 @@ TEST_F(CalculateTest, CalculateFOVStandardCamera) {
     int focalLength = 1000;  // 1000mm
     double sensorWidth = 36.0;  // Full frame sensor width
     double sensorHeight = 24.0; // Full frame sensor height
-    
+
     auto result = calculateFOV(focalLength, sensorWidth, sensorHeight);
-    
+
     // Expected values calculated using the formula: 2 * atan(size/(2*focal)) * 180/pi
     EXPECT_NEAR(result.minFOV, 1.37, 0.01);  // Height angle
     EXPECT_NEAR(result.maxFOV, 2.06, 0.01);  // Diagonal angle
@@ -47,7 +47,7 @@ TEST_F(CalculateTest, CalculateFOVEdgeCases) {
     // Test with very large focal length
     auto resultLarge = calculateFOV(10000, 36.0, 24.0);
     EXPECT_NEAR(resultLarge.minFOV, 0.137, 0.001);
-    
+
     // Test with very small focal length
     auto resultSmall = calculateFOV(10, 36.0, 24.0);
     EXPECT_NEAR(resultSmall.maxFOV, 127.0, 1.0);
@@ -61,7 +61,7 @@ TEST_F(CalculateTest, CalculateGSTKnownDate) {
     date.tm_hour = 12;  // 12:00:00
     date.tm_min = 0;
     date.tm_sec = 0;
-    
+
     double gst = calculateGST(date);
     EXPECT_NEAR(gst, 280.46062, 0.0001);
 }
@@ -72,7 +72,7 @@ TEST_F(CalculateTest, CalculateAltAzKnownPosition) {
     double dec = 89.264;      // Polaris Dec (degrees)
     double lat = 45.0;        // Observer latitude
     double lon = -75.0;       // Observer longitude
-    
+
     std::tm date = {};
     date.tm_year = 121;    // 2021
     date.tm_mon = 6;       // July
@@ -80,9 +80,9 @@ TEST_F(CalculateTest, CalculateAltAzKnownPosition) {
     date.tm_hour = 0;      // 00:00:00
     date.tm_min = 0;
     date.tm_sec = 0;
-    
+
     auto result = calculateAltAz(ra, dec, lat, lon, date);
-    
+
     // Polaris should be visible at about the observer's latitude
     EXPECT_NEAR(result.altitude, lat, 1.0);
     // Azimuth should be close to true north (0 or 360 degrees)
@@ -95,7 +95,7 @@ TEST_F(CalculateTest, CalculateAltAzEquator) {
     double dec = 0.0;     // Object on celestial equator
     double lat = 0.0;     // Observer at equator
     double lon = 0.0;     // At prime meridian
-    
+
     std::tm date = {};
     date.tm_year = 121;
     date.tm_mon = 6;
@@ -103,9 +103,9 @@ TEST_F(CalculateTest, CalculateAltAzEquator) {
     date.tm_hour = 12;    // Local noon
     date.tm_min = 0;
     date.tm_sec = 0;
-    
+
     auto result = calculateAltAz(ra, dec, lat, lon, date);
-    
+
     // Object should be near zenith
     EXPECT_NEAR(result.altitude, 90.0, 1.0);
 }
@@ -116,7 +116,7 @@ TEST_F(CalculateTest, CalculateAltAzPoles) {
     double dec = 0.0;
     double lat = 90.0;    // North pole
     double lon = 0.0;
-    
+
     std::tm date = {};
     date.tm_year = 121;
     date.tm_mon = 6;
@@ -124,9 +124,9 @@ TEST_F(CalculateTest, CalculateAltAzPoles) {
     date.tm_hour = 0;
     date.tm_min = 0;
     date.tm_sec = 0;
-    
+
     auto result = calculateAltAz(ra, dec, lat, lon, date);
-    
+
     // Object should be on horizon
     EXPECT_NEAR(result.altitude, 0.0, 1.0);
 }
@@ -137,7 +137,7 @@ TEST_F(CalculateTest, CalculateAltAzBelowHorizon) {
     double dec = 0.0;
     double lat = 45.0;
     double lon = 0.0;
-    
+
     std::tm date = {};
     date.tm_year = 121;
     date.tm_mon = 6;
@@ -145,9 +145,9 @@ TEST_F(CalculateTest, CalculateAltAzBelowHorizon) {
     date.tm_hour = 12;    // Local noon
     date.tm_min = 0;
     date.tm_sec = 0;
-    
+
     auto result = calculateAltAz(ra, dec, lat, lon, date);
-    
+
     // Object should be below horizon
     EXPECT_LT(result.altitude, 0.0);
 }

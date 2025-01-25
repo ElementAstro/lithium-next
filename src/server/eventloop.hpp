@@ -233,7 +233,7 @@ private:
         // 添加任务池相关字段
         Task* next_pooled = nullptr;
         bool is_active = true;
-        
+
         // 添加任务类型标识
         enum class Type {
             Normal,
@@ -241,12 +241,12 @@ private:
             Periodic,
             Cancelable
         } type = Type::Normal;
-        
+
         // 对象池分配器
         static void* operator new(size_t size) {
             return task_pool.allocate();
         }
-        
+
         static void operator delete(void* ptr) {
             task_pool.deallocate(static_cast<Task*>(ptr));
         }
@@ -264,31 +264,31 @@ private:
             free_list_ = free_list_->next_pooled;
             return task;
         }
-        
+
         void deallocate(Task* task) {
             std::lock_guard<std::mutex> lock(pool_mutex_);
             task->next_pooled = free_list_;
             free_list_ = task;
         }
-        
+
     private:
         Task* free_list_ = nullptr;
         std::mutex pool_mutex_;
     };
-    
+
     static TaskPool task_pool;
-    
+
     // 添加高性能任务队列
     struct TaskQueue {
         std::array<std::priority_queue<Task>, 3> priority_queues;  // 高中低三个优先级队列
         std::mutex mutex;
-        
+
         void push(Task&& task) {
             std::lock_guard<std::mutex> lock(mutex);
             int queue_index = task.priority > 0 ? 0 : (task.priority < 0 ? 2 : 1);
             priority_queues[queue_index].push(std::move(task));
         }
-        
+
         bool pop(Task& task) {
             std::lock_guard<std::mutex> lock(mutex);
             for (auto& queue : priority_queues) {
@@ -301,7 +301,7 @@ private:
             return false;
         }
     };
-    
+
     TaskQueue task_queue_;
 
     std::priority_queue<Task> tasks_;

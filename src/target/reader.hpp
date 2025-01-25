@@ -67,7 +67,7 @@ public:
     void enableFieldValidation(bool enable);
     [[nodiscard]] auto getLineNumber() const -> size_t;
     void reset();
-    
+
     // 批量读取方法
     auto readRows(size_t count) -> std::vector<std::unordered_map<std::string, std::string>>;
 
@@ -92,7 +92,7 @@ public:
     void enableChecksum(bool enable);
     void flush();
     [[nodiscard]] auto getWrittenRows() const -> size_t;
-    
+
     // 批量写入方法
     void writeRows(const std::vector<std::unordered_map<std::string, std::string>>& rows);
 

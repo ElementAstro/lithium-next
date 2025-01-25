@@ -83,12 +83,12 @@ TEST_F(ScriptManagerTest, MaxVersionLimit) {
 TEST_F(ScriptManagerTest, ConcurrentExecution) {
     manager->registerScript("script1", "echo 'one'");
     manager->registerScript("script2", "echo 'two'");
-    
+
     std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> scripts = {
         {"script1", {}},
         {"script2", {}}
     };
-    
+
     auto results = manager->runScriptsConcurrently(scripts);
     EXPECT_EQ(results.size(), 2);
     EXPECT_TRUE(results[0].has_value());
@@ -111,14 +111,14 @@ TEST_F(ScriptManagerTest, ProgressTracking) {
         sleep 1
         echo "PROGRESS:100"
     )");
-    
+
     auto future = manager->runScriptAsync("test", {});
-    
+
     // Check progress
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     float progress = manager->getScriptProgress("test");
     EXPECT_GE(progress, 0.0f);
-    
+
     future.get();
 }
 
@@ -129,11 +129,11 @@ TEST_F(ScriptManagerTest, ScriptAbortion) {
             sleep 1
         done
     )");
-    
+
     auto future = manager->runScriptAsync("test", {});
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     manager->abortScript("test");
-    
+
     auto result = future.get();
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result->second, -999);  // Special abort status code
@@ -154,12 +154,12 @@ TEST_F(ScriptManagerTest, ScriptLogging) {
 TEST_F(ScriptManagerTest, SequentialExecution) {
     manager->registerScript("script1", "echo 'first'");
     manager->registerScript("script2", "echo 'second'");
-    
+
     std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> scripts = {
         {"script1", {}},
         {"script2", {}}
     };
-    
+
     auto results = manager->runScriptsSequentially(scripts);
     EXPECT_EQ(results.size(), 2);
     EXPECT_TRUE(results[0].has_value());
@@ -169,7 +169,7 @@ TEST_F(ScriptManagerTest, SequentialExecution) {
 TEST_F(ScriptManagerTest, ScriptOutputAndStatus) {
     manager->registerScript("test", "exit 42");
     manager->runScript("test", {});
-    
+
     auto status = manager->getScriptStatus("test");
     ASSERT_TRUE(status.has_value());
     EXPECT_EQ(status.value(), 42);
@@ -180,7 +180,7 @@ TEST_F(ScriptManagerTest, PowerShellSpecificFeatures) {
         $ErrorActionPreference = 'Stop'
         Write-Host "PowerShell Test"
     )");
-    
+
     auto result = manager->runScript("ps_test", {});
     ASSERT_TRUE(result.has_value());
     EXPECT_TRUE(result->first.find("PowerShell Test") != std::string::npos);

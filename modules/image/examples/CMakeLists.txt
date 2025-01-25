@@ -14,4 +14,3 @@ foreach(CPP_FILE ${CPP_FILES})
     add_executable(${EXE_NAME} ${CPP_FILE})
     target_link_libraries(${EXE_NAME} ${LIBRARIES_TO_LINK})
 endforeach()
-

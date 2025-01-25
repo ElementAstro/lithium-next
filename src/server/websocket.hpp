@@ -258,12 +258,12 @@ private:
     int compression_level_{6};
 
     // 记录每个连接的最后活动时间
-    std::unordered_map<crow::websocket::connection*, 
+    std::unordered_map<crow::websocket::connection*,
         std::chrono::steady_clock::time_point> last_activity_times_;
-    
+
     // 更新连接的最后活动时间
     void update_activity_time(crow::websocket::connection* conn);
-    
+
     // 获取连接的最后活动时间
     std::chrono::steady_clock::time_point get_last_activity_time(
         crow::websocket::connection* conn) const;

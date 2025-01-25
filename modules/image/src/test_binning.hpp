@@ -12,7 +12,7 @@ protected:
         smallImage = cv::Mat(100, 100, CV_8UC1, cv::Scalar(128));
         largeImage = cv::Mat(3000, 3000, CV_8UC1, cv::Scalar(128));
         colorImage = cv::Mat(100, 100, CV_8UC3, cv::Scalar(64, 128, 192));
-        
+
         // Create images with different bit depths
         image8bit = cv::Mat(100, 100, CV_8UC1, cv::Scalar(128));
         image16bit = cv::Mat(100, 100, CV_16UC1, cv::Scalar(32768));
@@ -98,7 +98,7 @@ TEST_F(BinningTest, BinningPreservesAverageIntensity) {
     cv::Scalar originalMean = cv::mean(smallImage);
     auto result = processMatWithBinAvg(smallImage, 2, 2, false, true);
     cv::Scalar binnedMean = cv::mean(result);
-    
+
     EXPECT_NEAR(originalMean[0], binnedMean[0], 1.0);
 }
 

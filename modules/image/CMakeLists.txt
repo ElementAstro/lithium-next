@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(lithium_image 
+project(lithium_image
     VERSION 1.0.0
     LANGUAGES C CXX
 )
@@ -20,8 +20,8 @@ include_directories(src)
 
 # 创建共享库
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
-target_include_directories(${PROJECT_NAME} 
-    PUBLIC 
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${OpenCV_INCLUDE_DIRS}

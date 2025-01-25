@@ -11,7 +11,7 @@ curl -X POST $BASE_URL/addTarget \
   -d '{"name": "test_target"}'
 echo -e "\n"
 
-# Test removeTarget endpoint  
+# Test removeTarget endpoint
 echo "Testing removeTarget..."
 curl -X POST $BASE_URL/removeTarget \
   -H "Content-Type: application/json" \

@@ -42,7 +42,7 @@ auto ImageInfo::hash() const -> size_t {
 }
 
 auto ImageInfo::isComplete() const noexcept -> bool {
-    return dateTime.has_value() && imageType.has_value() && 
+    return dateTime.has_value() && imageType.has_value() &&
            filter.has_value() && exposureTime.has_value();
 }
 
@@ -130,7 +130,7 @@ public:
         std::function<bool(const std::string&)> validator) -> void {
         fieldValidators_[field] = std::move(validator);
     }
-    
+
     auto setPreProcessor(std::function<std::string(std::string)> processor) -> void {
         preProcessor_ = std::move(processor);
     }
@@ -259,7 +259,7 @@ private:
         -> std::optional<ImageInfo> {
         using namespace std::views;
         using namespace std::ranges;
-        
+
         std::shared_lock lock(cacheMutex_);
         if (cache_) {
             if (auto cached = cache_->get(filename)) {
@@ -267,7 +267,7 @@ private:
             }
         }
         lock.unlock();
-        
+
         std::smatch matchResult;
         if (!std::regex_match(filename, matchResult, fullRegexPattern_)) {
             LOG_F(ERROR, "Filename does not match the pattern: {}", filename);
@@ -282,7 +282,7 @@ private:
                 validator != fieldValidators_.end() && !validator->second(value)) {
                 return false;
             }
-            
+
             if (auto parser = parsers_.find(key); parser != parsers_.end()) {
                 parser->second(info, value);
             }
@@ -299,7 +299,7 @@ private:
         if (cache_) {
             cache_->put(filename, info);
         }
-        
+
         return info;
     }
 
@@ -307,17 +307,17 @@ private:
     [[nodiscard]] auto findFilesInDirectoryImpl(const std::filesystem::path& dir, T&& filter) const
         -> std::vector<ImageInfo> {
         std::vector<ImageInfo> results;
-        
+
         for (const auto& entry : std::filesystem::recursive_directory_iterator(dir)) {
             if (!entry.is_regular_file()) continue;
-            
+
             if (auto info = parseFilename(entry.path().string())) {
                 if (filter(*info)) {
                     results.push_back(std::move(*info));
                 }
             }
         }
-        
+
         return results;
     }
 };

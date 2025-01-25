@@ -252,7 +252,7 @@ public:
     [[nodiscard]] auto calculateChecksum() const -> uint64_t;
     [[nodiscard]] auto isStripped() const -> bool;
     [[nodiscard]] auto getDependencies() const -> std::vector<std::string>;
-    
+
     // 性能优化相关
     void enableCache(bool enable = true);
     void setParallelProcessing(bool enable = true);

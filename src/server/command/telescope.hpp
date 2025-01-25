@@ -13,6 +13,6 @@ void mountHome();
 void mountSync();
 void mountSpeedSwitch();
 void mountGoto(double ra, double dec);
-}  // namespace lithium::middleware 
+}  // namespace lithium::middleware
 
 #endif  // LITHIUM_SERVER_MIDDLEWARE_TELESCOPE_HPP

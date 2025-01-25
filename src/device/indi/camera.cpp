@@ -934,7 +934,7 @@ AtomCameraFrame INDICamera::getFrameInfo() const {
     INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
     if (ccdFrame.isValid()) {
         frame.resolution.width = ccdFrame[2].getValue();
-        frame.resolution.height = ccdFrame[3].getValue(); 
+        frame.resolution.height = ccdFrame[3].getValue();
     }
 
     return frame;

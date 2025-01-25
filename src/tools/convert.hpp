@@ -28,7 +28,7 @@ struct SphericalCoordinates {
 
 /**
  * @brief Clamps a value within a specified range.
- * 
+ *
  * @param value The value to clamp.
  * @param maxVal The maximum value of the range.
  * @param minVal The minimum value of the range.
@@ -38,7 +38,7 @@ auto rangeTo(double value, double maxVal, double minVal) -> double;
 
 /**
  * @brief Converts degrees to radians.
- * 
+ *
  * @param degree The angle in degrees.
  * @return The angle in radians.
  */
@@ -46,7 +46,7 @@ auto degreeToRad(double degree) -> double;
 
 /**
  * @brief Converts radians to degrees.
- * 
+ *
  * @param radians The angle in radians.
  * @return The angle in degrees.
  */
@@ -54,7 +54,7 @@ auto radToDegree(double radians) -> double;
 
 /**
  * @brief Converts hours to degrees.
- * 
+ *
  * @param hours The angle in hours.
  * @return The angle in degrees.
  */
@@ -62,7 +62,7 @@ auto hourToDegree(double hours) -> double;
 
 /**
  * @brief Converts hours to radians.
- * 
+ *
  * @param hours The angle in hours.
  * @return The angle in radians.
  */
@@ -70,7 +70,7 @@ auto hourToRad(double hours) -> double;
 
 /**
  * @brief Converts degrees to hours.
- * 
+ *
  * @param degrees The angle in degrees.
  * @return The angle in hours.
  */
@@ -78,7 +78,7 @@ auto degreeToHour(double degrees) -> double;
 
 /**
  * @brief Converts radians to hours.
- * 
+ *
  * @param radians The angle in radians.
  * @return The angle in hours.
  */
@@ -86,7 +86,7 @@ auto radToHour(double radians) -> double;
 
 /**
  * @brief Calculates the Hour Angle (HA) in degrees.
- * 
+ *
  * @param rightAscensionRad The Right Ascension in radians.
  * @param lstDegree The Local Sidereal Time in degrees.
  * @return The Hour Angle in degrees.
@@ -95,7 +95,7 @@ auto getHaDegree(double rightAscensionRad, double lstDegree) -> double;
 
 /**
  * @brief Converts equatorial coordinates (RA, Dec) to horizontal coordinates (Alt, Az).
- * 
+ *
  * @param hourAngleRad The Hour Angle in radians.
  * @param declinationRad The Declination in radians.
  * @param latitudeRad The observer's latitude in radians.
@@ -106,7 +106,7 @@ auto raDecToAltAz(double hourAngleRad, double declinationRad,
 
 /**
  * @brief Converts horizontal coordinates (Alt, Az) to equatorial coordinates (RA, Dec).
- * 
+ *
  * @param altRadian The Altitude in radians.
  * @param azRadian The Azimuth in radians.
  * @param hrRadian Reference to store the Hour Angle in radians.
@@ -118,7 +118,7 @@ void altAzToRaDec(double altRadian, double azRadian, double& hrRadian,
 
 /**
  * @brief Converts equatorial coordinates to Cartesian coordinates.
- * 
+ *
  * @param rightAscension The Right Ascension in degrees.
  * @param declination The Declination in degrees.
  * @param radius The radius (distance).
@@ -129,7 +129,7 @@ auto convertEquatorialToCartesian(double rightAscension, double declination,
 
 /**
  * @brief Converts Cartesian coordinates to spherical coordinates.
- * 
+ *
  * @param cartesianPoint The Cartesian coordinates.
  * @return The spherical coordinates, or std::nullopt if the conversion fails.
  */
@@ -138,7 +138,7 @@ auto convertToSphericalCoordinates(const CartesianCoordinates& cartesianPoint)
 
 /**
  * @brief Converts degrees, minutes, and seconds to decimal degrees.
- * 
+ *
  * @param degrees The degrees.
  * @param minutes The minutes.
  * @param seconds The seconds.
@@ -148,7 +148,7 @@ auto dmsToDegree(int degrees, int minutes, double seconds) -> double;
 
 /**
  * @brief Converts radians to a string representation in degrees, minutes, and seconds (DMS).
- * 
+ *
  * @param radians The angle in radians.
  * @return The string representation in DMS format.
  */
@@ -156,7 +156,7 @@ auto radToDmsStr(double radians) -> std::string;
 
 /**
  * @brief Converts radians to a string representation in hours, minutes, and seconds (HMS).
- * 
+ *
  * @param radians The angle in radians.
  * @return The string representation in HMS format.
  */

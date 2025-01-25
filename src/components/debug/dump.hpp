@@ -142,12 +142,12 @@ public:
     [[nodiscard]] auto getMemoryMap() const -> std::string;
     [[nodiscard]] auto findMemoryLeaks() const -> std::string;
     [[nodiscard]] auto analyzeLockContention() const -> std::string;
-    
+
     // 导出功能
     void exportToJson(const std::string& filename) const;
     void exportToXml(const std::string& filename) const;
     void generateHtmlReport(const std::string& filename) const;
-    
+
     // 配置选项
     void setSymbolSearchPaths(const std::vector<std::string>& paths);
     void setAnalysisDepth(int depth);
