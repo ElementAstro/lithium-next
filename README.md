@@ -33,16 +33,19 @@ To set up the development environment for Lithium-Next, follow these steps:
    ```bash
    git clone https://github.com/ElementAstro/lithium-next.git
    cd lithium-next
+   git submodule update --init --recursive
    ```
 
 2. Install the required dependencies:
    ```bash
    sudo apt-get update
+   sudo apt-get upgrade
    sudo apt-get install -y gcc g++ cmake libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev gettext
    ```
 
 3. Set up the pre-commit hooks:
    ```bash
+   pip install pre-commit
    pre-commit install
    ```
 
@@ -86,6 +89,16 @@ To set up the development environment for Lithium-Next, follow these steps:
    cd build-gcc
    cmake -DCMAKE_CXX_COMPILER=g++ ..
    make
+   ```
+
+9. Update cmake
+   ```bash
+   wget https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4.tar.gz
+   tar -zxvf cmake-3.31.4.tar.gz
+   cd cmake-3.31.4
+   ./bootstrap
+   make
+   sudo make install
    ```
 
 ## New Shooting Functionalities

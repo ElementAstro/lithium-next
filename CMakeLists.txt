@@ -26,12 +26,16 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/")
 # Include directories
 include_directories(${lithium_src_dir})
 include_directories(${lithium_thirdparty_dir})
+include_directories(${lithium_thirdparty_dir}/crow)
 include_directories(${lithium_atom_dir})
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+find_library(LIBZ_LIBRARY NAMES z PATHS /usr/lib/x86_64-linux-gnu /opt/conda/lib)
+find_library(LIBBZ2_LIBRARY NAMES bz2 PATHS /usr/lib/x86_64-linux-gnu /opt/conda/lib)
 
 find_package(Python 3.7 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
