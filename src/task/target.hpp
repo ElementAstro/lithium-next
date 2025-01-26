@@ -198,6 +198,25 @@ public:
      */
     auto fromJson(const json& data) -> void;
 
+    // 任务组管理方法
+    void createTaskGroup(const std::string& groupName);
+    void addTaskToGroup(const std::string& groupName,
+                        const std::string& taskUUID);
+    void removeTaskFromGroup(const std::string& groupName,
+                             const std::string& taskUUID);
+    std::vector<std::string> getTaskGroup(const std::string& groupName) const;
+
+    // 依赖管理方法
+    void addTaskDependency(const std::string& taskUUID,
+                           const std::string& dependsOnUUID);
+    void removeTaskDependency(const std::string& taskUUID,
+                              const std::string& dependsOnUUID);
+    bool checkDependencies(const std::string& taskUUID) const;
+
+    // 执行控制
+    void executeGroup(const std::string& groupName);
+    void abortGroup(const std::string& groupName);
+
 private:
     std::string name_;  ///< The name of the target.
     std::string uuid_;  ///< The unique identifier of the target.
@@ -237,6 +256,14 @@ private:
     mutable std::shared_mutex paramsMutex_;
 
     json params_;  ///< Parameters for all tasks in this target
+
+    // 任务组管理
+    std::unordered_map<std::string, std::vector<std::string>> taskGroups_;
+    std::shared_mutex groupMutex_;
+
+    // 任务依赖关系
+    std::unordered_map<std::string, std::vector<std::string>> taskDependencies_;
+    std::shared_mutex depMutex_;
 
     // Helper methods
     void notifyStart();

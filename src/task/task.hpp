@@ -65,7 +65,7 @@ public:
      * @brief Executes the task with the given parameters.
      * @param params The parameters to be passed to the task action.
      */
-    void execute(const json& params);
+    virtual void execute(const json& params);
 
     /**
      * @brief Sets the timeout for the task.

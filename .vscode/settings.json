@@ -1,0 +1,4 @@
+{
+    "c-cpp-compile-run.cpp-linker-flags": "-lgtest -lpthread",
+    "c-cpp-compile-run.c-linker-flags": "-lgtest -lpthread"
+}

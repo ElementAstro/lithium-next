@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "script/sheller.hpp"
 #include "template/device.hpp"
 
 #include "atom/error/exception.hpp"
@@ -26,7 +27,6 @@ class DeviceTypeNotFoundException : public atom::error::Exception {
     throw DeviceTypeNotFoundException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                       ATOM_FUNC_NAME, __VA_ARGS__)
 
-
 namespace lithium {
 
 class DeviceManager {
@@ -40,12 +40,15 @@ public:
 
     // 设备管理接口
     void addDevice(const std::string& type, std::shared_ptr<AtomDriver> device);
-    void removeDevice(const std::string& type, std::shared_ptr<AtomDriver> device);
+    void removeDevice(const std::string& type,
+                      std::shared_ptr<AtomDriver> device);
     void removeDeviceByName(const std::string& name);
-    std::unordered_map<std::string, std::vector<std::shared_ptr<AtomDriver>>> getDevices() const;
+    std::unordered_map<std::string, std::vector<std::shared_ptr<AtomDriver>>>
+    getDevices() const;
 
     // 主设备管理
-    void setPrimaryDevice(const std::string& type, std::shared_ptr<AtomDriver> device);
+    void setPrimaryDevice(const std::string& type,
+                          std::shared_ptr<AtomDriver> device);
     std::shared_ptr<AtomDriver> getPrimaryDevice(const std::string& type) const;
 
     // 设备操作接口
@@ -59,7 +62,8 @@ public:
     // 查询接口
     std::shared_ptr<AtomDriver> getDeviceByName(const std::string& name) const;
     std::shared_ptr<AtomDriver> findDeviceByName(const std::string& name) const;
-    std::vector<std::shared_ptr<AtomDriver>> findDevicesByType(const std::string& type) const;
+    std::vector<std::shared_ptr<AtomDriver>> findDevicesByType(
+        const std::string& type) const;
     bool isDeviceConnected(const std::string& name) const;
     std::string getDeviceType(const std::string& name) const;
 
@@ -67,6 +71,14 @@ public:
     bool initializeDevice(const std::string& name);
     bool destroyDevice(const std::string& name);
     std::vector<std::string> scanDevices(const std::string& type);
+
+    // 新增方法
+    bool isDeviceValid(const std::string& name) const;
+    void setDeviceRetryStrategy(const std::string& name,
+                                const RetryStrategy& strategy);
+    float getDeviceHealth(const std::string& name) const;
+    void abortDeviceOperation(const std::string& name);
+    void resetDevice(const std::string& name);
 
 private:
     class Impl;
