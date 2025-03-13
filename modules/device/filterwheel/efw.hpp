@@ -8,9 +8,6 @@
 #include <vector>
 #include "device/template/filterwheel.hpp"
 
-// ==================== 错误处理模块 ====================
-std::string errorCodeToString(EFW_ERROR_CODE code);
-
 // 设备属性缓存
 struct DeviceProperties {
     EFW_INFO info;
