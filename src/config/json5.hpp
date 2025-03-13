@@ -1,140 +1,252 @@
 #ifndef LITHIUM_CONFIG_JSON5_HPP
 #define LITHIUM_CONFIG_JSON5_HPP
 
-#include <stdexcept>
+#include <concepts>
+#include <expected>
 #include <string>
+#include <string_view>
 
 namespace lithium {
 namespace internal {
 
-class JSON5ParseError : public std::runtime_error {
+// Using std::expected from C++23 (can be replaced with a backport like
+// tl::expected for now) We'll simulate it with our own implementation for this
+// example
+template <typename T, typename E>
+class expected {
+private:
+    union {
+        T value_;
+        E error_;
+    };
+    bool has_value_;
+
 public:
-  explicit JSON5ParseError(const std::string &msg) : std::runtime_error(msg) {}
+    explicit expected(const T& value) : value_(value), has_value_(true) {}
+    explicit expected(T&& value) : value_(std::move(value)), has_value_(true) {}
+    explicit expected(const E& error) : error_(error), has_value_(false) {}
+    explicit expected(E&& error)
+        : error_(std::move(error)), has_value_(false) {}
+    ~expected() {
+        if (has_value_)
+            value_.~T();
+        else
+            error_.~E();
+    }
+
+    [[nodiscard]] bool has_value() const noexcept { return has_value_; }
+    [[nodiscard]] const T& value() const& { return value_; }
+    [[nodiscard]] T& value() & { return value_; }
+    [[nodiscard]] const E& error() const& { return error_; }
+    [[nodiscard]] E& error() & { return error_; }
+
+    // Conversion operators
+    explicit operator bool() const noexcept { return has_value_; }
 };
 
-inline auto removeComments(const std::string &json5) -> std::string {
-  if (json5.empty()) {
-    return json5;
-  }
+struct JSON5ParseError {
+    std::string message;
+    size_t position;
 
-  std::string result;
-  result.reserve(json5.size());
-  bool inSingleLineComment = false;
-  bool inMultiLineComment = false;
-  bool inString = false;
+    JSON5ParseError(std::string_view msg, size_t pos = 0)
+        : message(msg), position(pos) {}
 
-  try {
-    for (size_t i = 0; i < json5.size(); ++i) {
-      // 字符串处理
-      if (!inSingleLineComment && !inMultiLineComment && json5[i] == '"') {
-        inString = !inString;
-        result += json5[i];
-        continue;
-      }
-
-      if (inString) {
-        result += json5[i];
-        continue;
-      }
-
-      // 注释处理
-      if (!inMultiLineComment && !inSingleLineComment && i + 1 < json5.size()) {
-        if (json5[i] == '/' && json5[i + 1] == '/') {
-          inSingleLineComment = true;
-          ++i;
-          continue;
-        }
-        if (json5[i] == '/' && json5[i + 1] == '*') {
-          inMultiLineComment = true;
-          ++i;
-          continue;
-        }
-      }
-
-      if (inSingleLineComment) {
-        if (json5[i] == '\n') {
-          inSingleLineComment = false;
-          result += '\n';
-        }
-        continue;
-      }
-
-      if (inMultiLineComment) {
-        if (i + 1 < json5.size() && json5[i] == '*' && json5[i + 1] == '/') {
-          inMultiLineComment = false;
-          ++i;
-        }
-        continue;
-      }
-
-      result += json5[i];
+    [[nodiscard]] std::string what() const {
+        return message +
+               (position > 0 ? " at position " + std::to_string(position) : "");
     }
+};
 
-    if (inString) {
-      throw JSON5ParseError("Unterminated string");
-    }
-    if (inMultiLineComment) {
-      throw JSON5ParseError("Unterminated multi-line comment");
-    }
+// Concept for string-like types that can be used for JSON processing
+template <typename T>
+concept StringLike = std::convertible_to<T, std::string_view>;
 
-    return result;
-
-  } catch (const std::exception &e) {
-    throw JSON5ParseError(std::string("JSON5 parse error: ") + e.what());
-  }
-}
-
-inline auto convertJSON5toJSON(const std::string &json5) -> std::string {
-  try {
-    std::string json = removeComments(json5);
-    if (json.empty()) {
-      return json;
+// Improved function to remove comments with better performance
+template <StringLike T>
+[[nodiscard]] auto removeComments(const T& json5)
+    -> expected<std::string, JSON5ParseError> {
+    const std::string_view input{json5};
+    if (input.empty()) {
+        return expected<std::string, JSON5ParseError>{std::string{}};
     }
 
     std::string result;
-    result.reserve(json.size() * 1.2); // 预分配空间
+    result.reserve(input.size());
+    bool inSingleLineComment = false;
+    bool inMultiLineComment = false;
     bool inString = false;
+    bool escaped = false;
 
-    for (size_t i = 0; i < json.size(); ++i) {
-      if (json[i] == '"') {
-        inString = !inString;
-        result += json[i];
-        continue;
-      }
+    try {
+        for (size_t i = 0; i < input.size(); ++i) {
+            // String handling with proper escape character support
+            if (!inSingleLineComment && !inMultiLineComment) {
+                if (input[i] == '\\' && inString) {
+                    escaped = !escaped;
+                    result.push_back(input[i]);
+                    continue;
+                }
 
-      if (inString) {
-        result += json[i];
-        continue;
-      }
+                if (input[i] == '"' && !escaped) {
+                    inString = !inString;
+                    result.push_back(input[i]);
+                    continue;
+                }
+            }
 
-      // 处理未加引号的键名
-      if (!inString && std::isalpha(json[i]) || json[i] == '_') {
-        size_t start = i;
-        while (i < json.size() &&
-               (std::isalnum(json[i]) || json[i] == '_' || json[i] == '-')) {
-          ++i;
+            if (escaped) {
+                escaped = false;
+                result.push_back(input[i]);
+                continue;
+            }
+
+            if (inString) {
+                result.push_back(input[i]);
+                continue;
+            }
+
+            // Comment handling
+            if (!inMultiLineComment && !inSingleLineComment &&
+                i + 1 < input.size()) {
+                if (input[i] == '/' && input[i + 1] == '/') {
+                    inSingleLineComment = true;
+                    ++i;
+                    continue;
+                }
+                if (input[i] == '/' && input[i + 1] == '*') {
+                    inMultiLineComment = true;
+                    ++i;
+                    continue;
+                }
+            }
+
+            if (inSingleLineComment) {
+                if (input[i] == '\n') {
+                    inSingleLineComment = false;
+                    result.push_back('\n');
+                }
+                continue;
+            }
+
+            if (inMultiLineComment) {
+                if (i + 1 < input.size() && input[i] == '*' &&
+                    input[i + 1] == '/') {
+                    inMultiLineComment = false;
+                    ++i;
+                }
+                continue;
+            }
+
+            result.push_back(input[i]);
         }
-        result += '"' + json.substr(start, i - start) + '"';
-        --i;
-        continue;
-      }
 
-      result += json[i];
+        if (inString) {
+            return expected<std::string, JSON5ParseError>{
+                JSON5ParseError{"Unterminated string", input.size()}};
+        }
+        if (inMultiLineComment) {
+            return expected<std::string, JSON5ParseError>{JSON5ParseError{
+                "Unterminated multi-line comment", input.size()}};
+        }
+
+        return expected<std::string, JSON5ParseError>{std::move(result)};
+    } catch (const std::exception& e) {
+        return expected<std::string, JSON5ParseError>{
+            JSON5ParseError{std::string{"JSON5 parse error: "} + e.what()}};
     }
-
-    if (inString) {
-      throw JSON5ParseError("Unterminated string in JSON5");
-    }
-
-    return result;
-
-  } catch (const std::exception &e) {
-    throw JSON5ParseError(std::string("JSON5 to JSON conversion error: ") +
-                          e.what());
-  }
 }
 
-} // namespace internal
-} // namespace lithium
+// Improved JSON5 to JSON converter using C++20 features
+template <StringLike T>
+[[nodiscard]] auto convertJSON5toJSON(const T& json5)
+    -> expected<std::string, JSON5ParseError> {
+    try {
+        auto jsonResult = removeComments(json5);
+        if (!jsonResult.has_value()) {
+            return expected<std::string, JSON5ParseError>{jsonResult.error()};
+        }
+
+        const std::string& json = jsonResult.value();
+        if (json.empty()) {
+            return expected<std::string, JSON5ParseError>{std::string{}};
+        }
+
+        std::string result;
+        result.reserve(json.size() * 1.2);  // Pre-allocate space
+        bool inString = false;
+        bool escaped = false;
+
+        for (size_t i = 0; i < json.size(); ++i) {
+            if (escaped) {
+                result.push_back(json[i]);
+                escaped = false;
+                continue;
+            }
+
+            if (json[i] == '\\' && inString) {
+                result.push_back(json[i]);
+                escaped = true;
+                continue;
+            }
+
+            if (json[i] == '"') {
+                inString = !inString;
+                result.push_back(json[i]);
+                continue;
+            }
+
+            if (inString) {
+                result.push_back(json[i]);
+                continue;
+            }
+
+            // Handle unquoted property keys (improved algorithm)
+            if (std::isalpha(json[i]) || json[i] == '_') {
+                size_t start = i;
+                while (i < json.size() && (std::isalnum(json[i]) ||
+                                           json[i] == '_' || json[i] == '-')) {
+                    ++i;
+                }
+
+                // Check if this is really a key (should be followed by colon)
+                bool isKey = false;
+                for (size_t j = i; j < json.size(); ++j) {
+                    if (json[j] == ':') {
+                        isKey = true;
+                        break;
+                    } else if (!std::isspace(json[j])) {
+                        break;
+                    }
+                }
+
+                if (isKey) {
+                    result.push_back('"');
+                    result.append(json.substr(start, i - start));
+                    result.push_back('"');
+                } else {
+                    result.append(json.substr(start, i - start));
+                }
+                --i;
+                continue;
+            }
+
+            result.push_back(json[i]);
+        }
+
+        if (inString) {
+            return expected<std::string, JSON5ParseError>{
+                JSON5ParseError{"Unterminated string in JSON5", json.size()}};
+        }
+
+        return expected<std::string, JSON5ParseError>{std::move(result)};
+
+    } catch (const std::exception& e) {
+        return expected<std::string, JSON5ParseError>{JSON5ParseError{
+            std::string{"JSON5 to JSON conversion error: "} + e.what()}};
+    }
+}
+
+}  // namespace internal
+}  // namespace lithium
 
 #endif

@@ -4,7 +4,6 @@
 #include <chrono>
 #include <concepts>
 #include <filesystem>
-#include <functional>
 #include <future>
 #include <memory>
 #include <optional>
@@ -20,6 +19,19 @@ namespace fs = std::filesystem;
 
 namespace lithium {
 
+// File concept for defining valid file handler operations
+template <typename T>
+concept FileHandler = requires(T handler, const fs::path& path) {
+    { handler(path) } -> std::same_as<void>;
+};
+
+// Callback concept for change notifications
+template <typename T>
+concept ChangeNotifier =
+    requires(T callback, const fs::path& path, const std::string& changeType) {
+        { callback(path, changeType) } -> std::same_as<void>;
+    };
+
 /**
  * @brief Class for tracking and managing files in a directory.
  */
@@ -32,6 +44,8 @@ public:
      * information.
      * @param fileTypes The types of files to track.
      * @param recursive Whether to track files recursively in subdirectories.
+     * @throws std::invalid_argument if directory does not exist or parameters
+     * are invalid
      */
     FileTracker(std::string_view directory, std::string_view jsonFilePath,
                 std::span<const std::string> fileTypes, bool recursive = false);
@@ -49,12 +63,14 @@ public:
     /**
      * @brief Scans the directory and generates a JSON file with file
      * information.
+     * @throws FailToScanDirectory if scanning fails
      */
     void scan();
 
     /**
      * @brief Compares the current state of the directory with the previous
      * state.
+     * @throws FailToCompareJSON if comparison fails
      */
     void compare();
 
@@ -62,12 +78,15 @@ public:
      * @brief Logs the differences between the current and previous states to a
      * file.
      * @param logFilePath The path to the log file.
+     * @throws FailToLogDifferences if logging fails
      */
     void logDifferences(std::string_view logFilePath) const;
 
     /**
      * @brief Recovers files based on the information in a JSON file.
      * @param jsonFilePath The path to the JSON file.
+     * @throws FailToRecoverFiles if recovery fails
+     * @throws std::invalid_argument if jsonFilePath is empty
      */
     void recover(std::string_view jsonFilePath);
 
@@ -102,7 +121,7 @@ public:
      * @tparam Func The type of the function.
      * @param func The function to apply to each file.
      */
-    template <std::invocable<const fs::path&> Func>
+    template <FileHandler Func>
     void forEachFile(Func&& func) const;
 
     /**
@@ -116,6 +135,7 @@ public:
     /**
      * @brief Adds a file type to the list of tracked file types.
      * @param fileType The file type to add.
+     * @throws std::invalid_argument if fileType is empty
      */
     void addFileType(std::string_view fileType);
 
@@ -128,6 +148,7 @@ public:
     /**
      * @brief Sets the encryption key for encrypting/decrypting the JSON file.
      * @param key The encryption key.
+     * @throws std::invalid_argument if key is empty
      */
     void setEncryptionKey(std::string_view key);
 
@@ -144,17 +165,20 @@ public:
     /**
      * @brief Sets a callback function to be called when a change is detected.
      * @param callback The callback function.
+     * @throws std::invalid_argument if callback is invalid
      */
-    void setChangeCallback(
-        std::function<void(const fs::path&, const std::string&)> callback);
+    template <ChangeNotifier Callback>
+    void setChangeCallback(Callback&& callback);
 
     /**
      * @brief Processes a batch of files using a specified processor function.
      * @param files The files to process.
      * @param processor The processor function.
+     * @throws std::invalid_argument if files is empty or processor is invalid
      */
+    template <FileHandler Processor>
     void batchProcess(const std::vector<fs::path>& files,
-                      std::function<void(const fs::path&)> processor);
+                      Processor&& processor);
 
     /**
      * @brief Gets statistics about the tracked files.
@@ -171,6 +195,7 @@ public:
     /**
      * @brief Sets the maximum size of the file cache.
      * @param maxSize The maximum cache size.
+     * @throws std::invalid_argument if maxSize is 0
      */
     void setCacheSize(size_t maxSize);
 
@@ -184,6 +209,15 @@ public:
         size_t deletedFiles{0};   ///< Number of deleted files.
         std::chrono::system_clock::time_point
             lastScanTime;  ///< Time of the last scan.
+
+        // Added equality comparison operator for testing
+        bool operator==(const FileStats& other) const noexcept {
+            return totalFiles == other.totalFiles &&
+                   modifiedFiles == other.modifiedFiles &&
+                   newFiles == other.newFiles &&
+                   deletedFiles == other.deletedFiles &&
+                   lastScanTime == other.lastScanTime;
+        }
     } ATOM_ALIGNAS(64);
 
     /**

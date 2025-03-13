@@ -2,11 +2,15 @@
 #ifndef LITHIUM_ADDON_DEPENDENCY_HPP
 #define LITHIUM_ADDON_DEPENDENCY_HPP
 
-#include <functional>
+#include <concepts>
+#include <coroutine>
+// 删除未使用的头文件
 #include <optional>
 #include <shared_mutex>
+#include <span>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -17,6 +21,11 @@
 using json = nlohmann::json;
 
 namespace lithium {
+
+// Define a concept for string-like types
+template <typename T>
+concept StringLike = std::convertible_to<T, std::string_view>;
+
 /**
  * @brief A class that represents a directed dependency graph.
  *
@@ -26,15 +35,18 @@ namespace lithium {
  */
 class DependencyGraph {
 public:
-    DependencyGraph();
+    DependencyGraph() noexcept;
 
     using Node = std::string;
+
+    void clear();
 
     /**
      * @brief Adds a node to the dependency graph.
      *
      * @param node The name of the node to be added.
      * @param version The version of the node.
+     * @throws std::invalid_argument If the node is invalid.
      */
     void addNode(const Node& node, const Version& version);
 
@@ -46,6 +58,8 @@ public:
      * @param from The node that has a dependency.
      * @param to The node that is being depended upon.
      * @param requiredVersion The required version of the dependent node.
+     * @throws std::invalid_argument If the nodes don't exist or version
+     * requirements aren't met.
      */
     void addDependency(const Node& from, const Node& to,
                        const Version& requiredVersion);
@@ -57,7 +71,7 @@ public:
      *
      * @param node The name of the node to be removed.
      */
-    void removeNode(const Node& node);
+    void removeNode(const Node& node) noexcept;
 
     /**
      * @brief Removes a directed dependency from one node to another.
@@ -65,7 +79,7 @@ public:
      * @param from The node that previously had a dependency.
      * @param to The node that is being removed from the dependency list.
      */
-    void removeDependency(const Node& from, const Node& to);
+    void removeDependency(const Node& from, const Node& to) noexcept;
 
     /**
      * @brief Retrieves the direct dependencies of a node.
@@ -73,7 +87,8 @@ public:
      * @param node The node for which to get dependencies.
      * @return A vector containing the names of the dependent nodes.
      */
-    auto getDependencies(const Node& node) const -> std::vector<Node>;
+    [[nodiscard]] auto getDependencies(const Node& node) const noexcept
+        -> std::vector<Node>;
 
     /**
      * @brief Retrieves the direct dependents of a node.
@@ -81,14 +96,15 @@ public:
      * @param node The node for which to get dependents.
      * @return A vector containing the names of the dependents.
      */
-    auto getDependents(const Node& node) const -> std::vector<Node>;
+    [[nodiscard]] auto getDependents(const Node& node) const noexcept
+        -> std::vector<Node>;
 
     /**
      * @brief Checks if the dependency graph contains a cycle.
      *
      * @return True if there is a cycle in the graph, false otherwise.
      */
-    auto hasCycle() const -> bool;
+    [[nodiscard]] auto hasCycle() const noexcept -> bool;
 
     /**
      * @brief Performs a topological sort of the nodes in the dependency graph.
@@ -96,7 +112,8 @@ public:
      * @return An optional vector containing the nodes in topological order, or
      * std::nullopt if a cycle is detected.
      */
-    auto topologicalSort() const -> std::optional<std::vector<Node>>;
+    [[nodiscard]] auto topologicalSort() const noexcept
+        -> std::optional<std::vector<Node>>;
 
     /**
      * @brief Retrieves all dependencies of a node, including transitive
@@ -105,7 +122,8 @@ public:
      * @param node The node for which to get all dependencies.
      * @return A set containing all dependency node names.
      */
-    auto getAllDependencies(const Node& node) const -> std::unordered_set<Node>;
+    [[nodiscard]] auto getAllDependencies(const Node& node) const noexcept
+        -> std::unordered_set<Node>;
 
     /**
      * @brief Loads nodes in parallel using a specified loading function.
@@ -115,7 +133,7 @@ public:
      * @param loadFunction The function to apply to each node.
      */
     void loadNodesInParallel(
-        std::function<void(const Node&)> loadFunction) const;
+        std::invocable<const Node&> auto loadFunction) const;
 
     /**
      * @brief Resolves dependencies for a given list of directories.
@@ -123,21 +141,21 @@ public:
      * This function analyzes the specified directories and determines their
      * dependencies.
      *
-     * @param directories A vector containing the paths of directories to
-     * resolve.
+     * @param directories A view of directory paths to resolve.
      * @return A vector containing resolved dependency paths.
+     * @throws std::runtime_error If there is an error resolving dependencies.
      */
-    auto resolveDependencies(const std::vector<Node>& directories)
+    [[nodiscard]] auto resolveDependencies(std::span<const Node> directories)
         -> std::vector<Node>;
 
     /**
      * @brief Resolves system dependencies for a given list of directories.
      *
-     * @param directories A vector containing the paths of directories to
-     * resolve.
+     * @param directories A view of directory paths to resolve.
      * @return A map containing system dependency names and their versions.
      */
-    auto resolveSystemDependencies(const std::vector<Node>& directories)
+    [[nodiscard]] auto resolveSystemDependencies(
+        std::span<const Node> directories)
         -> std::unordered_map<std::string, Version>;
 
     /**
@@ -145,58 +163,103 @@ public:
      * @param node The dependency node
      * @param priority The priority value to set
      */
-    void setPriority(const Node& node, int priority);
+    void setPriority(const Node& node, int priority) noexcept;
 
     /**
      * @brief Detects version conflicts among dependencies.
      * @return A vector of tuples containing conflicting nodes and their
      * versions
      */
-    auto detectVersionConflicts() const
+    [[nodiscard]] auto detectVersionConflicts() const noexcept
         -> std::vector<std::tuple<Node, Node, Version, Version>>;
 
     /**
      * @brief Resolves dependencies in parallel.
-     * @param directories A vector of directories to resolve dependencies from
+     * @param directories A view of directories to resolve dependencies from
      * @return A vector of resolved dependency nodes
+     * @throws std::runtime_error If there is an error resolving dependencies.
      */
-    auto resolveParallelDependencies(const std::vector<Node>& directories)
-        -> std::vector<Node>;
+    [[nodiscard]] auto resolveParallelDependencies(
+        std::span<const Node> directories) -> std::vector<Node>;
 
     /**
      * @brief Adds a group of dependencies.
      * @param groupName The name of the group
-     * @param nodes A vector of dependency nodes to add to the group
+     * @param nodes A view of dependency nodes to add to the group
      */
-    void addGroup(const std::string& groupName, const std::vector<Node>& nodes);
+    void addGroup(std::string_view groupName, std::span<const Node> nodes);
 
     /**
      * @brief Gets all dependencies within a group.
      * @param groupName The name of the group
      * @return A vector of dependency nodes within the group
      */
-    auto getGroupDependencies(const std::string& groupName) const
-        -> std::vector<Node>;
+    [[nodiscard]] auto getGroupDependencies(
+        std::string_view groupName) const noexcept -> std::vector<Node>;
 
     /**
      * @brief Clears the dependency cache.
      */
-    void clearCache();
+    void clearCache() noexcept;
 
     /**
      * @brief Parses a package.json file.
      * @param path The path to the package.json file
      * @return A pair containing the package name and a map of dependencies
+     * @throws std::runtime_error If there is an error parsing the file.
      */
-    static auto parsePackageJson(const Node& path)
+    [[nodiscard]] static auto parsePackageJson(std::string_view path)
         -> std::pair<Node, std::unordered_map<Node, Version>>;
 
     /**
-     * @brief 验证一个节点的所有依赖是否有效
-     * @param node 要验证的节点名称
-     * @return 如果所有依赖都有效返回true,否则返回false
+     * @brief Validates all dependencies of a node
+     * @param node The name of the node to validate
+     * @return true if all dependencies are valid, false otherwise
      */
-    auto validateDependencies(const Node& node) const -> bool;
+    [[nodiscard]] auto validateDependencies(const Node& node) const noexcept
+        -> bool;
+
+    // Async dependency resolution generator
+    struct DependencyGenerator {
+        struct promise_type {
+            Node value;
+            auto get_return_object() { return DependencyGenerator{this}; }
+            auto initial_suspend() { return std::suspend_always{}; }
+            auto final_suspend() noexcept { return std::suspend_always{}; }
+            void return_void() {}
+            void unhandled_exception() { std::terminate(); }
+            auto yield_value(Node v) {
+                value = v;
+                return std::suspend_always{};
+            }
+        };
+
+        // 修复了这里的构造函数，正确初始化 coroutine_handle
+        explicit DependencyGenerator(promise_type* p)
+            : coro_(std::coroutine_handle<promise_type>::from_promise(*p)) {}
+        ~DependencyGenerator() {
+            if (coro_.address()) {
+                coro_.destroy();
+            }
+        }
+
+        bool next() {
+            if (!coro_.done()) {
+                coro_.resume();
+                return !coro_.done();
+            }
+            return false;
+        }
+
+        const Node& value() const { return coro_.promise().value; }
+
+    private:
+        std::coroutine_handle<promise_type> coro_;
+    };
+
+    // Async dependency resolution function returning a generator
+    [[nodiscard]] DependencyGenerator resolveDependenciesAsync(
+        const Node& directory);
 
 private:
     mutable std::shared_mutex mutex_;
@@ -207,10 +270,11 @@ private:
     std::unordered_map<Node, Version>
         nodeVersions_;  ///< Map to track node versions.
 
-    std::unordered_map<Node, int> priorities_;  // 节点优先级
-    std::unordered_map<std::string, std::vector<Node>> groups_;  // 依赖分组
+    std::unordered_map<Node, int> priorities_;  // Node priorities
+    std::unordered_map<std::string, std::vector<Node>>
+        groups_;  // Dependency groups
     mutable std::unordered_map<Node, std::vector<Node>>
-        dependencyCache_;  // 依赖缓存
+        dependencyCache_;  // Dependency cache
 
     /**
      * @brief Utility function to check for cycles in the graph.
@@ -219,8 +283,9 @@ private:
      * @param recStack A set of nodes in the recursion stack
      * @return True if a cycle is detected, false otherwise
      */
-    auto hasCycleUtil(const Node& node, std::unordered_set<Node>& visited,
-                      std::unordered_set<Node>& recStack) const -> bool;
+    [[nodiscard]] auto hasCycleUtil(
+        const Node& node, std::unordered_set<Node>& visited,
+        std::unordered_set<Node>& recStack) const noexcept -> bool;
 
     /**
      * @brief Utility function to perform topological sort.
@@ -229,9 +294,9 @@ private:
      * @param stack A stack to store the topological order
      * @return True if the sort is successful, false otherwise
      */
-    auto topologicalSortUtil(const Node& node,
-                             std::unordered_set<Node>& visited,
-                             std::stack<Node>& stack) const -> bool;
+    [[nodiscard]] auto topologicalSortUtil(
+        const Node& node, std::unordered_set<Node>& visited,
+        std::stack<Node>& stack) const noexcept -> bool;
 
     /**
      * @brief Utility function to get all dependencies of a node.
@@ -239,30 +304,33 @@ private:
      * @param allDependencies A set to store all dependencies
      */
     void getAllDependenciesUtil(
-        const Node& node, std::unordered_set<Node>& allDependencies) const;
+        const Node& node,
+        std::unordered_set<Node>& allDependencies) const noexcept;
 
     /**
      * @brief Utility function to remove duplicates from a vector of nodes.
      * @param input The input vector of nodes
      * @return A vector of unique nodes
      */
-    static auto removeDuplicates(const std::vector<Node>& input)
-        -> std::vector<Node>;
+    [[nodiscard]] static auto removeDuplicates(
+        std::span<const Node> input) noexcept -> std::vector<Node>;
 
     /**
-     * @brief Parses a package.json file.
-     * @param path The path to the package.json file
+     * @brief Parses a package.xml file.
+     * @param path The path to the package.xml file
      * @return A pair containing the package name and a map of dependencies
+     * @throws std::runtime_error If there is an error parsing the file.
      */
-    static auto parsePackageXml(const Node& path)
+    [[nodiscard]] static auto parsePackageXml(std::string_view path)
         -> std::pair<Node, std::unordered_map<Node, Version>>;
 
     /**
      * @brief Parses a package.yaml file.
      * @param path The path to the package.yaml file
      * @return A pair containing the package name and a map of dependencies
+     * @throws std::runtime_error If there is an error parsing the file.
      */
-    static auto parsePackageYaml(const std::string& path)
+    [[nodiscard]] static auto parsePackageYaml(std::string_view path)
         -> std::pair<std::string, std::unordered_map<std::string, Version>>;
 
     /**
@@ -272,6 +340,7 @@ private:
      * @param from The dependent node.
      * @param to The dependency node.
      * @param requiredVersion The required version of the dependency.
+     * @throws std::invalid_argument If the version requirements aren't met.
      */
     void validateVersion(const Node& from, const Node& to,
                          const Version& requiredVersion) const;
@@ -282,8 +351,15 @@ private:
      * @param batch A vector of nodes to resolve in parallel.
      * @return A vector of resolved nodes.
      */
-    auto resolveParallelBatch(const std::vector<Node>& batch)
+    [[nodiscard]] auto resolveParallelBatch(std::span<const Node> batch)
         -> std::vector<Node>;
+
+    // Validates if a node exists in the graph
+    [[nodiscard]] bool nodeExists(const Node& node) const noexcept;
+
+    // Thread-safe getter for node version
+    [[nodiscard]] auto getNodeVersion(const Node& node) const noexcept
+        -> std::optional<Version>;
 };
 }  // namespace lithium
 
