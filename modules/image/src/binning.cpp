@@ -282,8 +282,10 @@ cv::Mat processWithCustomAverage(const cv::Mat& image, uint32_t camxbin, uint32_
         for (uint32_t x = 0; x < NEW_WIDTH; ++x) {
             cv::Rect binRect(x * camxbin, y * camybin, camxbin, camybin);
             cv::Mat bin = image(binRect);
-            result.at<cv::Vec3b>(y, x) = cv::mean(bin);
-        }
+            cv::Scalar meanScalar = cv::mean(bin);
+            result.at<cv::Vec3b>(y, x) = cv::Vec3b(static_cast<uchar>(meanScalar[0]),
+                                                 static_cast<uchar>(meanScalar[1]),
+                                                 static_cast<uchar>(meanScalar[2]));
     }
 
     LOG_F(INFO, "Exiting processWithCustomAverage");
