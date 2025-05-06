@@ -17,6 +17,7 @@
 #include "atom/log/loguru.hpp"
 #include "atom/macro.hpp"
 #include "device/template/camera.hpp"
+#include "task/task_camera.hpp" // Include task_camera.hpp
 
 INDICamera::INDICamera(std::string deviceName)
     : AtomCamera(name_), name_(std::move(deviceName)) {}
@@ -717,7 +718,7 @@ auto INDICamera::isOffsetAvailable() -> bool {
 
     if (!ccdOffset.isValid()) {
         LOG_F(ERROR, "Error: unable to find CCD_OFFSET property...");
-        return false;
+        return true;
     }
     return true;
 }

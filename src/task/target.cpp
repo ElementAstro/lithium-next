@@ -185,48 +185,124 @@ auto Target::getTaskParams(const std::string& taskUUID) const
     return std::nullopt;
 }
 
+void Target::createTaskGroup(const std::string& groupName) {
+    std::unique_lock lock(groupMutex_);
+    if (taskGroups_.find(groupName) == taskGroups_.end()) {
+        taskGroups_[groupName] = std::vector<std::string>();
+        LOG_F(INFO, "Created task group: {}", groupName);
+    }
+}
+
+void Target::addTaskToGroup(const std::string& groupName,
+                            const std::string& taskUUID) {
+    std::unique_lock lock(groupMutex_);
+    if (auto it = taskGroups_.find(groupName); it != taskGroups_.end()) {
+        it->second.push_back(taskUUID);
+        LOG_F(INFO, "Added task {} to group {}", taskUUID, groupName);
+    }
+}
+
+void Target::executeGroup(const std::string& groupName) {
+    std::shared_lock lock(groupMutex_);
+    if (auto it = taskGroups_.find(groupName); it != taskGroups_.end()) {
+        for (const auto& taskUUID : it->second) {
+            if (!checkDependencies(taskUUID)) {
+                LOG_F(ERROR, "Dependencies not met for task: {}", taskUUID);
+                continue;
+            }
+
+            try {
+                auto task = std::find_if(tasks_.begin(), tasks_.end(),
+                                         [&taskUUID](const auto& t) {
+                                             return t->getUUID() == taskUUID;
+                                         });
+
+                if (task != tasks_.end()) {
+                    (*task)->execute(params_);
+                }
+            } catch (const std::exception& e) {
+                LOG_F(ERROR, "Failed to execute task {}: {}", taskUUID,
+                      e.what());
+                if (onError_)
+                    onError_(name_, e);
+            }
+        }
+    }
+}
+
+void Target::addTaskDependency(const std::string& taskUUID,
+                               const std::string& dependsOnUUID) {
+    std::unique_lock lock(depMutex_);
+    taskDependencies_[taskUUID].push_back(dependsOnUUID);
+    LOG_F(INFO, "Added dependency: {} depends on {}", taskUUID, dependsOnUUID);
+}
+
+bool Target::checkDependencies(const std::string& taskUUID) const {
+    std::shared_lock lock(depMutex_);
+    if (auto it = taskDependencies_.find(taskUUID);
+        it != taskDependencies_.end()) {
+        for (const auto& depUUID : it->second) {
+            auto depTask = std::find_if(
+                tasks_.begin(), tasks_.end(),
+                [&depUUID](const auto& t) { return t->getUUID() == depUUID; });
+
+            if (depTask == tasks_.end() ||
+                (*depTask)->getStatus() != TaskStatus::Completed) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void Target::execute() {
     if (!isEnabled()) {
         status_ = TargetStatus::Skipped;
-        LOG_F(WARNING, "Target {} is disabled, skipping execution", name_);
+        if (onEnd_)
+            onEnd_(name_, status_);
         return;
     }
 
     status_ = TargetStatus::InProgress;
-    LOG_F(INFO, "Target {} execution started", name_);
+    if (onStart_)
+        onStart_(name_);
 
-    std::shared_lock paramsLock(paramsMutex_);
-    const json& currentParams = params_;
-    paramsLock.unlock();
+    std::vector<std::string> executedGroups;
+    bool hasFailure = false;
 
+    // 先执行没有分组的任务
     for (auto& task : tasks_) {
-        if (status_ == TargetStatus::Failed ||
-            status_ == TargetStatus::Skipped) {
-            break;
-        }
+        if (!checkDependencies(task->getUUID()))
+            continue;
 
         try {
-            LOG_F(INFO, "Executing task {} in target {}", task->getName(),
-                  name_);
-            // 使用存储的参数直接执行任务
-            task->execute(currentParams);
+            task->execute(params_);
+            completedTasks_++;
 
             if (task->getStatus() == TaskStatus::Failed) {
-                status_ = TargetStatus::Failed;
+                hasFailure = true;
                 break;
             }
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Task {} failed in target {}: {}", task->getName(),
-                  name_, e.what());
-            status_ = TargetStatus::Failed;
+            if (onError_)
+                onError_(name_, e);
+            hasFailure = true;
             break;
         }
     }
 
-    if (status_ != TargetStatus::Failed) {
-        status_ = TargetStatus::Completed;
-        LOG_F(INFO, "Target {} execution completed successfully", name_);
+    // 再执行任务组
+    if (!hasFailure) {
+        std::shared_lock lock(groupMutex_);
+        for (const auto& [groupName, _] : taskGroups_) {
+            executeGroup(groupName);
+            executedGroups.push_back(groupName);
+        }
     }
+
+    status_ = hasFailure ? TargetStatus::Failed : TargetStatus::Completed;
+    if (onEnd_)
+        onEnd_(name_, status_);
 }
 
 void Target::setParams(const json& params) {
