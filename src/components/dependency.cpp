@@ -10,6 +10,7 @@
 #include <thread>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"

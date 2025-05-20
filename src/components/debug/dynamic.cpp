@@ -11,6 +11,10 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <optional>
+#include <variant>
+#include <future>
+#include <shared_mutex>
 
 #ifdef __linux__
 #include <elf.h>
@@ -88,7 +92,7 @@ public:
     }
 
     void parseAsync(const std::function<void(bool)>& callback) {
-        std::thread([this, callback]() {
+        std::async(std::launch::async, [this, callback]() {
             try {
                 parse();
                 callback(true);
@@ -96,7 +100,7 @@ public:
                 LOG_F(ERROR, "Async parsing failed: {}", e.what());
                 callback(false);
             }
-        }).detach();
+        });
     }
 
     static auto verifyLibrary(const std::string& library_path) -> bool {
@@ -129,6 +133,7 @@ private:
     ParserConfig config_;
     std::unordered_map<std::string, std::vector<std::string>> dependency_graph_;
     std::unordered_map<std::string, time_t> cache_;
+    mutable std::shared_mutex mutex_;
 
     void readDynamicLibraries() {
         LOG_SCOPE_FUNCTION(INFO);

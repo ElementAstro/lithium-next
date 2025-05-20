@@ -23,6 +23,7 @@
 #include <syncstream>
 #include <thread>
 #include <vector>
+#include <memory>
 
 #include "atom/error/exception.hpp"
 #include "atom/type/json.hpp"

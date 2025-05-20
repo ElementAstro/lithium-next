@@ -1,4 +1,3 @@
-// FILE: system_dependency.cpp
 #include "system_dependency.hpp"
 
 #include <algorithm>
@@ -11,6 +10,10 @@
 #include <regex>
 #include <sstream>
 #include <unordered_map>
+#include <shared_mutex>
+#include <optional>
+#include <variant>
+#include <atomic>
 
 #if defined(__linux__)
 #define PLATFORM_LINUX
@@ -33,7 +36,6 @@
 namespace lithium {
 using json = nlohmann::json;
 
-// 定义 VersionInfo 的输出运算符
 std::ostream& operator<<(std::ostream& os, const VersionInfo& vi) {
     os << vi.major << "." << vi.minor << "." << vi.patch;
     if (!vi.prerelease.empty()) {
@@ -47,7 +49,7 @@ public:
     explicit Impl(const std::string& configPath) {
         detectPlatform();
         loadPackageManagerConfig(configPath);
-        initializeCache();  // 定义 initializeCache
+        initializeCache();
     }
 
     ~Impl() { saveCacheToFile(); }
@@ -82,14 +84,12 @@ public:
     void cancelInstallation(const std::string& depName) {
         std::lock_guard lock(asyncMutex_);
 
-        // 不同包管理器的进程名映射
         const std::unordered_map<std::string, std::string> pkgMgrProcessMap = {
             {"apt", "apt"},       {"dnf", "dnf"},      {"pacman", "pacman"},
             {"zypper", "zypper"}, {"brew", "brew"},    {"choco", "choco"},
             {"scoop", "scoop"},   {"winget", "winget"}};
 
 #ifdef PLATFORM_LINUX
-        // 在Linux上使用pkill命令终止包管理器进程
         for (const auto& [mgr, proc] : pkgMgrProcessMap) {
             std::string cmd = "pkill -9 " + proc;
             auto result = atom::system::executeCommandWithStatus(cmd);
@@ -98,7 +98,6 @@ public:
             }
         }
 #elif defined(PLATFORM_WINDOWS)
-        // 在Windows上使用taskkill命令终止包管理器进程
         for (const auto& [mgr, proc] : pkgMgrProcessMap) {
             std::string cmd = "taskkill /F /IM " + proc + ".exe";
             auto result = atom::system::executeCommandWithStatus(cmd);
@@ -120,7 +119,7 @@ public:
         std::ostringstream report;
         for (const auto& dep : dependencies_) {
             report << "Dependency: " << dep.name;
-            if (!dep.version.major) {  // 使用 VersionInfo::empty()
+            if (!dep.version.major) {
                 report << ", Version: " << dep.version;
             }
             report << ", Package Manager: " << dep.packageManager << "\n";
@@ -201,7 +200,6 @@ public:
 
     void loadSystemPackageManagers() {
 #ifdef PLATFORM_LINUX
-        // Debian/Ubuntu 系
         packageManagers_.emplace_back(PackageManagerInfo{
             "apt",
             [](const DependencyInfo& dep) -> std::string {
@@ -220,7 +218,6 @@ public:
                 return "apt-cache search " + dep;
             }});
 
-        // DNF (新版 Fedora/RHEL)
         packageManagers_.emplace_back(PackageManagerInfo{
             "dnf",
             [](const DependencyInfo& dep) -> std::string {
@@ -239,7 +236,6 @@ public:
                 return "dnf search " + dep;
             }});
 
-        // Pacman (Arch Linux)
         packageManagers_.emplace_back(PackageManagerInfo{
             "pacman",
             [](const DependencyInfo& dep) -> std::string {
@@ -258,7 +254,6 @@ public:
                 return "pacman -Ss " + dep;
             }});
 
-        // Zypper (openSUSE)
         packageManagers_.emplace_back(PackageManagerInfo{
             "zypper",
             [](const DependencyInfo& dep) -> std::string {
@@ -277,7 +272,6 @@ public:
                 return "zypper search " + dep;
             }});
 
-        // Flatpak
         packageManagers_.emplace_back(PackageManagerInfo{
             "flatpak",
             [](const DependencyInfo& dep) -> std::string {
@@ -296,7 +290,6 @@ public:
                 return "flatpak search " + dep;
             }});
 
-        // Snap
         packageManagers_.emplace_back(PackageManagerInfo{
             "snap",
             [](const DependencyInfo& dep) -> std::string {
@@ -317,7 +310,6 @@ public:
 #endif
 
 #ifdef PLATFORM_MAC
-        // Homebrew
         packageManagers_.emplace_back(
             PackageManagerInfo{"brew",
                                [](const DependencyInfo& dep) -> std::string {
@@ -336,7 +328,6 @@ public:
                                    return "brew search " + dep;
                                }});
 
-        // MacPorts
         packageManagers_.emplace_back(
             PackageManagerInfo{"port",
                                [](const DependencyInfo& dep) -> std::string {
@@ -357,7 +348,6 @@ public:
 #endif
 
 #ifdef PLATFORM_WINDOWS
-        // Chocolatey
         packageManagers_.emplace_back(
             PackageManagerInfo{"choco",
                                [](const DependencyInfo& dep) -> std::string {
@@ -376,7 +366,6 @@ public:
                                    return "choco search " + dep;
                                }});
 
-        // Scoop
         packageManagers_.emplace_back(
             PackageManagerInfo{"scoop",
                                [](const DependencyInfo& dep) -> std::string {
@@ -395,7 +384,6 @@ public:
                                    return "scoop search " + dep;
                                }});
 
-        // Winget
         packageManagers_.emplace_back(PackageManagerInfo{
             "winget",
             [](const DependencyInfo& dep) -> std::string {
@@ -420,7 +408,6 @@ public:
         return packageManagers_;
     }
 
-    // 新增：从JSON配置文件加载包管理器信息
     void loadPackageManagerConfig(const std::string& configPath) {
         try {
             std::ifstream file(configPath);
@@ -460,7 +447,6 @@ public:
         }
     }
 
-    // 新增：LRU缓存实现
     template <typename K, typename V>
     class LRUCache {
     public:
@@ -503,10 +489,8 @@ public:
             cacheItemsMap_;
     };
 
-    // 新增：初始化缓存
     void initializeCache() { loadCacheFromFile(); }
 
-    // 新增：异步安装实现
     auto install(const std::string& name)
         -> std::future<DependencyResult<std::string>> {
         return std::async(
@@ -517,7 +501,6 @@ public:
                     DependencyInfo dep{name, VersionInfo{},
                                        getDefaultPackageManager()};
                     installDependency(dep);
-                    // 对于 void，不设置 value
                 } catch (const DependencyException& e) {
                     result.error = DependencyError(
                         DependencyErrorCode::INSTALL_FAILED, e.what());
@@ -526,7 +509,6 @@ public:
             });
     }
 
-    // 新增：版本解析和比较
     static auto parseVersion(const std::string& version) -> VersionInfo {
         std::regex version_regex(R"((\d+)\.(\d+)\.(\d+)(?:-(.+))?)");
         std::smatch matches;
@@ -544,7 +526,6 @@ public:
         return info;
     }
 
-    // 新增：获取依赖关系图
     auto getDependencyGraph() const -> std::string {
         json graph;
         std::function<void(const std::string&, json&)> buildGraph =
@@ -591,8 +572,7 @@ private:
     std::vector<DependencyInfo> dependencies_;
     std::unordered_map<std::string, bool> installedCache_;
     std::unordered_map<std::string, std::string> customInstallCommands_;
-    std::shared_mutex cacheMutex_;  // 修改为 shared_mutex，移除 mutable
-                                    // std::mutex cacheMutex_
+    std::shared_mutex cacheMutex_;
     std::mutex asyncMutex_;
     std::vector<std::future<void>> asyncFutures_;
     std::vector<PackageManagerInfo> packageManagers_;
@@ -623,26 +603,20 @@ private:
 #ifdef PLATFORM_LINUX
         std::ifstream osReleaseFile("/etc/os-release");
         std::string line;
-        // Debian 系
         std::regex debianRegex(
             R"(ID=(?:debian|ubuntu|linuxmint|elementary|pop|zorin|deepin|kali|parrot|mx|raspbian))");
-        // Red Hat 系
         std::regex redhatRegex(
             R"(ID=(?:fedora|rhel|centos|rocky|alma|oracle|scientific|amazon))");
-        // Arch 系
         std::regex archRegex(
             R"(ID=(?:arch|manjaro|endeavouros|artix|garuda|blackarch))");
-        // SUSE 系
         std::regex suseRegex(
             R"(ID=(?:opensuse|opensuse-leap|opensuse-tumbleweed|suse|sled|sles))");
-        // 其他主流发行版
         std::regex gentooRegex(R"(ID=(?:gentoo|calculate|redcore|sabayon))");
         std::regex slackwareRegex(R"(ID=(?:slackware))");
         std::regex voidRegex(R"(ID=(?:void))");
         std::regex alpineRegex(R"(ID=(?:alpine))");
         std::regex clearRegex(R"(ID=(?:clear-linux-os))");
         std::regex solusRegex(R"(ID=(?:solus))");
-        // 嵌入式/专用发行版
         std::regex embeddedRegex(R"(ID=(?:openwrt|buildroot|yocto))");
 
         if (osReleaseFile.is_open()) {
@@ -718,9 +692,7 @@ private:
 #endif
     }
 
-    void configurePackageManagers() {
-        // 已由 loadSystemPackageManagers 配置
-    }
+    void configurePackageManagers() {}
 
     bool isDependencyInstalled(const DependencyInfo& dep) {
         auto it = installedCache_.find(dep.name);
@@ -782,7 +754,7 @@ private:
             return;
         }
         json j;
-        j["dependencies"] = json::array();  // Initialize as an array
+        j["dependencies"] = json::array();
         for (const auto& dep : dependencies_) {
             j["dependencies"].push_back(
                 json::object({{"name", dep.name},
@@ -797,10 +769,8 @@ private:
         cacheFile << j.dump(4);
     }
 
-    // 新增：性能优化相关成员
     LRUCache<std::string, bool> installationCache_{100};
 
-    // 新增：获取默认包管理器
     auto getDefaultPackageManager() const -> std::string {
         switch (distroType_) {
             case DistroType::DEBIAN:
@@ -819,7 +789,6 @@ private:
     }
 };
 
-// 实现DependencyManager的委托方法
 DependencyManager::DependencyManager(const std::string& configPath)
     : pImpl_(std::make_unique<Impl>(configPath)) {}
 
