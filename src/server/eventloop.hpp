@@ -1,17 +1,21 @@
 #ifndef EVENT_LOOP_HPP
 #define EVENT_LOOP_HPP
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <csignal>
 #include <functional>
 #include <future>
+#include <memory>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
+#include <spdlog/spdlog.h>
 
 #ifdef USE_ASIO
 #include <boost/asio.hpp>
@@ -27,234 +31,250 @@
 namespace lithium::app {
 
 /**
- * @brief Event loop class for managing asynchronous tasks and events.
+ * @brief High-performance event loop for managing asynchronous tasks and
+ * events.
+ *
+ * This class provides a thread-safe, priority-based task scheduling system
+ * with support for delayed execution, periodic tasks, event handling, and
+ * platform-specific I/O multiplexing.
  */
 class EventLoop {
 public:
     using EventCallback = std::function<void()>;
-    /**
-     * @brief Constructs an EventLoop instance.
-     *
-     * @param num_threads Number of threads to use in the thread pool.
-     */
-    explicit EventLoop(int num_threads = 1);
 
     /**
-     * @brief Destructs the EventLoop instance.
+     * @brief Constructs an EventLoop instance with specified thread count.
+     *
+     * @param thread_count Number of worker threads in the thread pool (default:
+     * 1)
+     */
+    explicit EventLoop(int thread_count = 1);
+
+    /**
+     * @brief Destructor that safely shuts down the event loop and joins all
+     * threads.
      */
     ~EventLoop();
 
     /**
-     * @brief Starts the event loop.
+     * @brief Starts the event loop processing.
      */
     void run();
 
     /**
-     * @brief Stops the event loop.
+     * @brief Stops the event loop and signals all worker threads to terminate.
      */
     void stop();
 
     /**
-     * @brief Posts a task to the event loop with a specified priority.
+     * @brief Posts a task with specified priority to the event loop.
      *
-     * @tparam F The type of the function to post.
-     * @tparam Args The types of the arguments to pass to the function.
-     * @param priority The priority of the task.
-     * @param f The function to post.
-     * @param args The arguments to pass to the function.
-     * @return A future representing the result of the task.
+     * @tparam Function Type of the callable object
+     * @tparam Arguments Variadic template for function arguments
+     * @param priority Task priority (higher values = higher priority)
+     * @param function Callable object to execute
+     * @param arguments Arguments to pass to the function
+     * @return Future representing the task result
      */
-    template <typename F, typename... Args>
-    auto post(int priority, F&& f,
-              Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
+    template <typename Function, typename... Arguments>
+    auto post(int priority, Function&& function, Arguments&&... arguments)
+        -> std::future<std::invoke_result_t<Function, Arguments...>>;
 
     /**
-     * @brief Posts a task to the event loop with default priority.
+     * @brief Posts a task with default priority (0) to the event loop.
      *
-     * @tparam F The type of the function to post.
-     * @tparam Args The types of the arguments to pass to the function.
-     * @param f The function to post.
-     * @param args The arguments to pass to the function.
-     * @return A future representing the result of the task.
+     * @tparam Function Type of the callable object
+     * @tparam Arguments Variadic template for function arguments
+     * @param function Callable object to execute
+     * @param arguments Arguments to pass to the function
+     * @return Future representing the task result
      */
-    template <typename F, typename... Args>
-    auto post(F&& f,
-              Args&&... args) -> std::future<std::invoke_result_t<F, Args...>>;
+    template <typename Function, typename... Arguments>
+    auto post(Function&& function, Arguments&&... arguments)
+        -> std::future<std::invoke_result_t<Function, Arguments...>>;
 
     /**
-     * @brief Posts a delayed task to the event loop with a specified priority.
+     * @brief Posts a delayed task with specified priority.
      *
-     * @tparam F The type of the function to post.
-     * @tparam Args The types of the arguments to pass to the function.
-     * @param delay The delay before the task is executed.
-     * @param priority The priority of the task.
-     * @param f The function to post.
-     * @param args The arguments to pass to the function.
-     * @return A future representing the result of the task.
+     * @tparam Function Type of the callable object
+     * @tparam Arguments Variadic template for function arguments
+     * @param delay Execution delay in milliseconds
+     * @param priority Task priority
+     * @param function Callable object to execute
+     * @param arguments Arguments to pass to the function
+     * @return Future representing the task result
      */
-    template <typename F, typename... Args>
-    auto postDelayed(std::chrono::milliseconds delay, int priority, F&& f,
-                     Args&&... args)
-        -> std::future<std::invoke_result_t<F, Args...>>;
+    template <typename Function, typename... Arguments>
+    auto postDelayed(std::chrono::milliseconds delay, int priority,
+                     Function&& function, Arguments&&... arguments)
+        -> std::future<std::invoke_result_t<Function, Arguments...>>;
 
     /**
-     * @brief Posts a delayed task to the event loop with default priority.
+     * @brief Posts a delayed task with default priority.
      *
-     * @tparam F The type of the function to post.
-     * @tparam Args The types of the arguments to pass to the function.
-     * @param delay The delay before the task is executed.
-     * @param f The function to post.
-     * @param args The arguments to pass to the function.
-     * @return A future representing the result of the task.
+     * @tparam Function Type of the callable object
+     * @tparam Arguments Variadic template for function arguments
+     * @param delay Execution delay in milliseconds
+     * @param function Callable object to execute
+     * @param arguments Arguments to pass to the function
+     * @return Future representing the task result
      */
-    template <typename F, typename... Args>
-    auto postDelayed(std::chrono::milliseconds delay, F&& f, Args&&... args)
-        -> std::future<std::invoke_result_t<F, Args...>>;
+    template <typename Function, typename... Arguments>
+    auto postDelayed(std::chrono::milliseconds delay, Function&& function,
+                     Arguments&&... arguments)
+        -> std::future<std::invoke_result_t<Function, Arguments...>>;
 
     /**
-     * @brief Adjusts the priority of a task.
+     * @brief Dynamically adjusts the priority of an existing task.
      *
-     * @param task_id The ID of the task to adjust.
-     * @param new_priority The new priority of the task.
-     * @return True if the task priority was adjusted, false otherwise.
+     * @param task_id Unique identifier of the task
+     * @param new_priority New priority value for the task
+     * @return True if task was found and priority adjusted, false otherwise
      */
     auto adjustTaskPriority(int task_id, int new_priority) -> bool;
 
     /**
-     * @brief Posts a task with a dependency on another task.
+     * @brief Posts a task that depends on completion of another task.
      *
-     * @tparam F The type of the function to post.
-     * @tparam G The type of the dependency task.
-     * @param f The function to post.
-     * @param dependency_task The dependency task.
+     * @tparam Function Type of the main function
+     * @tparam DependencyFunction Type of the dependency function
+     * @param function Main function to execute after dependency
+     * @param dependency_task Task that must complete first
      */
-    template <typename F, typename G>
-    void postWithDependency(F&& f, G&& dependency_task);
+    template <typename Function, typename DependencyFunction>
+    void postWithDependency(Function&& function,
+                            DependencyFunction&& dependency_task);
 
     /**
-     * @brief Schedules a periodic task.
+     * @brief Schedules a task to execute periodically at specified intervals.
      *
-     * @param interval The interval between task executions.
-     * @param priority The priority of the task.
-     * @param func The function to execute periodically.
+     * @param interval Time interval between executions
+     * @param priority Task priority for each execution
+     * @param function Function to execute periodically
      */
     void schedulePeriodic(std::chrono::milliseconds interval, int priority,
-                          std::function<void()> func);
+                          std::function<void()> function);
 
     /**
-     * @brief Posts a cancelable task.
+     * @brief Posts a task that can be cancelled via atomic flag.
      *
-     * @tparam F The type of the function to post.
-     * @tparam Args The types of the arguments to pass to the function.
-     * @param f The function to post.
-     * @param cancel_flag The atomic flag to check for cancellation.
-     * @return A future representing the result of the task.
+     * @tparam Function Type of the callable object
+     * @tparam Arguments Variadic template for function arguments
+     * @param function Callable object to execute
+     * @param cancel_flag Atomic boolean flag for cancellation control
+     * @return Future for task completion
      */
-    template <typename F, typename... Args>
-    auto postCancelable(F&& f,
-                        std::atomic<bool>& cancel_flag) -> std::future<void>;
+    template <typename Function, typename... Arguments>
+    auto postCancelable(Function&& function, std::atomic<bool>& cancel_flag)
+        -> std::future<void>;
 
     /**
-     * @brief Sets a timeout for a function.
+     * @brief Executes a function after specified timeout delay.
      *
-     * @param func The function to execute after the timeout.
-     * @param delay The delay before the function is executed.
+     * @param function Function to execute after timeout
+     * @param delay Timeout delay in milliseconds
      */
-    void setTimeout(std::function<void()> func,
+    void setTimeout(std::function<void()> function,
                     std::chrono::milliseconds delay);
 
     /**
-     * @brief Sets an interval for a function.
+     * @brief Executes a function repeatedly at specified intervals.
      *
-     * @param func The function to execute periodically.
-     * @param interval The interval between function executions.
+     * @param function Function to execute at each interval
+     * @param interval Time interval between executions
      */
-    void setInterval(std::function<void()> func,
+    void setInterval(std::function<void()> function,
                      std::chrono::milliseconds interval);
 
     /**
-     * @brief Subscribes to an event.
-     *
-     * @param event_name The name of the event to subscribe to.
-     * @param callback The callback function to execute when the event is
+     * @brief Subscribes a callback to be executed when specific event is
      * emitted.
+     *
+     * @param event_name Name of the event to subscribe to
+     * @param callback Function to execute when event occurs
      */
     void subscribeEvent(const std::string& event_name,
                         const EventCallback& callback);
 
     /**
-     * @brief Emits an event.
+     * @brief Emits an event, triggering all subscribed callbacks.
      *
-     * @param event_name The name of the event to emit.
+     * @param event_name Name of the event to emit
      */
     void emitEvent(const std::string& event_name);
 
 #ifdef __linux__
     /**
-     * @brief Adds a file descriptor to the epoll instance.
+     * @brief Adds file descriptor to Linux epoll instance for I/O monitoring.
      *
-     * @param fd The file descriptor to add.
+     * @param file_descriptor File descriptor to monitor for I/O events
      */
-    void addEpollFd(int fd) const;
+    void addEpollFileDescriptor(int file_descriptor) const;
 
     /**
-     * @brief Adds a signal handler.
+     * @brief Registers signal handler for Linux signal processing.
      *
-     * @param signal The signal to handle.
-     * @param handler The handler function to execute when the signal is
-     * received.
+     * @param signal_number Signal number to handle
+     * @param handler Function to execute when signal is received
      */
-    void addSignalHandler(int signal, std::function<void()> handler);
+    void addSignalHandler(int signal_number, std::function<void()> handler);
 #elif _WIN32
     /**
-     * @brief Adds a socket file descriptor.
+     * @brief Adds socket file descriptor for Windows I/O monitoring.
      *
-     * @param fd The socket file descriptor to add.
+     * @param socket_fd Socket file descriptor to monitor
      */
-    void add_socket_fd(SOCKET fd);
+    void addSocketFileDescriptor(SOCKET socket_fd);
 #endif
 
 private:
+    /**
+     * @brief Internal task representation with priority and scheduling
+     * information.
+     */
     struct Task {
-        std::function<void()> func;
+        std::function<void()> function;
         int priority;
-        std::chrono::steady_clock::time_point execTime;
-        int taskId;
+        std::chrono::steady_clock::time_point execution_time;
+        int task_id;
 
         /**
-         * @brief Compares two tasks based on their priority and execution time.
+         * @brief Task priority comparison operator for priority queue ordering.
          *
-         * @param other The other task to compare to.
-         * @return True if this task has lower priority or later execution time,
-         * false otherwise.
+         * @param other Task to compare against
+         * @return True if this task has lower priority or later execution time
          */
         auto operator<(const Task& other) const -> bool;
 
-        // 添加任务池相关字段
         Task* next_pooled = nullptr;
         bool is_active = true;
 
-        // 添加任务类型标识
+        /**
+         * @brief Task type enumeration for different scheduling behaviors.
+         */
         enum class Type {
-            Normal,
-            Delayed,
-            Periodic,
-            Cancelable
+            Normal,     ///< Standard one-time execution task
+            Delayed,    ///< Task with delayed execution
+            Periodic,   ///< Repeating task with fixed interval
+            Cancelable  ///< Task that can be cancelled
         } type = Type::Normal;
 
-        // 对象池分配器
-        static void* operator new(size_t size) {
-            return task_pool.allocate();
-        }
+        static void* operator new(size_t size) { return task_pool_.allocate(); }
 
         static void operator delete(void* ptr) {
-            task_pool.deallocate(static_cast<Task*>(ptr));
+            task_pool_.deallocate(static_cast<Task*>(ptr));
         }
     };
 
-    // 添加任务对象池
+    /**
+     * @brief Memory pool for efficient task allocation and deallocation.
+     */
     class TaskPool {
     public:
+        /**
+         * @brief Allocates a task object from the pool or creates new one.
+         * @return Pointer to allocated task object
+         */
         Task* allocate() {
             std::lock_guard<std::mutex> lock(pool_mutex_);
             if (free_list_ == nullptr) {
@@ -265,6 +285,10 @@ private:
             return task;
         }
 
+        /**
+         * @brief Returns task object to the pool for reuse.
+         * @param task Task object to deallocate
+         */
         void deallocate(Task* task) {
             std::lock_guard<std::mutex> lock(pool_mutex_);
             task->next_pooled = free_list_;
@@ -276,19 +300,31 @@ private:
         std::mutex pool_mutex_;
     };
 
-    static TaskPool task_pool;
+    static TaskPool task_pool_;
 
-    // 添加高性能任务队列
+    /**
+     * @brief Multi-priority task queue for efficient task scheduling.
+     */
     struct TaskQueue {
-        std::array<std::priority_queue<Task>, 3> priority_queues;  // 高中低三个优先级队列
+        std::array<std::priority_queue<Task>, 3> priority_queues;
         std::mutex mutex;
 
+        /**
+         * @brief Adds task to appropriate priority queue.
+         * @param task Task to add to queue
+         */
         void push(Task&& task) {
             std::lock_guard<std::mutex> lock(mutex);
-            int queue_index = task.priority > 0 ? 0 : (task.priority < 0 ? 2 : 1);
+            int queue_index =
+                task.priority > 0 ? 0 : (task.priority < 0 ? 2 : 1);
             priority_queues[queue_index].push(std::move(task));
         }
 
+        /**
+         * @brief Retrieves highest priority task from queues.
+         * @param task Reference to store retrieved task
+         * @return True if task was retrieved, false if all queues empty
+         */
         bool pop(Task& task) {
             std::lock_guard<std::mutex> lock(mutex);
             for (auto& queue : priority_queues) {
@@ -303,8 +339,7 @@ private:
     };
 
     TaskQueue task_queue_;
-
-    std::priority_queue<Task> tasks_;
+    std::priority_queue<Task> legacy_tasks_;
     std::mutex queue_mutex_;
     std::condition_variable condition_;
     std::atomic<bool> stop_flag_;
@@ -313,7 +348,7 @@ private:
     std::unordered_map<std::string, std::vector<EventCallback>>
         event_subscribers_;
     std::unordered_map<int, std::function<void()>> signal_handlers_;
-    int next_task_id_ = 0;
+    std::atomic<int> next_task_id_;
 
 #ifdef USE_ASIO
     boost::asio::io_context io_context_;
@@ -325,115 +360,134 @@ private:
     std::vector<struct epoll_event> epoll_events_;
     int signal_fd_;
 
+    /**
+     * @brief Handles Linux epoll I/O events.
+     * @param event Epoll event structure containing event information
+     */
     void handleEpollEvent(const epoll_event& event);
 #elif _WIN32
-    fd_set read_fds;
+    fd_set read_fds_;
 #endif
 
     /**
-     * @brief Worker thread function for processing tasks.
+     * @brief Main worker thread function for processing tasks and I/O events.
      */
     void workerThread();
 
     /**
-     * @brief Wakes up the event loop.
+     * @brief Wakes up the event loop from blocking I/O operations.
      */
     void wakeup();
 };
 
-template <typename F, typename... Args>
-auto EventLoop::post(int priority, F&& f, Args&&... args)
-    -> std::future<std::invoke_result_t<F, Args...>> {
-    using return_type = std::invoke_result_t<F, Args...>;
+// Template Implementation
+
+template <typename Function, typename... Arguments>
+auto EventLoop::post(int priority, Function&& function,
+                     Arguments&&... arguments)
+    -> std::future<std::invoke_result_t<Function, Arguments...>> {
+    using return_type = std::invoke_result_t<Function, Arguments...>;
     auto task = std::make_shared<std::packaged_task<return_type()>>(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+        std::bind(std::forward<Function>(function),
+                  std::forward<Arguments>(arguments)...));
     std::future<return_type> result = task->get_future();
+
     {
         std::unique_lock lock(queue_mutex_);
-        tasks_.emplace(Task{[task]() { (*task)(); }, priority,
-                            std::chrono::steady_clock::now(), next_task_id_++});
+        legacy_tasks_.emplace(Task{[task]() { (*task)(); }, priority,
+                                   std::chrono::steady_clock::now(),
+                                   next_task_id_.fetch_add(1)});
     }
+
 #ifdef USE_ASIO
-    io_context_.post(task { (*task)(); });
+    io_context_.post([task]() { (*task)(); });
 #else
     condition_.notify_one();
 #endif
     return result;
 }
 
-template <typename F, typename... Args>
-auto EventLoop::post(F&& f, Args&&... args)
-    -> std::future<std::invoke_result_t<F, Args...>> {
-    return post(0, std::forward<F>(f), std::forward<Args>(args)...);
+template <typename Function, typename... Arguments>
+auto EventLoop::post(Function&& function, Arguments&&... arguments)
+    -> std::future<std::invoke_result_t<Function, Arguments...>> {
+    return post(0, std::forward<Function>(function),
+                std::forward<Arguments>(arguments)...);
 }
 
-template <typename F, typename... Args>
+template <typename Function, typename... Arguments>
 auto EventLoop::postDelayed(std::chrono::milliseconds delay, int priority,
-                            F&& f, Args&&... args)
-    -> std::future<std::invoke_result_t<F, Args...>> {
-    using return_type = std::invoke_result_t<F, Args...>;
+                            Function&& function, Arguments&&... arguments)
+    -> std::future<std::invoke_result_t<Function, Arguments...>> {
+    using return_type = std::invoke_result_t<Function, Arguments...>;
     auto task = std::make_shared<std::packaged_task<return_type()>>(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+        std::bind(std::forward<Function>(function),
+                  std::forward<Arguments>(arguments)...));
     std::future<return_type> result = task->get_future();
-    auto execTime = std::chrono::steady_clock::now() + delay;
+    auto execution_time = std::chrono::steady_clock::now() + delay;
+
 #ifdef USE_ASIO
     auto timer =
         std::make_unique<boost::asio::steady_timer>(io_context_, delay);
     timers_.emplace_back(std::move(timer));
-    timers_.back()->async_wait([task](const boost::system::error_code& ec) {
-        if (!ec) {
-            (*task)();
-        }
-    });
+    timers_.back()->async_wait(
+        [task](const boost::system::error_code& error_code) {
+            if (!error_code) {
+                (*task)();
+            }
+        });
 #else
     {
         std::unique_lock lock(queue_mutex_);
-        tasks_.emplace(
-            Task{[task]() { (*task)(); }, priority, execTime, next_task_id_++});
+        legacy_tasks_.emplace(Task{[task]() { (*task)(); }, priority,
+                                   execution_time, next_task_id_.fetch_add(1)});
     }
     condition_.notify_one();
 #endif
     return result;
 }
 
-template <typename F, typename... Args>
-auto EventLoop::postDelayed(std::chrono::milliseconds delay, F&& f,
-                            Args&&... args)
-    -> std::future<std::invoke_result_t<F, Args...>> {
-    return postDelayed(delay, 0, std::forward<F>(f),
-                       std::forward<Args>(args)...);
+template <typename Function, typename... Arguments>
+auto EventLoop::postDelayed(std::chrono::milliseconds delay,
+                            Function&& function, Arguments&&... arguments)
+    -> std::future<std::invoke_result_t<Function, Arguments...>> {
+    return postDelayed(delay, 0, std::forward<Function>(function),
+                       std::forward<Arguments>(arguments)...);
 }
 
-template <typename F, typename G>
-void EventLoop::postWithDependency(F&& f, G&& dependency_task) {
+template <typename Function, typename DependencyFunction>
+void EventLoop::postWithDependency(Function&& function,
+                                   DependencyFunction&& dependency_task) {
     std::future<void> dependency = dependency_task.get_future();
-    std::thread([this, f = std::forward<F>(f),
+    std::thread([this, f = std::forward<Function>(function),
                  dependency = std::move(dependency)]() mutable {
         dependency.wait();
         post(std::move(f));
     }).detach();
 }
 
-template <typename F, typename... Args>
-auto EventLoop::postCancelable(F&& f, std::atomic<bool>& cancel_flag)
+template <typename Function, typename... Arguments>
+auto EventLoop::postCancelable(Function&& function,
+                               std::atomic<bool>& cancel_flag)
     -> std::future<void> {
-    using return_type = std::invoke_result_t<F, Args...>;
+    using return_type = std::invoke_result_t<Function, Arguments...>;
     auto task = std::make_shared<std::packaged_task<return_type()>>(
-        std::bind(std::forward<F>(f)));
+        std::bind(std::forward<Function>(function)));
     std::future<return_type> result = task->get_future();
+
     {
         std::unique_lock lock(queue_mutex_);
-        tasks_.emplace(Task{[task, &cancel_flag]() {
-                                if (!cancel_flag.load()) {
-                                    (*task)();
-                                }
-                            },
-                            0, std::chrono::steady_clock::now(),
-                            next_task_id_++});
+        legacy_tasks_.emplace(Task{[task, &cancel_flag]() {
+                                       if (!cancel_flag.load()) {
+                                           (*task)();
+                                       }
+                                   },
+                                   0, std::chrono::steady_clock::now(),
+                                   next_task_id_.fetch_add(1)});
     }
     condition_.notify_one();
     return result;
 }
+
 }  // namespace lithium::app
 
 #endif  // EVENT_LOOP_HPP

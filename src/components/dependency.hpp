@@ -4,7 +4,6 @@
 
 #include <concepts>
 #include <coroutine>
-// 删除未使用的头文件
 #include <optional>
 #include <shared_mutex>
 #include <span>
@@ -22,7 +21,6 @@ using json = nlohmann::json;
 
 namespace lithium {
 
-// Define a concept for string-like types
 template <typename T>
 concept StringLike = std::convertible_to<T, std::string_view>;
 
@@ -219,7 +217,9 @@ public:
     [[nodiscard]] auto validateDependencies(const Node& node) const noexcept
         -> bool;
 
-    // Async dependency resolution generator
+    /**
+     * @brief Async dependency resolution generator.
+     */
     struct DependencyGenerator {
         struct promise_type {
             Node value;
@@ -234,9 +234,9 @@ public:
             }
         };
 
-        // 修复了这里的构造函数，正确初始化 coroutine_handle
         explicit DependencyGenerator(promise_type* p)
             : coro_(std::coroutine_handle<promise_type>::from_promise(*p)) {}
+
         ~DependencyGenerator() {
             if (coro_.address()) {
                 coro_.destroy();
@@ -257,24 +257,22 @@ public:
         std::coroutine_handle<promise_type> coro_;
     };
 
-    // Async dependency resolution function returning a generator
+    /**
+     * @brief Async dependency resolution function returning a generator.
+     * @param directory The directory to resolve dependencies from
+     * @return A generator that yields dependency nodes asynchronously
+     */
     [[nodiscard]] DependencyGenerator resolveDependenciesAsync(
         const Node& directory);
 
 private:
     mutable std::shared_mutex mutex_;
-    std::unordered_map<Node, std::unordered_set<Node>>
-        adjList_;  ///< Adjacency list representation of the graph.
-    std::unordered_map<Node, std::unordered_set<Node>>
-        incomingEdges_;  ///< Map to track incoming edges for each node.
-    std::unordered_map<Node, Version>
-        nodeVersions_;  ///< Map to track node versions.
-
-    std::unordered_map<Node, int> priorities_;  // Node priorities
-    std::unordered_map<std::string, std::vector<Node>>
-        groups_;  // Dependency groups
-    mutable std::unordered_map<Node, std::vector<Node>>
-        dependencyCache_;  // Dependency cache
+    std::unordered_map<Node, std::unordered_set<Node>> adjList_;
+    std::unordered_map<Node, std::unordered_set<Node>> incomingEdges_;
+    std::unordered_map<Node, Version> nodeVersions_;
+    std::unordered_map<Node, int> priorities_;
+    std::unordered_map<std::string, std::vector<Node>> groups_;
+    mutable std::unordered_map<Node, std::vector<Node>> dependencyCache_;
 
     /**
      * @brief Utility function to check for cycles in the graph.
@@ -354,13 +352,22 @@ private:
     [[nodiscard]] auto resolveParallelBatch(std::span<const Node> batch)
         -> std::vector<Node>;
 
-    // Validates if a node exists in the graph
+    /**
+     * @brief Validates if a node exists in the graph.
+     * @param node The node to check
+     * @return true if the node exists, false otherwise
+     */
     [[nodiscard]] bool nodeExists(const Node& node) const noexcept;
 
-    // Thread-safe getter for node version
+    /**
+     * @brief Thread-safe getter for node version.
+     * @param node The node to get version for
+     * @return The version of the node, or nullopt if not found
+     */
     [[nodiscard]] auto getNodeVersion(const Node& node) const noexcept
         -> std::optional<Version>;
 };
+
 }  // namespace lithium
 
 #endif  // LITHIUM_ADDON_DEPENDENCY_HPP

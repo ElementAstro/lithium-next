@@ -8,32 +8,26 @@
 
 Date: 2023-4-30
 
-Description: Configor
+Description: High-performance Configuration Manager with Split Components
 
 **************************************************/
 
 #include "configor.hpp"
 #include "atom/macro.hpp"
-#include "json5.hpp"
 
-#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <fstream>
-#include <future>
 #include <mutex>
 #include <ranges>
 #include <shared_mutex>
 #include <thread>
 #include <unordered_map>
 
-#include "atom/function/global_ptr.hpp"
-#include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
-#include "atom/system/env.hpp"
+
 #include "atom/type/json.hpp"
 
-#include "constant/constant.hpp"
+#include <spdlog/spdlog.h>
 
 using json = nlohmann::json;
 
@@ -42,46 +36,107 @@ namespace lithium {
 // Helper function to split string by delimiter
 static auto splitString(std::string_view str, char delim = '/') {
     return str | std::ranges::views::split(delim) |
-           std::ranges::views::transform([](auto &&rng) {
+           std::ranges::views::transform([](auto&& rng) {
                return std::string_view(rng.begin(), rng.end());
            });
 }
 
+/**
+ * @brief Implementation class for ConfigManager with integrated components
+ */
 class ConfigManagerImpl {
 public:
-    ConfigManagerImpl() : nextCallbackId(1) {}
+    explicit ConfigManagerImpl(const ConfigManager::Options& options)
+        : options_(options),
+          nextCallbackId_(1),
+          running_(true),
+          logger_(spdlog::get("config_manager") ? spdlog::get("config_manager")
+                                                : spdlog::default_logger()),
+          cache_(options.cache_options),
+          validator_(options.validator_options),
+          serializer_(),
+          watcher_(options.watcher_options) {
+        logger_->info(
+            "ConfigManager implementation initialized with components");
 
-    ~ConfigManagerImpl() {
-        running = false;
-        if (saveThread.joinable()) {
-            saveCondition.notify_all();
-            saveThread.join();
+        // Initialize metrics
+        metrics_.last_operation = std::chrono::steady_clock::now();
+
+        // Start background save thread
+        saveThread_ = std::thread(&ConfigManagerImpl::savingThread, this);
+
+        // Start file watcher if enabled
+        if (options_.enable_auto_reload) {
+            watcher_.startWatching();
+            logger_->info("File watcher started for auto-reload functionality");
         }
     }
 
-    // Helper method to navigate through JSON using a key path
+    ~ConfigManagerImpl() {
+        logger_->debug("ConfigManager implementation shutting down");
+
+        running_.store(false);
+
+        // Stop file watcher
+        watcher_.stopAll();
+
+        // Stop background save thread
+        if (saveThread_.joinable()) {
+            saveCondition_.notify_all();
+            saveThread_.join();
+        }
+
+        logger_->info("ConfigManager implementation shut down completed");
+    }
+
+    // Helper method to navigate through JSON using a key path with caching and
+    // validation
     template <typename ValueType>
-    auto setOrAppendImpl(std::string_view key_path, ValueType &&value,
+    auto setOrAppendImpl(std::string_view key_path, ValueType&& value,
                          bool append) -> bool {
-        std::unique_lock lock(rwMutex);
+        const auto start_time = std::chrono::steady_clock::now();
+
+        std::unique_lock lock(rwMutex_);
 
         try {
+            // Validate the value if validation is enabled
+            if (options_.enable_validation) {
+                json temp_value = std::forward<ValueType>(value);
+                auto validation_result =
+                    validator_.validate(temp_value, key_path);
+                if (!validation_result.isValid) {
+                    logger_->error("Validation failed for key '{}': {}",
+                                   key_path,
+                                   validation_result.getErrorMessage());
+                    ++metrics_.validation_failures;
+                    return false;
+                }
+                ++metrics_.validation_successes;
+            }
+
             // Check if the key_path is "/" and set the root value directly
             if (key_path == "/") {
                 if (append) {
-                    if (!config.is_array()) {
-                        config = json::array();
+                    if (!config_.is_array()) {
+                        config_ = json::array();
                     }
-                    config.push_back(std::forward<ValueType>(value));
+                    config_.push_back(std::forward<ValueType>(value));
                 } else {
-                    config = std::forward<ValueType>(value);
+                    config_ = std::forward<ValueType>(value);
                 }
+
+                // Update cache
+                if (options_.enable_caching) {
+                    cache_.put("/", config_);
+                }
+
                 notifyChanges("/");
-                LOG_F(INFO, "Set root config: {}", config.dump());
+                logger_->info("Set root config: {}", config_.dump());
+                updateOperationMetrics("set_root", start_time);
                 return true;
             }
 
-            json *p = &config;
+            json* p = &config_;
             auto keys = splitString(key_path);
             std::string currentPath;
 
@@ -95,15 +150,15 @@ public:
                     currentPath += "/";
                 currentPath += keyStr;
 
-                LOG_F(INFO, "Processing path segment: {}", keyStr);
+                logger_->debug("Processing path segment: {}", keyStr);
 
                 if (std::next(it) == keys.end()) {  // If this is the last key
                     if (append) {
                         if (!p->contains(keyStr)) {
                             (*p)[keyStr] = json::array();
                         } else if (!(*p)[keyStr].is_array()) {
-                            LOG_F(ERROR, "Target key is not an array: {}",
-                                  keyStr);
+                            logger_->error("Target key is not an array: {}",
+                                           keyStr);
                             return false;
                         }
                         (*p)[keyStr].push_back(std::forward<ValueType>(value));
@@ -111,9 +166,16 @@ public:
                         (*p)[keyStr] = std::forward<ValueType>(value);
                     }
 
+                    // Update cache
+                    if (options_.enable_caching) {
+                        cache_.put(currentPath, (*p)[keyStr]);
+                    }
+
                     notifyChanges(currentPath);
-                    LOG_F(INFO, "Final config at {}: {}", currentPath,
-                          (*p)[keyStr].dump());
+                    logger_->debug("Set config at {}: {}", currentPath,
+                                   (*p)[keyStr].dump());
+                    updateOperationMetrics(append ? "append" : "set",
+                                           start_time);
                     return true;
                 }
 
@@ -125,8 +187,9 @@ public:
             }
 
             return false;
-        } catch (const std::exception &e) {
-            LOG_F(ERROR, "Error in setOrAppendImpl: {}", e.what());
+        } catch (const std::exception& e) {
+            logger_->error("Error in setOrAppendImpl for '{}': {}", key_path,
+                           e.what());
             return false;
         }
     }
@@ -138,133 +201,214 @@ public:
     };
 
     // Notify all callbacks about configuration changes
-    void notifyChanges(const std::string &path) {
-        std::shared_lock lock(callbackMutex);
-        for (const auto &cb : callbacks) {
+    void notifyChanges(const std::string& path) {
+        std::shared_lock lock(callbackMutex_);
+        for (const auto& cb : callbacks_) {
             try {
                 cb.callback(path);
-            } catch (const std::exception &e) {
-                LOG_F(ERROR, "Exception in config change callback: {}",
-                      e.what());
+            } catch (const std::exception& e) {
+                logger_->error(
+                    "Exception in config change callback for '{}': {}", path,
+                    e.what());
             }
         }
     }
 
-    // Add background saving functionality
-    void scheduleSave(const fs::path &path) {
-        std::unique_lock lock(saveMutex);
-        pendingSaves[path.string()] =
-            std::chrono::system_clock::now() + std::chrono::seconds(5);
-        saveCondition.notify_one();
+    // Add background saving functionality with improved performance
+    void scheduleSave(const fs::path& path) {
+        std::unique_lock lock(saveMutex_);
+        pendingSaves_[path.string()] =
+            std::chrono::system_clock::now() + options_.auto_save_delay;
+        saveCondition_.notify_one();
+
+        logger_->debug("Scheduled save for: {}", path.string());
     }
 
-    // Background saving thread function
+    // Background saving thread function with performance improvements
     void savingThread() {
-        while (running) {
+        logger_->debug("Background saving thread started");
+
+        while (running_.load()) {
             std::vector<std::string> pathsToSave;
 
             {
-                std::unique_lock lock(saveMutex);
+                std::unique_lock lock(saveMutex_);
                 auto now = std::chrono::system_clock::now();
 
                 // Wait until a save is due or we're shutting down
-                saveCondition.wait_for(
+                saveCondition_.wait_for(
                     lock, std::chrono::seconds(1), [this, now]() {
-                        return !running ||
+                        return !running_.load() ||
                                std::ranges::any_of(
-                                   pendingSaves, [now](const auto &pair) {
+                                   pendingSaves_, [now](const auto& pair) {
                                        return pair.second <= now;
                                    });
                     });
 
-                if (!running)
+                if (!running_.load())
                     return;
 
                 // Find paths that need saving
-                for (auto it = pendingSaves.begin();
-                     it != pendingSaves.end();) {
+                for (auto it = pendingSaves_.begin();
+                     it != pendingSaves_.end();) {
                     if (it->second <= now) {
                         pathsToSave.push_back(it->first);
-                        it = pendingSaves.erase(it);
+                        it = pendingSaves_.erase(it);
                     } else {
                         ++it;
                     }
                 }
             }
 
-            // Save each file outside the lock
-            for (const auto &path : pathsToSave) {
-                std::shared_lock configLock(rwMutex);
+            // Save each file outside the lock with improved error handling
+            for (const auto& path : pathsToSave) {
+                const auto save_start = std::chrono::steady_clock::now();
+
+                std::shared_lock configLock(rwMutex_);
                 try {
                     fs::path filePath(path);
                     std::string filename = filePath.stem().string();
 
-                    if (config.contains(filename)) {
-                        std::ofstream ofs(filePath);
-                        if (ofs) {
-                            ofs << config[filename].dump(4);
-                            LOG_F(INFO, "Config auto-saved to file: {}", path);
+                    if (config_.contains(filename)) {
+                        // Use serializer component for saving
+                        auto result = serializer_.serialize(config_[filename]);
+                        if (result.success) {
+                            std::ofstream ofs(filePath);
+                            if (ofs) {
+                                ofs << result.data;
+                                ++metrics_.files_saved;
+                                updateOperationMetrics("auto_save", save_start);
+                                logger_->info("Config auto-saved to file: {}",
+                                              path);
+                            } else {
+                                logger_->error(
+                                    "Failed to open file for auto-save: {}",
+                                    path);
+                            }
+                        } else {
+                            logger_->error(
+                                "Failed to serialize config for auto-save: {}",
+                                result.errorMessage);
                         }
                     }
-                } catch (const std::exception &e) {
-                    LOG_F(ERROR, "Error during auto-save: {}", e.what());
+                } catch (const std::exception& e) {
+                    logger_->error("Error during auto-save of '{}': {}", path,
+                                   e.what());
                 }
+            }
+        }
+
+        logger_->debug("Background saving thread stopped");
+    }
+
+    // Helper method to update operation metrics
+    void updateOperationMetrics(
+        const std::string& operation_type,
+        std::chrono::steady_clock::time_point start_time) {
+        const auto end_time = std::chrono::steady_clock::now();
+        const auto duration_ms =
+            std::chrono::duration_cast<std::chrono::microseconds>(end_time -
+                                                                  start_time)
+                .count() /
+            1000.0;
+
+        std::unique_lock lock(metricsMutex_);
+        ++metrics_.total_operations;
+        metrics_.last_operation = end_time;
+
+        // Update running average
+        if (operation_type == "get" || operation_type == "has") {
+            if (metrics_.total_operations == 1) {
+                metrics_.average_access_time_ms = duration_ms;
+            } else {
+                metrics_.average_access_time_ms =
+                    (metrics_.average_access_time_ms *
+                         (metrics_.total_operations - 1) +
+                     duration_ms) /
+                    metrics_.total_operations;
+            }
+        } else if (operation_type == "save" || operation_type == "auto_save") {
+            if (metrics_.files_saved == 1) {
+                metrics_.average_save_time_ms = duration_ms;
+            } else {
+                metrics_.average_save_time_ms =
+                    (metrics_.average_save_time_ms *
+                         (metrics_.files_saved - 1) +
+                     duration_ms) /
+                    metrics_.files_saved;
             }
         }
     }
 
-    mutable std::shared_mutex rwMutex;
-    json config;
-    std::thread saveThread;
-    std::atomic<bool> running{true};
+    // Member variables
+    ConfigManager::Options options_;  ///< Configuration options
+    mutable std::shared_mutex
+        rwMutex_;                ///< Thread safety mutex for config data
+    json config_;                ///< Main configuration storage
+    std::thread saveThread_;     ///< Background save thread
+    std::atomic<bool> running_;  ///< Running state
+
+    std::shared_ptr<spdlog::logger> logger_;  ///< Logger instance
+    ConfigCache cache_;                       ///< Cache component
+    ConfigValidator validator_;               ///< Validator component
+    ConfigSerializer serializer_;             ///< Serializer component
+    lithium::config::ConfigWatcher watcher_;  ///< File watcher component
 
     // Callback management
-    std::vector<CallbackInfo> callbacks;
-    std::shared_mutex callbackMutex;
-    std::atomic<size_t> nextCallbackId;
+    std::vector<CallbackInfo> callbacks_;  ///< Registered callbacks
+    std::shared_mutex callbackMutex_;      ///< Callback thread safety
+    std::atomic<size_t> nextCallbackId_;   ///< Next callback ID
 
     // Auto-save management
-    std::mutex saveMutex;
-    std::condition_variable saveCondition;
+    std::mutex saveMutex_;                   ///< Save operations mutex
+    std::condition_variable saveCondition_;  ///< Save condition variable
     std::unordered_map<std::string, std::chrono::system_clock::time_point>
-        pendingSaves;
+        pendingSaves_;  ///< Pending saves
+
+    // Metrics
+    mutable std::shared_mutex metricsMutex_;  ///< Metrics thread safety
+    ConfigManager::Metrics metrics_;          ///< Performance metrics
 };
 
-ConfigManager::ConfigManager() : impl_(std::make_unique<ConfigManagerImpl>()) {
-    LOG_F(INFO, "ConfigManager created.");
-    // Start background saving thread
-    impl_->saveThread =
-        std::thread(&ConfigManagerImpl::savingThread, impl_.get());
+// ConfigManager implementation starts here
+ConfigManager::ConfigManager() : ConfigManager(Options{}) {}
+
+ConfigManager::ConfigManager(const Options& options)
+    : impl_(std::make_unique<ConfigManagerImpl>(options)) {
+    impl_->logger_->info("ConfigManager created with integrated components");
 }
 
 ConfigManager::~ConfigManager() {
-    // Signal thread to stop
-    impl_->running = false;
-
-    if (impl_->saveThread.joinable()) {
-        impl_->saveCondition.notify_all();
-        impl_->saveThread.join();
+    if (impl_) {
+        // Save any remaining configs before destruction
+        ATOM_UNUSED_RESULT(saveAll("./"));
+        impl_->logger_->info("ConfigManager destroyed");
     }
-
-    // Save any remaining configs
-    ATOM_UNUSED_RESULT(saveAll("./"));
-    LOG_F(INFO, "ConfigManager destroyed.");
 }
 
-ConfigManager::ConfigManager(ConfigManager &&other) noexcept
+ConfigManager::ConfigManager(ConfigManager&& other) noexcept
     : impl_(std::move(other.impl_)) {
-    LOG_F(INFO, "ConfigManager moved.");
+    if (impl_) {
+        impl_->logger_->debug("ConfigManager moved");
+    }
 }
 
-ConfigManager &ConfigManager::operator=(ConfigManager &&other) noexcept {
+ConfigManager& ConfigManager::operator=(ConfigManager&& other) noexcept {
     if (this != &other) {
         impl_ = std::move(other.impl_);
-        LOG_F(INFO, "ConfigManager move-assigned.");
+        if (impl_) {
+            impl_->logger_->debug("ConfigManager move-assigned");
+        }
     }
     return *this;
 }
 
 auto ConfigManager::createShared() -> std::shared_ptr<ConfigManager> {
+    return createShared(Options{});
+}
+
+auto ConfigManager::createShared(const Options& options)
+    -> std::shared_ptr<ConfigManager> {
     static std::mutex instanceMutex;
     static std::weak_ptr<ConfigManager> instancePtr;
 
@@ -273,251 +417,98 @@ auto ConfigManager::createShared() -> std::shared_ptr<ConfigManager> {
         return shared;
     }
 
-    auto instance = std::shared_ptr<ConfigManager>(new ConfigManager());
+    auto instance = std::shared_ptr<ConfigManager>(new ConfigManager(options));
     instancePtr = instance;
     return instance;
 }
 
 auto ConfigManager::createUnique() -> std::unique_ptr<ConfigManager> {
-    return std::unique_ptr<ConfigManager>(new ConfigManager());
+    return createUnique(Options{});
 }
 
-auto ConfigManager::loadFromFile(const fs::path &path) -> bool {
-    try {
-        std::ifstream ifs(path);
-        if (!ifs || ifs.peek() == std::ifstream::traits_type::eof()) {
-            LOG_F(ERROR, "Failed to open file: {}", path.string());
-            return false;
-        }
-
-        std::string filename = path.stem().string();
-
-        if (path.extension() == ".json" || path.extension() == ".lithium") {
-            json j = json::parse(ifs);
-            if (j.empty()) {
-                LOG_F(WARNING, "Config file is empty: {}", path.string());
-                return false;
-            }
-
-            std::unique_lock lock(impl_->rwMutex);
-            impl_->config[filename] = j;
-            impl_->notifyChanges("/" + filename);
-        } else if (path.extension() == ".json5" ||
-                   path.extension() == ".lithium5") {
-            // Use improved json5 parser with string_view for better performance
-            std::string json5((std::istreambuf_iterator<char>(ifs)),
-                              std::istreambuf_iterator<char>());
-
-            auto result = internal::convertJSON5toJSON(json5);
-            if (!result) {
-                LOG_F(ERROR, "Failed to parse JSON5 file: {}, error: {}",
-                      path.string(), result.error().what());
-                return false;
-            }
-
-            json j = json::parse(result.value());
-            if (j.empty()) {
-                LOG_F(WARNING, "Config file is empty: {}", path.string());
-                return false;
-            }
-
-            std::unique_lock lock(impl_->rwMutex);
-            impl_->config[filename] = j;
-            impl_->notifyChanges("/" + filename);
-        } else {
-            LOG_F(WARNING, "Unsupported file extension: {}",
-                  path.extension().string());
-            return false;
-        }
-
-        LOG_F(INFO, "Config loaded from file: {}", path.string());
-        return true;
-    } catch (const json::exception &e) {
-        LOG_F(ERROR, "Failed to parse file: {}, error message: {}",
-              path.string(), e.what());
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to load config file: {}, error message: {}",
-              path.string(), e.what());
-    }
-    return false;
-}
-
-auto ConfigManager::loadFromFiles(std::span<const fs::path> paths) -> size_t {
-    size_t successCount = 0;
-
-    // Use parallel algorithms for multiple files
-    if (paths.size() > 4) {  // Threshold for parallelism
-        std::vector<std::future<bool>> results;
-        results.reserve(paths.size());
-
-        for (const auto &path : paths) {
-            results.push_back(std::async(std::launch::async, [this, &path]() {
-                return loadFromFile(path);
-            }));
-        }
-
-        for (auto &result : results) {
-            if (result.get()) {
-                successCount++;
-            }
-        }
-    } else {
-        // Sequential load for small numbers of files
-        for (const auto &path : paths) {
-            if (loadFromFile(path)) {
-                successCount++;
-            }
-        }
-    }
-
-    return successCount;
-}
-
-auto ConfigManager::loadFromDir(const fs::path &dir_path,
-                                bool recursive) -> bool {
-    std::shared_lock lock(impl_->rwMutex);
-    try {
-        for (const auto &entry : fs::directory_iterator(dir_path)) {
-            if (entry.is_regular_file()) {
-                if (entry.path().extension() == ".json" ||
-                    entry.path().extension() == ".lithium") {
-                    if (!loadFromFile(entry.path())) {
-                        LOG_F(WARNING, "Failed to load config file: {}",
-                              entry.path().string());
-                    }
-                } else if (entry.path().extension() == ".json5" ||
-                           entry.path().extension() == ".lithium5") {
-                    std::ifstream ifs(entry.path());
-                    if (!ifs ||
-                        ifs.peek() == std::ifstream::traits_type::eof()) {
-                        LOG_F(ERROR, "Failed to open file: {}",
-                              entry.path().string());
-                        return false;
-                    }
-                    std::string json5((std::istreambuf_iterator<char>(ifs)),
-                                      std::istreambuf_iterator<char>());
-                    json j = json::parse(internal::convertJSON5toJSON(json5));
-                    if (j.empty()) {
-                        LOG_F(WARNING, "Config file is empty: {}",
-                              entry.path().string());
-                        return false;
-                    }
-                    std::string filename = entry.path().stem().string();
-                    impl_->config[filename] = j;
-                }
-            } else if (recursive && entry.is_directory()) {
-                loadFromDir(entry.path(), true);
-            }
-        }
-        LOG_F(INFO, "Config loaded from directory: {}", dir_path.string());
-        return true;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to load config file from: {}, error message: {}",
-              dir_path.string(), e.what());
-        return false;
-    }
-}
-
-auto ConfigManager::save(const fs::path &file_path) const -> bool {
-    std::unique_lock lock(impl_->rwMutex);
-    std::ofstream ofs(file_path);
-    if (!ofs) {
-        LOG_F(ERROR, "Failed to open file: {}", file_path.string());
-        return false;
-    }
-    try {
-        std::string filename = file_path.stem().string();
-        if (impl_->config.contains(filename)) {
-            ofs << impl_->config[filename].dump(4);
-            ofs.close();
-            LOG_F(INFO, "Config saved to file: {}", file_path.string());
-            return true;
-        } else {
-            LOG_F(ERROR, "Config for file: {} not found", file_path.string());
-            return false;
-        }
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to save config to file: {}, error message: {}",
-              file_path.string(), e.what());
-        return false;
-    }
-}
-
-auto ConfigManager::saveAll(const fs::path &dir_path) const -> bool {
-    std::unique_lock lock(impl_->rwMutex);
-    try {
-        for (const auto &[filename, config] : impl_->config.items()) {
-            fs::path file_path = dir_path / (filename + ".json");
-            std::ofstream ofs(file_path);
-            if (!ofs) {
-                LOG_F(ERROR, "Failed to open file: {}", file_path.string());
-                return false;
-            }
-            ofs << config.dump(4);
-            ofs.close();
-            LOG_F(INFO, "Config saved to file: {}", file_path.string());
-        }
-        return true;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR,
-              "Failed to save all configs to directory: {}, error message: {}",
-              dir_path.string(), e.what());
-        return false;
-    }
+auto ConfigManager::createUnique(const Options& options)
+    -> std::unique_ptr<ConfigManager> {
+    return std::unique_ptr<ConfigManager>(new ConfigManager(options));
 }
 
 auto ConfigManager::get(std::string_view key_path) const
     -> std::optional<json> {
-    std::shared_lock lock(impl_->rwMutex);
+    const auto start_time = std::chrono::steady_clock::now();
+
+    // Try cache first if caching is enabled
+    if (impl_->options_.enable_caching) {
+        if (auto cached_value = impl_->cache_.get(std::string(key_path))) {
+            ++impl_->metrics_.cache_hits;
+            impl_->updateOperationMetrics("get", start_time);
+            return cached_value.value();
+        }
+        ++impl_->metrics_.cache_misses;
+    }
+
+    std::shared_lock lock(impl_->rwMutex_);
     try {
-        const json *p = &impl_->config;
+        const json* p = &impl_->config_;
         auto keys = splitString(key_path);
 
-        for (const auto &key : keys) {
+        for (const auto& key : keys) {
             if (key.empty())
                 continue;  // Skip empty segments
 
             if (p->is_object() && p->contains(std::string(key))) {
                 p = &(*p)[std::string(key)];
             } else {
-                LOG_F(WARNING, "Key not found: {}", key_path);
+                impl_->logger_->debug("Key not found: {}", key_path);
+                impl_->updateOperationMetrics("get", start_time);
                 return std::nullopt;
             }
         }
-        return *p;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error retrieving key {}: {}", key_path, e.what());
+
+        json result = *p;
+
+        // Cache the result if caching is enabled
+        if (impl_->options_.enable_caching) {
+            impl_->cache_.put(std::string(key_path), result);
+        }
+
+        impl_->updateOperationMetrics("get", start_time);
+        return result;
+    } catch (const std::exception& e) {
+        impl_->logger_->error("Error retrieving key '{}': {}", key_path,
+                              e.what());
+        impl_->updateOperationMetrics("get", start_time);
         return std::nullopt;
     }
 }
 
-auto ConfigManager::set(std::string_view key_path, const json &value) -> bool {
+auto ConfigManager::set(std::string_view key_path, const json& value) -> bool {
     return impl_->setOrAppendImpl(key_path, value, false);
 }
 
-auto ConfigManager::set(std::string_view key_path, json &&value) -> bool {
+auto ConfigManager::set(std::string_view key_path, json&& value) -> bool {
     return impl_->setOrAppendImpl(key_path, std::move(value), false);
 }
 
-auto ConfigManager::append(std::string_view key_path,
-                           const json &value) -> bool {
+auto ConfigManager::append(std::string_view key_path, const json& value)
+    -> bool {
     return impl_->setOrAppendImpl(key_path, value, true);
 }
 
 auto ConfigManager::remove(std::string_view key_path) -> bool {
-    std::unique_lock lock(impl_->rwMutex);
+    const auto start_time = std::chrono::steady_clock::now();
+
+    std::unique_lock lock(impl_->rwMutex_);
     try {
-        json *p = &impl_->config;
+        json* p = &impl_->config_;
         std::vector<std::string> keys;
 
-        for (const auto &key : splitString(key_path)) {
+        for (const auto& key : splitString(key_path)) {
             if (!key.empty()) {
                 keys.emplace_back(key);
             }
         }
 
         if (keys.empty()) {
-            LOG_F(WARNING, "Invalid key path for deletion: {}", key_path);
+            impl_->logger_->warn("Invalid key path for deletion: {}", key_path);
             return false;
         }
 
@@ -525,175 +516,280 @@ auto ConfigManager::remove(std::string_view key_path) -> bool {
             if (std::next(it) == keys.end()) {
                 if (p->is_object() && p->contains(*it)) {
                     p->erase(*it);
+
+                    // Remove from cache
+                    if (impl_->options_.enable_caching) {
+                        impl_->cache_.remove(std::string(key_path));
+                    }
+
                     impl_->notifyChanges(std::string(key_path));
-                    LOG_F(INFO, "Deleted key: {}", key_path);
+                    impl_->logger_->info("Deleted key: {}", key_path);
+                    impl_->updateOperationMetrics("remove", start_time);
                     return true;
                 }
-                LOG_F(WARNING, "Key not found for deletion: {}", key_path);
+                impl_->logger_->warn("Key not found for deletion: {}",
+                                     key_path);
                 return false;
             }
 
             if (!p->is_object() || !p->contains(*it)) {
-                LOG_F(WARNING, "Key not found for deletion: {}", key_path);
+                impl_->logger_->warn("Key not found for deletion: {}",
+                                     key_path);
                 return false;
             }
             p = &(*p)[*it];
         }
 
         return false;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error removing key {}: {}", key_path, e.what());
+    } catch (const std::exception& e) {
+        impl_->logger_->error("Error removing key '{}': {}", key_path,
+                              e.what());
         return false;
     }
 }
 
 auto ConfigManager::has(std::string_view key_path) const -> bool {
-    return get(key_path).has_value();
-}
+    const auto start_time = std::chrono::steady_clock::now();
 
-// Implementation of the new callback system
-size_t ConfigManager::onChanged(
-    std::function<void(std::string_view path)> callback) {
-    if (!callback) {
-        LOG_F(WARNING, "Attempted to register null callback");
-        return 0;
-    }
-
-    std::unique_lock lock(impl_->callbackMutex);
-    size_t id = impl_->nextCallbackId++;
-    impl_->callbacks.push_back({id, std::move(callback)});
-    return id;
-}
-
-bool ConfigManager::removeCallback(size_t id) {
-    if (id == 0)
-        return false;
-
-    std::unique_lock lock(impl_->callbackMutex);
-    auto it = std::find_if(impl_->callbacks.begin(), impl_->callbacks.end(),
-                           [id](const auto &cb) { return cb.id == id; });
-
-    if (it != impl_->callbacks.end()) {
-        impl_->callbacks.erase(it);
-        return true;
-    }
-    return false;
-}
-
-void ConfigManager::tidy() {
-    std::unique_lock lock(impl_->rwMutex);
-    json updatedConfig;
-    for (const auto &[key, value] : impl_->config.items()) {
-        json *p = &updatedConfig;
-        for (const auto &subKey : key | std::views::split('/')) {
-            std::string subKeyStr = std::string(subKey.begin(), subKey.end());
-            if (!p->contains(subKeyStr)) {
-                (*p)[subKeyStr] = json::object();
-            }
-            p = &(*p)[subKeyStr];
+    // Check cache first if caching is enabled
+    if (impl_->options_.enable_caching) {
+        if (impl_->cache_.contains(std::string(key_path))) {
+            ++impl_->metrics_.cache_hits;
+            impl_->updateOperationMetrics("has", start_time);
+            return true;
         }
-        *p = value;
-        LOG_F(INFO, "Tidied key: {} with value: {}", key, value.dump());
+        ++impl_->metrics_.cache_misses;
     }
-    impl_->config = std::move(updatedConfig);
-    LOG_F(INFO, "Config tidied.");
+
+    bool result = get(key_path).has_value();
+    impl_->updateOperationMetrics("has", start_time);
+    return result;
 }
 
-void ConfigManager::merge(const json &src, json &target) {
-    for (auto it = src.begin(); it != src.end(); ++it) {
-        LOG_F(INFO, "Merge config: {}", it.key());
-        if (it->is_object() && target.contains(it.key()) &&
-            target[it.key()].is_object()) {
-            merge(*it, target[it.key()]);
-        } else {
-            target[it.key()] = *it;
-        }
-    }
+// Component access methods
+const ConfigCache& ConfigManager::getCache() const { return impl_->cache_; }
+
+const ConfigValidator& ConfigManager::getValidator() const {
+    return impl_->validator_;
 }
 
-void ConfigManager::merge(const json &src) {
-    merge(src, impl_->config);
-    LOG_F(INFO, "Config merged.");
+const ConfigSerializer& ConfigManager::getSerializer() const {
+    return impl_->serializer_;
 }
 
-void ConfigManager::clear() {
-    std::unique_lock lock(impl_->rwMutex);
-    impl_->config.clear();
-    LOG_F(INFO, "Config cleared.");
+const lithium::config::ConfigWatcher& ConfigManager::getWatcher() const {
+    return impl_->watcher_;
 }
 
-// Use C++20 ranges for better performance and cleaner code
-auto ConfigManager::getKeys() const -> std::vector<std::string> {
-    std::shared_lock lock(impl_->rwMutex);
-    std::vector<std::string> paths;
+// Configuration and metrics methods
+void ConfigManager::updateOptions(const Options& options) {
+    impl_->options_ = options;
 
-    // More efficient recursive lambda with C++20 features
-    std::function<void(const json &, std::string)> extractPaths =
-        [&](const json &j, std::string path) {
-            // Use ranges and structured bindings for cleaner iteration
-            for (const auto &[key, value] : j.items()) {
-                std::string currentPath = path.empty() ? key : path + "/" + key;
+    // Update component options (need to check if these methods exist)
+    // impl_->cache_.updateOptions(options.cache_options);
+    // impl_->validator_.updateOptions(options.validator_options);
+    // impl_->serializer_.updateOptions(options.serializer_options);
+    // impl_->watcher_.updateOptions(options.watcher_options);
 
-                if (value.is_object()) {
-                    extractPaths(value, currentPath);
-                } else {
-                    paths.push_back(currentPath);
-                }
-            }
-        };
-
-    extractPaths(impl_->config, "");
-    return paths;
+    impl_->logger_->info("ConfigManager options updated");
 }
 
-auto ConfigManager::listPaths() const -> std::vector<std::string> {
+const ConfigManager::Options& ConfigManager::getOptions() const noexcept {
+    return impl_->options_;
+}
+
+ConfigManager::Metrics ConfigManager::getMetrics() const {
+    std::shared_lock lock(impl_->metricsMutex_);
+
+    // Combine metrics from all components
+    auto metrics = impl_->metrics_;
+
+    // Add cache metrics
+    auto cache_stats = impl_->cache_.getStatistics();
+    metrics.cache_hits = cache_stats.hits;
+    metrics.cache_misses = cache_stats.misses;
+
+    // Add validator metrics (need to check if this method exists)
+    // auto validator_stats = impl_->validator_.getStatistics();
+    // metrics.validation_successes = validator_stats.successful_validations;
+    // metrics.validation_failures = validator_stats.failed_validations;
+
+    // Add watcher metrics
+    auto watcher_stats = impl_->watcher_.getStatistics();
+    metrics.auto_reloads = watcher_stats.total_events_processed;
+
+    return metrics;
+}
+
+void ConfigManager::resetMetrics() {
+    std::unique_lock lock(impl_->metricsMutex_);
+    impl_->metrics_ = Metrics{};
+    impl_->metrics_.last_operation = std::chrono::steady_clock::now();
+
+    // Reset component metrics (need to check if these methods exist)
+    // impl_->cache_.resetStatistics();
+    // impl_->validator_.resetStatistics();
+    impl_->watcher_.resetStatistics();
+
+    impl_->logger_->debug("All metrics reset");
+}
+
+// Validation methods
+bool ConfigManager::setSchema(std::string_view schema_path,
+                              const json& schema) {
     try {
-        std::shared_lock lock(impl_->rwMutex);
-        std::weak_ptr<atom::utils::Env> envPtr;
-        GET_OR_CREATE_WEAK_PTR(envPtr, atom::utils::Env,
-                               Constants::ENVIRONMENT);
-        auto env = envPtr.lock();
-
-        if (!env) {
-            LOG_F(ERROR, "Failed to get environment instance");
-            return {};
+        bool result = impl_->validator_.setSchema(schema);
+        if (result) {
+            impl_->logger_->info("Schema set for path: {}", schema_path);
+        } else {
+            impl_->logger_->error("Failed to set schema for path: {}",
+                                  schema_path);
         }
-
-        // Get the config directory with better error handling
-        auto configDir = env->get("config");
-        if (configDir.empty()) {
-            configDir = env->getEnv("LITHIUM_CONFIG_DIR", "./config");
-            LOG_F(INFO, "Using environment config directory: {}", configDir);
-        }
-
-        if (!atom::io::isFolderExists(configDir)) {
-            LOG_F(WARNING, "Config directory does not exist: {}", configDir);
-            // Try to create the directory
-            try {
-                if (fs::create_directories(configDir)) {
-                    LOG_F(INFO, "Created config directory: {}", configDir);
-                } else {
-                    LOG_F(ERROR, "Failed to create config directory: {}",
-                          configDir);
-                    return {};
-                }
-            } catch (const fs::filesystem_error &e) {
-                LOG_F(ERROR, "Filesystem error creating config directory: {}",
-                      e.what());
-                return {};
-            }
-        }
-
-        // Check for more file types and use enhanced error handling
-        auto paths = atom::io::checkFileTypeInFolder(
-            configDir, {".json", ".json5", ".lithium", ".lithium5"},
-            atom::io::FileOption::PATH);
-
-        LOG_F(INFO, "Found {} configuration files", paths.size());
-        return paths;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error listing configuration paths: {}", e.what());
-        return {};
+        return result;
+    } catch (const std::exception& e) {
+        impl_->logger_->error("Exception setting schema for '{}': {}",
+                              schema_path, e.what());
+        return false;
     }
 }
+
+bool ConfigManager::loadSchema(std::string_view schema_path,
+                               const fs::path& file_path) {
+    try {
+        bool result = impl_->validator_.loadSchema(file_path.string());
+        if (result) {
+            impl_->logger_->info("Schema loaded for path '{}' from file: {}",
+                                 schema_path, file_path.string());
+        } else {
+            impl_->logger_->error(
+                "Failed to load schema for path '{}' from file: {}",
+                schema_path, file_path.string());
+        }
+        return result;
+    } catch (const std::exception& e) {
+        impl_->logger_->error("Exception loading schema for '{}' from '{}': {}",
+                              schema_path, file_path.string(), e.what());
+        return false;
+    }
+}
+
+ValidationResult ConfigManager::validate(std::string_view config_path) const {
+    auto value = get(config_path);
+    if (!value) {
+        return ValidationResult{
+            false,
+            {},
+            {},
+            "Configuration path not found: " + std::string(config_path)};
+    }
+
+    return impl_->validator_.validate(value.value(), config_path);
+}
+
+ValidationResult ConfigManager::validateAll() const {
+    std::shared_lock lock(impl_->rwMutex_);
+    return impl_->validator_.validate(impl_->config_, "");
+}
+
+// File watching methods
+bool ConfigManager::enableAutoReload(const fs::path& file_path) {
+    try {
+        bool result = impl_->watcher_.watchFile(
+            file_path, [this](const fs::path& changed_path,
+                              lithium::config::FileEvent event) {
+                onFileChanged(changed_path, event);
+            });
+
+        if (result) {
+            impl_->logger_->info("Auto-reload enabled for: {}",
+                                 file_path.string());
+        } else {
+            impl_->logger_->error("Failed to enable auto-reload for: {}",
+                                  file_path.string());
+        }
+        return result;
+    } catch (const std::exception& e) {
+        impl_->logger_->error("Exception enabling auto-reload for '{}': {}",
+                              file_path.string(), e.what());
+        return false;
+    }
+}
+
+bool ConfigManager::disableAutoReload(const fs::path& file_path) {
+    try {
+        bool result = impl_->watcher_.stopWatching(file_path);
+        if (result) {
+            impl_->logger_->info("Auto-reload disabled for: {}",
+                                 file_path.string());
+        }
+        return result;
+    } catch (const std::exception& e) {
+        impl_->logger_->error("Exception disabling auto-reload for '{}': {}",
+                              file_path.string(), e.what());
+        return false;
+    }
+}
+
+bool ConfigManager::isAutoReloadEnabled(const fs::path& file_path) const {
+    return impl_->watcher_.isWatching(file_path);
+}
+
+// Helper methods
+void ConfigManager::logTypeConversionError(std::string_view key_path,
+                                           const char* type_name,
+                                           const char* error_message) const {
+    impl_->logger_->error("Type conversion error for '{}' to type '{}': {}",
+                          key_path, type_name, error_message);
+}
+
+void ConfigManager::onFileChanged(const fs::path& file_path,
+                                  lithium::config::FileEvent event) {
+    const char* event_name = [event]() {
+        switch (event) {
+            case lithium::config::FileEvent::CREATED:
+                return "CREATED";
+            case lithium::config::FileEvent::MODIFIED:
+                return "MODIFIED";
+            case lithium::config::FileEvent::DELETED:
+                return "DELETED";
+            case lithium::config::FileEvent::MOVED:
+                return "MOVED";
+            default:
+                return "UNKNOWN";
+        }
+    }();
+
+    impl_->logger_->info("File {} event for: {}", event_name,
+                         file_path.string());
+
+    if (event == lithium::config::FileEvent::MODIFIED ||
+        event == lithium::config::FileEvent::CREATED) {
+        // Reload the file
+        if (loadFromFile(file_path)) {
+            ++impl_->metrics_.auto_reloads;
+            impl_->logger_->info("Auto-reloaded configuration from: {}",
+                                 file_path.string());
+        } else {
+            impl_->logger_->error(
+                "Failed to auto-reload configuration from: {}",
+                file_path.string());
+        }
+    } else if (event == lithium::config::FileEvent::DELETED) {
+        // Remove from configuration
+        std::string filename = file_path.stem().string();
+        if (remove("/" + filename)) {
+            impl_->logger_->info("Removed deleted configuration: {}", filename);
+        }
+    }
+}
+
+void ConfigManager::updateMetrics(const std::string& operation_type,
+                                  double duration_ms) {
+    auto duration =
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double, std::milli>(duration_ms));
+    impl_->updateOperationMetrics(operation_type,
+                                  std::chrono::steady_clock::now() - duration);
+}
+
 }  // namespace lithium

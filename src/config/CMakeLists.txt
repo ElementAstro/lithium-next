@@ -4,11 +4,25 @@ cmake_minimum_required(VERSION 3.20)
 project(lithium_config VERSION 1.0.0 LANGUAGES C CXX)
 
 # Project sources and headers
-set(PROJECT_SOURCES configor.cpp)
-set(PROJECT_HEADERS configor.hpp)
+set(PROJECT_SOURCES 
+    configor.cpp
+    config_cache.cpp
+    config_validator.cpp
+    config_serializer.cpp
+    config_watcher.cpp
+)
 
-# Required libraries for the project
-set(PROJECT_LIBS loguru ${CMAKE_THREAD_LIBS_INIT} atom)
+set(PROJECT_HEADERS 
+    configor.hpp
+    config_cache.hpp
+    config_validator.hpp
+    config_serializer.hpp
+    config_watcher.hpp
+    configor_macro.hpp
+    json5.hpp
+)
+
+set(PROJECT_LIBS ${CMAKE_THREAD_LIBS_INIT} atom)
 
 if (WIN32)
     list(APPEND PROJECT_LIBS ws2_32)

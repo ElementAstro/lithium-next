@@ -18,8 +18,9 @@ class ModuleController : public Controller {
 private:
     static std::weak_ptr<lithium::ModuleLoader> mModuleLoader;
 
-    // Utility function to handle all module actions
-    static auto handleModuleAction(
+    // Utility function to handle all module actions - moved to top with
+    // explicit return type
+    static crow::response handleModuleAction(
         const crow::request& req, const crow::json::rvalue& body,
         const std::string& command,
         std::function<bool(std::shared_ptr<lithium::ModuleLoader>)> func) {
@@ -34,6 +35,8 @@ private:
                 res["status"] = "error";
                 res["message"] = "ModuleLoader is not available.";
             } else {
+                // Fix: Unwrap ModuleResult<bool> returned by ModuleLoader
+                // methods
                 bool success = func(moduleLoader);
                 if (success) {
                     LOG_F(INFO, "Module action '{}' succeeded.", command);
@@ -71,31 +74,67 @@ public:
         GET_OR_CREATE_WEAK_PTR(mModuleLoader, lithium::ModuleLoader,
                                Constants::MODULE_LOADER);
 
-        // Define the routes
+        // Define the routes using lambdas instead of member function pointers
         CROW_ROUTE(app, "/module/load")
-            .methods("POST"_method)(&ModuleController::loadModule, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->loadModule(req, res);
+                });
         CROW_ROUTE(app, "/module/unload")
-            .methods("POST"_method)(&ModuleController::unloadModule, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->unloadModule(req, res);
+                });
         CROW_ROUTE(app, "/module/unloadAll")
-            .methods("POST"_method)(&ModuleController::unloadAllModules, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->unloadAllModules(req, res);
+                });
         CROW_ROUTE(app, "/module/has")
-            .methods("POST"_method)(&ModuleController::hasModule, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->hasModule(req, res);
+                });
         CROW_ROUTE(app, "/module/get")
-            .methods("POST"_method)(&ModuleController::getModule, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->getModule(req, res);
+                });
         CROW_ROUTE(app, "/module/enable")
-            .methods("POST"_method)(&ModuleController::enableModule, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->enableModule(req, res);
+                });
         CROW_ROUTE(app, "/module/disable")
-            .methods("POST"_method)(&ModuleController::disableModule, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->disableModule(req, res);
+                });
         CROW_ROUTE(app, "/module/isEnabled")
-            .methods("POST"_method)(&ModuleController::isModuleEnabled, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->isModuleEnabled(req, res);
+                });
         CROW_ROUTE(app, "/module/list")
-            .methods("GET"_method)(&ModuleController::getAllModules, this);
+            .methods("GET"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->getAllModules(req, res);
+                });
         CROW_ROUTE(app, "/module/hasFunction")
-            .methods("POST"_method)(&ModuleController::hasFunction, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->hasFunction(req, res);
+                });
         CROW_ROUTE(app, "/module/reload")
-            .methods("POST"_method)(&ModuleController::reloadModule, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->reloadModule(req, res);
+                });
         CROW_ROUTE(app, "/module/status")
-            .methods("POST"_method)(&ModuleController::getModuleStatus, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->getModuleStatus(req, res);
+                });
 
         LOG_F(INFO, "Module controller routes registered.");
     }
@@ -113,9 +152,11 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Loading module: Name='{}', Path='{}'", name, path);
 
-        res =
-            handleModuleAction(req, body, "loadModule", [&](auto moduleLoader) {
-                return moduleLoader->loadModule(path, name);
+        res = handleModuleAction(
+            req, body, "loadModule",
+            [path, name](std::shared_ptr<lithium::ModuleLoader> moduleLoader) {
+                auto result = moduleLoader->loadModule(path, name);
+                return result && result.value();
             });
     }
 
@@ -131,10 +172,12 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Unloading module: Name='{}'", name);
 
-        res = handleModuleAction(req, body, "unloadModule",
-                                 [&](auto moduleLoader) {
-                                     return moduleLoader->unloadModule(name);
-                                 });
+        res = handleModuleAction(
+            req, body, "unloadModule",
+            [name](std::shared_ptr<lithium::ModuleLoader> moduleLoader) {
+                auto result = moduleLoader->unloadModule(name);
+                return result && result.value();
+            });
     }
 
     // Endpoint to unload all modules
@@ -147,10 +190,12 @@ public:
             return;
         }
 
-        res = handleModuleAction(req, body, "unloadAllModules",
-                                 [&](auto moduleLoader) {
-                                     return moduleLoader->unloadAllModules();
-                                 });
+        res = handleModuleAction(
+            req, body, "unloadAllModules",
+            [](std::shared_ptr<lithium::ModuleLoader> moduleLoader) {
+                auto result = moduleLoader->unloadAllModules();
+                return result && result.value();
+            });
     }
 
     // Endpoint to check if a module exists
@@ -165,10 +210,10 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Checking existence of module: Name='{}'", name);
 
-        res = handleModuleAction(req, body, "hasModule",
-                                 [&](auto moduleLoader) -> bool {
-                                     return moduleLoader->hasModule(name);
-                                 });
+        res = handleModuleAction(
+            req, body, "hasModule",
+            [name](std::shared_ptr<lithium::ModuleLoader> moduleLoader)
+                -> bool { return moduleLoader->hasModule(name); });
     }
 
     // Endpoint to get module information
@@ -183,25 +228,39 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Getting information for module: Name='{}'", name);
 
-        res = handleModuleAction(
-            req, body, "getModule", [&](auto moduleLoader) -> bool {
-                auto module = moduleLoader->getModule(name);
-                if (module) {
-                    LOG_F(INFO,
-                          "Module found: Name='{}', Enabled={}, Status={}",
-                          name, module->enabled.load(),
-                          static_cast<int>(module->currentStatus));
-                    crow::json::wvalue jsonModule;
-                    jsonModule["name"] = name;
-                    jsonModule["enabled"] = module->enabled.load();
-                    jsonModule["status"] =
-                        static_cast<int>(module->currentStatus);
-                    res = crow::response(200, jsonModule);
-                    return true;
-                }
-                LOG_F(WARNING, "Module not found: Name='{}'", name);
-                return false;
-            });
+        // For getModule, we need special handling to return module details
+        auto moduleLoader = mModuleLoader.lock();
+        if (!moduleLoader) {
+            LOG_F(ERROR, "ModuleLoader is not available.");
+            crow::json::wvalue resJson;
+            resJson["command"] = "getModule";
+            resJson["status"] = "error";
+            resJson["message"] = "ModuleLoader is not available.";
+            res = crow::response(500, resJson);
+            return;
+        }
+
+        auto module = moduleLoader->getModule(name);
+        if (module) {
+            LOG_F(INFO, "Module found: Name='{}', Enabled={}, Status={}", name,
+                  module->enabled.load(),
+                  static_cast<int>(module->currentStatus));
+            crow::json::wvalue jsonModule;
+            jsonModule["command"] = "getModule";
+            jsonModule["status"] = "success";
+            jsonModule["name"] = name;
+            jsonModule["enabled"] = module->enabled.load();
+            jsonModule["moduleStatus"] =
+                static_cast<int>(module->currentStatus);
+            res = crow::response(200, jsonModule);
+        } else {
+            LOG_F(WARNING, "Module not found: Name='{}'", name);
+            crow::json::wvalue resJson;
+            resJson["command"] = "getModule";
+            resJson["status"] = "failure";
+            resJson["message"] = "Module not found.";
+            res = crow::response(404, resJson);
+        }
     }
 
     // Endpoint to enable a module
@@ -216,10 +275,12 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Enabling module: Name='{}'", name);
 
-        res = handleModuleAction(req, body, "enableModule",
-                                 [&](auto moduleLoader) {
-                                     return moduleLoader->enableModule(name);
-                                 });
+        res = handleModuleAction(
+            req, body, "enableModule",
+            [name](std::shared_ptr<lithium::ModuleLoader> moduleLoader) {
+                auto result = moduleLoader->enableModule(name);
+                return result && result.value();
+            });
     }
 
     // Endpoint to disable a module
@@ -234,10 +295,12 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Disabling module: Name='{}'", name);
 
-        res = handleModuleAction(req, body, "disableModule",
-                                 [&](auto moduleLoader) {
-                                     return moduleLoader->disableModule(name);
-                                 });
+        res = handleModuleAction(
+            req, body, "disableModule",
+            [name](std::shared_ptr<lithium::ModuleLoader> moduleLoader) {
+                auto result = moduleLoader->disableModule(name);
+                return result && result.value();
+            });
     }
 
     // Endpoint to check if a module is enabled
@@ -252,16 +315,25 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Checking if module is enabled: Name='{}'", name);
 
-        res = handleModuleAction(
-            req, body, "isModuleEnabled", [&](auto moduleLoader) -> bool {
-                bool enabled = moduleLoader->isModuleEnabled(name);
-                LOG_F(INFO, "Module '{}' enabled status: {}", name, enabled);
-                crow::json::wvalue resJson;
-                resJson["status"] = "success";
-                resJson["moduleEnabled"] = enabled;
-                res = crow::response(200, resJson);
-                return true;
-            });
+        // Special handling for isModuleEnabled to return the enabled status
+        auto moduleLoader = mModuleLoader.lock();
+        if (!moduleLoader) {
+            LOG_F(ERROR, "ModuleLoader is not available.");
+            crow::json::wvalue resJson;
+            resJson["command"] = "isModuleEnabled";
+            resJson["status"] = "error";
+            resJson["message"] = "ModuleLoader is not available.";
+            res = crow::response(500, resJson);
+            return;
+        }
+
+        bool enabled = moduleLoader->isModuleEnabled(name);
+        LOG_F(INFO, "Module '{}' enabled status: {}", name, enabled);
+        crow::json::wvalue resJson;
+        resJson["command"] = "isModuleEnabled";
+        resJson["status"] = "success";
+        resJson["moduleEnabled"] = enabled;
+        res = crow::response(200, resJson);
     }
 
     // Endpoint to list all modules
@@ -273,12 +345,12 @@ public:
             crow::json::wvalue resJson;
             resJson["status"] = "error";
             resJson["message"] = "ModuleLoader is not available.";
-            res = crow::response(200, resJson);
+            res = crow::response(500, resJson);
             return;
         }
 
         auto modules = moduleLoader->getAllExistedModules();
-        LOG_F(INFO, "Listing all modules. Count: %zu", modules.size());
+        LOG_F(INFO, "Listing all modules. Count: {}", modules.size());
         crow::json::wvalue resJson;
         resJson["status"] = "success";
         resJson["modules"] = modules;
@@ -299,17 +371,27 @@ public:
         LOG_F(INFO, "Checking if module '{}' has function '{}'", name,
               functionName);
 
-        res = handleModuleAction(
-            req, body, "hasFunction", [&](auto moduleLoader) -> bool {
-                bool hasFunc = moduleLoader->hasFunction(name, functionName);
-                LOG_F(INFO, "Module '{}' has function '{}': {}", name,
-                      functionName, hasFunc);
-                crow::json::wvalue resJson;
-                resJson["status"] = "success";
-                resJson["hasFunction"] = hasFunc;
-                res = crow::response(200, resJson);
-                return true;
-            });
+        // Special handling for hasFunction to return the function existence
+        // status
+        auto moduleLoader = mModuleLoader.lock();
+        if (!moduleLoader) {
+            LOG_F(ERROR, "ModuleLoader is not available.");
+            crow::json::wvalue resJson;
+            resJson["command"] = "hasFunction";
+            resJson["status"] = "error";
+            resJson["message"] = "ModuleLoader is not available.";
+            res = crow::response(500, resJson);
+            return;
+        }
+
+        bool hasFunc = moduleLoader->hasFunction(name, functionName);
+        LOG_F(INFO, "Module '{}' has function '{}': {}", name, functionName,
+              hasFunc);
+        crow::json::wvalue resJson;
+        resJson["command"] = "hasFunction";
+        resJson["status"] = "success";
+        resJson["hasFunction"] = hasFunc;
+        res = crow::response(200, resJson);
     }
 
     // Endpoint to reload a module
@@ -324,10 +406,12 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Reloading module: Name='{}'", name);
 
-        res = handleModuleAction(req, body, "reloadModule",
-                                 [&](auto moduleLoader) {
-                                     return moduleLoader->reloadModule(name);
-                                 });
+        res = handleModuleAction(
+            req, body, "reloadModule",
+            [name](std::shared_ptr<lithium::ModuleLoader> moduleLoader) {
+                auto result = moduleLoader->reloadModule(name);
+                return result && result.value();
+            });
     }
 
     // Endpoint to get module status
@@ -342,17 +426,25 @@ public:
         std::string name = body["name"].s();
         LOG_F(INFO, "Getting status for module: Name='{}'", name);
 
-        res = handleModuleAction(
-            req, body, "getModuleStatus", [&](auto moduleLoader) -> bool {
-                auto status = moduleLoader->getModuleStatus(name);
-                LOG_F(INFO, "Module '{}' status: {}", name,
-                      static_cast<int>(status));
-                crow::json::wvalue resJson;
-                resJson["status"] = "success";
-                resJson["moduleStatus"] = static_cast<int>(status);
-                res = crow::response(200, resJson);
-                return true;
-            });
+        // Special handling for getModuleStatus to return the status
+        auto moduleLoader = mModuleLoader.lock();
+        if (!moduleLoader) {
+            LOG_F(ERROR, "ModuleLoader is not available.");
+            crow::json::wvalue resJson;
+            resJson["command"] = "getModuleStatus";
+            resJson["status"] = "error";
+            resJson["message"] = "ModuleLoader is not available.";
+            res = crow::response(500, resJson);
+            return;
+        }
+
+        auto status = moduleLoader->getModuleStatus(name);
+        LOG_F(INFO, "Module '{}' status: {}", name, static_cast<int>(status));
+        crow::json::wvalue resJson;
+        resJson["command"] = "getModuleStatus";
+        resJson["status"] = "success";
+        resJson["moduleStatus"] = static_cast<int>(status);
+        res = crow::response(200, resJson);
     }
 };
 

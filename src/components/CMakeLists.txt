@@ -13,8 +13,6 @@ project(lithium_components VERSION 1.0.0 LANGUAGES C CXX)
 set(PROJECT_FILES
     dependency.cpp
     loader.cpp
-    manager.cpp
-    system_dependency.cpp
     tracker.cpp
     version.cpp
 
@@ -32,6 +30,9 @@ set(PROJECT_LIBS
     ${CMAKE_THREAD_LIBS_INIT}
 )
 
+# Add manager subdirectory
+add_subdirectory(manager)
+
 # Create Static Library
 add_library(${PROJECT_NAME} STATIC ${PROJECT_FILES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -40,7 +41,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBS} lithium_components_manager)
 
 # Set version properties
 set_target_properties(${PROJECT_NAME} PROPERTIES

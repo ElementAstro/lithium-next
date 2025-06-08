@@ -28,7 +28,9 @@ template <typename T>
 concept CheckRule = requires(T t) {
     { t.check(std::string{}) } -> std::convertible_to<bool>;
     { t.severity() } -> std::convertible_to<ErrorSeverity>;
+    { t.message() } -> std::convertible_to<std::string>;
 };
+
 /**
  * @brief Class for checking commands against a set of rules.
  */
@@ -72,6 +74,48 @@ public:
     void addRule(
         const std::string& name,
         std::function<std::optional<Error>(const std::string&, size_t)> check);
+
+    /**
+     * @brief Adds a typed rule that meets the CheckRule concept
+     *
+     * @tparam T A type satisfying the CheckRule concept
+     * @param name The name of the rule
+     * @param rule The rule object
+     */
+    template <typename T>
+    void addTypedRule(const std::string& name, T&& rule)
+    {
+        std::unique_lock lock(ruleMutex_);
+
+        auto wrapper = [r = std::forward<T>(rule)](
+                           const std::string& line,
+                           size_t lineNum) -> std::optional<Error> {
+            if (!r.check(line)) {
+                return Error{r.message(), lineNum,
+                             0,  // Column unknown
+                             r.severity()};
+            }
+            return std::nullopt;
+        };
+
+        auto newRule = std::make_unique<CheckRule>();
+        newRule->name = name;
+        newRule->check = wrapper;
+        rules_.push_back(std::move(newRule));
+    }
+
+    /**
+     * @brief Removes a rule by name.
+     * @param name The name of the rule to remove.
+     * @return True if the rule was removed, false if not found.
+     */
+    bool removeRule(const std::string& name);
+
+    /**
+     * @brief Lists all rule names currently registered.
+     * @return A vector of rule names.
+     */
+    std::vector<std::string> listRules() const;
 
     /**
      * @brief Sets the list of dangerous commands.
@@ -136,19 +180,22 @@ public:
      */
     void setResourceLimits(size_t maxMemoryMB, size_t maxFileSize);
 
-    // 新增安全检查功能
     /**
      * @brief 设置命令沙箱模式
+     * @param enable Whether to enable sandbox mode
      */
     void enableSandbox(bool enable);
 
     /**
      * @brief 添加自定义安全检查规则
+     * @param rule A function that returns true if command is safe, false
+     * otherwise
      */
     void addSecurityRule(std::function<bool(const std::string&)> rule);
 
     /**
      * @brief 设置命令超时限制
+     * @param timeout Maximum allowed time for command execution
      */
     void setTimeoutLimit(std::chrono::milliseconds timeout);
 
@@ -161,7 +208,7 @@ private:
         impl_;  ///< Pointer to the implementation
 
     // 线程安全的规则容器
-    std::shared_mutex ruleMutex_;
+    mutable std::shared_mutex ruleMutex_;
     atom::type::concurrent_vector<std::unique_ptr<CheckRule>> rules_;
 };
 
