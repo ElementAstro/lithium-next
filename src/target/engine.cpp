@@ -1,5 +1,5 @@
 #include "engine.hpp"
-#include "preference.hpp"  // 引入偏好引擎
+#include "preference.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -8,10 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "atom/log/loguru.hpp"
 #include "atom/search/lru.hpp"
 #include "atom/type/json.hpp"
-#include "string.hpp"
+#include "spdlog/spdlog.h"
 
 using json = nlohmann::json;
 
@@ -20,7 +19,7 @@ namespace lithium::target {
 // --------------------- CelestialObject Implementation ---------------------
 
 auto CelestialObject::from_json(const json& j) -> CelestialObject {
-    LOG_F(INFO, "Deserializing CelestialObject from JSON.");
+    spdlog::info("Deserializing CelestialObject from JSON");
     try {
         CelestialObject obj(
             j.at("ID").get<std::string>(), j.at("标识").get<std::string>(),
@@ -42,20 +41,19 @@ auto CelestialObject::from_json(const json& j) -> CelestialObject {
             j.at("长轴(分)").get<double>(), j.at("短轴(分)").get<double>(),
             j.at("方位角").get<int>(), j.at("详细描述").get<std::string>(),
             j.at("简略描述").get<std::string>());
-        LOG_F(INFO, "Successfully deserialized CelestialObject with ID: {}",
-              obj.ID);
+        spdlog::info("Successfully deserialized CelestialObject with ID: {}",
+                     obj.ID);
         return obj;
     } catch (const json::exception& e) {
-        LOG_F(ERROR,
-              "JSON deserialization error in CelestialObject::from_json: {}",
-              e.what());
+        spdlog::error(
+            "JSON deserialization error in CelestialObject::from_json: {}",
+            e.what());
         throw;
     }
 }
 
-// JSON序列化函数
 auto CelestialObject::to_json() const -> json {
-    LOG_F(INFO, "Serializing CelestialObject with ID: {}", ID);
+    spdlog::info("Serializing CelestialObject with ID: {}", ID);
     try {
         return json{{"ID", ID},
                     {"标识", Identifier},
@@ -68,7 +66,7 @@ auto CelestialObject::to_json() const -> json {
                     {"类型", Type},
                     {"含重复类型", DuplicateType},
                     {"形态", Morphology},
-                    {"星座(Zh)", ConstellationZh},
+                    {"星座(Zh)", ConstellationCn},
                     {"星座(En)", ConstellationEn},
                     {"赤经(J2000)", RAJ2000},
                     {"赤经D(J2000)", RADJ2000},
@@ -84,8 +82,9 @@ auto CelestialObject::to_json() const -> json {
                     {"详细描述", DetailedDescription},
                     {"简略描述", BriefDescription}};
     } catch (const json::exception& e) {
-        LOG_F(ERROR, "JSON serialization error in CelestialObject::to_json: {}",
-              e.what());
+        spdlog::error(
+            "JSON serialization error in CelestialObject::to_json: {}",
+            e.what());
         throw;
     }
 }
@@ -97,70 +96,61 @@ StarObject::StarObject(std::string name, std::vector<std::string> aliases,
     : name_(std::move(name)),
       aliases_(std::move(aliases)),
       clickCount_(clickCount) {
-    LOG_F(INFO, "Constructed StarObject with name: {}", name_);
+    spdlog::info("Constructed StarObject with name: {}", name_);
 }
 
-// 访问器方法实现
 const std::string& StarObject::getName() const {
-    LOG_F(INFO, "Accessing StarObject::getName for {}", name_);
+    spdlog::debug("Accessing StarObject::getName for {}", name_);
     return name_;
 }
 
 const std::vector<std::string>& StarObject::getAliases() const {
-    LOG_F(INFO, "Accessing StarObject::getAliases for {}", name_);
+    spdlog::debug("Accessing StarObject::getAliases for {}", name_);
     return aliases_;
 }
 
 int StarObject::getClickCount() const {
-    LOG_F(INFO, "Accessing StarObject::getClickCount for {}", name_);
+    spdlog::debug("Accessing StarObject::getClickCount for {}", name_);
     return clickCount_;
 }
 
-// 修改器方法实现
 void StarObject::setName(const std::string& name) {
-    LOG_F(INFO, "Setting name from {} to {}", name_, name);
+    spdlog::info("Setting name from {} to {}", name_, name);
     name_ = name;
 }
 
 void StarObject::setAliases(const std::vector<std::string>& aliases) {
-    LOG_F(INFO, "Setting aliases for {}: {}", name_, [&aliases]() {
-        std::stringstream ss;
-        for (const auto& alias : aliases) {
-            ss << alias << " ";
-        }
-        return ss.str();
-    }());
+    spdlog::info("Setting aliases for {}", name_);
     aliases_ = aliases;
 }
 
 void StarObject::setClickCount(int clickCount) {
-    LOG_F(INFO, "Setting clickCount for {} to {}", name_, clickCount);
+    spdlog::info("Setting clickCount for {} to {}", name_, clickCount);
     clickCount_ = clickCount;
 }
 
-// JSON序列化函数实现
 void StarObject::setCelestialObject(const CelestialObject& celestialObject) {
-    LOG_F(INFO, "Associating CelestialObject with ID: {} to StarObject: {}",
-          celestialObject.ID, name_);
+    spdlog::info("Associating CelestialObject with ID: {} to StarObject: {}",
+                 celestialObject.ID, name_);
     celestialObject_ = celestialObject;
 }
 
 CelestialObject StarObject::getCelestialObject() const {
-    LOG_F(INFO, "Accessing CelestialObject for StarObject: {}", name_);
+    spdlog::debug("Accessing CelestialObject for StarObject: {}", name_);
     return celestialObject_;
 }
 
 auto StarObject::to_json() const -> json {
-    LOG_F(INFO, "Serializing StarObject: {}", name_);
+    spdlog::info("Serializing StarObject: {}", name_);
     try {
         return json{{"name", name_},
                     {"aliases", aliases_},
                     {"clickCount", clickCount_},
                     {"celestialObject", celestialObject_.to_json()}};
     } catch (const json::exception& e) {
-        LOG_F(ERROR,
-              "JSON serialization error in StarObject::to_json for {}: {}",
-              name_, e.what());
+        spdlog::error(
+            "JSON serialization error in StarObject::to_json for {}: {}", name_,
+            e.what());
         throw;
     }
 }
@@ -169,44 +159,44 @@ auto StarObject::to_json() const -> json {
 
 Trie::Trie() {
     root_ = new TrieNode();
-    LOG_F(INFO, "Initialized Trie.");
+    spdlog::info("Initialized Trie");
 }
 
 Trie::~Trie() {
     clear(root_);
-    LOG_F(INFO, "Destroyed Trie.");
+    spdlog::info("Destroyed Trie");
 }
 
 void Trie::insert(const std::string& word) {
-    LOG_F(INFO, "Inserting word into Trie: {}", word);
+    spdlog::debug("Inserting word into Trie: {}", word);
     TrieNode* current = root_;
     for (const char& ch : word) {
         if (current->children.find(ch) == current->children.end()) {
-            LOG_F(INFO, "Creating new TrieNode for character: {}", ch);
+            spdlog::trace("Creating new TrieNode for character: {}", ch);
             current->children[ch] = new TrieNode();
         }
         current = current->children[ch];
     }
     current->isEndOfWord = true;
-    LOG_F(INFO, "Finished inserting word into Trie: {}", word);
+    spdlog::debug("Finished inserting word into Trie: {}", word);
 }
 
 auto Trie::autoComplete(const std::string& prefix) const
     -> std::vector<std::string> {
-    LOG_F(INFO, "Auto-completing prefix: {}", prefix);
+    spdlog::debug("Auto-completing prefix: {}", prefix);
     std::vector<std::string> suggestions;
     TrieNode* current = root_;
     for (const char& ch : prefix) {
         if (current->children.find(ch) == current->children.end()) {
-            LOG_F(INFO, "Prefix '{}' not found in Trie.", prefix);
+            spdlog::debug("Prefix '{}' not found in Trie", prefix);
             return suggestions;  // Prefix not found
         }
         current = current->children[ch];
     }
-    LOG_F(INFO, "Prefix '{}' found. Performing DFS for suggestions.", prefix);
+    spdlog::debug("Prefix '{}' found. Performing DFS for suggestions", prefix);
     dfs(current, prefix, suggestions);
-    LOG_F(INFO, "Auto-complete found {} suggestions for prefix: {}",
-          suggestions.size(), prefix);
+    spdlog::debug("Auto-complete found {} suggestions for prefix: {}",
+                  suggestions.size(), prefix);
     return suggestions;
 }
 
@@ -214,7 +204,7 @@ void Trie::dfs(TrieNode* node, const std::string& prefix,
                std::vector<std::string>& suggestions) const {
     if (node->isEndOfWord) {
         suggestions.emplace_back(prefix);
-        LOG_F(INFO, "Found word in Trie during DFS: {}", prefix);
+        spdlog::trace("Found word in Trie during DFS: {}", prefix);
     }
     for (const auto& [ch, child] : node->children) {
         dfs(child, prefix + ch, suggestions);
@@ -228,7 +218,7 @@ void Trie::clear(TrieNode* node) {
     for (auto& [ch, child] : node->children) {
         clear(child);
     }
-    LOG_F(INFO, "Deleting TrieNode.");
+    spdlog::trace("Deleting TrieNode");
     delete node;
 }
 
@@ -236,83 +226,78 @@ void Trie::clear(TrieNode* node) {
 
 class SearchEngine::Impl {
 public:
-    static constexpr size_t CACHE_CAPACITY = 100;  // 定义缓存容量
+    static constexpr size_t DEFAULT_CACHE_CAPACITY = 100;
 
-    Impl() : queryCache_(CACHE_CAPACITY) {
-        LOG_F(INFO, "SearchEngine initialized with cache capacity {}",
-              CACHE_CAPACITY);
+    Impl() : queryCache_(DEFAULT_CACHE_CAPACITY) {
+        spdlog::info("SearchEngine initialized with cache capacity {}",
+                     DEFAULT_CACHE_CAPACITY);
     }
 
-    ~Impl() { LOG_F(INFO, "SearchEngine destroyed."); }
+    ~Impl() { spdlog::info("SearchEngine destroyed"); }
 
-    // 初始化推荐引擎
     bool initializeRecommendationEngine(const std::string& modelFilename) {
         try {
             recommendationEngine_.loadModel(modelFilename);
-            LOG_F(INFO, "Recommendation Engine loaded model from '{}'",
-                  modelFilename);
+            spdlog::info("Recommendation Engine loaded model from '{}'",
+                         modelFilename);
             return true;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to load Recommendation Engine model: {}",
-                  e.what());
+            spdlog::error("Failed to load Recommendation Engine model: {}",
+                          e.what());
             return false;
         }
     }
 
-    // 添加星体对象
     void addStarObject(const StarObject& starObject) {
         std::unique_lock lock(indexMutex_);
-        LOG_F(INFO, "Adding StarObject: {}", starObject.getName());
+        spdlog::info("Adding StarObject: {}", starObject.getName());
         try {
             auto result =
                 starObjectIndex_.emplace(starObject.getName(), starObject);
             if (!result.second) {
-                LOG_F(WARNING,
-                      "StarObject with name '{}' already exists. Overwriting.",
-                      starObject.getName());
+                spdlog::warn(
+                    "StarObject with name '{}' already exists. Overwriting",
+                    starObject.getName());
                 starObjectIndex_[starObject.getName()] = starObject;
             }
             trie_.insert(starObject.getName());
             for (const auto& alias : starObject.getAliases()) {
                 trie_.insert(alias);
                 aliasIndex_.emplace(alias, starObject.getName());
-                LOG_F(INFO, "Added alias '{}' for StarObject '{}'.", alias,
-                      starObject.getName());
+                spdlog::debug("Added alias '{}' for StarObject '{}'", alias,
+                              starObject.getName());
             }
-            LOG_F(INFO, "Successfully added StarObject: {}",
-                  starObject.getName());
+            spdlog::info("Successfully added StarObject: {}",
+                         starObject.getName());
 
-            // 添加到推荐引擎
+            // Add to recommendation engine
             recommendationEngine_.addItem(starObject.getName(),
                                           starObject.getAliases());
-
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception in addStarObject for {}: {}",
-                  starObject.getName(), e.what());
+            spdlog::error("Exception in addStarObject for {}: {}",
+                          starObject.getName(), e.what());
         }
     }
 
-    // 添加用户评分
     void addUserRating(const std::string& user, const std::string& item,
                        double rating) {
         try {
             recommendationEngine_.addRating(user, item, rating);
-            LOG_F(INFO, "Added rating: User '{}', Item '{}', Rating {}", user,
-                  item, rating);
+            spdlog::info("Added rating: User '{}', Item '{}', Rating {}", user,
+                         item, rating);
         } catch (const std::exception& e) {
-            LOG_F(ERROR,
-                  "Exception in addUserRating for user '{}', item '{}': {}",
-                  user, item, e.what());
+            spdlog::error(
+                "Exception in addUserRating for user '{}', item '{}': {}", user,
+                item, e.what());
         }
     }
 
-    // 搜索星体对象
     std::vector<StarObject> searchStarObject(const std::string& query) const {
-        LOG_F(INFO, "Searching for StarObject with query: {}", query);
+        spdlog::info("Searching for StarObject with query: {}", query);
         std::shared_lock lock(indexMutex_);
         try {
             if (auto cached = queryCache_.get(query)) {
-                LOG_F(INFO, "Cache hit for query: {}", query);
+                spdlog::info("Cache hit for query: {}", query);
                 return *cached;
             }
 
@@ -320,111 +305,108 @@ public:
             auto it = starObjectIndex_.find(query);
             if (it != starObjectIndex_.end()) {
                 results.emplace_back(it->second);
-                LOG_F(INFO, "Found StarObject by name: {}", query);
+                spdlog::debug("Found StarObject by name: {}", query);
             }
 
-            // 通过别名搜索
+            // Search by alias
             auto aliasRange = aliasIndex_.equal_range(query);
             for (auto itr = aliasRange.first; itr != aliasRange.second; ++itr) {
                 auto starIt = starObjectIndex_.find(itr->second);
                 if (starIt != starObjectIndex_.end()) {
                     results.emplace_back(starIt->second);
-                    LOG_F(INFO, "Found StarObject '{}' by alias '{}'.",
-                          starIt->second.getName(), query);
+                    spdlog::debug("Found StarObject '{}' by alias '{}'",
+                                  starIt->second.getName(), query);
                 }
             }
 
             if (!results.empty()) {
                 queryCache_.put(query, results);
-                LOG_F(INFO, "Search completed for query: {} with {} results.",
-                      query, results.size());
+                spdlog::info("Search completed for query: {} with {} results",
+                             query, results.size());
             } else {
-                LOG_F(INFO, "No results found for query: {}", query);
+                spdlog::info("No results found for query: {}", query);
             }
 
             return results;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception in searchStarObject for query '{}': {}",
-                  query, e.what());
+            spdlog::error("Exception in searchStarObject for query '{}': {}",
+                          query, e.what());
             return {};
         }
     }
 
-    // 模糊搜索星体对象
     std::vector<StarObject> fuzzySearchStarObject(const std::string& query,
                                                   int tolerance) const {
-        LOG_F(INFO,
-              "Performing fuzzy search for query: '{}' with tolerance: {}",
-              query, tolerance);
+        spdlog::info(
+            "Performing fuzzy search for query: '{}' with tolerance: {}", query,
+            tolerance);
         std::shared_lock lock(indexMutex_);
         std::vector<StarObject> results;
         try {
             for (const auto& [name, starObject] : starObjectIndex_) {
                 if (levenshteinDistance(query, name) <= tolerance) {
                     results.emplace_back(starObject);
-                    LOG_F(INFO, "Fuzzy match found: {}", name);
+                    spdlog::debug("Fuzzy match found: {}", name);
                 } else {
                     for (const auto& alias : starObject.getAliases()) {
                         if (levenshteinDistance(query, alias) <= tolerance) {
                             results.emplace_back(starObject);
-                            LOG_F(INFO, "Fuzzy match found by alias: {}",
-                                  alias);
+                            spdlog::debug("Fuzzy match found by alias: {}",
+                                          alias);
                             break;
                         }
                     }
                 }
             }
-            LOG_F(INFO,
-                  "Fuzzy search completed for query: '{}' with {} results.",
-                  query, results.size());
+            spdlog::info(
+                "Fuzzy search completed for query: '{}' with {} results", query,
+                results.size());
             return results;
         } catch (const std::exception& e) {
-            LOG_F(ERROR,
-                  "Exception in fuzzySearchStarObject for query '{}': {}",
-                  query, e.what());
+            spdlog::error(
+                "Exception in fuzzySearchStarObject for query '{}': {}", query,
+                e.what());
             return {};
         }
     }
 
-    // 自动完成星体对象名称
     std::vector<std::string> autoCompleteStarObject(
         const std::string& prefix) const {
-        LOG_F(INFO, "Auto-completing StarObject with prefix: {}", prefix);
+        spdlog::info("Auto-completing StarObject with prefix: {}", prefix);
         try {
             auto suggestions = trie_.autoComplete(prefix);
-            LOG_F(INFO, "Auto-complete retrieved {} suggestions for prefix: {}",
-                  suggestions.size(), prefix);
+            spdlog::info(
+                "Auto-complete retrieved {} suggestions for prefix: {}",
+                suggestions.size(), prefix);
             return suggestions;
         } catch (const std::exception& e) {
-            LOG_F(ERROR,
-                  "Exception in autoCompleteStarObject for prefix '{}': {}",
-                  prefix, e.what());
+            spdlog::error(
+                "Exception in autoCompleteStarObject for prefix '{}': {}",
+                prefix, e.what());
             return {};
         }
     }
 
-    // 获取排序后的结果
     static std::vector<StarObject> getRankedResultsStatic(
         std::vector<StarObject>& results) {
-        LOG_F(INFO, "Ranking search results by click count.");
+        spdlog::info("Ranking search results by click count");
         std::sort(results.begin(), results.end(),
                   [](const StarObject& a, const StarObject& b) {
                       return a.getClickCount() > b.getClickCount();
                   });
-        LOG_F(INFO, "Ranking completed. Top result click count: {}",
-              results.empty() ? 0 : results[0].getClickCount());
+        spdlog::info("Ranking completed. Top result click count: {}",
+                     results.empty() ? 0 : results[0].getClickCount());
         return results;
     }
 
-    // 高级搜索 - 过滤功能
     std::vector<StarObject> filterSearch(const std::string& type,
                                          const std::string& morphology,
                                          double minMagnitude,
                                          double maxMagnitude) const {
-        LOG_F(INFO,
-              "Performing filtered search with type: '{}', morphology: '{}', "
-              "magnitude range: {}-{}",
-              type, morphology, minMagnitude, maxMagnitude);
+        spdlog::info(
+            "Performing filtered search with type: '{}', morphology: '{}', "
+            "magnitude range: {}-{}",
+            type, morphology, minMagnitude, maxMagnitude);
         std::shared_lock lock(indexMutex_);
         std::vector<StarObject> results;
         try {
@@ -447,35 +429,34 @@ public:
 
                 if (matches) {
                     results.emplace_back(starObject);
-                    LOG_F(INFO, "StarObject '{}' matches filter criteria.",
-                          name);
+                    spdlog::debug("StarObject '{}' matches filter criteria",
+                                  name);
                 }
             }
-            LOG_F(INFO, "Filtered search completed with {} results.",
-                  results.size());
+            spdlog::info("Filtered search completed with {} results",
+                         results.size());
             return results;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception in filterSearch: {}", e.what());
+            spdlog::error("Exception in filterSearch: {}", e.what());
             return {};
         }
     }
 
-    // 从 name.json 加载星体对象
     bool loadFromNameJson(const std::string& filename) {
-        LOG_F(INFO, "Loading StarObjects from file: {}", filename);
+        spdlog::info("Loading StarObjects from file: {}", filename);
         std::ifstream file(filename);
         if (!file.is_open()) {
-            LOG_F(ERROR, "Failed to open file: {}", filename);
+            spdlog::error("Failed to open file: {}", filename);
             return false;
         }
 
         json jsonData;
         try {
             file >> jsonData;
-            LOG_F(INFO, "Successfully read JSON data from {}", filename);
+            spdlog::info("Successfully read JSON data from {}", filename);
         } catch (const json::parse_error& e) {
-            LOG_F(ERROR, "JSON parsing error while reading {}: {}", filename,
-                  e.what());
+            spdlog::error("JSON parsing error while reading {}: {}", filename,
+                          e.what());
             return false;
         }
 
@@ -483,8 +464,7 @@ public:
 
         for (const auto& item : jsonData) {
             if (!item.is_array() || item.size() < 1) {
-                LOG_F(WARNING, "Invalid entry in {}: {}", filename,
-                      item.dump());
+                spdlog::warn("Invalid entry in {}: {}", filename, item.dump());
                 continue;  // Skip invalid entries
             }
             std::string name = item[0].get<std::string>();
@@ -502,37 +482,36 @@ public:
                         end != std::string::npos) {
                         aliases.emplace_back(
                             alias.substr(start, end - start + 1));
-                        LOG_F(INFO, "Parsed alias '{}' for StarObject '{}'.",
-                              alias.substr(start, end - start + 1), name);
+                        spdlog::debug("Parsed alias '{}' for StarObject '{}'",
+                                      alias.substr(start, end - start + 1),
+                                      name);
                     }
                 }
             }
-            StarObject star(name, aliases,
-                            0);  // Assuming default clickCount is 0
+            StarObject star(name, aliases, 0);  // Default clickCount is 0
             addStarObject(star);
         }
 
         size_t loadedCount = starObjectIndex_.size() - initialSize;
-        LOG_F(INFO, "Loaded {} StarObjects from {}", loadedCount, filename);
+        spdlog::info("Loaded {} StarObjects from {}", loadedCount, filename);
         return true;
     }
 
-    // 从 ngc2019.json 加载 CelestialObjects 并与 StarObjects 关联
     bool loadFromCelestialJson(const std::string& filename) {
-        LOG_F(INFO, "Loading CelestialObjects from file: {}", filename);
+        spdlog::info("Loading CelestialObjects from file: {}", filename);
         std::ifstream file(filename);
         if (!file.is_open()) {
-            LOG_F(ERROR, "Failed to open file: {}", filename);
+            spdlog::error("Failed to open file: {}", filename);
             return false;
         }
 
         json jsonData;
         try {
             file >> jsonData;
-            LOG_F(INFO, "Successfully read JSON data from {}", filename);
+            spdlog::info("Successfully read JSON data from {}", filename);
         } catch (const json::parse_error& e) {
-            LOG_F(ERROR, "JSON parsing error while reading {}: {}", filename,
-                  e.what());
+            spdlog::error("JSON parsing error while reading {}: {}", filename,
+                          e.what());
             return false;
         }
 
@@ -544,99 +523,94 @@ public:
                 CelestialObject celestialObject =
                     CelestialObject::from_json(item);
                 std::string name =
-                    celestialObject
-                        .getName();  // Assuming Identifier is the name
+                    celestialObject.getName();  // Identifier is the name
 
-                // 查找对应的 StarObject
+                // Find corresponding StarObject
                 auto it = starObjectIndex_.find(name);
                 if (it != starObjectIndex_.end()) {
                     it->second.setCelestialObject(celestialObject);
                     matched++;
-                    LOG_F(INFO,
-                          "Associated CelestialObject with StarObject '{}'.",
-                          name);
+                    spdlog::debug(
+                        "Associated CelestialObject with StarObject '{}'",
+                        name);
 
-                    // 更新推荐引擎的物品特征
+                    // Update recommendation engine item features
                     recommendationEngine_.addItemFeature(
-                        name, "Type", 1.0);  // 示例，具体特征可根据需求添加
-
+                        name, "Type", 1.0);  // Example feature
                 } else {
                     unmatched++;
-                    LOG_F(WARNING,
-                          "No matching StarObject found for CelestialObject "
-                          "'{}'.",
-                          name);
+                    spdlog::warn(
+                        "No matching StarObject found for CelestialObject '{}'",
+                        name);
                 }
             } catch (const std::exception& e) {
-                LOG_F(ERROR, "Error associating CelestialObject: {}", e.what());
+                spdlog::error("Error associating CelestialObject: {}",
+                              e.what());
             }
         }
 
-        LOG_F(INFO, "Loaded CelestialObjects from {}: Matched {}, Unmatched {}",
-              filename, matched, unmatched);
+        spdlog::info(
+            "Loaded CelestialObjects from {}: Matched {}, Unmatched {}",
+            filename, matched, unmatched);
         return true;
     }
 
-    // 推荐方法
     std::vector<std::pair<std::string, double>> recommendItems(
         const std::string& user, int topN = 5) {
-        LOG_F(INFO, "Requesting top {} recommendations for user '{}'.", topN,
-              user);
+        spdlog::info("Requesting top {} recommendations for user '{}'", topN,
+                     user);
         try {
             return recommendationEngine_.recommendItems(user, topN);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception in recommendItems for user '{}': {}", user,
-                  e.what());
+            spdlog::error("Exception in recommendItems for user '{}': {}", user,
+                          e.what());
             return {};
         }
     }
 
-    // 保存和加载推荐模型
     bool saveRecommendationModel(const std::string& filename) {
-        LOG_F(INFO, "Saving Recommendation Engine model to '{}'.", filename);
+        spdlog::info("Saving Recommendation Engine model to '{}'", filename);
         try {
             recommendationEngine_.saveModel(filename);
-            LOG_F(INFO,
-                  "Successfully saved Recommendation Engine model to '{}'.",
-                  filename);
+            spdlog::info(
+                "Successfully saved Recommendation Engine model to '{}'",
+                filename);
             return true;
         } catch (const std::exception& e) {
-            LOG_F(ERROR,
-                  "Failed to save Recommendation Engine model to '{}': {}",
-                  filename, e.what());
+            spdlog::error(
+                "Failed to save Recommendation Engine model to '{}': {}",
+                filename, e.what());
             return false;
         }
     }
 
     bool loadRecommendationModel(const std::string& filename) {
-        LOG_F(INFO, "Loading Recommendation Engine model from '{}'.", filename);
+        spdlog::info("Loading Recommendation Engine model from '{}'", filename);
         try {
             recommendationEngine_.loadModel(filename);
-            LOG_F(INFO,
-                  "Successfully loaded Recommendation Engine model from '{}'.",
-                  filename);
+            spdlog::info(
+                "Successfully loaded Recommendation Engine model from '{}'",
+                filename);
             return true;
         } catch (const std::exception& e) {
-            LOG_F(ERROR,
-                  "Failed to load Recommendation Engine model from '{}': {}",
-                  filename, e.what());
+            spdlog::error(
+                "Failed to load Recommendation Engine model from '{}': {}",
+                filename, e.what());
             return false;
         }
     }
 
-    // 训练推荐引擎
     void trainRecommendationEngine() {
-        LOG_F(INFO, "Starting training of Recommendation Engine.");
+        spdlog::info("Starting training of Recommendation Engine");
         try {
             recommendationEngine_.train();
-            LOG_F(INFO, "Recommendation Engine training completed.");
+            spdlog::info("Recommendation Engine training completed");
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception during Recommendation Engine training: {}",
-                  e.what());
+            spdlog::error("Exception during Recommendation Engine training: {}",
+                          e.what());
         }
     }
 
-    // 从CSV加载数据
     bool loadFromCSV(const std::string& filename,
                      const std::vector<std::string>& requiredFields,
                      Dialect dialect) {
@@ -652,32 +626,31 @@ public:
                 count++;
 
                 if (count % 1000 == 0) {
-                    LOG_F(INFO, "Processed {} records from CSV", count);
+                    spdlog::info("Processed {} records from CSV", count);
                 }
             }
 
-            LOG_F(INFO, "Successfully loaded {} records from {}", count,
-                  filename);
+            spdlog::info("Successfully loaded {} records from {}", count,
+                         filename);
             return true;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error loading from CSV {}: {}", filename, e.what());
+            spdlog::error("Error loading from CSV {}: {}", filename, e.what());
             return false;
         }
     }
 
-    // 混合推荐实现
     auto getHybridRecommendations(const std::string& user, int topN,
                                   double contentWeight,
                                   double collaborativeWeight)
         -> std::vector<std::pair<std::string, double>> {
         try {
-            // 获取协同过滤推荐
+            // Get collaborative filtering recommendations
             auto cfRecs = recommendationEngine_.recommendItems(user, topN * 2);
 
-            // 获取基于内容的推荐
+            // Get content-based recommendations
             auto contentRecs = getContentBasedRecommendations(user, topN * 2);
 
-            // 合并结果
+            // Merge results
             std::unordered_map<std::string, double> hybridScores;
 
             for (const auto& [item, score] : cfRecs) {
@@ -688,7 +661,7 @@ public:
                 hybridScores[item] += score * contentWeight;
             }
 
-            // 转换为向量并排序
+            // Convert to vector and sort
             std::vector<std::pair<std::string, double>> results(
                 hybridScores.begin(), hybridScores.end());
 
@@ -697,53 +670,51 @@ public:
                           return a.second > b.second;
                       });
 
-            // 截取前topN个结果
+            // Truncate to top N results
             if (results.size() > static_cast<size_t>(topN)) {
                 results.resize(topN);
             }
 
             return results;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error in hybrid recommendations: {}", e.what());
+            spdlog::error("Error in hybrid recommendations: {}", e.what());
             return {};
         }
     }
 
-    // 获取用户历史交互记录
     auto getUserHistory(const std::string& user)
         -> std::unordered_map<std::string, double> {
-        LOG_F(INFO, "Getting history for user: {}", user);
+        spdlog::info("Getting history for user: {}", user);
         try {
             std::unordered_map<std::string, double> history;
 
-            // 从推荐引擎获取用户的评分历史
+            // Get user ratings from recommendation engine
             for (const auto& [name, star] : starObjectIndex_) {
                 auto rating = recommendationEngine_.predictRating(user, name);
-                if (rating > 0.0) {  // 只记录有效评分
+                if (rating > 0.0) {  // Only record valid ratings
                     history[name] = rating;
                 }
             }
 
-            LOG_F(INFO, "Retrieved {} historical items for user {}",
-                  history.size(), user);
+            spdlog::info("Retrieved {} historical items for user {}",
+                         history.size(), user);
             return history;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error getting user history for {}: {}", user,
-                  e.what());
+            spdlog::error("Error getting user history for {}: {}", user,
+                          e.what());
             return {};
         }
     }
 
-    // 将 StarObject 转换为 CSV 行数据
     void populateStarObjectRow(
         const StarObject& star,
         std::unordered_map<std::string, std::string>& row) {
-        LOG_F(INFO, "Populating row data for StarObject: {}", star.getName());
+        spdlog::debug("Populating row data for StarObject: {}", star.getName());
         try {
-            // 基本信息
+            // Basic information
             row["name"] = star.getName();
 
-            // 合并别名为分号分隔的字符串
+            // Join aliases with semicolons
             if (!star.getAliases().empty()) {
                 std::stringstream ss;
                 for (size_t i = 0; i < star.getAliases().size(); ++i) {
@@ -758,27 +729,27 @@ public:
 
             row["click_count"] = std::to_string(star.getClickCount());
 
-            // 天体对象信息
+            // Celestial object information
             const auto& celestial = star.getCelestialObject();
-            row["ID"] = celestial.ID;
-            row["类型"] = celestial.Type;
-            row["形态"] = celestial.Morphology;
-            row["赤经(J2000)"] = celestial.RAJ2000;
-            row["赤经D(J2000)"] = std::to_string(celestial.RADJ2000);
-            row["赤纬(J2000)"] = celestial.DecJ2000;
-            row["赤纬D(J2000)"] = std::to_string(celestial.DecDJ2000);
-            row["可见光星等V"] = std::to_string(celestial.VisualMagnitudeV);
+            row["id"] = celestial.ID;
+            row["type"] = celestial.Type;
+            row["morphology"] = celestial.Morphology;
+            row["ra_j2000"] = celestial.RAJ2000;
+            row["ra_d_j2000"] = std::to_string(celestial.RADJ2000);
+            row["dec_j2000"] = celestial.DecJ2000;
+            row["dec_d_j2000"] = std::to_string(celestial.DecDJ2000);
+            row["visual_magnitude"] =
+                std::to_string(celestial.VisualMagnitudeV);
 
-            LOG_F(INFO, "Successfully populated row data for StarObject: {}",
-                  star.getName());
+            spdlog::debug("Successfully populated row data for StarObject: {}",
+                          star.getName());
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error populating row data for {}: {}", star.getName(),
-                  e.what());
+            spdlog::error("Error populating row data for {}: {}",
+                          star.getName(), e.what());
             throw;
         }
     }
 
-    // 导出到CSV
     bool exportToCSV(const std::string& filename,
                      const std::vector<std::string>& fields, Dialect dialect) {
         try {
@@ -791,15 +762,14 @@ public:
                 writer.writeRow(row);
             }
 
-            LOG_F(INFO, "Successfully exported data to {}", filename);
+            spdlog::info("Successfully exported data to {}", filename);
             return true;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error exporting to CSV {}: {}", filename, e.what());
+            spdlog::error("Error exporting to CSV {}: {}", filename, e.what());
             return false;
         }
     }
 
-    // 新增辅助方法
     void processStarObjectFromCSV(
         const std::unordered_map<std::string, std::string>& row) {
         std::string name = row.at("name");
@@ -809,13 +779,13 @@ public:
             std::stringstream ss(row.at("aliases"));
             std::string alias;
             while (std::getline(ss, alias, ';')) {
-                aliases.push_back(atom::utils::trim(alias));
+                aliases.push_back(trim(alias));
             }
         }
 
         StarObject star(name, aliases);
 
-        // 设置其他属性
+        // Set other properties
         if (row.count("click_count")) {
             star.setClickCount(std::stoi(row.at("click_count")));
         }
@@ -825,21 +795,21 @@ public:
 
     auto getSimilarItems(const std::string& itemId)
         -> std::vector<std::pair<std::string, double>> {
-        LOG_F(INFO, "Getting similar items for: {}", itemId);
+        spdlog::info("Getting similar items for: {}", itemId);
         try {
-            // 保存相似度和对应物品
+            // Store similarities and corresponding items
             std::vector<std::pair<std::string, double>> similarities;
 
-            // 获取源物品
+            // Get source item
             auto sourceIt = starObjectIndex_.find(itemId);
             if (sourceIt == starObjectIndex_.end()) {
-                LOG_F(WARNING, "Item {} not found in index", itemId);
+                spdlog::warn("Item {} not found in index", itemId);
                 return similarities;
             }
 
             const auto& sourceCelestial = sourceIt->second.getCelestialObject();
 
-            // 计算与其他物品的相似度
+            // Calculate similarity with other items
             for (const auto& [targetId, targetStar] : starObjectIndex_) {
                 if (targetId == itemId)
                     continue;
@@ -847,12 +817,12 @@ public:
                 double similarity = 0.0;
                 const auto& targetCelestial = targetStar.getCelestialObject();
 
-                // 类型匹配权重 (0.4)
+                // Type match weight (0.4)
                 if (sourceCelestial.Type == targetCelestial.Type) {
                     similarity += 0.4;
                 }
 
-                // 位置相似度权重 (0.3)
+                // Position similarity weight (0.3)
                 double raDiff = std::abs(sourceCelestial.RADJ2000 -
                                          targetCelestial.RADJ2000);
                 double decDiff = std::abs(sourceCelestial.DecDJ2000 -
@@ -863,35 +833,35 @@ public:
                                             10.0);
                 similarity += 0.3 * posSimilarity;
 
-                // 亮度相似度权重 (0.3)
+                // Brightness similarity weight (0.3)
                 double magDiff = std::abs(sourceCelestial.VisualMagnitudeV -
                                           targetCelestial.VisualMagnitudeV);
                 double magSimilarity = 1.0 - std::min(1.0, magDiff / 5.0);
                 similarity += 0.3 * magSimilarity;
 
-                if (similarity > 0.1) {  // 只保留相似度大于阈值的结果
+                if (similarity > 0.1) {  // Only keep results above threshold
                     similarities.emplace_back(targetId, similarity);
                 }
             }
 
-            // 按相似度降序排序
+            // Sort by similarity in descending order
             std::sort(similarities.begin(), similarities.end(),
                       [](const auto& a, const auto& b) {
                           return a.second > b.second;
                       });
 
-            // 限制返回数量
+            // Limit return count
             if (similarities.size() > 20) {
                 similarities.resize(20);
             }
 
-            LOG_F(INFO, "Found {} similar items for {}", similarities.size(),
-                  itemId);
+            spdlog::info("Found {} similar items for {}", similarities.size(),
+                         itemId);
             return similarities;
 
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error getting similar items for {}: {}", itemId,
-                  e.what());
+            spdlog::error("Error getting similar items for {}: {}", itemId,
+                          e.what());
             return {};
         }
     }
@@ -900,10 +870,10 @@ public:
         -> std::vector<std::pair<std::string, double>> {
         std::vector<std::pair<std::string, double>> results;
 
-        // 获取用户历史记录
+        // Get user history
         auto userHistory = getUserHistory(user);
 
-        // 基于用户历史计算推荐
+        // Calculate recommendations based on user history
         std::unordered_map<std::string, double> scores;
         for (const auto& historyItem : userHistory) {
             auto similar = getSimilarItems(historyItem.first);
@@ -912,7 +882,7 @@ public:
             }
         }
 
-        // 转换为向量并排序
+        // Convert to vector and sort
         results.assign(scores.begin(), scores.end());
         std::sort(
             results.begin(), results.end(),
@@ -925,28 +895,24 @@ public:
         return results;
     }
 
-    std::unordered_map<std::string, StarObject>
-        starObjectIndex_;  // Key: Star name
-    std::unordered_multimap<std::string, std::string>
-        aliasIndex_;  // Key: Alias, Value: Star name
-    Trie trie_;
-    mutable atom::search::ThreadSafeLRUCache<std::string,
-                                             std::vector<StarObject>>
-        queryCache_;
-    mutable std::shared_mutex indexMutex_;
+    // Helper functions
+    static std::string trim(const std::string& str) {
+        size_t start = str.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos)
+            return "";
 
-    // 推荐引擎
-    AdvancedRecommendationEngine recommendationEngine_;
+        size_t end = str.find_last_not_of(" \t\r\n");
+        return str.substr(start, end - start + 1);
+    }
 
-    // 编辑距离实现
     static int levenshteinDistance(const std::string& str1,
                                    const std::string& str2) {
-        LOG_F(INFO, "Calculating Levenshtein distance between '{}' and '{}'.",
-              str1, str2);
+        spdlog::debug("Calculating Levenshtein distance between '{}' and '{}'",
+                      str1, str2);
         const size_t len1 = str1.size();
         const size_t len2 = str2.size();
 
-        // 初始化距离矩阵
+        // Initialize distance matrix
         std::vector<std::vector<int>> distanceMatrix(
             len1 + 1, std::vector<int>(len2 + 1));
 
@@ -957,138 +923,154 @@ public:
             distanceMatrix[0][j] = static_cast<int>(j);
         }
 
-        // 计算编辑距离
+        // Calculate edit distance
         for (size_t i = 1; i <= len1; ++i) {
             for (size_t j = 1; j <= len2; ++j) {
                 if (str1[i - 1] == str2[j - 1]) {
                     distanceMatrix[i][j] = distanceMatrix[i - 1][j - 1];
                 } else {
                     distanceMatrix[i][j] = std::min({
-                        distanceMatrix[i - 1][j] + 1,     // 删除
-                        distanceMatrix[i][j - 1] + 1,     // 插入
-                        distanceMatrix[i - 1][j - 1] + 1  // 替换
+                        distanceMatrix[i - 1][j] + 1,     // Delete
+                        distanceMatrix[i][j - 1] + 1,     // Insert
+                        distanceMatrix[i - 1][j - 1] + 1  // Replace
                     });
                 }
             }
         }
 
-        LOG_F(INFO, "Levenshtein distance between '{}' and '{}' is {}", str1,
-              str2, distanceMatrix[len1][len2]);
+        spdlog::trace("Levenshtein distance between '{}' and '{}' is {}", str1,
+                      str2, distanceMatrix[len1][len2]);
         return distanceMatrix[len1][len2];
     }
+
+    // Data members
+    std::unordered_map<std::string, StarObject>
+        starObjectIndex_;  ///< Key: Star name
+    std::unordered_multimap<std::string, std::string>
+        aliasIndex_;  ///< Key: Alias, Value: Star name
+    Trie trie_;       ///< Prefix tree for auto-completion
+    mutable atom::search::ThreadSafeLRUCache<std::string,
+                                             std::vector<StarObject>>
+        queryCache_;  ///< Thread-safe LRU cache
+    mutable std::shared_mutex
+        indexMutex_;  ///< Mutex for thread-safe access to indices
+    AdvancedRecommendationEngine
+        recommendationEngine_;  ///< Recommendation engine
 };
 
 // --------------------- SearchEngine Implementation ---------------------
 
 SearchEngine::SearchEngine() : pImpl_(std::make_unique<Impl>()) {
-    LOG_F(INFO, "SearchEngine instance created.");
+    spdlog::info("SearchEngine instance created");
 }
 
 SearchEngine::~SearchEngine() {
-    LOG_F(INFO, "SearchEngine instance destroyed.");
+    spdlog::info("SearchEngine instance destroyed");
 }
 
 bool SearchEngine::initializeRecommendationEngine(
     const std::string& modelFilename) {
-    LOG_F(INFO, "Initializing Recommendation Engine with model file '{}'.",
-          modelFilename);
+    spdlog::info("Initializing Recommendation Engine with model file '{}'",
+                 modelFilename);
     return pImpl_->initializeRecommendationEngine(modelFilename);
 }
 
 void SearchEngine::addStarObject(const StarObject& starObject) {
-    LOG_F(INFO, "Request to add StarObject: {}", starObject.getName());
+    spdlog::info("Request to add StarObject: {}", starObject.getName());
     pImpl_->addStarObject(starObject);
 }
 
 void SearchEngine::addUserRating(const std::string& user,
                                  const std::string& item, double rating) {
-    LOG_F(INFO, "Request to add rating: User '{}', Item '{}', Rating {}", user,
-          item, rating);
+    spdlog::info("Request to add rating: User '{}', Item '{}', Rating {}", user,
+                 item, rating);
     pImpl_->addUserRating(user, item, rating);
 }
 
 auto SearchEngine::searchStarObject(const std::string& query) const
     -> std::vector<StarObject> {
-    LOG_F(INFO, "Request to search StarObject with query: {}", query);
+    spdlog::info("Request to search StarObject with query: {}", query);
     return pImpl_->searchStarObject(query);
 }
 
-auto SearchEngine::fuzzySearchStarObject(
-    const std::string& query, int tolerance) const -> std::vector<StarObject> {
-    LOG_F(INFO,
-          "Request to perform fuzzy search on StarObject with query: '{}' and "
-          "tolerance: {}",
-          query, tolerance);
+auto SearchEngine::fuzzySearchStarObject(const std::string& query,
+                                         int tolerance) const
+    -> std::vector<StarObject> {
+    spdlog::info(
+        "Request to perform fuzzy search on StarObject with query: '{}' and "
+        "tolerance: {}",
+        query, tolerance);
     return pImpl_->fuzzySearchStarObject(query, tolerance);
 }
 
 auto SearchEngine::autoCompleteStarObject(const std::string& prefix) const
     -> std::vector<std::string> {
-    LOG_F(INFO, "Request to auto-complete StarObject with prefix: {}", prefix);
+    spdlog::info("Request to auto-complete StarObject with prefix: {}", prefix);
     return pImpl_->autoCompleteStarObject(prefix);
 }
 
 std::vector<StarObject> SearchEngine::getRankedResults(
     std::vector<StarObject>& results) {
-    LOG_F(INFO, "Request to rank search results.");
+    spdlog::info("Request to rank search results");
     return Impl::getRankedResultsStatic(results);
 }
 
 bool SearchEngine::loadFromNameJson(const std::string& filename) {
-    LOG_F(INFO, "Request to load StarObjects from name JSON file: {}",
-          filename);
+    spdlog::info("Request to load StarObjects from name JSON file: {}",
+                 filename);
     return pImpl_->loadFromNameJson(filename);
 }
 
 bool SearchEngine::loadFromCelestialJson(const std::string& filename) {
-    LOG_F(INFO, "Request to load CelestialObjects from JSON file: {}",
-          filename);
+    spdlog::info("Request to load CelestialObjects from JSON file: {}",
+                 filename);
     return pImpl_->loadFromCelestialJson(filename);
 }
 
-auto SearchEngine::filterSearch(
-    const std::string& type, const std::string& morphology, double minMagnitude,
-    double maxMagnitude) const -> std::vector<StarObject> {
-    LOG_F(INFO,
-          "Request to perform filtered search with type: '{}', morphology: "
-          "'{}', magnitude range: {}-{}",
-          type, morphology, minMagnitude, maxMagnitude);
+auto SearchEngine::filterSearch(const std::string& type,
+                                const std::string& morphology,
+                                double minMagnitude, double maxMagnitude) const
+    -> std::vector<StarObject> {
+    spdlog::info(
+        "Request to perform filtered search with type: '{}', morphology: '{}', "
+        "magnitude range: {}-{}",
+        type, morphology, minMagnitude, maxMagnitude);
     return pImpl_->filterSearch(type, morphology, minMagnitude, maxMagnitude);
 }
 
 std::vector<std::pair<std::string, double>> SearchEngine::recommendItems(
     const std::string& user, int topN) const {
-    LOG_F(INFO, "Request to recommend top {} items for user '{}'.", topN, user);
+    spdlog::info("Request to recommend top {} items for user '{}'", topN, user);
     return pImpl_->recommendItems(user, topN);
 }
 
 bool SearchEngine::saveRecommendationModel(const std::string& filename) const {
-    LOG_F(INFO, "Request to save Recommendation Engine model to '{}'.",
-          filename);
+    spdlog::info("Request to save Recommendation Engine model to '{}'",
+                 filename);
     return pImpl_->saveRecommendationModel(filename);
 }
 
 bool SearchEngine::loadRecommendationModel(const std::string& filename) {
-    LOG_F(INFO, "Request to load Recommendation Engine model from '{}'.",
-          filename);
+    spdlog::info("Request to load Recommendation Engine model from '{}'",
+                 filename);
     return pImpl_->loadRecommendationModel(filename);
 }
 
 void SearchEngine::trainRecommendationEngine() {
-    LOG_F(INFO, "Request to train Recommendation Engine.");
+    spdlog::info("Request to train Recommendation Engine");
     pImpl_->trainRecommendationEngine();
 }
 
-// 实现SearchEngine的新方法
 bool SearchEngine::loadFromCSV(const std::string& filename,
                                const std::vector<std::string>& requiredFields,
                                Dialect dialect) {
     return pImpl_->loadFromCSV(filename, requiredFields, dialect);
 }
 
-auto SearchEngine::getHybridRecommendations(
-    const std::string& user, int topN, double contentWeight,
-    double collaborativeWeight) -> std::vector<std::pair<std::string, double>> {
+auto SearchEngine::getHybridRecommendations(const std::string& user, int topN,
+                                            double contentWeight,
+                                            double collaborativeWeight)
+    -> std::vector<std::pair<std::string, double>> {
     return pImpl_->getHybridRecommendations(user, topN, contentWeight,
                                             collaborativeWeight);
 }
@@ -1099,25 +1081,24 @@ bool SearchEngine::exportToCSV(const std::string& filename,
     return pImpl_->exportToCSV(filename, fields, dialect);
 }
 
-// 补全批量处理评分的方法
 void SearchEngine::batchProcessRatings(const std::string& csvFilename) {
-    LOG_F(INFO, "Starting batch processing of ratings from {}", csvFilename);
+    spdlog::info("Starting batch processing of ratings from {}", csvFilename);
     try {
         std::ifstream file(csvFilename);
         if (!file.is_open()) {
-            LOG_F(ERROR, "Failed to open ratings file: {}", csvFilename);
+            spdlog::error("Failed to open ratings file: {}", csvFilename);
             return;
         }
 
         std::string line;
-        // 跳过标题行
+        // Skip header line
         std::getline(file, line);
 
         while (std::getline(file, line)) {
             std::stringstream ss(line);
             std::string user, item, ratingStr;
 
-            // 假设CSV格式为: user,item,rating
+            // Assume CSV format: user,item,rating
             std::getline(ss, user, ',');
             std::getline(ss, item, ',');
             std::getline(ss, ratingStr, ',');
@@ -1125,30 +1106,29 @@ void SearchEngine::batchProcessRatings(const std::string& csvFilename) {
             try {
                 double rating = std::stod(ratingStr);
                 addUserRating(user, item, rating);
-                LOG_F(INFO, "Processed rating: {} -> {} = {}", user, item,
-                      rating);
+                spdlog::debug("Processed rating: {} -> {} = {}", user, item,
+                              rating);
             } catch (const std::exception& e) {
-                LOG_F(ERROR, "Error processing rating: {}", e.what());
+                spdlog::error("Error processing rating: {}", e.what());
                 continue;
             }
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error in batch processing ratings: {}", e.what());
+        spdlog::error("Error in batch processing ratings: {}", e.what());
     }
 }
 
-// 补全批量更新天体对象的方法
 void SearchEngine::batchUpdateStarObjects(const std::string& csvFilename) {
-    LOG_F(INFO, "Starting batch update of StarObjects from {}", csvFilename);
+    spdlog::info("Starting batch update of StarObjects from {}", csvFilename);
     try {
         std::ifstream file(csvFilename);
         if (!file.is_open()) {
-            LOG_F(ERROR, "Failed to open update file: {}", csvFilename);
+            spdlog::error("Failed to open update file: {}", csvFilename);
             return;
         }
 
         std::string line;
-        // 跳过标题行
+        // Skip header line
         std::getline(file, line);
 
         while (std::getline(file, line)) {
@@ -1158,7 +1138,7 @@ void SearchEngine::batchUpdateStarObjects(const std::string& csvFilename) {
             size_t fieldIndex = 0;
 
             while (std::getline(ss, field, ',')) {
-                // 基本字段：name,aliases,type,magnitude
+                // Basic fields: name,aliases,type,magnitude
                 switch (fieldIndex) {
                     case 0:
                         fields["name"] = field;
@@ -1179,7 +1159,7 @@ void SearchEngine::batchUpdateStarObjects(const std::string& csvFilename) {
             }
 
             try {
-                // 解析别名
+                // Parse aliases
                 std::vector<std::string> aliases;
                 std::stringstream aliasStream(fields["aliases"]);
                 std::string alias;
@@ -1187,10 +1167,10 @@ void SearchEngine::batchUpdateStarObjects(const std::string& csvFilename) {
                     aliases.push_back(alias);
                 }
 
-                // 创建或更新 StarObject
+                // Create or update StarObject
                 StarObject star(fields["name"], aliases);
 
-                // 设置其他属性
+                // Set other properties
                 if (!fields["type"].empty()) {
                     CelestialObject celestial = star.getCelestialObject();
                     celestial.Type = fields["type"];
@@ -1202,25 +1182,24 @@ void SearchEngine::batchUpdateStarObjects(const std::string& csvFilename) {
                 }
 
                 addStarObject(star);
-                LOG_F(INFO, "Updated StarObject: {}", fields["name"]);
+                spdlog::info("Updated StarObject: {}", fields["name"]);
             } catch (const std::exception& e) {
-                LOG_F(ERROR, "Error updating StarObject: {}", e.what());
+                spdlog::error("Error updating StarObject: {}", e.what());
                 continue;
             }
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error in batch updating StarObjects: {}", e.what());
+        spdlog::error("Error in batch updating StarObjects: {}", e.what());
     }
 }
 
-// 补全缓存控制方法
 void SearchEngine::clearCache() {
-    LOG_F(INFO, "Clearing search engine cache");
+    spdlog::info("Clearing search engine cache");
     pImpl_->queryCache_.clear();
 }
 
 void SearchEngine::setCacheSize(size_t size) {
-    LOG_F(INFO, "Setting cache size to {}", size);
+    spdlog::info("Setting cache size to {}", size);
     pImpl_->queryCache_.resize(size);
 }
 
@@ -1230,7 +1209,7 @@ auto SearchEngine::getCacheStats() const -> std::string {
     ss << "Cache Statistics:\n"
        << "Size: " << cache.size() << "\n";
 
-    LOG_F(INFO, "Retrieved cache statistics");
+    spdlog::info("Retrieved cache statistics");
     return ss.str();
 }
 

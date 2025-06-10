@@ -1,8 +1,7 @@
 #include "orm.hpp"
-#include <algorithm>
+#include <spdlog/spdlog.h>
 #include <chrono>
 #include <iostream>
-#include <random>
 
 namespace lithium::database {
 
@@ -23,7 +22,7 @@ Database::Database(const std::string& db_name, int flags)
         } else {
             error_msg += "Unknown error";
         }
-        LOG_F(ERROR, "{}", error_msg);
+        spdlog::error("{}", error_msg);
         THROW_FAILED_TO_OPEN_DATABASE(error_msg);
     }
 
@@ -33,9 +32,9 @@ Database::Database(const std::string& db_name, int flags)
         execute("PRAGMA journal_mode = WAL;");
         execute("PRAGMA synchronous = NORMAL;");
         valid.store(true);
-        LOG_F(INFO, "Database opened successfully: {}", db_name);
+        spdlog::info("Database opened successfully: {}", db_name);
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to configure database: {}", e.what());
+        spdlog::error("Failed to configure database: {}", e.what());
         throw;
     }
 }
@@ -46,7 +45,7 @@ Database::~Database() {
             execute("PRAGMA optimize;");
         }
     } catch (const std::exception& e) {
-        LOG_F(WARNING, "Error during database cleanup: {}", e.what());
+        spdlog::warn("Error during database cleanup: {}", e.what());
     }
     valid.store(false);
 }
@@ -106,7 +105,7 @@ void Database::execute(const std::string& sql) {
         } else {
             error += "Unknown error";
         }
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_SQL_EXECUTION_ERROR(error);
     }
 }
@@ -124,11 +123,37 @@ void Database::configure(
         try {
             std::string sql = "PRAGMA " + name + " = " + value + ";";
             execute(sql);
-            LOG_F(INFO, "Set PRAGMA {}: {}", name, value);
+            spdlog::info("Set PRAGMA {}: {}", name, value);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to set PRAGMA {}: {}", name, e.what());
+            spdlog::error("Failed to set PRAGMA {}: {}", name, e.what());
             throw;
         }
+    }
+}
+
+void Database::commit() {
+    if (!valid.load()) {
+        THROW_VALIDATION_ERROR("Attempted to commit on invalid database connection");
+    }
+    try {
+        execute("COMMIT;");
+        spdlog::info("Database transaction committed via Database::commit()");
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to commit transaction: {}", e.what());
+        THROW_TRANSACTION_ERROR("Failed to commit transaction: " + std::string(e.what()));
+    }
+}
+
+void Database::rollback() {
+    if (!valid.load()) {
+        THROW_VALIDATION_ERROR("Attempted to rollback on invalid database connection");
+    }
+    try {
+        execute("ROLLBACK;");
+        spdlog::info("Database transaction rolled back via Database::rollback()");
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to rollback transaction: {}", e.what());
+        THROW_TRANSACTION_ERROR("Failed to rollback transaction: " + std::string(e.what()));
     }
 }
 
@@ -141,7 +166,7 @@ Transaction::Transaction(Database& db)
     try {
         db.execute("BEGIN TRANSACTION;");
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to begin transaction: {}", e.what());
+        spdlog::error("Failed to begin transaction: {}", e.what());
         THROW_TRANSACTION_ERROR("Failed to begin transaction: " +
                                 std::string(e.what()));
     }
@@ -153,9 +178,9 @@ Transaction::~Transaction() {
         try {
             rollback();
         } catch (const std::exception& e) {
-            LOG_F(ERROR,
-                  "Failed to auto-rollback transaction in destructor: {}",
-                  e.what());
+            spdlog::error(
+                "Failed to auto-rollback transaction in destructor: {}",
+                e.what());
         }
     }
 }
@@ -168,9 +193,9 @@ void Transaction::commit() {
     try {
         db.execute("COMMIT;");
         committed = true;
-        LOG_F(INFO, "Transaction committed successfully");
+        spdlog::info("Transaction committed successfully");
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to commit transaction: {}", e.what());
+        spdlog::error("Failed to commit transaction: {}", e.what());
         THROW_TRANSACTION_ERROR("Failed to commit transaction: " +
                                 std::string(e.what()));
     }
@@ -184,9 +209,9 @@ void Transaction::rollback() {
     try {
         db.execute("ROLLBACK;");
         rolledBack = true;
-        LOG_F(INFO, "Transaction rolled back successfully");
+        spdlog::info("Transaction rolled back successfully");
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to rollback transaction: {}", e.what());
+        spdlog::error("Failed to rollback transaction: {}", e.what());
         THROW_TRANSACTION_ERROR("Failed to rollback transaction: " +
                                 std::string(e.what()));
     }
@@ -206,11 +231,11 @@ Statement::Statement(Database& db, const std::string& sql)
     if (result != SQLITE_OK) {
         std::string error = "Failed to prepare SQL statement: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_PREPARE_STATEMENT_ERROR(error);
     }
 
-    LOG_F(INFO, "Prepared statement: {}", sql);
+    spdlog::info("Prepared statement: {}", sql);
 }
 
 Statement::~Statement() {
@@ -223,7 +248,7 @@ Statement& Statement::bind(int index, int value) {
     if (result != SQLITE_OK) {
         std::string error = "Failed to bind int parameter: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_PREPARE_STATEMENT_ERROR(error);
     }
     return *this;
@@ -235,7 +260,7 @@ Statement& Statement::bind(int index, int64_t value) {
     if (result != SQLITE_OK) {
         std::string error = "Failed to bind int64 parameter: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_PREPARE_STATEMENT_ERROR(error);
     }
     return *this;
@@ -247,7 +272,7 @@ Statement& Statement::bind(int index, double value) {
     if (result != SQLITE_OK) {
         std::string error = "Failed to bind double parameter: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_PREPARE_STATEMENT_ERROR(error);
     }
     return *this;
@@ -261,7 +286,7 @@ Statement& Statement::bind(int index, const std::string& value) {
     if (result != SQLITE_OK) {
         std::string error = "Failed to bind text parameter: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_PREPARE_STATEMENT_ERROR(error);
     }
     return *this;
@@ -273,7 +298,7 @@ Statement& Statement::bindNull(int index) {
     if (result != SQLITE_OK) {
         std::string error = "Failed to bind NULL parameter: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_PREPARE_STATEMENT_ERROR(error);
     }
     return *this;
@@ -284,7 +309,7 @@ bool Statement::execute() {
     if (result != SQLITE_DONE && result != SQLITE_ROW) {
         std::string error = "Failed to execute statement: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_SQL_EXECUTION_ERROR(error);
     }
     return true;
@@ -299,7 +324,7 @@ bool Statement::step() {
     if (result != SQLITE_DONE) {
         std::string error = "Failed to step statement: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_SQL_EXECUTION_ERROR(error);
     }
 
@@ -310,7 +335,7 @@ Statement& Statement::reset() {
     if (sqlite3_reset(stmt.get()) != SQLITE_OK) {
         std::string error = "Failed to reset statement: ";
         error += sqlite3_errmsg(db.get());
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         THROW_PREPARE_STATEMENT_ERROR(error);
     }
     return *this;
@@ -319,8 +344,8 @@ Statement& Statement::reset() {
 int Statement::getInt(int index) const {
     validateIndex(index, false);
     if (!checkColumnType(index, SQLITE_INTEGER)) {
-        LOG_F(WARNING,
-              "Column type mismatch: expected INTEGER, converting anyway");
+        spdlog::warn(
+            "Column type mismatch: expected INTEGER, converting anyway");
     }
     return sqlite3_column_int(stmt.get(), index);
 }
@@ -328,8 +353,8 @@ int Statement::getInt(int index) const {
 int64_t Statement::getInt64(int index) const {
     validateIndex(index, false);
     if (!checkColumnType(index, SQLITE_INTEGER)) {
-        LOG_F(WARNING,
-              "Column type mismatch: expected INTEGER, converting anyway");
+        spdlog::warn(
+            "Column type mismatch: expected INTEGER, converting anyway");
     }
     return sqlite3_column_int64(stmt.get(), index);
 }
@@ -337,8 +362,7 @@ int64_t Statement::getInt64(int index) const {
 double Statement::getDouble(int index) const {
     validateIndex(index, false);
     if (!checkColumnType(index, SQLITE_FLOAT)) {
-        LOG_F(WARNING,
-              "Column type mismatch: expected FLOAT, converting anyway");
+        spdlog::warn("Column type mismatch: expected FLOAT, converting anyway");
     }
     return sqlite3_column_double(stmt.get(), index);
 }
@@ -350,8 +374,7 @@ std::string Statement::getText(int index) const {
     }
 
     if (!checkColumnType(index, SQLITE_TEXT)) {
-        LOG_F(WARNING,
-              "Column type mismatch: expected TEXT, converting anyway");
+        spdlog::warn("Column type mismatch: expected TEXT, converting anyway");
     }
 
     const unsigned char* text = sqlite3_column_text(stmt.get(), index);
@@ -368,8 +391,7 @@ std::vector<uint8_t> Statement::getBlob(int index) const {
     }
 
     if (!checkColumnType(index, SQLITE_BLOB)) {
-        LOG_F(WARNING,
-              "Column type mismatch: expected BLOB, converting anyway");
+        spdlog::warn("Column type mismatch: expected BLOB, converting anyway");
     }
 
     const void* blob = sqlite3_column_blob(stmt.get(), index);
@@ -649,7 +671,7 @@ CacheManager& CacheManager::getInstance() {
 void CacheManager::put(const std::string& key, const std::string& value,
                        int ttlSeconds) {
     if (key.empty()) {
-        LOG_F(WARNING, "Attempted to cache with empty key");
+        spdlog::warn("Attempted to cache with empty key");
         return;
     }
 
@@ -728,11 +750,12 @@ void CacheManager::purgePeriodically() {
 
             size_t removed = purgeExpired();
             if (removed > 0) {
-                LOG_F(INFO, "Cache purge: removed {} expired entries", removed);
+                spdlog::info("Cache purge: removed {} expired entries",
+                             removed);
             }
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception in cache purge thread: {}", e.what());
+        spdlog::error("Exception in cache purge thread: {}", e.what());
     }
 }
 
@@ -759,5 +782,56 @@ template bool ColumnValue<bool>::readFromStatement(const Statement&, int);
 
 // QueryBuilder::where - template specializations
 template QueryBuilder& QueryBuilder::where<>(const std::string&);
+
+// Statement::bindNamed implementations
+template <>
+Statement& Statement::bindNamed<int>(const std::string& name,
+                                     const int& value) {
+    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
+    if (index == 0) {
+        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
+    }
+    return bind(index, value);
+}
+
+template <>
+Statement& Statement::bindNamed<int64_t>(const std::string& name,
+                                         const int64_t& value) {
+    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
+    if (index == 0) {
+        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
+    }
+    return bind(index, value);
+}
+
+template <>
+Statement& Statement::bindNamed<double>(const std::string& name,
+                                        const double& value) {
+    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
+    if (index == 0) {
+        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
+    }
+    return bind(index, value);
+}
+
+template <>
+Statement& Statement::bindNamed<std::string>(const std::string& name,
+                                             const std::string& value) {
+    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
+    if (index == 0) {
+        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
+    }
+    return bind(index, value);
+}
+
+template <>
+Statement& Statement::bindNamed<std::nullptr_t>(const std::string& name,
+                                                const std::nullptr_t& value) {
+    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
+    if (index == 0) {
+        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
+    }
+    return bindNull(index);
+}
 
 }  // namespace lithium::database

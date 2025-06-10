@@ -4,50 +4,47 @@
 #include <fstream>
 #include <iostream>
 #include <numeric>
+#include <sstream>
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
-// 获取或创建用户 ID
 auto AdvancedRecommendationEngine::getUserId(const std::string& user) -> int {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     auto userIterator = userIndex_.find(user);
     if (userIterator == userIndex_.end()) {
         int newIndex = static_cast<int>(userIndex_.size());
         userIndex_[user] = newIndex;
-        LOG_F(INFO, "New user added: {} with ID: {}", user, newIndex);
+        spdlog::info("New user added: {} with ID: {}", user, newIndex);
         return newIndex;
     }
     return userIterator->second;
 }
 
-// 获取或创建物品 ID
 auto AdvancedRecommendationEngine::getItemId(const std::string& item) -> int {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     auto itemIterator = itemIndex_.find(item);
     if (itemIterator == itemIndex_.end()) {
         int newIndex = static_cast<int>(itemIndex_.size());
         itemIndex_[item] = newIndex;
-        LOG_F(INFO, "New item added: {} with ID: {}", item, newIndex);
+        spdlog::info("New item added: {} with ID: {}", item, newIndex);
         return newIndex;
     }
     return itemIterator->second;
 }
 
-// 获取或创建特征 ID
 auto AdvancedRecommendationEngine::getFeatureId(const std::string& feature)
     -> int {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     auto featureIterator = featureIndex_.find(feature);
     if (featureIterator == featureIndex_.end()) {
         int newIndex = static_cast<int>(featureIndex_.size());
         featureIndex_[feature] = newIndex;
-        LOG_F(INFO, "New feature added: {} with ID: {}", feature, newIndex);
+        spdlog::info("New feature added: {} with ID: {}", feature, newIndex);
         return newIndex;
     }
     return featureIterator->second;
 }
 
-// 计算时间衰减因子
 auto AdvancedRecommendationEngine::calculateTimeFactor(
     const std::chrono::system_clock::time_point& ratingTime) const -> double {
     auto now = std::chrono::system_clock::now();
@@ -55,14 +52,13 @@ auto AdvancedRecommendationEngine::calculateTimeFactor(
         std::chrono::duration_cast<std::chrono::hours>(now - ratingTime);
     double timeFactor =
         std::exp(-TIME_DECAY_FACTOR * static_cast<double>(duration.count()) /
-                 (HOURS_IN_A_DAY * DAYS_IN_A_YEAR));  // 按年衰减
+                 (HOURS_IN_A_DAY * DAYS_IN_A_YEAR));  // Annual decay
     return timeFactor;
 }
 
-// 规范化评分
 void AdvancedRecommendationEngine::normalizeRatings() {
-    std::lock_guard<std::mutex> lock(mtx_);
-    LOG_F(INFO, "Starting normalization of ratings.");
+    std::lock_guard lock(mtx_);
+    spdlog::info("Starting normalization of ratings");
     double mean = 0.0;
     if (!ratings_.empty()) {
         mean = std::accumulate(ratings_.begin(), ratings_.end(), 0.0,
@@ -72,20 +68,19 @@ void AdvancedRecommendationEngine::normalizeRatings() {
                ratings_.size();
     }
     for (auto& tup : ratings_) {
-        std::get<2>(tup) -= mean;  // 减去平均值
+        std::get<2>(tup) -= mean;
     }
-    LOG_F(INFO, "Ratings normalization completed.");
+    spdlog::info("Ratings normalization completed");
 }
 
-// 更新矩阵分解
 void AdvancedRecommendationEngine::updateMatrixFactorization() {
-    std::lock_guard<std::mutex> lock(mtx_);
-    LOG_F(INFO, "Starting matrix factorization update.");
+    std::lock_guard lock(mtx_);
+    spdlog::info("Starting matrix factorization update");
 
     size_t numUsers = userIndex_.size();
     size_t numItems = itemIndex_.size();
 
-    // 初始化用户和物品因子矩阵
+    // Initialize user and item factor matrices
     if (userFactors_.rows() != static_cast<int>(numUsers) ||
         userFactors_.cols() != LATENT_FACTORS) {
         userFactors_ = Eigen::MatrixXd::Random(numUsers, LATENT_FACTORS) *
@@ -97,7 +92,7 @@ void AdvancedRecommendationEngine::updateMatrixFactorization() {
                        RANDOM_INIT_RANGE;
     }
 
-    // 开始迭代
+    // Perform iterative optimization
     for (int iter = 0; iter < MAX_ITERATIONS; ++iter) {
         for (const auto& [userId, itemId, rating, timestamp] : ratings_) {
             double pred =
@@ -112,24 +107,31 @@ void AdvancedRecommendationEngine::updateMatrixFactorization() {
                 LEARNING_RATE * (err * userVec - REGULARIZATION * itemVec);
         }
     }
-    LOG_F(INFO, "Matrix factorization update completed.");
+    spdlog::info("Matrix factorization update completed");
 }
 
-// 添加评分
 void AdvancedRecommendationEngine::addRating(const std::string& user,
                                              const std::string& item,
                                              double rating) {
     if (rating < 0.0 || rating > 5.0) {
-        throw DataException("Rating must be between 0 and 5.");
+        throw DataException("Rating must be between 0 and 5");
     }
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     int userId = getUserId(user);
     int itemId = getItemId(item);
     ratings_.emplace_back(userId, itemId, rating,
                           std::chrono::system_clock::now());
 }
 
-// 批量添加评分
+void AdvancedRecommendationEngine::addImplicitFeedback(
+    const std::string& user, const std::string& item) {
+    std::lock_guard lock(mtx_);
+    int userId = getUserId(user);
+    int itemId = getItemId(item);
+    ratings_.emplace_back(userId, itemId, 1.0,
+                          std::chrono::system_clock::now());
+}
+
 void AdvancedRecommendationEngine::addRatings(
     const std::vector<std::tuple<std::string, std::string, double>>& ratings) {
     std::vector<std::tuple<std::string, std::string, double>> batch;
@@ -140,6 +142,7 @@ void AdvancedRecommendationEngine::addRatings(
         if (batch.size() >= BATCH_SIZE) {
             processBatch(batch);
             batch.clear();
+            batch.reserve(BATCH_SIZE);
         }
     }
 
@@ -148,24 +151,28 @@ void AdvancedRecommendationEngine::addRatings(
     }
 }
 
-// 处理批量数据
 void AdvancedRecommendationEngine::processBatch(
     const std::vector<std::tuple<std::string, std::string, double>>& batch) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
 
     for (const auto& [user, item, rating] : batch) {
         try {
+            if (rating < 0.0 || rating > 5.0) {
+                spdlog::warn("Invalid rating value {} for user {} and item {}",
+                             rating, user, item);
+                continue;
+            }
+
             int userId = getUserId(user);
             int itemId = getItemId(item);
             ratings_.emplace_back(userId, itemId, rating,
                                   std::chrono::system_clock::now());
         } catch (const std::exception& e) {
-            LOG_F(WARNING, "Failed to process rating: {}", e.what());
+            spdlog::warn("Failed to process rating: {}", e.what());
         }
     }
 }
 
-// 清理过期缓存
 void AdvancedRecommendationEngine::clearExpiredCache() {
     auto now = std::chrono::system_clock::now();
     if (now - cache_.lastUpdate > Cache::CACHE_DURATION) {
@@ -173,13 +180,12 @@ void AdvancedRecommendationEngine::clearExpiredCache() {
         cache_.lastUpdate = now;
     }
 
-    // 限制缓存大小
+    // Limit cache size for memory efficiency
     if (cache_.recommendations.size() > CACHE_MAX_ITEMS) {
         cache_.recommendations.clear();
     }
 }
 
-// 计算物品相似度
 auto AdvancedRecommendationEngine::calculateItemSimilarity(int item1, int item2)
     -> double {
     if (!itemFeatures_.contains(item1) || !itemFeatures_.contains(item2)) {
@@ -190,6 +196,7 @@ auto AdvancedRecommendationEngine::calculateItemSimilarity(int item1, int item2)
     double norm1 = 0.0;
     double norm2 = 0.0;
 
+    // Calculate cosine similarity between feature vectors
     for (const auto& [featureId, value1] : itemFeatures_[item1]) {
         if (itemFeatures_[item2].contains(featureId)) {
             dotProduct += value1 * itemFeatures_[item2][featureId];
@@ -204,16 +211,16 @@ auto AdvancedRecommendationEngine::calculateItemSimilarity(int item1, int item2)
     return dotProduct / (std::sqrt(norm1) * std::sqrt(norm2) + 1e-8);
 }
 
-// 混合评分计算
-auto AdvancedRecommendationEngine::hybridScore(
-    const std::string& user, const std::string& item) -> double {
+auto AdvancedRecommendationEngine::hybridScore(const std::string& user,
+                                               const std::string& item)
+    -> double {
     int userId = getUserId(user);
     int itemId = getItemId(item);
 
-    // 矩阵分解评分
+    // Matrix factorization score
     double mfScore = userFactors_.row(userId).dot(itemFactors_.row(itemId));
 
-    // 基于内容的评分
+    // Content-based score
     double contentScore = 0.0;
     for (const auto& [otherItemId, _] : itemFeatures_) {
         if (otherItemId != itemId) {
@@ -224,11 +231,10 @@ auto AdvancedRecommendationEngine::hybridScore(
         }
     }
 
-    // 混合评分
+    // Combine scores with weighting
     return 0.7 * mfScore + 0.3 * contentScore;
 }
 
-// 获取缓存的推荐结果
 auto AdvancedRecommendationEngine::getCachedRecommendations(
     const std::string& user)
     -> std::optional<std::vector<std::pair<std::string, double>>> {
@@ -240,11 +246,10 @@ auto AdvancedRecommendationEngine::getCachedRecommendations(
     return std::nullopt;
 }
 
-// 优化模型
 void AdvancedRecommendationEngine::optimize() {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
 
-    // 清理无效数据
+    // Remove invalid ratings
     ratings_.erase(std::remove_if(ratings_.begin(), ratings_.end(),
                                   [](const auto& rating) {
                                       return std::get<2>(rating) < 0 ||
@@ -252,17 +257,16 @@ void AdvancedRecommendationEngine::optimize() {
                                   }),
                    ratings_.end());
 
-    // 更新矩阵分解
+    // Update model
     updateMatrixFactorization();
 
-    // 清理缓存
+    // Reset cache
     cache_.recommendations.clear();
-    LOG_F(INFO, "Model optimization completed");
+    spdlog::info("Model optimization completed");
 }
 
-// 清理所有数据
 void AdvancedRecommendationEngine::clear() {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     ratings_.clear();
     itemFeatures_.clear();
     userIndex_.clear();
@@ -271,11 +275,12 @@ void AdvancedRecommendationEngine::clear() {
     cache_.recommendations.clear();
     userFactors_.resize(0, 0);
     itemFactors_.resize(0, 0);
+
+    spdlog::info("All data cleared from recommendation engine");
 }
 
-// 获取统计信息
 auto AdvancedRecommendationEngine::getStats() -> std::string {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     std::stringstream ss;
     ss << "Users: " << userIndex_.size() << "\n"
        << "Items: " << itemIndex_.size() << "\n"
@@ -285,54 +290,67 @@ auto AdvancedRecommendationEngine::getStats() -> std::string {
     return ss.str();
 }
 
-// 添加物品
 void AdvancedRecommendationEngine::addItem(
     const std::string& item, const std::vector<std::string>& features) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     int itemId = getItemId(item);
     for (const auto& feature : features) {
         int featureId = getFeatureId(feature);
-        itemFeatures_[itemId][featureId] = 1.0;  // 二进制特征，存在即为 1.0
+        itemFeatures_[itemId][featureId] = 1.0;  // Binary feature presence
     }
 }
 
-// 添加物品特征
+void AdvancedRecommendationEngine::addItems(
+    const std::vector<std::pair<std::string, std::vector<std::string>>>&
+        items) {
+    for (const auto& [item, features] : items) {
+        addItem(item, features);
+    }
+}
+
 void AdvancedRecommendationEngine::addItemFeature(const std::string& item,
                                                   const std::string& feature,
                                                   double value) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     if (value < 0.0 || value > 1.0) {
-        throw DataException("Feature value must be between 0 and 1.");
+        throw DataException("Feature value must be between 0 and 1");
     }
     int itemId = getItemId(item);
     int featureId = getFeatureId(feature);
     itemFeatures_[itemId][featureId] = value;
 }
 
-// 训练模型
 void AdvancedRecommendationEngine::train() {
-    LOG_F(INFO, "Starting model training.");
+    spdlog::info("Starting model training");
     normalizeRatings();
     updateMatrixFactorization();
-    LOG_F(INFO, "Model training completed.");
+    spdlog::info("Model training completed");
 }
 
-// 生成推荐
 auto AdvancedRecommendationEngine::recommendItems(const std::string& user,
                                                   int topN)
     -> std::vector<std::pair<std::string, double>> {
-    std::lock_guard<std::mutex> lock(mtx_);
+    // Check cache first for performance
+    auto cachedRecommendations = getCachedRecommendations(user);
+    if (cachedRecommendations.has_value()) {
+        auto recommendations = cachedRecommendations.value();
+        if (recommendations.size() >= static_cast<size_t>(topN)) {
+            return {recommendations.begin(), recommendations.begin() + topN};
+        }
+    }
+
+    std::lock_guard lock(mtx_);
     int userId = getUserId(user);
     std::unordered_map<int, double> scores;
 
-    // 矩阵分解评分
+    // Calculate scores for all items
     Eigen::VectorXd userVec = userFactors_.row(userId);
     for (int itemId = 0; itemId < itemFactors_.rows(); ++itemId) {
         double score = userVec.dot(itemFactors_.row(itemId));
         scores[itemId] = score;
     }
 
-    // 排序并获取前 topN 个物品
+    // Sort by score and select top N
     std::vector<std::pair<int, double>> scoredItems(scores.begin(),
                                                     scores.end());
     std::sort(scoredItems.begin(), scoredItems.end(),
@@ -341,6 +359,8 @@ auto AdvancedRecommendationEngine::recommendItems(const std::string& user,
               });
 
     std::vector<std::pair<std::string, double>> recommendations;
+    recommendations.reserve(topN);
+
     for (const auto& [itemId, score] : scoredItems) {
         const auto& itemNameIt = std::find_if(
             itemIndex_.begin(), itemIndex_.end(),
@@ -353,27 +373,40 @@ auto AdvancedRecommendationEngine::recommendItems(const std::string& user,
         }
     }
 
+    // Cache results for future use
+    cache_.recommendations[user] = recommendations;
+    cache_.lastUpdate = std::chrono::system_clock::now();
+
     return recommendations;
 }
 
-// 预测评分
-auto AdvancedRecommendationEngine::predictRating(
-    const std::string& user, const std::string& item) -> double {
-    std::lock_guard<std::mutex> lock(mtx_);
+auto AdvancedRecommendationEngine::recommend(const std::string& user, int topN)
+    -> std::vector<std::pair<std::string, double>> {
+    return recommendItems(user, topN);
+}
+
+auto AdvancedRecommendationEngine::predictRating(const std::string& user,
+                                                 const std::string& item)
+    -> double {
+    std::lock_guard lock(mtx_);
     int userId = getUserId(user);
     int itemId = getItemId(item);
     return userFactors_.row(userId).dot(itemFactors_.row(itemId));
 }
 
-// 保存模型到文件
+auto AdvancedRecommendationEngine::predict(const std::string& user,
+                                           const std::string& item) -> double {
+    return predictRating(user, item);
+}
+
 void AdvancedRecommendationEngine::saveModel(const std::string& filename) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     std::ofstream file(filename, std::ios::binary);
     if (!file) {
         throw ModelException("Failed to open file for saving: " + filename);
     }
 
-    // 保存用户索引
+    // Save user index
     size_t userIndexSize = userIndex_.size();
     file.write(reinterpret_cast<const char*>(&userIndexSize), sizeof(size_t));
 
@@ -384,7 +417,7 @@ void AdvancedRecommendationEngine::saveModel(const std::string& filename) {
         file.write(reinterpret_cast<const char*>(&userId), sizeof(int));
     }
 
-    // 保存物品索引
+    // Save item index
     size_t itemIndexSize = itemIndex_.size();
     file.write(reinterpret_cast<const char*>(&itemIndexSize), sizeof(size_t));
 
@@ -395,7 +428,7 @@ void AdvancedRecommendationEngine::saveModel(const std::string& filename) {
         file.write(reinterpret_cast<const char*>(&itemId), sizeof(int));
     }
 
-    // 保存用户因子矩阵
+    // Save user factor matrix
     Eigen::Index rows = userFactors_.rows();
     Eigen::Index cols = userFactors_.cols();
     file.write(reinterpret_cast<const char*>(&rows), sizeof(Eigen::Index));
@@ -403,7 +436,7 @@ void AdvancedRecommendationEngine::saveModel(const std::string& filename) {
     file.write(reinterpret_cast<const char*>(userFactors_.data()),
                static_cast<std::streamsize>(sizeof(double) * rows * cols));
 
-    // 保存物品因子矩阵
+    // Save item factor matrix
     rows = itemFactors_.rows();
     cols = itemFactors_.cols();
     file.write(reinterpret_cast<const char*>(&rows), sizeof(int));
@@ -412,18 +445,17 @@ void AdvancedRecommendationEngine::saveModel(const std::string& filename) {
                static_cast<std::streamsize>(sizeof(double) * rows * cols));
 
     file.close();
-    LOG_F(INFO, "Model saved successfully to {}", filename);
+    spdlog::info("Model saved successfully to {}", filename);
 }
 
-// 从文件加载模型
 void AdvancedRecommendationEngine::loadModel(const std::string& filename) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard lock(mtx_);
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
         throw ModelException("Failed to open file for loading: " + filename);
     }
 
-    // 加载用户索引
+    // Load user index
     size_t userIndexSize;
     file.read(reinterpret_cast<char*>(&userIndexSize), sizeof(size_t));
     for (size_t i = 0; i < userIndexSize; ++i) {
@@ -436,7 +468,7 @@ void AdvancedRecommendationEngine::loadModel(const std::string& filename) {
         userIndex_[user] = userId;
     }
 
-    // 加载物品索引
+    // Load item index
     size_t itemIndexSize;
     file.read(reinterpret_cast<char*>(&itemIndexSize), sizeof(size_t));
     for (size_t i = 0; i < itemIndexSize; ++i) {
@@ -449,7 +481,7 @@ void AdvancedRecommendationEngine::loadModel(const std::string& filename) {
         itemIndex_[item] = itemId;
     }
 
-    // 加载用户因子矩阵
+    // Load user factor matrix
     int rows, cols;
     file.read(reinterpret_cast<char*>(&rows), sizeof(int));
     file.read(reinterpret_cast<char*>(&cols), sizeof(int));
@@ -457,7 +489,7 @@ void AdvancedRecommendationEngine::loadModel(const std::string& filename) {
     file.read(reinterpret_cast<char*>(userFactors_.data()),
               static_cast<std::streamsize>(sizeof(double) * rows * cols));
 
-    // 加载物品因子矩阵
+    // Load item factor matrix
     file.read(reinterpret_cast<char*>(&rows), sizeof(int));
     file.read(reinterpret_cast<char*>(&cols), sizeof(int));
     itemFactors_.resize(rows, cols);
@@ -465,5 +497,5 @@ void AdvancedRecommendationEngine::loadModel(const std::string& filename) {
               static_cast<std::streamsize>(sizeof(double) * rows * cols));
 
     file.close();
-    LOG_F(INFO, "Model loaded successfully from {}", filename);
+    spdlog::info("Model loaded successfully from {}", filename);
 }

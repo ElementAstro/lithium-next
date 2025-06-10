@@ -108,62 +108,147 @@ public:
                                Constants::EXPOSURE_SEQUENCE);
         // Define the routes
         CROW_ROUTE(app, "/exposure_sequence/addTarget")
-            .methods("POST"_method)(&SequenceController::addTarget, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->addTarget(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/removeTarget")
-            .methods("POST"_method)(&SequenceController::removeTarget, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->removeTarget(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/modifyTarget")
-            .methods("POST"_method)(&SequenceController::modifyTarget, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->modifyTarget(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/executeAll")
-            .methods("POST"_method)(&SequenceController::executeAll, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->executeAll(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/stop")
-            .methods("POST"_method)(&SequenceController::stop, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->stop(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/pause")
-            .methods("POST"_method)(&SequenceController::pause, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->pause(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/resume")
-            .methods("POST"_method)(&SequenceController::resume, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->resume(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/saveSequence")
-            .methods("POST"_method)(&SequenceController::saveSequence, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->saveSequence(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/loadSequence")
-            .methods("POST"_method)(&SequenceController::loadSequence, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->loadSequence(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/getTargetNames")
-            .methods("GET"_method)(&SequenceController::getTargetNames, this);
+            .methods("GET"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->getTargetNames(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/getTargetStatus")
-            .methods("POST"_method)(&SequenceController::getTargetStatus, this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->getTargetStatus(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/getProgress")
-            .methods("GET"_method)(&SequenceController::getProgress, this);
+            .methods("GET"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->getProgress(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/setSchedulingStrategy")
-            .methods("POST"_method)(&SequenceController::setSchedulingStrategy,
-                                    this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->setSchedulingStrategy(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/setRecoveryStrategy")
-            .methods("POST"_method)(&SequenceController::setRecoveryStrategy,
-                                    this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->setRecoveryStrategy(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/addAlternativeTarget")
-            .methods("POST"_method)(&SequenceController::addAlternativeTarget,
-                                    this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->addAlternativeTarget(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/setMaxConcurrentTargets")
             .methods("POST"_method)(
-                &SequenceController::setMaxConcurrentTargets, this);
+                [this](crow::request& req, crow::response& res) {
+                    this->setMaxConcurrentTargets(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/setGlobalTimeout")
-            .methods("POST"_method)(&SequenceController::setGlobalTimeout,
-                                    this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->setGlobalTimeout(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/getFailedTargets")
-            .methods("GET"_method)(&SequenceController::getFailedTargets, this);
+            .methods("GET"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->getFailedTargets(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/retryFailedTargets")
-            .methods("POST"_method)(&SequenceController::retryFailedTargets,
-                                    this);
+            .methods("POST"_method)(
+                [this](crow::request& req, crow::response& res) {
+                    this->retryFailedTargets(req, res);
+                });
         CROW_ROUTE(app, "/exposure_sequence/getExecutionStats")
-            .methods("GET"_method)(&SequenceController::getExecutionStats,
-                                   this);
+            .methods("GET"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->getExecutionStats(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/setTargetTaskParams")
-            .methods("POST"_method)(&SequenceController::setTargetTaskParams,
-                                    this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->setTargetTaskParams(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/getTargetTaskParams")
-            .methods("POST"_method)(&SequenceController::getTargetTaskParams,
-                                    this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->getTargetTaskParams(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/setTargetParams")
-            .methods("POST"_method)(&SequenceController::setTargetParams, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->setTargetParams(req, res);
+                });
+
         CROW_ROUTE(app, "/exposure_sequence/getTargetParams")
-            .methods("POST"_method)(&SequenceController::getTargetParams, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->getTargetParams(req, res);
+                });
     }
 
     // Endpoint to add a target

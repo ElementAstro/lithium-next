@@ -12,7 +12,6 @@ public:
     void execute(const json& params) override;
 
 private:
-    // 处理不同的配置管理操作
     void handleSetConfig(const json& params);
     void handleGetConfig(const json& params);
     void handleDeleteConfig(const json& params);
@@ -21,7 +20,6 @@ private:
     void handleMergeConfig(const json& params);
     void handleListConfig(const json& params);
 
-    // 参数验证
     bool validateSetParams(const json& params);
     bool validateGetParams(const json& params);
     bool validateDeleteParams(const json& params);

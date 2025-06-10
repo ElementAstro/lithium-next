@@ -30,12 +30,9 @@ target_include_directories(component_manager
 # Link required libraries
 target_link_libraries(component_manager
     PUBLIC
-        atom::components
-        atom::memory
-        atom::error
-        atom::log
-    PRIVATE
-        nlohmann_json::nlohmann_json
+        atom_components
+        atom_memory
+        atom_error
 )
 
 # Set compiler features

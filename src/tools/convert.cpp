@@ -1,283 +1,401 @@
 #include "convert.hpp"
 #include "constant.hpp"
 
-#include "atom/log/loguru.hpp"
-
+#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <numbers>
+#include <sstream>
 
 namespace lithium::tools {
+
+namespace {
+// Mathematical constants
+constexpr double PI = std::numbers::pi;
+constexpr double TWO_PI = 2.0 * PI;
+constexpr double HALF_PI = PI / 2.0;
+constexpr double DEGREES_IN_CIRCLE = 360.0;
+constexpr double HOURS_IN_DAY = 24.0;
+constexpr double MINUTES_IN_HOUR = 60.0;
+constexpr double SECONDS_IN_MINUTE = 60.0;
+constexpr double SECONDS_IN_HOUR = MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
+constexpr double DEGREES_TO_RADIANS = PI / 180.0;
+constexpr double RADIANS_TO_DEGREES = 180.0 / PI;
+constexpr double HOURS_TO_DEGREES = 15.0;
+constexpr double DEGREES_TO_HOURS = 1.0 / HOURS_TO_DEGREES;
+constexpr double EPSILON = 1.0e-10;
+}  // namespace
+
 auto rangeTo(double value, double maxVal, double minVal) -> double {
-    LOG_F(INFO, "rangeTo: value={:.6f}, max={:.6f}, min={:.6f}", value, maxVal,
-          minVal);
+    spdlog::info("rangeTo: value={:.6f}, max={:.6f}, min={:.6f}", value, maxVal,
+                 minVal);
 
     double period = maxVal - minVal;
 
-    while (value < minVal) {
-        value += period;
-        LOG_F(INFO, "Adjusted value up: {:.6f}", value);
+    // Faster modulo calculation for range wrapping
+    if (period > 0) {
+        value = std::fmod(value - minVal, period);
+        if (value < 0) {
+            value += period;
+        }
+        value += minVal;
+
+        // Handle potential floating-point rounding issues
+        if (std::abs(value - maxVal) < EPSILON) {
+            value = minVal;
+        }
     }
 
-    while (value > maxVal) {
-        value -= period;
-        LOG_F(INFO, "Adjusted value down: {:.6f}", value);
-    }
-
-    LOG_F(INFO, "Final value: {:.6f}", value);
+    spdlog::info("Final value: {:.6f}", value);
     return value;
 }
 
 auto degreeToRad(double degree) -> double {
-    double radians = degree * K_DEGREES_TO_RADIANS;
-    LOG_F(INFO, "degreeToRad: {:.6f}° -> {:.6f} rad", degree, radians);
+    double radians = degree * DEGREES_TO_RADIANS;
+    spdlog::info("degreeToRad: {:.6f}° -> {:.6f} rad", degree, radians);
     return radians;
 }
 
 auto radToDegree(double radians) -> double {
-    double degrees = radians * K_RADIANS_TO_DEGREES;
-    LOG_F(INFO, "radToDegree: {:.6f} rad -> {:.6f}°", radians, degrees);
+    double degrees = radians * RADIANS_TO_DEGREES;
+    spdlog::info("radToDegree: {:.6f} rad -> {:.6f}°", radians, degrees);
     return degrees;
 }
 
 auto hourToDegree(double hours) -> double {
-    double degrees = hours * K_HOURS_TO_DEGREES;
-    degrees = rangeTo(degrees, K_DEGREES_IN_CIRCLE, 0.0);
-    LOG_F(INFO, "hourToDegree: {:.6f}h -> {:.6f}°", hours, degrees);
+    double degrees = hours * HOURS_TO_DEGREES;
+    degrees = rangeTo(degrees, DEGREES_IN_CIRCLE, 0.0);
+    spdlog::info("hourToDegree: {:.6f}h -> {:.6f}°", hours, degrees);
     return degrees;
 }
 
 auto hourToRad(double hours) -> double {
-    double degrees = hours * K_HOURS_TO_DEGREES;
-    degrees = rangeTo(degrees, K_DEGREES_IN_CIRCLE, 0.0);
+    double degrees = hours * HOURS_TO_DEGREES;
     double radians = degreeToRad(degrees);
-    LOG_F(INFO, "hourToRad: {:.6f}h -> {:.6f} rad", hours, radians);
+    spdlog::info("hourToRad: {:.6f}h -> {:.6f} rad", hours, radians);
     return radians;
 }
 
 auto degreeToHour(double degrees) -> double {
-    double hours = degrees / K_HOURS_TO_DEGREES;
-    hours = rangeTo(hours, K_HOURS_IN_DAY, 0.0);
-    LOG_F(INFO, "degreeToHour: {:.6f}° -> {:.6f}h", degrees, hours);
+    double hours = degrees * DEGREES_TO_HOURS;
+    hours = rangeTo(hours, HOURS_IN_DAY, 0.0);
+    spdlog::info("degreeToHour: {:.6f}° -> {:.6f}h", degrees, hours);
     return hours;
 }
 
 auto radToHour(double radians) -> double {
     double degrees = radToDegree(radians);
-    degrees = rangeTo(degrees, K_DEGREES_IN_CIRCLE, 0.0);
     double hours = degreeToHour(degrees);
-    LOG_F(INFO, "radToHour: {:.6f} rad -> {:.6f}h", radians, hours);
+    spdlog::info("radToHour: {:.6f} rad -> {:.6f}h", radians, hours);
     return hours;
 }
 
 auto getHaDegree(double rightAscensionRad, double lstDegree) -> double {
-    double hourAngle = lstDegree - radToDegree(rightAscensionRad);
-    hourAngle = rangeTo(hourAngle, K_DEGREES_IN_CIRCLE, 0.0);
-    LOG_F(INFO, "getHaDegree: RA={:.6f} rad, LST={:.6f}° -> HA={:.6f}°",
-          rightAscensionRad, lstDegree, hourAngle);
+    double rightAscensionDeg = radToDegree(rightAscensionRad);
+    double hourAngle = lstDegree - rightAscensionDeg;
+    hourAngle = rangeTo(hourAngle, DEGREES_IN_CIRCLE, 0.0);
+
+    spdlog::info(
+        "getHaDegree: RA={:.6f} rad ({:.6f}°), LST={:.6f}° -> HA={:.6f}°",
+        rightAscensionRad, rightAscensionDeg, lstDegree, hourAngle);
     return hourAngle;
 }
 
 auto raDecToAltAz(double hourAngleRad, double declinationRad,
                   double latitudeRad) -> std::vector<double> {
-    LOG_F(INFO,
-          "raDecToAltAz input: HA={:.6f} rad, Dec={:.6f} rad, Lat={:.6f} rad",
-          hourAngleRad, declinationRad, latitudeRad);
+    spdlog::info(
+        "raDecToAltAz input: HA={:.6f} rad, Dec={:.6f} rad, Lat={:.6f} rad",
+        hourAngleRad, declinationRad, latitudeRad);
 
-    double cosLatitude = std::cos(latitudeRad);
+    // Pre-calculate trigonometric values for performance
+    double sinLat = std::sin(latitudeRad);
+    double cosLat = std::cos(latitudeRad);
+    double sinDec = std::sin(declinationRad);
+    double cosDec = std::cos(declinationRad);
+    double cosHA = std::cos(hourAngleRad);
+    double sinHA = std::sin(hourAngleRad);
 
-    auto altitudeRad = std::asin(
-        std::sin(latitudeRad) * std::sin(declinationRad) +
-        cosLatitude * std::cos(declinationRad) * std::cos(hourAngleRad));
+    // Calculate altitude
+    double sinAlt = sinLat * sinDec + cosLat * cosDec * cosHA;
+    // Clamp to prevent numerical errors
+    sinAlt = std::clamp(sinAlt, -1.0, 1.0);
+    double altitudeRad = std::asin(sinAlt);
 
+    // Calculate azimuth
     double azimuthRad;
-    if (cosLatitude < K_EPSILON_VALUE) {
-        azimuthRad = hourAngleRad;  // polar case
-        LOG_F(INFO, "Polar case detected, using HA as azimuth");
+    if (std::abs(cosLat) < EPSILON) {
+        // Near the poles, azimuth is less defined and depends on hour angle
+        azimuthRad = hourAngleRad;
+        spdlog::info("Polar case detected, using HA as azimuth");
     } else {
-        double temp =
-            std::acos((std::sin(declinationRad) -
-                       std::sin(altitudeRad) * std::sin(latitudeRad)) /
-                      (std::cos(altitudeRad) * cosLatitude));
+        // Calculate azimuth
+        double num = sinDec - sinAlt * sinLat;
+        double den = cosDec * cosHA * cosLat;
 
-        azimuthRad = std::sin(hourAngleRad) > 0 ? 2 * M_PI - temp : temp;
-        LOG_F(INFO, "Calculated azimuth temp={:.6f}, final={:.6f} rad", temp,
-              azimuthRad);
+        // Handle numerical instability when den approaches 0
+        if (std::abs(den) < EPSILON) {
+            azimuthRad = sinHA >= 0 ? HALF_PI : 3 * HALF_PI;
+        } else {
+            double cosAz = num / (cosLat * std::cos(altitudeRad));
+            // Clamp to prevent numerical errors
+            cosAz = std::clamp(cosAz, -1.0, 1.0);
+            azimuthRad = std::acos(cosAz);
+
+            // Adjust for the correct quadrant
+            if (sinHA > 0) {
+                azimuthRad = TWO_PI - azimuthRad;
+            }
+        }
+
+        spdlog::info("Calculated azimuth: {:.6f} rad", azimuthRad);
     }
 
-    LOG_F(INFO, "raDecToAltAz output: Alt={:.6f} rad, Az={:.6f} rad",
-          altitudeRad, azimuthRad);
+    spdlog::info("raDecToAltAz output: Alt={:.6f} rad, Az={:.6f} rad",
+                 altitudeRad, azimuthRad);
     return {altitudeRad, azimuthRad};
 }
 
 void altAzToRaDec(double altRadian, double azRadian, double& hrRadian,
                   double& decRadian, double latRadian) {
-    LOG_F(INFO,
-          "altAzToRaDec input: Alt={:.6f} rad, Az={:.6f} rad, Lat={:.6f} rad",
-          altRadian, azRadian, latRadian);
+    spdlog::info(
+        "altAzToRaDec input: Alt={:.6f} rad, Az={:.6f} rad, Lat={:.6f} rad",
+        altRadian, azRadian, latRadian);
 
-    double cosLatitude = std::cos(latRadian);
-    if (altRadian > M_PI / 2.0) {
-        altRadian = M_PI - altRadian;
-        azRadian += M_PI;
+    // Pre-calculate trigonometric values for performance
+    double sinLat = std::sin(latRadian);
+    double cosLat = std::cos(latRadian);
+    double sinAlt = std::sin(altRadian);
+    double cosAlt = std::cos(altRadian);
+    double sinAz = std::sin(azRadian);
+    double cosAz = std::cos(azRadian);
+
+    // Normalize altitude to handle extreme cases
+    if (altRadian > HALF_PI) {
+        altRadian = PI - altRadian;
+        azRadian += PI;
+        sinAlt = std::sin(altRadian);
+        cosAlt = std::cos(altRadian);
+        sinAz = std::sin(azRadian);
+        cosAz = std::cos(azRadian);
     }
-    if (altRadian < -M_PI / 2.0) {
-        altRadian = -M_PI - altRadian;
-        azRadian -= M_PI;
+    if (altRadian < -HALF_PI) {
+        altRadian = -PI - altRadian;
+        azRadian -= PI;
+        sinAlt = std::sin(altRadian);
+        cosAlt = std::cos(altRadian);
+        sinAz = std::sin(azRadian);
+        cosAz = std::cos(azRadian);
     }
-    double sinDec = std::sin(latRadian) * std::sin(altRadian) +
-                    cosLatitude * std::cos(altRadian) * std::cos(azRadian);
+
+    // Calculate declination
+    double sinDec = sinLat * sinAlt + cosLat * cosAlt * cosAz;
+    // Clamp to prevent numerical errors
+    sinDec = std::clamp(sinDec, -1.0, 1.0);
     decRadian = std::asin(sinDec);
-    if (cosLatitude < K_EPSILON_VALUE) {
-        hrRadian = azRadian + M_PI;
+
+    // Calculate hour angle
+    if (std::abs(cosLat) < EPSILON) {
+        // Near poles, hour angle is determined mainly by azimuth
+        hrRadian = azRadian + PI;
     } else {
-        double temp = cosLatitude * std::cos(decRadian);
-        temp = (std::sin(altRadian) - std::sin(latRadian) * sinDec) / temp;
-        temp = std::acos(std::clamp(-temp, -1.0, 1.0));
-        if (std::sin(azRadian) > 0.0) {
-            hrRadian = M_PI + temp;
+        double cosDec = std::cos(decRadian);
+        // Handle potential division by zero
+        if (std::abs(cosDec) < EPSILON || std::abs(cosLat) < EPSILON) {
+            hrRadian = 0.0;  // Default value when division would be unstable
         } else {
-            hrRadian = M_PI - temp;
+            double temp = (sinAlt - sinLat * sinDec) / (cosLat * cosDec);
+            // Clamp to prevent numerical errors
+            temp = std::clamp(temp, -1.0, 1.0);
+            double ha = std::acos(temp);
+            // Adjust based on azimuth
+            hrRadian = sinAz > 0.0 ? TWO_PI - ha : ha;
         }
     }
-    LOG_F(INFO, "altAzToRaDec output: HR={:.6f} rad, Dec={:.6f} rad", hrRadian,
-          decRadian);
+
+    // Normalize hour angle
+    hrRadian = rangeTo(hrRadian, TWO_PI, 0.0);
+
+    spdlog::info("altAzToRaDec output: HR={:.6f} rad, Dec={:.6f} rad", hrRadian,
+                 decRadian);
 }
 
 auto convertEquatorialToCartesian(double rightAscension, double declination,
                                   double radius) -> CartesianCoordinates {
-    LOG_F(
-        INFO,
+    spdlog::info(
         "convertEquatorialToCartesian: RA={:.6f}°, Dec={:.6f}°, Radius={:.6f}",
         rightAscension, declination, radius);
 
     double raRad = degreeToRad(rightAscension);
     double decRad = degreeToRad(declination);
 
-    double x = radius * std::cos(decRad) * std::cos(raRad);
-    double y = radius * std::cos(decRad) * std::sin(raRad);
-    double z = radius * std::sin(decRad);
+    // Pre-calculate trigonometric values
+    double cosDec = std::cos(decRad);
+    double sinDec = std::sin(decRad);
+    double cosRA = std::cos(raRad);
+    double sinRA = std::sin(raRad);
 
-    LOG_F(INFO, "Cartesian coordinates: x={:.6f}, y={:.6f}, z={:.6f}", x, y, z);
+    // Calculate Cartesian coordinates
+    double x = radius * cosDec * cosRA;
+    double y = radius * cosDec * sinRA;
+    double z = radius * sinDec;
+
+    spdlog::info("Cartesian coordinates: x={:.6f}, y={:.6f}, z={:.6f}", x, y,
+                 z);
     return {x, y, z};
 }
 
 auto convertToSphericalCoordinates(const CartesianCoordinates& cartesianPoint)
     -> std::optional<SphericalCoordinates> {
-    LOG_F(INFO,
-          "convertToSphericalCoordinates: Cartesian=({:.6f}, {:.6f}, {:.6f})",
-          cartesianPoint.x, cartesianPoint.y, cartesianPoint.z);
+    spdlog::info(
+        "convertToSphericalCoordinates: Cartesian=({:.6f}, {:.6f}, {:.6f})",
+        cartesianPoint.x, cartesianPoint.y, cartesianPoint.z);
 
     double x = cartesianPoint.x;
     double y = cartesianPoint.y;
     double z = cartesianPoint.z;
 
-    double radius = std::sqrt(x * x + y * y + z * z);
-    if (radius == 0.0) {
-        LOG_F(WARNING, "Radius is zero, returning nullopt");
+    // Calculate radius squared first to avoid a square root if not needed
+    double radiusSquared = x * x + y * y + z * z;
+
+    // Check if the point is at the origin
+    if (radiusSquared < EPSILON) {
+        spdlog::warn("Point is at origin (or very close), returning nullopt");
         return std::nullopt;
     }
 
-    double declination = std::asin(z / radius) * K_RADIANS_TO_DEGREES;
-    double rightAscension = std::atan2(y, x) * K_RADIANS_TO_DEGREES;
+    double radius = std::sqrt(radiusSquared);
 
-    if (rightAscension < 0) {
-        rightAscension += K_DEGREES_IN_CIRCLE;
+    // Calculate declination with bounds check
+    double declination =
+        std::asin(std::clamp(z / radius, -1.0, 1.0)) * RADIANS_TO_DEGREES;
+
+    // Calculate right ascension
+    double rightAscension;
+    if (std::abs(x) < EPSILON && std::abs(y) < EPSILON) {
+        // Special case: point is on the Z-axis
+        rightAscension = 0.0;
+    } else {
+        rightAscension = std::atan2(y, x) * RADIANS_TO_DEGREES;
+        // Normalize to [0, 360)
+        if (rightAscension < 0) {
+            rightAscension += DEGREES_IN_CIRCLE;
+        }
     }
 
-    LOG_F(INFO, "Spherical coordinates: RA={:.6f}°, Dec={:.6f}°",
-          rightAscension, declination);
+    spdlog::info("Spherical coordinates: RA={:.6f}°, Dec={:.6f}°",
+                 rightAscension, declination);
     return SphericalCoordinates{rightAscension, declination};
 }
 
 auto dmsToDegree(int degrees, int minutes, double seconds) -> double {
-    LOG_F(INFO, "dmsToDegree: Degrees={}, Minutes={}, Seconds={:.6f}", degrees,
-          minutes, seconds);
+    spdlog::info("dmsToDegree: Degrees={}, Minutes={}, Seconds={:.6f}", degrees,
+                 minutes, seconds);
 
-    // 确定符号
-    double sign = degrees < 0 ? -1.0 : 1.0;
-    // 计算绝对值
-    double absDegrees = std::abs(degrees) + minutes / K_MINUTES_IN_HOUR +
-                        seconds / K_SECONDS_IN_HOUR;
-    double result = sign * absDegrees;
+    // Determine sign
+    double sign =
+        degrees < 0 ||
+                (degrees == 0 && (minutes < 0 || (minutes == 0 && seconds < 0)))
+            ? -1.0
+            : 1.0;
 
-    LOG_F(INFO, "Result: {:.6f}°", result);
+    // Calculate absolute values
+    int absDegrees = std::abs(degrees);
+    int absMinutes = std::abs(minutes);
+    double absSeconds = std::abs(seconds);
+
+    // Handle potential overflow in seconds and minutes
+    if (absSeconds >= SECONDS_IN_MINUTE) {
+        absMinutes += static_cast<int>(absSeconds / SECONDS_IN_MINUTE);
+        absSeconds = std::fmod(absSeconds, SECONDS_IN_MINUTE);
+    }
+
+    if (absMinutes >= MINUTES_IN_HOUR) {
+        absDegrees += absMinutes / static_cast<int>(MINUTES_IN_HOUR);
+        absMinutes %= static_cast<int>(MINUTES_IN_HOUR);
+    }
+
+    // Calculate decimal degrees
+    double result = sign * (absDegrees + absMinutes / MINUTES_IN_HOUR +
+                            absSeconds / SECONDS_IN_HOUR);
+
+    spdlog::info("Result: {:.6f}°", result);
     return result;
 }
 
 auto radToDmsStr(double radians) -> std::string {
-    LOG_F(INFO, "radToDmsStr: Input radians={:.6f}", radians);
+    spdlog::info("radToDmsStr: Input radians={:.6f}", radians);
 
-    // 将弧度转换为度数
+    // Convert radians to degrees
     double degrees = radToDegree(radians);
 
-    // 确定符号
+    // Determine sign
     char sign = degrees < 0 ? '-' : '+';
     degrees = std::abs(degrees);
 
-    // 提取度分秒
+    // Extract degrees, minutes, seconds
     int deg = static_cast<int>(degrees);
-    double minPartial = (degrees - deg) * 60.0;
+    double minPartial = (degrees - deg) * MINUTES_IN_HOUR;
     int min = static_cast<int>(minPartial);
-    double sec = (minPartial - min) * 60.0;
+    double sec = (minPartial - min) * SECONDS_IN_MINUTE;
 
-    // 处理舍入误差
-    if (sec >= 60.0) {
+    // Handle rounding errors
+    if (sec >= SECONDS_IN_MINUTE - EPSILON) {
         sec = 0.0;
         min++;
-        if (min >= 60) {
+        if (min >= MINUTES_IN_HOUR) {
             min = 0;
             deg++;
         }
     }
 
-    // 格式化输出
+    // Format output
     std::stringstream ss;
     ss << sign << std::setfill('0') << std::setw(2) << deg << "°"
        << std::setfill('0') << std::setw(2) << min << "'" << std::fixed
        << std::setprecision(1) << sec << "\"";
 
     std::string result = ss.str();
-    LOG_F(INFO, "radToDmsStr: Output={}", result);
+    spdlog::info("radToDmsStr: Output={}", result);
     return result;
 }
 
 auto radToHmsStr(double radians) -> std::string {
-    LOG_F(INFO, "radToHmsStr: Input radians={:.6f}", radians);
+    spdlog::info("radToHmsStr: Input radians={:.6f}", radians);
 
-    // 将弧度转换为小时
+    // Convert radians to hours
     double hours = radToHour(radians);
 
-    // 确保hours在0-24范围内
-    hours = rangeTo(hours, 24.0, 0.0);
+    // Ensure hours is in [0, 24) range
+    hours = rangeTo(hours, HOURS_IN_DAY, 0.0);
 
-    // 提取时分秒
+    // Extract hours, minutes, seconds
     int hrs = static_cast<int>(hours);
-    double minPartial = (hours - hrs) * 60.0;
+    double minPartial = (hours - hrs) * MINUTES_IN_HOUR;
     int min = static_cast<int>(minPartial);
-    double sec = (minPartial - min) * 60.0;
+    double sec = (minPartial - min) * SECONDS_IN_MINUTE;
 
-    // 处理舍入误差
-    if (sec >= 60.0) {
+    // Handle rounding errors
+    if (sec >= SECONDS_IN_MINUTE - EPSILON) {
         sec = 0.0;
         min++;
-        if (min >= 60) {
+        if (min >= MINUTES_IN_HOUR) {
             min = 0;
             hrs++;
-            if (hrs >= 24) {
+            if (hrs >= HOURS_IN_DAY) {
                 hrs = 0;
             }
         }
     }
 
-    // 格式化输出
+    // Format output
     std::stringstream ss;
     ss << std::setfill('0') << std::setw(2) << hrs << ':' << std::setfill('0')
        << std::setw(2) << min << ':' << std::fixed << std::setprecision(1)
        << std::setfill('0') << std::setw(4) << sec;
 
     std::string result = ss.str();
-    LOG_F(INFO, "radToHmsStr: Output={}", result);
+    spdlog::info("radToHmsStr: Output={}", result);
     return result;
 }
 

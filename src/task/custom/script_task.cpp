@@ -1,5 +1,7 @@
 #include "script_task.hpp"
 #include "atom/log/loguru.hpp"
+#include "factory.hpp"
+#include "task_registry.hpp"
 
 namespace lithium::sequencer::task {
 
@@ -538,6 +540,32 @@ void ScriptTask::validateResults(
 
     // 记录成功信息
     addHistoryEntry("Script executed successfully: " + scriptName);
+}
+
+// Register ScriptTask with factory
+#include "factory.hpp"
+
+namespace {
+    static auto script_task_registrar = TaskRegistrar<ScriptTask>(
+        "script_task",
+        TaskInfo{
+            .name = "script_task",
+            .description = "Execute custom scripts with error handling and monitoring",
+            .category = "automation",
+            .requiredParameters = {"scriptName"},
+            .parameterSchema = json{
+                {"scriptName", {{"type", "string"}, {"description", "Name or path of script to execute"}}},
+                {"scriptContent", {{"type", "string"}, {"description", "Inline script content"}}},
+                {"allowUnsafe", {{"type", "boolean"}, {"description", "Allow unsafe script execution"}, {"default", false}}},
+                {"timeout", {{"type", "number"}, {"description", "Execution timeout in seconds"}, {"default", 30}}},
+                {"args", {{"type", "object"}, {"description", "Script arguments"}, {"default", json::object()}}},
+                {"retryCount", {{"type", "number"}, {"description", "Number of retry attempts"}, {"default", 0}}}
+            },
+            .version = "1.0.0",
+            .dependencies = {},
+            .isEnabled = true
+        }
+    );
 }
 
 }  // namespace lithium::sequencer::task
