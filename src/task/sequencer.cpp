@@ -16,6 +16,7 @@
 #include "spdlog/spdlog.h"
 
 #include "constant/constant.hpp"
+#include "registration.hpp"
 
 namespace lithium::sequencer {
 
@@ -39,6 +40,11 @@ ExposureSequence::ExposureSequence() {
         std::make_shared<atom::async::LockFreeHashTable<std::string, json>>());
 
     taskGenerator_ = TaskGenerator::createShared();
+    
+    // Register built-in tasks with the factory
+    registerBuiltInTasks();
+    spdlog::info("Built-in tasks registered with factory");
+    
     initializeDefaultMacros();
 }
 
@@ -243,6 +249,7 @@ void ExposureSequence::loadSequence(const std::string& filename) {
         auto target = std::make_unique<Target>(name);
         target->setEnabled(enabled);
 
+        // Load tasks using the improved loadTasksFromJson method
         if (processedJson.contains("tasks") &&
             processedJson["tasks"].is_array()) {
             target->loadTasksFromJson(processedJson["tasks"]);

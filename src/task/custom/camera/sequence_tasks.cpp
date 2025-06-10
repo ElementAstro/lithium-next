@@ -3,6 +3,7 @@
 #include <memory>
 #include <thread>
 #include "basic_exposure.hpp"
+#include "common.hpp"
 
 #include "../../task.hpp"
 
@@ -14,10 +15,21 @@ namespace lithium::sequencer::task {
 
 // ==================== SmartExposureTask Implementation ====================
 
-auto SmartExposureTask::taskName() -> std::string { return "SmartExposure"; }
+SmartExposureTask::SmartExposureTask(const std::string& name,
+                                     const json& config)
+    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
+    validateSmartExposureParameters(config);
+    // Store default config as parameter definitions
+    for (const auto& [key, value] : config.items()) {
+        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
+    }
+}
 
-void SmartExposureTask::execute(const json& params) {
-    LOG_F(INFO, "Executing SmartExposure task with params: {}", params.dump(4));
+void SmartExposureTask::execute(const json& params) { executeImpl(params); }
+
+void SmartExposureTask::executeImpl(const json& params) {
+    LOG_F(INFO, "Executing SmartExposure task '{}' with params: {}", getName(),
+          params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
@@ -35,8 +47,7 @@ void SmartExposureTask::execute(const json& params) {
               "seconds",
               targetSNR, maxExposure);
 
-        double currentExposure =
-            (maxExposure + minExposure) / 2.0;  // Start with middle value
+        double currentExposure = (maxExposure + minExposure) / 2.0;
         double achievedSNR = 0.0;
 
         for (int attempt = 1; attempt <= maxAttempts; ++attempt) {
@@ -49,10 +60,13 @@ void SmartExposureTask::execute(const json& params) {
                                    {"binning", binning},
                                    {"gain", gain},
                                    {"offset", offset}};
-            TakeExposureTask::execute(exposureParams);
+
+            // Create and execute TakeExposureTask
+            auto exposureTask = std::make_unique<TakeExposureTask>(
+                "test_exposure", exposureParams);
+            exposureTask->execute(exposureParams);
 
             // In a real implementation, we would analyze the image for SNR
-            // For simulation, we'll use a simple formula
             achievedSNR =
                 std::min(targetSNR * 1.2, currentExposure * 0.5 + 20.0);
 
@@ -65,7 +79,6 @@ void SmartExposureTask::execute(const json& params) {
             }
 
             if (attempt < maxAttempts) {
-                // Adjust exposure time based on SNR ratio
                 double ratio = targetSNR / achievedSNR;
                 currentExposure = std::clamp(currentExposure * ratio * ratio,
                                              minExposure, maxExposure);
@@ -82,57 +95,26 @@ void SmartExposureTask::execute(const json& params) {
                             {"binning", binning},
                             {"gain", gain},
                             {"offset", offset}};
-        TakeExposureTask::execute(finalParams);
+        auto finalTask =
+            std::make_unique<TakeExposureTask>("final_exposure", finalParams);
+        finalTask->execute(finalParams);
 
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(INFO,
-              "SmartExposure task completed in {} ms with final SNR {:.2f}",
-              duration.count(), achievedSNR);
+        LOG_F(
+            INFO,
+            "SmartExposure task '{}' completed in {} ms with final SNR {:.2f}",
+            getName(), duration.count(), achievedSNR);
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(ERROR, "SmartExposure task failed after {} ms: {}",
-              duration.count(), e.what());
+        LOG_F(ERROR, "SmartExposure task '{}' failed after {} ms: {}",
+              getName(), duration.count(), e.what());
         throw;
     }
-}
-
-auto SmartExposureTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
-        try {
-            execute(params);
-        } catch (const std::exception& e) {
-            LOG_F(ERROR, "Enhanced SmartExposure task failed: {}", e.what());
-            throw;
-        }
-    });
-
-    defineParameters(*task);
-    task->setPriority(6);                          // Medium-high priority
-    task->setTimeout(std::chrono::seconds(1800));  // 30 minute timeout
-    task->setLogLevel(2);                          // INFO level
-
-    return task;
-}
-
-void SmartExposureTask::defineParameters(Task& task) {
-    task.addParamDefinition("target_snr", "double", false, 50.0,
-                            "Target signal-to-noise ratio");
-    task.addParamDefinition("max_exposure", "double", false, 300.0,
-                            "Maximum exposure time in seconds");
-    task.addParamDefinition("min_exposure", "double", false, 1.0,
-                            "Minimum exposure time in seconds");
-    task.addParamDefinition("max_attempts", "int", false, 5,
-                            "Maximum optimization attempts");
-    task.addParamDefinition("binning", "int", false, 1,
-                            "Camera binning factor");
-    task.addParamDefinition("gain", "int", false, 100, "Camera gain value");
-    task.addParamDefinition("offset", "int", false, 10,
-                            "Camera offset/brightness value");
 }
 
 void SmartExposureTask::validateSmartExposureParameters(const json& params) {
@@ -169,13 +151,21 @@ void SmartExposureTask::validateSmartExposureParameters(const json& params) {
 
 // ==================== DeepSkySequenceTask Implementation ====================
 
-auto DeepSkySequenceTask::taskName() -> std::string {
-    return "DeepSkySequence";
+DeepSkySequenceTask::DeepSkySequenceTask(const std::string& name,
+                                         const json& config)
+    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
+    validateDeepSkyParameters(config);
+    // Store default config as parameter definitions
+    for (const auto& [key, value] : config.items()) {
+        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
+    }
 }
 
-void DeepSkySequenceTask::execute(const json& params) {
-    LOG_F(INFO, "Executing DeepSkySequence task with params: {}",
-          params.dump(4));
+void DeepSkySequenceTask::execute(const json& params) { executeImpl(params); }
+
+void DeepSkySequenceTask::executeImpl(const json& params) {
+    LOG_F(INFO, "Executing DeepSkySequence task '{}' with params: {}",
+          getName(), params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
@@ -187,8 +177,7 @@ void DeepSkySequenceTask::execute(const json& params) {
             params.value("filters", std::vector<std::string>{"L"});
         bool dithering = params.value("dithering", true);
         int ditherPixels = params.value("dither_pixels", 10);
-        double ditherInterval =
-            params.value("dither_interval", 5);  // Every 5 exposures
+        double ditherInterval = params.value("dither_interval", 5);
         int binning = params.value("binning", 1);
         int gain = params.value("gain", 100);
         int offset = params.value("offset", 10);
@@ -211,15 +200,11 @@ void DeepSkySequenceTask::execute(const json& params) {
                   exposuresForThisFilter, filter);
 
             for (int exp = 1; exp <= exposuresForThisFilter; ++exp) {
-                // Apply dithering if enabled
                 if (dithering && exp > 1 &&
                     (exp - 1) % static_cast<int>(ditherInterval) == 0) {
                     LOG_F(INFO, "Applying dither offset of {} pixels",
                           ditherPixels);
-                    // In a real implementation, we would move the mount
-                    // slightly
-                    std::this_thread::sleep_for(
-                        std::chrono::seconds(2));  // Simulate dither time
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
                 }
 
                 LOG_F(INFO, "Taking exposure {} of {} for filter {}", exp,
@@ -230,9 +215,10 @@ void DeepSkySequenceTask::execute(const json& params) {
                                        {"binning", binning},
                                        {"gain", gain},
                                        {"offset", offset}};
-                TakeExposureTask::execute(exposureParams);
+                auto exposureTask = std::make_unique<TakeExposureTask>(
+                    getName() + "_exp_" + std::to_string(exp), exposureParams);
+                exposureTask->execute(exposureParams);
 
-                // Check for guide star drift or other issues
                 if (exp % 10 == 0) {
                     LOG_F(INFO, "Completed {} exposures for filter {}", exp,
                           filter);
@@ -246,57 +232,17 @@ void DeepSkySequenceTask::execute(const json& params) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(INFO, "DeepSkySequence task completed {} exposures in {} ms",
-              totalExposures, duration.count());
+        LOG_F(INFO, "DeepSkySequence task '{}' completed {} exposures in {} ms",
+              getName(), totalExposures, duration.count());
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(ERROR, "DeepSkySequence task failed after {} ms: {}",
-              duration.count(), e.what());
+        LOG_F(ERROR, "DeepSkySequence task '{}' failed after {} ms: {}",
+              getName(), duration.count(), e.what());
         throw;
     }
-}
-
-auto DeepSkySequenceTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
-        try {
-            execute(params);
-        } catch (const std::exception& e) {
-            LOG_F(ERROR, "Enhanced DeepSkySequence task failed: {}", e.what());
-            throw;
-        }
-    });
-
-    defineParameters(*task);
-    task->setPriority(5);  // Medium priority for long sequences
-    task->setTimeout(std::chrono::seconds(28800));  // 8 hour timeout
-    task->setLogLevel(2);                           // INFO level
-
-    return task;
-}
-
-void DeepSkySequenceTask::defineParameters(Task& task) {
-    task.addParamDefinition("target_name", "string", false, "Unknown",
-                            "Name of the target object");
-    task.addParamDefinition("total_exposures", "int", true, 20,
-                            "Total number of exposures to take");
-    task.addParamDefinition("exposure_time", "double", true, 300.0,
-                            "Exposure time per frame in seconds");
-    task.addParamDefinition("filters", "array", false, json::array({"L"}),
-                            "List of filters to use");
-    task.addParamDefinition("dithering", "bool", false, true,
-                            "Enable dithering between exposures");
-    task.addParamDefinition("dither_pixels", "int", false, 10,
-                            "Dither offset in pixels");
-    task.addParamDefinition("dither_interval", "double", false, 5.0,
-                            "Dither every N exposures");
-    task.addParamDefinition("binning", "int", false, 1,
-                            "Camera binning factor");
-    task.addParamDefinition("gain", "int", false, 100, "Camera gain value");
-    task.addParamDefinition("offset", "int", false, 10,
-                            "Camera offset/brightness value");
 }
 
 void DeepSkySequenceTask::validateDeepSkyParameters(const json& params) {
@@ -338,24 +284,32 @@ void DeepSkySequenceTask::validateDeepSkyParameters(const json& params) {
 
 // ==================== PlanetaryImagingTask Implementation ====================
 
-auto PlanetaryImagingTask::taskName() -> std::string {
-    return "PlanetaryImaging";
+PlanetaryImagingTask::PlanetaryImagingTask(const std::string& name,
+                                           const json& config)
+    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
+    validatePlanetaryParameters(config);
+    // Store default config as parameter definitions
+    for (const auto& [key, value] : config.items()) {
+        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
+    }
 }
 
-void PlanetaryImagingTask::execute(const json& params) {
-    LOG_F(INFO, "Executing PlanetaryImaging task with params: {}",
-          params.dump(4));
+void PlanetaryImagingTask::execute(const json& params) { executeImpl(params); }
+
+void PlanetaryImagingTask::executeImpl(const json& params) {
+    LOG_F(INFO, "Executing PlanetaryImaging task '{}' with params: {}",
+          getName(), params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
     try {
         std::string planet = params.value("planet", "Mars");
-        int videoLength = params.value("video_length", 120);  // seconds
-        double frameRate = params.value("frame_rate", 30.0);  // fps
+        int videoLength = params.value("video_length", 120);
+        double frameRate = params.value("frame_rate", 30.0);
         std::vector<std::string> filters =
             params.value("filters", std::vector<std::string>{"R", "G", "B"});
         int binning = params.value("binning", 1);
-        int gain = params.value("gain", 400);  // Higher gain for planetary
+        int gain = params.value("gain", 400);
         int offset = params.value("offset", 10);
         bool highSpeed = params.value("high_speed", true);
 
@@ -370,21 +324,22 @@ void PlanetaryImagingTask::execute(const json& params) {
                   "Recording {} frames with filter {} at {} second exposures",
                   totalFrames, filter, frameExposure);
 
-            // For planetary imaging, we typically take rapid short exposures
             for (int frame = 1; frame <= totalFrames; ++frame) {
                 json exposureParams = {{"exposure", frameExposure},
                                        {"type", ExposureType::LIGHT},
                                        {"binning", binning},
                                        {"gain", gain},
                                        {"offset", offset}};
-                TakeExposureTask::execute(exposureParams);
+                auto exposureTask = std::make_unique<TakeExposureTask>(
+                    getName() + "_frame_" + std::to_string(frame),
+                    exposureParams);
+                exposureTask->execute(exposureParams);
 
                 if (frame % 100 == 0) {
                     LOG_F(INFO, "Captured {} of {} frames for filter {}", frame,
                           totalFrames, filter);
                 }
 
-                // Small delay if not in high-speed mode
                 if (!highSpeed) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 }
@@ -392,63 +347,24 @@ void PlanetaryImagingTask::execute(const json& params) {
 
             LOG_F(INFO, "Completed {} frames for filter {}", totalFrames,
                   filter);
-
-            // Brief pause between filters
             std::this_thread::sleep_for(std::chrono::seconds(2));
         }
 
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(INFO, "PlanetaryImaging task completed {} total frames in {} ms",
-              totalFrames * filters.size(), duration.count());
+        LOG_F(INFO,
+              "PlanetaryImaging task '{}' completed {} total frames in {} ms",
+              getName(), totalFrames * filters.size(), duration.count());
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(ERROR, "PlanetaryImaging task failed after {} ms: {}",
-              duration.count(), e.what());
+        LOG_F(ERROR, "PlanetaryImaging task '{}' failed after {} ms: {}",
+              getName(), duration.count(), e.what());
         throw;
     }
-}
-
-auto PlanetaryImagingTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
-        try {
-            execute(params);
-        } catch (const std::exception& e) {
-            LOG_F(ERROR, "Enhanced PlanetaryImaging task failed: {}", e.what());
-            throw;
-        }
-    });
-
-    defineParameters(*task);
-    task->setPriority(7);  // High priority for real-time imaging
-    task->setTimeout(std::chrono::seconds(3600));  // 1 hour timeout
-    task->setLogLevel(2);                          // INFO level
-
-    return task;
-}
-
-void PlanetaryImagingTask::defineParameters(Task& task) {
-    task.addParamDefinition("planet", "string", false, "Mars",
-                            "Name of the planet being imaged");
-    task.addParamDefinition("video_length", "int", true, 120,
-                            "Video length in seconds");
-    task.addParamDefinition("frame_rate", "double", false, 30.0,
-                            "Frame rate in frames per second");
-    task.addParamDefinition("filters", "array", false,
-                            json::array({"R", "G", "B"}),
-                            "List of filters to use");
-    task.addParamDefinition("binning", "int", false, 1,
-                            "Camera binning factor");
-    task.addParamDefinition("gain", "int", false, 400,
-                            "Camera gain value (higher for planetary)");
-    task.addParamDefinition("offset", "int", false, 10,
-                            "Camera offset/brightness value");
-    task.addParamDefinition("high_speed", "bool", false, true,
-                            "Enable high-speed capture mode");
 }
 
 void PlanetaryImagingTask::validatePlanetaryParameters(const json& params) {
@@ -458,7 +374,7 @@ void PlanetaryImagingTask::validatePlanetaryParameters(const json& params) {
     }
 
     int videoLength = params["video_length"].get<int>();
-    if (videoLength <= 0 || videoLength > 1800) {  // Max 30 minutes
+    if (videoLength <= 0 || videoLength > 1800) {
         THROW_INVALID_ARGUMENT(
             "Video length must be between 1 and 1800 seconds");
     }
@@ -473,20 +389,28 @@ void PlanetaryImagingTask::validatePlanetaryParameters(const json& params) {
 
 // ==================== TimelapseTask Implementation ====================
 
-auto TimelapseTask::taskName() -> std::string { return "Timelapse"; }
+TimelapseTask::TimelapseTask(const std::string& name, const json& config)
+    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
+    validateTimelapseParameters(config);
+    // Store default config as parameter definitions
+    for (const auto& [key, value] : config.items()) {
+        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
+    }
+}
 
-void TimelapseTask::execute(const json& params) {
-    LOG_F(INFO, "Executing Timelapse task with params: {}", params.dump(4));
+void TimelapseTask::execute(const json& params) { executeImpl(params); }
+
+void TimelapseTask::executeImpl(const json& params) {
+    LOG_F(INFO, "Executing Timelapse task '{}' with params: {}", getName(),
+          params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
     try {
         int totalFrames = params.value("total_frames", 100);
-        double interval =
-            params.value("interval", 30.0);  // seconds between frames
+        double interval = params.value("interval", 30.0);
         double exposureTime = params.value("exposure_time", 10.0);
-        std::string timelapseType =
-            params.value("type", "sunset");  // sunset, lunar, star_trails
+        std::string timelapseType = params.value("type", "sunset");
         int binning = params.value("binning", 1);
         int gain = params.value("gain", 100);
         int offset = params.value("offset", 10);
@@ -502,13 +426,10 @@ void TimelapseTask::execute(const json& params) {
             LOG_F(INFO, "Capturing timelapse frame {} of {}", frame,
                   totalFrames);
 
-            // Adjust exposure for certain timelapse types
             double currentExposure = exposureTime;
             if (autoExposure && timelapseType == "sunset") {
-                // Gradually increase exposure as it gets darker
                 double progress = static_cast<double>(frame) / totalFrames;
-                currentExposure =
-                    exposureTime * (1.0 + progress * 4.0);  // Up to 5x longer
+                currentExposure = exposureTime * (1.0 + progress * 4.0);
             }
 
             json exposureParams = {{"exposure", currentExposure},
@@ -516,9 +437,10 @@ void TimelapseTask::execute(const json& params) {
                                    {"binning", binning},
                                    {"gain", gain},
                                    {"offset", offset}};
-            TakeExposureTask::execute(exposureParams);
+            auto exposureTask = std::make_unique<TakeExposureTask>(
+                getName() + "_frame_" + std::to_string(frame), exposureParams);
+            exposureTask->execute(exposureParams);
 
-            // Calculate remaining time for this frame
             auto frameEndTime = std::chrono::steady_clock::now();
             auto frameElapsed =
                 std::chrono::duration_cast<std::chrono::seconds>(
@@ -536,53 +458,17 @@ void TimelapseTask::execute(const json& params) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(INFO, "Timelapse task completed {} frames in {} ms", totalFrames,
-              duration.count());
+        LOG_F(INFO, "Timelapse task '{}' completed {} frames in {} ms",
+              getName(), totalFrames, duration.count());
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        LOG_F(ERROR, "Timelapse task failed after {} ms: {}", duration.count(),
-              e.what());
+        LOG_F(ERROR, "Timelapse task '{}' failed after {} ms: {}", getName(),
+              duration.count(), e.what());
         throw;
     }
-}
-
-auto TimelapseTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
-        try {
-            execute(params);
-        } catch (const std::exception& e) {
-            LOG_F(ERROR, "Enhanced Timelapse task failed: {}", e.what());
-            throw;
-        }
-    });
-
-    defineParameters(*task);
-    task->setPriority(3);  // Medium-low priority for long sequences
-    task->setTimeout(std::chrono::seconds(43200));  // 12 hour timeout
-    task->setLogLevel(2);                           // INFO level
-
-    return task;
-}
-
-void TimelapseTask::defineParameters(Task& task) {
-    task.addParamDefinition("total_frames", "int", true, 100,
-                            "Total number of frames to capture");
-    task.addParamDefinition("interval", "double", true, 30.0,
-                            "Time interval between frames in seconds");
-    task.addParamDefinition("exposure_time", "double", false, 10.0,
-                            "Exposure time per frame in seconds");
-    task.addParamDefinition("type", "string", false, "sunset",
-                            "Type of timelapse (sunset, lunar, star_trails)");
-    task.addParamDefinition("binning", "int", false, 1,
-                            "Camera binning factor");
-    task.addParamDefinition("gain", "int", false, 100, "Camera gain value");
-    task.addParamDefinition("offset", "int", false, 10,
-                            "Camera offset/brightness value");
-    task.addParamDefinition("auto_exposure", "bool", false, false,
-                            "Automatically adjust exposure over time");
 }
 
 void TimelapseTask::validateTimelapseParameters(const json& params) {
@@ -601,7 +487,7 @@ void TimelapseTask::validateTimelapseParameters(const json& params) {
     }
 
     double interval = params["interval"].get<double>();
-    if (interval <= 0 || interval > 3600) {  // Max 1 hour between frames
+    if (interval <= 0 || interval > 3600) {
         THROW_INVALID_ARGUMENT("Interval must be between 0 and 3600 seconds");
     }
 
@@ -613,5 +499,144 @@ void TimelapseTask::validateTimelapseParameters(const json& params) {
         }
     }
 }
+
+// ==================== Task Registration ====================
+
+namespace {
+using namespace lithium::sequencer;
+
+// Register SmartExposureTask
+AUTO_REGISTER_TASK(
+    SmartExposureTask, "SmartExposure",
+    (TaskInfo{
+        .name = "SmartExposure",
+        .description =
+            "Automatically optimizes exposure time to achieve target SNR",
+        .category = "Camera",
+        .requiredParameters = {"target_snr"},
+        .parameterSchema =
+            json{{"type", "object"},
+                 {"properties",
+                  json{{"target_snr", json{{"type", "number"},
+                                           {"minimum", 0},
+                                           {"maximum", 1000}}},
+                       {"max_exposure", json{{"type", "number"},
+                                             {"minimum", 0},
+                                             {"maximum", 3600}}},
+                       {"min_exposure", json{{"type", "number"},
+                                             {"minimum", 0},
+                                             {"maximum", 300}}},
+                       {"max_attempts", json{{"type", "integer"},
+                                             {"minimum", 1},
+                                             {"maximum", 20}}},
+                       {"binning", json{{"type", "integer"}, {"minimum", 1}}},
+                       {"gain", json{{"type", "integer"}, {"minimum", 0}}},
+                       {"offset", json{{"type", "integer"}, {"minimum", 0}}}}},
+                 {"required", json::array({"target_snr"})}},
+        .version = "1.0.0",
+        .dependencies = {"TakeExposure"}}));
+
+// Register DeepSkySequenceTask
+AUTO_REGISTER_TASK(
+    DeepSkySequenceTask, "DeepSkySequence",
+    (TaskInfo{.name = "DeepSkySequence",
+              .description = "Performs automated deep sky imaging sequence "
+                             "with multiple filters",
+              .category = "Camera",
+              .requiredParameters = {"total_exposures", "exposure_time"},
+              .parameterSchema =
+                  json{
+                      {"type", "object"},
+                      {"properties",
+                       json{{"target_name", json{{"type", "string"}}},
+                            {"total_exposures", json{{"type", "integer"},
+                                                     {"minimum", 1},
+                                                     {"maximum", 1000}}},
+                            {"exposure_time", json{{"type", "number"},
+                                                   {"minimum", 0},
+                                                   {"maximum", 3600}}},
+                            {"filters",
+                             json{{"type", "array"},
+                                  {"items", json{{"type", "string"}}}}},
+                            {"dithering", json{{"type", "boolean"}}},
+                            {"dither_pixels", json{{"type", "integer"},
+                                                   {"minimum", 0},
+                                                   {"maximum", 100}}},
+                            {"dither_interval", json{{"type", "number"},
+                                                     {"minimum", 0},
+                                                     {"maximum", 50}}},
+                            {"binning",
+                             json{{"type", "integer"}, {"minimum", 1}}},
+                            {"gain", json{{"type", "integer"}, {"minimum", 0}}},
+                            {"offset",
+                             json{{"type", "integer"}, {"minimum", 0}}}}},
+                      {"required", json::array({"total_exposures",
+                                                "exposure_time"})}},
+              .version = "1.0.0",
+              .dependencies = {"TakeExposure"}}));
+
+// Register PlanetaryImagingTask
+AUTO_REGISTER_TASK(
+    PlanetaryImagingTask, "PlanetaryImaging",
+    (TaskInfo{
+        .name = "PlanetaryImaging",
+        .description =
+            "High-speed planetary imaging with lucky imaging support",
+        .category = "Camera",
+        .requiredParameters = {"video_length"},
+        .parameterSchema =
+            json{{"type", "object"},
+                 {"properties",
+                  json{{"planet", json{{"type", "string"}}},
+                       {"video_length", json{{"type", "integer"},
+                                             {"minimum", 1},
+                                             {"maximum", 1800}}},
+                       {"frame_rate", json{{"type", "number"},
+                                           {"minimum", 0},
+                                           {"maximum", 120}}},
+                       {"filters", json{{"type", "array"},
+                                        {"items", json{{"type", "string"}}}}},
+                       {"binning", json{{"type", "integer"}, {"minimum", 1}}},
+                       {"gain", json{{"type", "integer"}, {"minimum", 0}}},
+                       {"offset", json{{"type", "integer"}, {"minimum", 0}}},
+                       {"high_speed", json{{"type", "boolean"}}}}},
+                 {"required", json::array({"video_length"})}},
+        .version = "1.0.0",
+        .dependencies = {"TakeExposure"}}));
+
+// Register TimelapseTask
+AUTO_REGISTER_TASK(
+    TimelapseTask, "Timelapse",
+    (TaskInfo{.name = "Timelapse",
+              .description =
+                  "Captures timelapse sequences with configurable intervals",
+              .category = "Camera",
+              .requiredParameters = {"total_frames", "interval"},
+              .parameterSchema =
+                  json{
+                      {"type", "object"},
+                      {"properties",
+                       json{{"total_frames", json{{"type", "integer"},
+                                                  {"minimum", 1},
+                                                  {"maximum", 10000}}},
+                            {"interval", json{{"type", "number"},
+                                              {"minimum", 0},
+                                              {"maximum", 3600}}},
+                            {"exposure_time",
+                             json{{"type", "number"}, {"minimum", 0}}},
+                            {"type",
+                             json{{"type", "string"},
+                                  {"enum", json::array({"sunset", "lunar",
+                                                        "star_trails"})}}},
+                            {"binning",
+                             json{{"type", "integer"}, {"minimum", 1}}},
+                            {"gain", json{{"type", "integer"}, {"minimum", 0}}},
+                            {"offset",
+                             json{{"type", "integer"}, {"minimum", 0}}},
+                            {"auto_exposure", json{{"type", "boolean"}}}}},
+                      {"required", json::array({"total_frames", "interval"})}},
+              .version = "1.0.0",
+              .dependencies = {"TakeExposure"}}));
+}  // namespace
 
 }  // namespace lithium::sequencer::task

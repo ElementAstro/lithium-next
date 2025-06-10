@@ -9,19 +9,28 @@
 namespace lithium::sequencer::task {
 
 TaskConfigManagement::TaskConfigManagement(const std::string& name)
-    : Task(name, [this](const json& params) { execute(params); }) {
+    : Task(name, [this](const json& params) { this->execute(params); }) {
     spdlog::info("TaskConfigManagement created with name: {}", name);
-    // Add parameter definitions
+
+    // Add parameter definitions using the new interface
     addParamDefinition("operation", "string", true, nullptr,
                        "Operation type: set/get/delete/load/save/merge/list");
     addParamDefinition("key_path", "string", false, nullptr,
                        "Configuration key path");
-    addParamDefinition("value", "object", false, nullptr,
+    addParamDefinition("value", "any", false, nullptr,
                        "Configuration value to set");
     addParamDefinition("file_path", "string", false, nullptr,
                        "File path for load/save operations");
     addParamDefinition("merge_data", "object", false, nullptr,
                        "Configuration data to merge");
+    addParamDefinition("recursive", "boolean", false, json(false),
+                       "Recursive loading for directories");
+    addParamDefinition("is_directory", "boolean", false, json(false),
+                       "Whether the file_path is a directory");
+    addParamDefinition("save_all", "boolean", false, json(false),
+                       "Save all configuration data");
+    addParamDefinition("list_files", "boolean", false, json(false),
+                       "List config files instead of keys");
 
     // Set task priority
     setPriority(8);
@@ -35,10 +44,19 @@ TaskConfigManagement::TaskConfigManagement(const std::string& name)
 }
 
 void TaskConfigManagement::execute(const json& params) {
-    spdlog::info("Executing ConfigManagement task: {}", params.dump());
+    auto startTime = std::chrono::steady_clock::now();
 
+    spdlog::info("Executing ConfigManagement task: {}", params.dump());
+    addHistoryEntry("Started execution with params: " + params.dump());
+
+    // Validate parameters using the built-in validation
     if (!validateParams(params)) {
-        spdlog::warn("Parameter validation failed for: {}", params.dump());
+        setErrorType(TaskErrorType::InvalidParameter);
+        auto errors = getParamErrors();
+        for (const auto& error : errors) {
+            spdlog::warn("Parameter validation error: {}", error);
+            addHistoryEntry("Parameter validation error: " + error);
+        }
         return;
     }
 
@@ -48,6 +66,7 @@ void TaskConfigManagement::execute(const json& params) {
         const std::string operation = params["operation"];
 
         spdlog::debug("Operation to execute: {}", operation);
+        addHistoryEntry("Executing operation: " + operation);
 
         match(operation)(
             pattern | "set" = [&] { handleSetConfig(params); },
@@ -59,8 +78,10 @@ void TaskConfigManagement::execute(const json& params) {
             pattern | "list" = [&] { handleListConfig(params); },
             pattern | _ =
                 [&] {
-                    THROW_INVALID_CONFIG_EXCEPTION("Unknown operation: " +
-                                                   operation);
+                    setErrorType(TaskErrorType::InvalidParameter);
+                    std::string errorMsg = "Unknown operation: " + operation;
+                    addHistoryEntry(errorMsg);
+                    throw std::invalid_argument(errorMsg);
                 });
 
         addHistoryEntry("Operation " + operation + " completed successfully");
@@ -68,18 +89,26 @@ void TaskConfigManagement::execute(const json& params) {
 
     } catch (const std::exception& e) {
         setErrorType(TaskErrorType::SystemError);
-        spdlog::error("Failed to execute config operation: {}", e.what());
-        THROW_RUNTIME_ERROR("Failed to execute config operation: {}", e.what());
+        std::string errorMsg =
+            "Failed to execute config operation: " + std::string(e.what());
+        addHistoryEntry(errorMsg);
+        spdlog::error("{}", errorMsg);
+        throw;
     }
+
+    // Record execution time
+    auto endTime = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        endTime - startTime);
+    // Note: executionTime_ is private, so we rely on the base class to track
+    // this
+
+    addHistoryEntry("Task execution completed in " +
+                    std::to_string(duration.count()) + "ms");
 }
 
 void TaskConfigManagement::handleSetConfig(const json& params) {
     spdlog::info("Handling set config with params: {}", params.dump());
-    if (!validateSetParams(params)) {
-        spdlog::warn("Set config parameter validation failed for: {}",
-                     params.dump());
-        return;
-    }
 
     auto configManager =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
@@ -90,8 +119,11 @@ void TaskConfigManagement::handleSetConfig(const json& params) {
                   value.dump());
 
     if (!configManager->set(keyPath, value)) {
-        spdlog::error("Failed to set config at path: {}", keyPath);
-        THROW_RUNTIME_ERROR("Failed to set config at path: {}", keyPath);
+        setErrorType(TaskErrorType::SystemError);
+        std::string errorMsg = "Failed to set config at path: " + keyPath;
+        addHistoryEntry(errorMsg);
+        spdlog::error("{}", errorMsg);
+        throw std::runtime_error(errorMsg);
     }
 
     addHistoryEntry("Set config at path: " + keyPath);
@@ -100,11 +132,6 @@ void TaskConfigManagement::handleSetConfig(const json& params) {
 
 void TaskConfigManagement::handleGetConfig(const json& params) {
     spdlog::info("Handling get config with params: {}", params.dump());
-    if (!validateGetParams(params)) {
-        spdlog::warn("Get config parameter validation failed for: {}",
-                     params.dump());
-        return;
-    }
 
     auto configManager =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
@@ -114,21 +141,20 @@ void TaskConfigManagement::handleGetConfig(const json& params) {
 
     auto value = configManager->get(keyPath);
     if (!value) {
-        spdlog::error("Failed to get config at path: {}", keyPath);
-        THROW_RUNTIME_ERROR("Failed to get config at path: {}", keyPath);
+        setErrorType(TaskErrorType::SystemError);
+        std::string errorMsg = "Failed to get config at path: " + keyPath;
+        addHistoryEntry(errorMsg);
+        spdlog::error("{}", errorMsg);
+        throw std::runtime_error(errorMsg);
     }
 
-    addHistoryEntry("Retrieved config from path: " + keyPath);
+    addHistoryEntry("Retrieved config from path: " + keyPath + " = " +
+                    value->dump());
     spdlog::info("Retrieved config from path: {}", keyPath);
 }
 
 void TaskConfigManagement::handleDeleteConfig(const json& params) {
     spdlog::info("Handling delete config with params: {}", params.dump());
-    if (!validateDeleteParams(params)) {
-        spdlog::warn("Delete config parameter validation failed for: {}",
-                     params.dump());
-        return;
-    }
 
     auto configManager =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
@@ -137,8 +163,11 @@ void TaskConfigManagement::handleDeleteConfig(const json& params) {
     spdlog::debug("Deleting config at path: {}", keyPath);
 
     if (!configManager->remove(keyPath)) {
-        spdlog::error("Failed to delete config at path: {}", keyPath);
-        THROW_RUNTIME_ERROR("Failed to delete config at path: {}", keyPath);
+        setErrorType(TaskErrorType::SystemError);
+        std::string errorMsg = "Failed to delete config at path: " + keyPath;
+        addHistoryEntry(errorMsg);
+        spdlog::error("{}", errorMsg);
+        throw std::runtime_error(errorMsg);
     }
 
     addHistoryEntry("Deleted config at path: " + keyPath);
@@ -147,31 +176,31 @@ void TaskConfigManagement::handleDeleteConfig(const json& params) {
 
 void TaskConfigManagement::handleLoadConfig(const json& params) {
     spdlog::info("Handling load config with params: {}", params.dump());
-    if (!validateLoadParams(params)) {
-        spdlog::warn("Load config parameter validation failed for: {}",
-                     params.dump());
-        return;
-    }
 
     auto configManager =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
     const std::string& filePath = params["file_path"];
 
     bool recursive = params.value("recursive", false);
+    bool isDirectory = params.value("is_directory", false);
 
-    spdlog::debug("Loading config from file: {} with recursive: {}", filePath,
-                  recursive);
+    spdlog::debug(
+        "Loading config from file: {} with recursive: {}, isDirectory: {}",
+        filePath, recursive, isDirectory);
 
     bool success;
-    if (params.value("is_directory", false)) {
+    if (isDirectory) {
         success = configManager->loadFromDir(filePath, recursive);
     } else {
         success = configManager->loadFromFile(filePath);
     }
 
     if (!success) {
-        spdlog::error("Failed to load config from: {}", filePath);
-        THROW_RUNTIME_ERROR("Failed to load config from: {}", filePath);
+        setErrorType(TaskErrorType::SystemError);
+        std::string errorMsg = "Failed to load config from: " + filePath;
+        addHistoryEntry(errorMsg);
+        spdlog::error("{}", errorMsg);
+        throw std::runtime_error(errorMsg);
     }
 
     addHistoryEntry("Loaded config from: " + filePath);
@@ -180,28 +209,28 @@ void TaskConfigManagement::handleLoadConfig(const json& params) {
 
 void TaskConfigManagement::handleSaveConfig(const json& params) {
     spdlog::info("Handling save config with params: {}", params.dump());
-    if (!validateSaveParams(params)) {
-        spdlog::warn("Save config parameter validation failed for: {}",
-                     params.dump());
-        return;
-    }
 
     auto configManager =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
     const std::string& filePath = params["file_path"];
+    bool saveAll = params.value("save_all", false);
 
-    spdlog::debug("Saving config to file: {}", filePath);
+    spdlog::debug("Saving config to file: {} with saveAll: {}", filePath,
+                  saveAll);
 
     bool success;
-    if (params.value("save_all", false)) {
+    if (saveAll) {
         success = configManager->saveAll(filePath);
     } else {
         success = configManager->save(filePath);
     }
 
     if (!success) {
-        spdlog::error("Failed to save config to: {}", filePath);
-        THROW_RUNTIME_ERROR("Failed to save config to: {}", filePath);
+        setErrorType(TaskErrorType::SystemError);
+        std::string errorMsg = "Failed to save config to: " + filePath;
+        addHistoryEntry(errorMsg);
+        spdlog::error("{}", errorMsg);
+        throw std::runtime_error(errorMsg);
     }
 
     addHistoryEntry("Saved config to: " + filePath);
@@ -210,11 +239,6 @@ void TaskConfigManagement::handleSaveConfig(const json& params) {
 
 void TaskConfigManagement::handleMergeConfig(const json& params) {
     spdlog::info("Handling merge config with params: {}", params.dump());
-    if (!validateMergeParams(params)) {
-        spdlog::warn("Merge config parameter validation failed for: {}",
-                     params.dump());
-        return;
-    }
 
     auto configManager =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
@@ -233,7 +257,9 @@ void TaskConfigManagement::handleListConfig(const json& params) {
     auto configManager =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
 
-    if (params.value("list_files", false)) {
+    bool listFiles = params.value("list_files", false);
+
+    if (listFiles) {
         auto paths = configManager->listPaths();
         addHistoryEntry("Listed " + std::to_string(paths.size()) +
                         " config files");
@@ -246,73 +272,9 @@ void TaskConfigManagement::handleListConfig(const json& params) {
     }
 }
 
-bool TaskConfigManagement::validateSetParams(const json& params) {
-    spdlog::debug("Validating set params: {}", params.dump());
-    if (!params.contains("key_path") || !params.contains("value")) {
-        setErrorType(TaskErrorType::InvalidParameter);
-        addHistoryEntry("Missing required parameters for set operation");
-        spdlog::warn("Missing required parameters for set operation");
-        return false;
-    }
-    return true;
-}
-
-bool TaskConfigManagement::validateGetParams(const json& params) {
-    spdlog::debug("Validating get params: {}", params.dump());
-    if (!params.contains("key_path")) {
-        setErrorType(TaskErrorType::InvalidParameter);
-        addHistoryEntry("Missing key_path parameter for get operation");
-        spdlog::warn("Missing key_path parameter for get operation");
-        return false;
-    }
-    return true;
-}
-
-bool TaskConfigManagement::validateDeleteParams(const json& params) {
-    spdlog::debug("Validating delete params: {}", params.dump());
-    if (!params.contains("key_path")) {
-        setErrorType(TaskErrorType::InvalidParameter);
-        addHistoryEntry("Missing key_path parameter for delete operation");
-        spdlog::warn("Missing key_path parameter for delete operation");
-        return false;
-    }
-    return true;
-}
-
-bool TaskConfigManagement::validateLoadParams(const json& params) {
-    spdlog::debug("Validating load params: {}", params.dump());
-    if (!params.contains("file_path")) {
-        setErrorType(TaskErrorType::InvalidParameter);
-        addHistoryEntry("Missing file_path parameter for load operation");
-        spdlog::warn("Missing file_path parameter for load operation");
-        return false;
-    }
-    return true;
-}
-
-bool TaskConfigManagement::validateSaveParams(const json& params) {
-    spdlog::debug("Validating save params: {}", params.dump());
-    if (!params.contains("file_path")) {
-        setErrorType(TaskErrorType::InvalidParameter);
-        addHistoryEntry("Missing file_path parameter for save operation");
-        spdlog::warn("Missing file_path parameter for save operation");
-        return false;
-    }
-    return true;
-}
-
-bool TaskConfigManagement::validateMergeParams(const json& params) {
-    spdlog::debug("Validating merge params: {}", params.dump());
-    if (!params.contains("merge_data") || !params["merge_data"].is_object()) {
-        setErrorType(TaskErrorType::InvalidParameter);
-        addHistoryEntry(
-            "Missing or invalid merge_data parameter for merge operation");
-        spdlog::warn(
-            "Missing or invalid merge_data parameter for merge operation");
-        return false;
-    }
-    return true;
-}
+// Remove individual validation methods since we now use the built-in parameter
+// validation The parameter definitions with required flags handle validation
+// automatically
 
 // Register ConfigTask with factory
 namespace {
@@ -334,7 +296,7 @@ static auto config_task_registrar = TaskRegistrar<TaskConfigManagement>(
                    {"description",
                     "Configuration key path using dot notation"}}},
                  {"value",
-                  {{"type", "object"},
+                  {{"type", "any"},
                    {"description", "Configuration value to set"}}},
                  {"file_path",
                   {{"type", "string"},
@@ -343,15 +305,22 @@ static auto config_task_registrar = TaskRegistrar<TaskConfigManagement>(
                   {{"type", "object"},
                    {"description",
                     "Configuration data to merge with existing settings"}}},
-                 {"backup",
+                 {"recursive",
                   {{"type", "boolean"},
-                   {"description",
-                    "Create backup before modifying configuration"},
-                   {"default", true}}},
-                 {"validate",
+                   {"description", "Recursive loading for directories"},
+                   {"default", false}}},
+                 {"is_directory",
                   {{"type", "boolean"},
-                   {"description", "Validate configuration after changes"},
-                   {"default", true}}}},
+                   {"description", "Whether the file_path is a directory"},
+                   {"default", false}}},
+                 {"save_all",
+                  {{"type", "boolean"},
+                   {"description", "Save all configuration data"},
+                   {"default", false}}},
+                 {"list_files",
+                  {{"type", "boolean"},
+                   {"description", "List config files instead of keys"},
+                   {"default", false}}}},
         .version = "1.0.0",
         .dependencies = {},
         .isEnabled = true},

@@ -19,13 +19,6 @@ private:
     void handleSaveConfig(const json& params);
     void handleMergeConfig(const json& params);
     void handleListConfig(const json& params);
-
-    bool validateSetParams(const json& params);
-    bool validateGetParams(const json& params);
-    bool validateDeleteParams(const json& params);
-    bool validateLoadParams(const json& params);
-    bool validateSaveParams(const json& params);
-    bool validateMergeParams(const json& params);
 };
 
 }  // namespace lithium::sequencer::task

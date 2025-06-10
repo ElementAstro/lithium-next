@@ -321,9 +321,22 @@ public:
      */
     json toJson() const;
 
+    /**
+     * @brief Sets the task type for factory-based creation.
+     * @param type The task type identifier.
+     */
+    void setTaskType(const std::string& type);
+
+    /**
+     * @brief Gets the task type identifier.
+     * @return The task type identifier.
+     */
+    [[nodiscard]] auto getTaskType() const -> const std::string&;
+
 private:
     std::string name_;  ///< The name of the task.
     std::string uuid_;  ///< The unique identifier of the task.
+    std::string taskType_;  ///< The task type identifier for factory-based creation.
     std::function<void(const json&)>
         action_;  ///< The action to be performed by the task.
     std::chrono::seconds timeout_{0};  ///< The timeout duration for the task.

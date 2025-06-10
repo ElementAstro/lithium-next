@@ -15,14 +15,16 @@
 
 #include "constant/constant.hpp"
 
+
+                                           
 template <>
-struct atom::meta::EnumTraits<lithium::sequencer::task::ExposureType> {
-    static constexpr std::array<lithium::sequencer::task::ExposureType, 5>
-        values = {lithium::sequencer::task::ExposureType::LIGHT,
-                  lithium::sequencer::task::ExposureType::DARK,
-                  lithium::sequencer::task::ExposureType::BIAS,
-                  lithium::sequencer::task::ExposureType::FLAT,
-                  lithium::sequencer::task::ExposureType::SNAPSHOT};
+struct atom::meta::EnumTraits<ExposureType> {
+    static constexpr std::array<ExposureType, 5>
+        values = {ExposureType::LIGHT,
+                  ExposureType::DARK,
+                  ExposureType::BIAS,
+                  ExposureType::FLAT,
+                  ExposureType::SNAPSHOT};
     static constexpr std::array<std::string_view, 5> names = {
         "LIGHT", "DARK", "BIAS", "FLAT", "SNAPSHOT"};
 };

@@ -86,7 +86,7 @@ public:
         std::function<void(const std::string&, int)> hook);
 
     // 新增配置方法
-    void setPriority(const std::string& name, ScriptPriority priority);
+    void setScriptPriority(const std::string& name, ScriptPriority priority);
     void setConcurrencyLimit(int limit);
     void setResourceLimit(const std::string& name, size_t memoryLimit,
                           int cpuLimit);
@@ -115,7 +115,6 @@ private:
     int concurrencyLimit_{4};
     std::shared_mutex statusMutex_;
     std::atomic<bool> shouldStop_{false};
-    TaskStatus status_{TaskStatus::Pending};
 
     // 内部方法
     void setupDefaults();

@@ -82,6 +82,10 @@ std::unique_ptr<Task> TaskFactory::createTask(const std::string& taskType,
         }
 
         auto task = it->second->createTask(name, config);
+        if (task) {
+            // Set the task type for proper serialization
+            task->setTaskType(taskType);
+        }
         spdlog::info("Created task '{}' of type '{}'", name, taskType);
         return task;
 

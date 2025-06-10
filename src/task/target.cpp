@@ -4,7 +4,7 @@
  */
 #include "target.hpp"
 
-#include "task_camera.hpp"
+#include "custom/factory.hpp"
 
 #include <mutex>
 
@@ -14,8 +14,6 @@
 #include "atom/type/json.hpp"
 #include "atom/utils/uuid.hpp"
 #include "spdlog/spdlog.h"
-
-#include "matchit/matchit.h"
 
 #include "constant/constant.hpp"
 
@@ -430,23 +428,42 @@ auto Target::getParams() const -> const json& {
 }
 
 void Target::loadTasksFromJson(const json& tasksJson) {
+    auto& factory = TaskFactory::getInstance();
+
     for (const auto& taskJson : tasksJson) {
-        std::string taskName = taskJson.at("name").get<std::string>();
-        using namespace matchit;
-        auto task = match(taskName)(
-            pattern | "TakeExposure" = [&]() -> std::unique_ptr<Task> {
-                return TaskCreator<task::TakeExposureTask>::createTask();
-            },
-            pattern | "TakeManyExposure" = [&]() -> std::unique_ptr<Task> {
-                return TaskCreator<task::TakeManyExposureTask>::createTask();
-            },
-            pattern | "SubframeExposure" = [&]() -> std::unique_ptr<Task> {
-                return TaskCreator<task::SubframeExposureTask>::createTask();
-            },
-            pattern | _ = [&]() -> std::unique_ptr<Task> {
-                THROW_TASK_ERROR_EXCEPTION("Unknown task type: {}", taskName);
-            });
-        addTask(std::move(task));
+        if (!taskJson.contains("name") || !taskJson["name"].is_string()) {
+            spdlog::error("Task JSON missing or invalid 'name' field: {}",
+                          taskJson.dump());
+            continue;
+        }
+
+        std::string taskType = taskJson["name"].get<std::string>();
+        std::string taskName = taskJson.value(
+            "taskName", taskType + "_" + atom::utils::UUID().toString());
+        json config = taskJson.value("config", json::object());
+
+        // Merge any additional parameters from the task JSON into config
+        for (const auto& [key, value] : taskJson.items()) {
+            if (key != "name" && key != "taskName" && key != "config") {
+                config[key] = value;
+            }
+        }
+
+        try {
+            auto task = factory.createTask(taskType, taskName, config);
+            if (task) {
+                addTask(std::move(task));
+                spdlog::info(
+                    "Successfully created and added task '{}' of type '{}'",
+                    taskName, taskType);
+            } else {
+                spdlog::error("Failed to create task '{}' of type '{}'",
+                              taskName, taskType);
+            }
+        } catch (const std::exception& e) {
+            spdlog::error("Exception creating task '{}' of type '{}': {}",
+                          taskName, taskType, e.what());
+        }
     }
 }
 

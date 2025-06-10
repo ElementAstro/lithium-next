@@ -360,6 +360,15 @@ void Task::clearExceptionCallback() {
     spdlog::info("Exception callback cleared for task {}", name_);
 }
 
+void Task::setTaskType(const std::string& type) {
+    taskType_ = type;
+    spdlog::info("Task '{}' type set to '{}'", name_, type);
+}
+
+auto Task::getTaskType() const -> const std::string& {
+    return taskType_;
+}
+
 json Task::toJson() const {
     auto paramDefs = json::array();
     for (const auto& def : paramDefinitions_) {
@@ -374,6 +383,7 @@ json Task::toJson() const {
     return {
         {"name", name_},
         {"uuid", uuid_},
+        {"taskType", taskType_},
         {"status", static_cast<int>(status_)},
         {"error", error_.value_or("")},
         {"priority", priority_},

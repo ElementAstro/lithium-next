@@ -2,19 +2,30 @@
 #define LITHIUM_TASK_CAMERA_BASIC_EXPOSURE_HPP
 
 #include "../../task.hpp"
-#include "common.hpp"
+#include "custom/factory.hpp"
 
+enum ExposureType { LIGHT, DARK, BIAS, FLAT, SNAPSHOT };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType, {
+                                               {LIGHT, "light"},
+                                               {DARK, "dark"},
+                                               {BIAS, "bias"},
+                                               {FLAT, "flat"},
+                                               {SNAPSHOT, "snapshot"},
+                                           })
 namespace lithium::sequencer::task {
 
 /**
  * @brief Derived class for creating TakeExposure tasks.
  * Basic single exposure task with comprehensive parameter validation.
  */
-class TakeExposureTask : public TaskCreator<TakeExposureTask> {
+class TakeExposureTask : public Task {
 public:
+    using Task::Task;  // Inherit base class constructors
+
     static auto taskName() -> std::string;
-    static void execute(const json& params);
-    
+    void execute(const json& params) override;
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
     static void defineParameters(Task& task);
@@ -26,14 +37,16 @@ public:
  * @brief Derived class for creating TakeManyExposure tasks.
  * Sequence of exposures with delay support and comprehensive error handling.
  */
-class TakeManyExposureTask : public TaskCreator<TakeManyExposureTask> {
+class TakeManyExposureTask : public Task {
 public:
+    using Task::Task;  // Inherit base class constructors
+
     static auto taskName() -> std::string;
-    static void execute(const json& params);
-    
+    void execute(const json& params) override;
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
-    
+
 private:
     static void defineParameters(Task& task);
     static void validateSequenceParameters(const json& params);
@@ -44,11 +57,13 @@ private:
  * @brief Derived class for creating SubframeExposure tasks.
  * Subframe/ROI exposure with precise coordinate validation.
  */
-class SubframeExposureTask : public TaskCreator<SubframeExposureTask> {
+class SubframeExposureTask : public Task {
 public:
+    using Task::Task;  // Inherit base class constructors
+
     static auto taskName() -> std::string;
-    static void execute(const json& params);
-    
+    void execute(const json& params) override;
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
     static void defineParameters(Task& task);
@@ -59,11 +74,13 @@ public:
  * @brief Derived class for creating CameraSettings tasks.
  * Camera configuration management with validation.
  */
-class CameraSettingsTask : public TaskCreator<CameraSettingsTask> {
+class CameraSettingsTask : public Task {
 public:
+    using Task::Task;  // Inherit base class constructors
+
     static auto taskName() -> std::string;
-    static void execute(const json& params);
-    
+    void execute(const json& params) override;
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
     static void defineParameters(Task& task);
@@ -74,11 +91,13 @@ public:
  * @brief Derived class for creating CameraPreview tasks.
  * Quick preview exposures with optimized settings.
  */
-class CameraPreviewTask : public TaskCreator<CameraPreviewTask> {
+class CameraPreviewTask : public Task {
 public:
+    using Task::Task;  // Inherit base class constructors
+
     static auto taskName() -> std::string;
-    static void execute(const json& params);
-    
+    void execute(const json& params) override;
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
     static void defineParameters(Task& task);
