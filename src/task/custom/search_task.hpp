@@ -6,7 +6,7 @@
 #include "target/engine.hpp"
 #include "task/task.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 using json = nlohmann::json;
 
@@ -96,6 +96,6 @@ private:
     static constexpr int DEFAULT_TOP_N = 10;  ///< Default number of results
 };
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task
 
 #endif  // LITHIUM_TASK_CELESTIAL_SEARCH_HPP

@@ -2,8 +2,9 @@
 #include "atom/log/loguru.hpp"
 #include "factory.hpp"
 #include "spdlog/spdlog.h"
+#include "script/python_caller.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 ScriptTask::ScriptTask(const std::string& name,
                        const std::string& scriptConfigPath,
@@ -16,6 +17,15 @@ ScriptTask::ScriptTask(const std::string& name,
         scriptAnalyzer_ = std::make_unique<ScriptAnalyzer>(analyzerConfigPath);
     }
 
+    // Initialize Python wrapper
+    try {
+        pythonWrapper_ = std::make_unique<PythonWrapper>();
+        initializePythonEnvironment();
+    } catch (const std::exception& e) {
+        spdlog::warn("Failed to initialize Python wrapper: {}", e.what());
+    }
+
+    setupResourcePool();
     setupDefaults();
 }
 
@@ -40,6 +50,32 @@ void ScriptTask::setupDefaults() {
         setErrorType(TaskErrorType::SystemError);
         addHistoryEntry("Exception occurred: " + std::string(e.what()));
     });
+}
+
+void ScriptTask::initializePythonEnvironment() {
+    if (!pythonWrapper_) return;
+
+    try {
+        // Add common Python paths
+        pythonWrapper_->add_sys_path("./scripts/python");
+        pythonWrapper_->add_sys_path("./lib/python");
+
+        // Register common C++ functions for Python access
+        pythonWrapper_->register_function("log_info", [this]() {
+            spdlog::info("Called from Python script");
+        });
+
+        addHistoryEntry("Python environment initialized");
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to setup Python environment: {}", e.what());
+        throw;
+    }
+}
+
+void ScriptTask::setupResourcePool() {
+    resourcePool_.maxConcurrentScripts = 4;
+    resourcePool_.totalMemoryLimit = 1024 * 1024 * 1024;  // 1GB
+    resourcePool_.usedMemory = 0;
 }
 
 void ScriptTask::execute(const json& params) {
@@ -550,6 +586,294 @@ void ScriptTask::validateResults(
     addHistoryEntry("Script executed successfully: " + scriptName);
 }
 
+void ScriptTask::registerPythonScript(const std::string& name, const std::string& content) {
+    if (!pythonWrapper_) {
+        throw std::runtime_error("Python wrapper not available");
+    }
+
+    try {
+        // Validate Python script
+        if (scriptAnalyzer_) {
+            auto result = analyzeScript(content);
+            if (!result.isValid) {
+                throw std::invalid_argument("Python script validation failed");
+            }
+        }
+
+        // Load script into Python environment
+        pythonWrapper_->load_script(content, name);
+
+        // Cache compiled version if enabled
+        if (cachingEnabled_) {
+            // Python scripts are compiled on load by pybind11
+            addHistoryEntry("Python script cached: " + name);
+        }
+
+        addHistoryEntry("Python script registered: " + name);
+
+    } catch (const std::exception& e) {
+        handleScriptError(name, "Failed to register Python script: " + std::string(e.what()));
+        throw;
+    }
+}
+
+void ScriptTask::loadPythonModule(const std::string& moduleName, const std::string& alias) {
+    if (!pythonWrapper_) {
+        throw std::runtime_error("Python wrapper not available");
+    }
+
+    try {
+        std::string moduleAlias = alias.empty() ? moduleName : alias;
+        pythonWrapper_->load_script("import " + moduleName, moduleAlias);
+        addHistoryEntry("Python module loaded: " + moduleName + " as " + moduleAlias);
+    } catch (const std::exception& e) {
+        handleScriptError(moduleName, "Failed to load Python module: " + std::string(e.what()));
+        throw;
+    }
+}
+
+void ScriptTask::setPythonVariable(const std::string& alias, 
+                                  const std::string& varName, 
+                                  const py::object& value) {
+    if (!pythonWrapper_) {
+        throw std::runtime_error("Python wrapper not available");
+    }
+    
+    try {
+        pythonWrapper_->set_variable(alias, varName, value);
+        addHistoryEntry("Set Python variable: " + alias + "::" + varName);
+    } catch (const std::exception& e) {
+        handleScriptError(alias, "Failed to set Python variable: " + std::string(e.what()));
+        throw;
+    }
+}
+
+void ScriptTask::executeWithContext(const std::string& scriptName, 
+                                   const ScriptExecutionContext& context) {
+    validateExecutionContext(context);
+    
+    // Store context for later use
+    executionContexts_[scriptName] = context;
+    
+    // Set working directory
+    if (!context.workingDirectory.empty()) {
+        // Platform-specific directory change
+        #ifdef _WIN32
+        _chdir(context.workingDirectory.c_str());
+        #else
+        chdir(context.workingDirectory.c_str());
+        #endif
+    }
+    
+    // Set environment variables
+    for (const auto& [key, value] : context.environment) {
+        #ifdef _WIN32
+        _putenv_s(key.c_str(), value.c_str());
+        #else
+        setenv(key.c_str(), value.c_str(), 1);
+        #endif
+    }
+    
+    // Execute based on script type
+    executeScriptWithType(scriptName, context.type, {});
+}
+
+std::future<ScriptStatus> ScriptTask::executeAsync(const std::string& scriptName,
+                                                   const json& params) {
+    return std::async(std::launch::async, [this, scriptName, params]() {
+        try {
+            executeScript(scriptName, params.get<std::unordered_map<std::string, std::string>>());
+            return getScriptStatus(scriptName);
+        } catch (const std::exception& e) {
+            ScriptStatus status;
+            status.isRunning = false;
+            status.exitCode = -1;
+            status.currentStage = "Error: " + std::string(e.what());
+            return status;
+        }
+    });
+}
+
+void ScriptTask::executePipeline(const std::vector<std::string>& scriptNames,
+                                const json& sharedContext) {
+    json currentContext = sharedContext;
+    
+    for (const auto& scriptName : scriptNames) {
+        try {
+            addHistoryEntry("Executing pipeline step: " + scriptName);
+            
+            // Execute script with current context
+            auto args = currentContext.get<std::unordered_map<std::string, std::string>>();
+            executeScript(scriptName, args);
+            
+            // Get script output and merge into context
+            auto logs = getScriptLogs(scriptName);
+            if (!logs.empty()) {
+                currentContext["previous_output"] = logs.back();
+            }
+            
+        } catch (const std::exception& e) {
+            spdlog::error("Pipeline failed at step {}: {}", scriptName, e.what());
+            throw std::runtime_error("Pipeline execution failed at: " + scriptName);
+        }
+    }
+    
+    addHistoryEntry("Pipeline execution completed");
+}
+
+void ScriptTask::createWorkflow(const std::string& workflowName,
+                               const std::vector<std::string>& scriptSequence) {
+    workflows_[workflowName] = scriptSequence;
+    addHistoryEntry("Workflow created: " + workflowName);
+}
+
+void ScriptTask::executeWorkflow(const std::string& workflowName,
+                                const json& params) {
+    auto it = workflows_.find(workflowName);
+    if (it == workflows_.end()) {
+        throw std::invalid_argument("Workflow not found: " + workflowName);
+    }
+    
+    try {
+        executePipeline(it->second, params);
+        addHistoryEntry("Workflow executed: " + workflowName);
+    } catch (const std::exception& e) {
+        handleScriptError(workflowName, "Workflow execution failed: " + std::string(e.what()));
+        throw;
+    }
+}
+
+void ScriptTask::setResourcePool(size_t maxConcurrentScripts, size_t totalMemoryLimit) {
+    std::lock_guard<std::mutex> lock(resourcePool_.resourceMutex);
+    resourcePool_.maxConcurrentScripts = maxConcurrentScripts;
+    resourcePool_.totalMemoryLimit = totalMemoryLimit;
+    addHistoryEntry("Resource pool configured: " + 
+                   std::to_string(maxConcurrentScripts) + " scripts, " +
+                   std::to_string(totalMemoryLimit / (1024*1024)) + "MB");
+}
+
+void ScriptTask::reserveResources(const std::string& scriptName,
+                                 size_t memoryMB, 
+                                 int cpuPercent) {
+    std::unique_lock<std::mutex> lock(resourcePool_.resourceMutex);
+    
+    size_t memoryBytes = memoryMB * 1024 * 1024;
+    
+    // Wait for resources to become available
+    resourcePool_.resourceAvailable.wait(lock, [this, memoryBytes]() {
+        return resourcePool_.usedMemory + memoryBytes <= resourcePool_.totalMemoryLimit;
+    });
+    
+    resourcePool_.usedMemory += memoryBytes;
+    addHistoryEntry("Resources reserved for " + scriptName + ": " + 
+                   std::to_string(memoryMB) + "MB");
+}
+
+void ScriptTask::releaseResources(const std::string& scriptName) {
+    std::lock_guard<std::mutex> lock(resourcePool_.resourceMutex);
+    
+    // This is simplified - in practice you'd track per-script resource usage
+    resourcePool_.usedMemory = 0; // Reset for simplicity
+    resourcePool_.resourceAvailable.notify_all();
+    
+    addHistoryEntry("Resources released for " + scriptName);
+}
+
+ScriptType ScriptTask::detectScriptType(const std::string& content) {
+    // Simple detection based on content patterns
+    if (content.find("#!/usr/bin/env python") != std::string::npos ||
+        content.find("import ") != std::string::npos ||
+        content.find("def ") != std::string::npos) {
+        return ScriptType::Python;
+    }
+    
+    if (content.find("#!/bin/bash") != std::string::npos ||
+        content.find("#!/bin/sh") != std::string::npos ||
+        content.find("echo ") != std::string::npos) {
+        return ScriptType::Shell;
+    }
+    
+    // Check for mixed content
+    bool hasPython = content.find("python") != std::string::npos;
+    bool hasShell = content.find("bash") != std::string::npos || content.find("sh ") != std::string::npos;
+    
+    if (hasPython && hasShell) {
+        return ScriptType::Mixed;
+    }
+    
+    return ScriptType::Shell; // Default to shell
+}
+
+void ScriptTask::executeScriptWithType(const std::string& scriptName,
+                                      ScriptType type,
+                                      const json& params) {
+    switch (type) {
+        case ScriptType::Python:
+            if (!pythonWrapper_) {
+                throw std::runtime_error("Python wrapper not available");
+            }
+            // Execute Python script
+            pythonWrapper_->eval_expression(scriptName, "exec(open('" + scriptName + "').read())");
+            break;
+            
+        case ScriptType::Shell:
+            // Use existing shell script execution
+            executeScript(scriptName, params.get<std::unordered_map<std::string, std::string>>());
+            break;
+            
+        case ScriptType::Mixed:
+            // Handle mixed scripts - this would need more sophisticated parsing
+            throw std::runtime_error("Mixed script execution not yet implemented");
+            break;
+            
+        case ScriptType::Auto:
+            // Auto-detect and execute
+            executeScriptWithType(scriptName, detectScriptType(scriptName), params);
+            break;
+    }
+}
+
+void ScriptTask::enableScriptCaching(bool enable) {
+    cachingEnabled_ = enable;
+    if (!enable) {
+        clearScriptCache();
+    }
+    addHistoryEntry("Script caching " + std::string(enable ? "enabled" : "disabled"));
+}
+
+void ScriptTask::clearScriptCache() {
+    compiledPythonScripts_.clear();
+    cachedShellScripts_.clear();
+    addHistoryEntry("Script cache cleared");
+}
+
+auto ScriptTask::getProfilingData(const std::string& scriptName) -> ProfilingData {
+    ProfilingData data;
+    data.executionTime = getExecutionTime(scriptName);
+    data.memoryUsage = static_cast<size_t>(getResourceUsage(scriptName) * 1024 * 1024);  // Convert to bytes
+    data.cpuUsage = getResourceUsage(scriptName) * 100; // Convert to percentage
+    data.ioOperations = 0; // Would need OS-specific implementation
+    
+    return data;
+}
+
+void ScriptTask::addEventListener(const std::string& eventType,
+                                 std::function<void(const json&)> handler) {
+    eventHandlers_[eventType] = handler;
+    addHistoryEntry("Event listener added: " + eventType);
+}
+
+void ScriptTask::fireEvent(const std::string& eventType, const json& data) {
+    auto it = eventHandlers_.find(eventType);
+    if (it != eventHandlers_.end()) {
+        try {
+            it->second(data);
+        } catch (const std::exception& e) {
+            spdlog::error("Event handler failed for {}: {}", eventType, e.what());
+        }
+    }
+}
+
 // Register ScriptTask with factory
 namespace {
 static auto script_task_registrar = TaskRegistrar<ScriptTask>(
@@ -593,4 +917,4 @@ static auto script_task_registrar = TaskRegistrar<ScriptTask>(
     });
 }  // namespace
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task

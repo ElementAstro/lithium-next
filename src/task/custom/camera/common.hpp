@@ -4,7 +4,7 @@
 #include <format>
 #include "atom/type/json.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 /**
  * @brief Exposure type enumeration for camera tasks
@@ -31,6 +31,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType, {
 // Common utility functions used across camera tasks can be added here
 // For example: exposure time validation, camera parameter validation, etc.
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task
 
 #endif  // LITHIUM_TASK_CAMERA_COMMON_HPP

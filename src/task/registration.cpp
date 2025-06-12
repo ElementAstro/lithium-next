@@ -3,7 +3,7 @@
 #include "custom/camera/sequence_tasks.hpp"
 #include "spdlog/spdlog.h"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 void registerBuiltInTasks() {
     auto& factory = TaskFactory::getInstance();
@@ -224,4 +224,4 @@ void registerBuiltInTasks() {
     spdlog::info("Successfully registered {} built-in tasks", 10);
 }
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task

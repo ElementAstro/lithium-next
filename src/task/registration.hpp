@@ -3,7 +3,7 @@
 
 #include "custom/factory.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 /**
  * @brief Registers all built-in tasks with the TaskFactory
@@ -28,6 +28,6 @@ std::unique_ptr<TaskType> createTaskWrapper(const std::string& name,
     });
 }
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // LITHIUM_TASK_REGISTRATION_HPP

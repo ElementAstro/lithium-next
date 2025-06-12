@@ -1,9 +1,9 @@
 #include "search_task.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
 #include "factory.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 TaskCelestialSearch::TaskCelestialSearch()
     : Task("TaskCelestialSearch",
@@ -15,43 +15,45 @@ TaskCelestialSearch::TaskCelestialSearch()
     setTimeout(std::chrono::seconds(30));
 }
 
-TaskCelestialSearch::TaskCelestialSearch(const std::string& name, const json& config)
+TaskCelestialSearch::TaskCelestialSearch(const std::string& name,
+                                         const json& config)
     : Task(name, [this](const json& params) { execute(params); }),
       searchEngine_(std::make_shared<target::SearchEngine>()) {
-    
     // Apply configuration if provided
     if (config.contains("priority")) {
         setPriority(config["priority"].get<int>());
     } else {
         setPriority(8);
     }
-    
+
     if (config.contains("timeout")) {
         setTimeout(std::chrono::seconds(config["timeout"].get<int>()));
     } else {
         setTimeout(std::chrono::seconds(30));
     }
-    
+
     // Configure data paths from config
     std::string nameJsonPath = config.value("nameJsonPath", "data/name.json");
-    std::string celestialJsonPath = config.value("celestialJsonPath", "data/celestial.json");
-    std::string modelPath = config.value("modelPath", "data/recommendation_model.json");
-    
+    std::string celestialJsonPath =
+        config.value("celestialJsonPath", "data/celestial.json");
+    std::string modelPath =
+        config.value("modelPath", "data/recommendation_model.json");
+
     // Initialize search engine with configured paths
     initializeSearchEngine(nameJsonPath, celestialJsonPath, modelPath);
     setupParameterDefinitions();
 }
 
-void TaskCelestialSearch::initializeSearchEngine(const std::string& nameJsonPath,
-                                               const std::string& celestialJsonPath,
-                                               const std::string& modelPath) {
+void TaskCelestialSearch::initializeSearchEngine(
+    const std::string& nameJsonPath, const std::string& celestialJsonPath,
+    const std::string& modelPath) {
     try {
         searchEngine_->loadFromNameJson(nameJsonPath);
         searchEngine_->loadFromCelestialJson(celestialJsonPath);
         searchEngine_->initializeRecommendationEngine(modelPath);
-        LOG_F(INFO, "Search engine initialized successfully");
+        spdlog::info("Search engine initialized successfully");
     } catch (const std::exception& e) {
-        LOG_F(WARNING, "Failed to initialize search engine: {}", e.what());
+        spdlog::warn("Failed to initialize search engine: {}", e.what());
         // Continue without throwing - allow graceful degradation
     }
 }
@@ -83,13 +85,13 @@ void TaskCelestialSearch::setupParameterDefinitions() {
 
 void TaskCelestialSearch::execute(const json& params) {
     const auto start = std::chrono::steady_clock::now();
-    LOG_F(INFO, "Starting celestial search task with params: {}",
-          params.dump());
+    spdlog::info("Starting celestial search task with params: {}",
+                 params.dump());
 
     try {
         if (!validateParams(params)) {
-            LOG_F(ERROR, "Parameter validation failed for params: {}",
-                  params.dump());
+            spdlog::error("Parameter validation failed for params: {}",
+                          params.dump());
             setErrorType(TaskErrorType::InvalidParameter);
             auto errors = getParamErrors();
             std::string errorMsg = "Invalid parameters: ";
@@ -98,10 +100,10 @@ void TaskCelestialSearch::execute(const json& params) {
             }
             THROW_INVALID_ARGUMENT(errorMsg);
         }
-        LOG_F(INFO, "Parameters validated successfully");
+        spdlog::info("Parameters validated successfully");
 
         std::string searchType = params.at("searchType").get<std::string>();
-        LOG_F(INFO, "Processing {} search request", searchType);
+        spdlog::info("Processing {} search request", searchType);
 
         json results;
 
@@ -114,7 +116,7 @@ void TaskCelestialSearch::execute(const json& params) {
         } else if (searchType == "recommendation") {
             results = getRecommendations(params);
         } else {
-            LOG_F(ERROR, "Invalid search type: {}", searchType);
+            spdlog::error("Invalid search type: {}", searchType);
             setErrorType(TaskErrorType::InvalidParameter);
             THROW_INVALID_ARGUMENT("Unknown search type: " + searchType);
         }
@@ -129,9 +131,9 @@ void TaskCelestialSearch::execute(const json& params) {
                         " results");
 
         if (params.contains("userId") && params.contains("query")) {
-            LOG_F(DEBUG, "Updating search history for user {} with query {}",
-                  params["userId"].get<std::string>(),
-                  params["query"].get<std::string>());
+            spdlog::debug("Updating search history for user {} with query {}",
+                          params["userId"].get<std::string>(),
+                          params["query"].get<std::string>());
             updateSearchHistory(params["userId"].get<std::string>(),
                                 params["query"].get<std::string>());
         }
@@ -139,10 +141,10 @@ void TaskCelestialSearch::execute(const json& params) {
         const auto end = std::chrono::steady_clock::now();
         const auto duration =
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        LOG_F(INFO, "Search task completed in {}ms", duration.count());
+        spdlog::info("Search task completed in {}ms", duration.count());
 
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error in TaskCelestialSearch: {}", e.what());
+        spdlog::error("Error in TaskCelestialSearch: {}", e.what());
         if (getErrorType() == TaskErrorType::None) {
             setErrorType(TaskErrorType::SystemError);
         }
@@ -156,26 +158,26 @@ json TaskCelestialSearch::searchByName(const json& params) {
     int fuzzyTolerance =
         params.value("fuzzyTolerance", DEFAULT_FUZZY_TOLERANCE);
 
-    LOG_F(INFO, "Starting name-based search for query: {}", query);
+    spdlog::info("Starting name-based search for query: {}", query);
 
     // First try exact match
     auto results = searchEngine_->searchStarObject(query);
-    LOG_F(DEBUG, "Exact match results count: {}", results.size());
+    spdlog::debug("Exact match results count: {}", results.size());
 
     // If no exact matches, try fuzzy search
     if (results.empty()) {
-        LOG_F(INFO, "No exact matches found, trying fuzzy search");
+        spdlog::info("No exact matches found, trying fuzzy search");
         results = searchEngine_->fuzzySearchStarObject(query, fuzzyTolerance);
-        LOG_F(DEBUG, "Fuzzy search results count: {}", results.size());
+        spdlog::debug("Fuzzy search results count: {}", results.size());
     }
 
     // Get autocomplete suggestions
     auto suggestions = searchEngine_->autoCompleteStarObject(query);
-    LOG_F(DEBUG, "Generated {} autocomplete suggestions", suggestions.size());
+    spdlog::debug("Generated {} autocomplete suggestions", suggestions.size());
 
     // Rank results by popularity
     auto rankedResults = searchEngine_->getRankedResults(results);
-    LOG_F(INFO, "Ranked {} results", rankedResults.size());
+    spdlog::info("Ranked {} results", rankedResults.size());
 
     // Build response JSON
     json response;
@@ -193,7 +195,7 @@ json TaskCelestialSearch::searchByName(const json& params) {
     const auto end = std::chrono::steady_clock::now();
     const auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    LOG_F(INFO, "Name search completed in {}ms", duration.count());
+    spdlog::info("Name search completed in {}ms", duration.count());
 
     addHistoryEntry("Found " + std::to_string(results.size()) +
                     " matches for query: " + query);
@@ -202,7 +204,7 @@ json TaskCelestialSearch::searchByName(const json& params) {
 }
 
 json TaskCelestialSearch::searchByType(const json& params) {
-    LOG_F(INFO, "Performing type-based search");
+    spdlog::info("Performing type-based search");
 
     std::string objectType = params.at("objectType").get<std::string>();
     std::string morphology = params.value("morphology", std::string(""));
@@ -229,7 +231,7 @@ json TaskCelestialSearch::searchByType(const json& params) {
 }
 
 json TaskCelestialSearch::searchByMagnitude(const json& params) {
-    LOG_F(INFO, "Performing magnitude-based search");
+    spdlog::info("Performing magnitude-based search");
 
     double minMag = params.at("minMagnitude").get<double>();
     double maxMag = params.at("maxMagnitude").get<double>();
@@ -255,7 +257,7 @@ json TaskCelestialSearch::searchByMagnitude(const json& params) {
 }
 
 json TaskCelestialSearch::getRecommendations(const json& params) {
-    LOG_F(INFO, "Getting object recommendations");
+    spdlog::info("Getting object recommendations");
 
     std::string userId = params.at("userId").get<std::string>();
     int topN = params.value("topN", DEFAULT_TOP_N);
@@ -287,119 +289,113 @@ json TaskCelestialSearch::getRecommendations(const json& params) {
 
 void TaskCelestialSearch::updateSearchHistory(const std::string& user,
                                               const std::string& query) {
-    LOG_F(INFO, "Updating search history for user: {}", user);
+    spdlog::info("Updating search history for user: {}", user);
 
     try {
         // Add implicit rating for the search query
         searchEngine_->addUserRating(user, query, 0.5);
-        LOG_F(DEBUG, "Added user rating for query: {}", query);
+        spdlog::debug("Added user rating for query: {}", query);
 
         // Periodically retrain the recommendation engine
         static int searchCount = 0;
         if (++searchCount % 100 == 0) {
-            LOG_F(INFO, "Training recommendation engine after {} searches",
-                  searchCount);
+            spdlog::info("Training recommendation engine after {} searches",
+                         searchCount);
             searchEngine_->trainRecommendationEngine();
             searchEngine_->saveRecommendationModel(
                 "data/recommendation_model.json");
-            LOG_F(INFO, "Recommendation model updated and saved");
+            spdlog::info("Recommendation model updated and saved");
         }
 
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error updating search history: {} (User: {})", e.what(),
-              user);
+        spdlog::error("Error updating search history: {} (User: {})", e.what(),
+                      user);
         // Don't throw here as this is not critical for search functionality
     }
 }
 
 // Task registration
 namespace {
-    // Define task information
-    TaskInfo searchTaskInfo = {
-        .name = "TaskCelestialSearch",
-        .description = "Performs celestial object searches with various filtering options and personalized recommendations",
-        .category = "Astronomy",
-        .requiredParameters = {"searchType"},
-        .parameterSchema = json{
+// Define task information
+TaskInfo searchTaskInfo = {
+    .name = "TaskCelestialSearch",
+    .description =
+        "Performs celestial object searches with various filtering options and "
+        "personalized recommendations",
+    .category = "Astronomy",
+    .requiredParameters = {"searchType"},
+    .parameterSchema =
+        json{
             {"type", "object"},
-            {"properties", json{
-                {"searchType", json{
-                    {"type", "string"},
-                    {"enum", json::array({"name", "type", "magnitude", "recommendation"})},
-                    {"description", "Type of search to perform"}
-                }},
-                {"query", json{
-                    {"type", "string"},
-                    {"description", "Search query string (required for name search)"}
-                }},
-                {"userId", json{
-                    {"type", "string"},
-                    {"description", "User identifier (required for recommendations)"}
-                }},
-                {"objectType", json{
-                    {"type", "string"},
-                    {"description", "Celestial object type filter"}
-                }},
-                {"morphology", json{
-                    {"type", "string"},
-                    {"description", "Morphological classification filter"}
-                }},
-                {"minMagnitude", json{
-                    {"type", "number"},
-                    {"description", "Minimum magnitude for filtering"}
-                }},
-                {"maxMagnitude", json{
-                    {"type", "number"},
-                    {"description", "Maximum magnitude for filtering"}
-                }},
-                {"topN", json{
-                    {"type", "integer"},
-                    {"minimum", 1},
-                    {"maximum", 100},
-                    {"default", 10},
-                    {"description", "Number of results to return"}
-                }},
-                {"fuzzyTolerance", json{
-                    {"type", "integer"},
-                    {"minimum", 0},
-                    {"maximum", 10},
-                    {"default", 2},
-                    {"description", "Fuzzy search tolerance level"}
-                }},
-                {"contentWeight", json{
-                    {"type", "number"},
-                    {"minimum", 0.0},
-                    {"maximum", 1.0},
-                    {"default", 0.3},
-                    {"description", "Weight for content-based recommendations"}
-                }},
-                {"collaborativeWeight", json{
-                    {"type", "number"},
-                    {"minimum", 0.0},
-                    {"maximum", 1.0},
-                    {"default", 0.7},
-                    {"description", "Weight for collaborative filtering recommendations"}
-                }}
-            }},
+            {"properties",
+             json{
+                 {"searchType",
+                  json{{"type", "string"},
+                       {"enum", json::array({"name", "type", "magnitude",
+                                             "recommendation"})},
+                       {"description", "Type of search to perform"}}},
+                 {"query",
+                  json{{"type", "string"},
+                       {"description",
+                        "Search query string (required for name search)"}}},
+                 {"userId",
+                  json{{"type", "string"},
+                       {"description",
+                        "User identifier (required for recommendations)"}}},
+                 {"objectType",
+                  json{{"type", "string"},
+                       {"description", "Celestial object type filter"}}},
+                 {"morphology",
+                  json{{"type", "string"},
+                       {"description", "Morphological classification filter"}}},
+                 {"minMagnitude",
+                  json{{"type", "number"},
+                       {"description", "Minimum magnitude for filtering"}}},
+                 {"maxMagnitude",
+                  json{{"type", "number"},
+                       {"description", "Maximum magnitude for filtering"}}},
+                 {"topN", json{{"type", "integer"},
+                               {"minimum", 1},
+                               {"maximum", 100},
+                               {"default", 10},
+                               {"description", "Number of results to return"}}},
+                 {"fuzzyTolerance",
+                  json{{"type", "integer"},
+                       {"minimum", 0},
+                       {"maximum", 10},
+                       {"default", 2},
+                       {"description", "Fuzzy search tolerance level"}}},
+                 {"contentWeight",
+                  json{{"type", "number"},
+                       {"minimum", 0.0},
+                       {"maximum", 1.0},
+                       {"default", 0.3},
+                       {"description",
+                        "Weight for content-based recommendations"}}},
+                 {"collaborativeWeight",
+                  json{{"type", "number"},
+                       {"minimum", 0.0},
+                       {"maximum", 1.0},
+                       {"default", 0.7},
+                       {"description",
+                        "Weight for collaborative filtering "
+                        "recommendations"}}}}},
             {"required", json::array({"searchType"})},
-            {"additionalProperties", false}
-        },
-        .version = "1.0.0",
-        .dependencies = {},
-        .isEnabled = true
-    };
+            {"additionalProperties", false}},
+    .version = "1.0.0",
+    .dependencies = {},
+    .isEnabled = true};
 
-    // Custom factory function that handles configuration
-    auto celestialSearchFactory = [](const std::string& name, const json& config) -> std::unique_ptr<TaskCelestialSearch> {
-        return std::make_unique<TaskCelestialSearch>(name, config);
-    };
+// Custom factory function that handles configuration
+auto celestialSearchFactory =
+    [](const std::string& name,
+       const json& config) -> std::unique_ptr<TaskCelestialSearch> {
+    return std::make_unique<TaskCelestialSearch>(name, config);
+};
 
-    // Register the task using the registrar
-    static TaskRegistrar<TaskCelestialSearch> searchTaskRegistrar(
-        "CelestialSearch", 
-        searchTaskInfo, 
-        celestialSearchFactory
-    );
-}
+// Register the task using the registrar
+static TaskRegistrar<TaskCelestialSearch> searchTaskRegistrar(
+    "CelestialSearch", searchTaskInfo, celestialSearchFactory);
+}  // namespace
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task

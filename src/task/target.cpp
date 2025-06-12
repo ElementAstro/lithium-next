@@ -17,7 +17,7 @@
 
 #include "constant/constant.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 /**
  * @class TaskErrorException
@@ -572,4 +572,4 @@ auto Target::fromJson(const json& data) -> void {
     }
 }
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task

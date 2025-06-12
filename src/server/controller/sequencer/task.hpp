@@ -7,7 +7,7 @@
 #ifndef LITHIUM_SERVER_CONTROLLER_TASK_MANAGEMENT_HPP
 #define LITHIUM_SERVER_CONTROLLER_TASK_MANAGEMENT_HPP
 
-#include "controller.hpp"
+#include "../controller.hpp"
 
 #include <functional>
 #include <string>
@@ -15,7 +15,7 @@
 #include "atom/type/json.hpp"
 
 // Import specific camera task types
-#include "../../task/custom/camera/basic_exposure.hpp"
+#include "task/custom/camera/basic_exposure.hpp"
 #include "../../task/custom/camera/focus_tasks.hpp"
 #include "../../task/custom/camera/filter_tasks.hpp"
 #include "../../task/custom/camera/guide_tasks.hpp"
@@ -125,39 +125,39 @@ public:
                     if (body.has("g_exposure")) params["g_exposure"] = body["g_exposure"].d();
                     if (body.has("b_exposure")) params["b_exposure"] = body["b_exposure"].d();
                     
-                    std::unique_ptr<lithium::sequencer::Task> task;
+                    std::unique_ptr<lithium::task::Task> task;
                     
                     // Create task based on type
                     if (taskType == "TakeExposureTask") {
-                        task = lithium::sequencer::task::TakeExposureTask::createEnhancedTask();
-                        lithium::sequencer::task::TakeExposureTask::execute(params);
+                        task = lithium::task::task::TakeExposureTask::createEnhancedTask();
+                        lithium::task::task::TakeExposureTask::execute(params);
                     } else if (taskType == "TakeManyExposureTask") {
-                        task = lithium::sequencer::task::TakeManyExposureTask::createEnhancedTask();
-                        lithium::sequencer::task::TakeManyExposureTask::execute(params);
+                        task = lithium::task::task::TakeManyExposureTask::createEnhancedTask();
+                        lithium::task::task::TakeManyExposureTask::execute(params);
                     } else if (taskType == "SubframeExposureTask") {
-                        task = lithium::sequencer::task::SubframeExposureTask::createEnhancedTask();
-                        lithium::sequencer::task::SubframeExposureTask::execute(params);
+                        task = lithium::task::task::SubframeExposureTask::createEnhancedTask();
+                        lithium::task::task::SubframeExposureTask::execute(params);
                     } else if (taskType == "CameraSettingsTask") {
-                        task = lithium::sequencer::task::CameraSettingsTask::createEnhancedTask();
-                        lithium::sequencer::task::CameraSettingsTask::execute(params);
+                        task = lithium::task::task::CameraSettingsTask::createEnhancedTask();
+                        lithium::task::task::CameraSettingsTask::execute(params);
                     } else if (taskType == "CameraPreviewTask") {
-                        task = lithium::sequencer::task::CameraPreviewTask::createEnhancedTask();
-                        lithium::sequencer::task::CameraPreviewTask::execute(params);
+                        task = lithium::task::task::CameraPreviewTask::createEnhancedTask();
+                        lithium::task::task::CameraPreviewTask::execute(params);
                     } else if (taskType == "AutoFocusTask") {
-                        task = lithium::sequencer::task::AutoFocusTask::createEnhancedTask();
-                        lithium::sequencer::task::AutoFocusTask::execute(params);
+                        task = lithium::task::task::AutoFocusTask::createEnhancedTask();
+                        lithium::task::task::AutoFocusTask::execute(params);
                     } else if (taskType == "FilterSequenceTask") {
-                        task = lithium::sequencer::task::FilterSequenceTask::createEnhancedTask();
-                        lithium::sequencer::task::FilterSequenceTask::execute(params);
+                        task = lithium::task::task::FilterSequenceTask::createEnhancedTask();
+                        lithium::task::task::FilterSequenceTask::execute(params);
                     } else if (taskType == "RGBSequenceTask") {
-                        task = lithium::sequencer::task::RGBSequenceTask::createEnhancedTask();
-                        lithium::sequencer::task::RGBSequenceTask::execute(params);
+                        task = lithium::task::task::RGBSequenceTask::createEnhancedTask();
+                        lithium::task::task::RGBSequenceTask::execute(params);
                     } else if (taskType == "GuidedExposureTask") {
-                        task = lithium::sequencer::task::GuidedExposureTask::createEnhancedTask();
-                        lithium::sequencer::task::GuidedExposureTask::execute(params);
+                        task = lithium::task::task::GuidedExposureTask::createEnhancedTask();
+                        lithium::task::task::GuidedExposureTask::execute(params);
                     } else if (taskType == "AutoCalibrationTask") {
-                        task = lithium::sequencer::task::AutoCalibrationTask::createEnhancedTask();
-                        lithium::sequencer::task::AutoCalibrationTask::execute(params);
+                        task = lithium::task::task::AutoCalibrationTask::createEnhancedTask();
+                        lithium::task::task::AutoCalibrationTask::execute(params);
                     } else {
                         throw std::invalid_argument("Unsupported camera task type: " + taskType);
                     }
@@ -190,7 +190,7 @@ public:
                     }
                     
                     // Create and execute the actual exposure task
-                    auto task = lithium::sequencer::task::TakeExposureTask::createEnhancedTask();
+                    auto task = lithium::task::task::TakeExposureTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create exposure task");
                     }
@@ -203,7 +203,7 @@ public:
                     if (body.has("offset")) params["offset"] = body["offset"].i();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::sequencer::task::TakeExposureTask::execute(params);
+                    lithium::task::task::TakeExposureTask::execute(params);
                     
                     result["message"] = "Exposure task created and executed successfully";
                     result["taskType"] = "TakeExposureTask";
@@ -230,7 +230,7 @@ public:
                     }
                     
                     // Create and execute the actual multiple exposures task
-                    auto task = lithium::sequencer::task::TakeManyExposureTask::createEnhancedTask();
+                    auto task = lithium::task::task::TakeManyExposureTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create multiple exposures task");
                     }
@@ -245,7 +245,7 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("delay")) params["delay"] = body["delay"].d();
                     
-                    lithium::sequencer::task::TakeManyExposureTask::execute(params);
+                    lithium::task::task::TakeManyExposureTask::execute(params);
                     
                     result["message"] = "Multiple exposures task created and executed successfully";
                     result["taskType"] = "TakeManyExposureTask";
@@ -273,7 +273,7 @@ public:
                         throw std::invalid_argument("Missing required parameters: exposure, x, y, width, height");
                     }
                     
-                    auto task = lithium::sequencer::task::SubframeExposureTask::createEnhancedTask();
+                    auto task = lithium::task::task::SubframeExposureTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create subframe exposure task");
                     }
@@ -287,7 +287,7 @@ public:
                     if (body.has("binning")) params["binning"] = body["binning"].i();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::sequencer::task::SubframeExposureTask::execute(params);
+                    lithium::task::task::SubframeExposureTask::execute(params);
                     
                     result["message"] = "Subframe exposure task created and executed successfully";
                     result["taskType"] = "SubframeExposureTask";
@@ -307,7 +307,7 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::sequencer::task::CameraSettingsTask::createEnhancedTask();
+                    auto task = lithium::task::task::CameraSettingsTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create camera settings task");
                     }
@@ -320,7 +320,7 @@ public:
                     if (body.has("temperature")) params["temperature"] = body["temperature"].d();
                     if (body.has("cooler")) params["cooler"] = body["cooler"].b();
                     
-                    lithium::sequencer::task::CameraSettingsTask::execute(params);
+                    lithium::task::task::CameraSettingsTask::execute(params);
                     
                     result["message"] = "Camera settings task created and executed successfully";
                     result["taskType"] = "CameraSettingsTask";
@@ -340,7 +340,7 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::sequencer::task::CameraPreviewTask::createEnhancedTask();
+                    auto task = lithium::task::task::CameraPreviewTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create camera preview task");
                     }
@@ -350,7 +350,7 @@ public:
                     if (body.has("binning")) params["binning"] = body["binning"].i();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::sequencer::task::CameraPreviewTask::execute(params);
+                    lithium::task::task::CameraPreviewTask::execute(params);
                     
                     result["message"] = "Camera preview task created and executed successfully";
                     result["taskType"] = "CameraPreviewTask";
@@ -370,7 +370,7 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::sequencer::task::AutoFocusTask::createEnhancedTask();
+                    auto task = lithium::task::task::AutoFocusTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create auto focus task");
                     }
@@ -383,7 +383,7 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("focuser")) params["focuser"] = body["focuser"].s();
                     
-                    lithium::sequencer::task::AutoFocusTask::execute(params);
+                    lithium::task::task::AutoFocusTask::execute(params);
                     
                     result["message"] = "Auto focus task created and executed successfully";
                     result["taskType"] = "AutoFocusTask";
@@ -407,7 +407,7 @@ public:
                         throw std::invalid_argument("Missing required parameters: filters, exposure");
                     }
                     
-                    auto task = lithium::sequencer::task::FilterSequenceTask::createEnhancedTask();
+                    auto task = lithium::task::task::FilterSequenceTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create filter sequence task");
                     }
@@ -419,7 +419,7 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("filter_wheel")) params["filter_wheel"] = body["filter_wheel"].s();
                     
-                    lithium::sequencer::task::FilterSequenceTask::execute(params);
+                    lithium::task::task::FilterSequenceTask::execute(params);
                     
                     result["message"] = "Filter sequence task created and executed successfully";
                     result["taskType"] = "FilterSequenceTask";
@@ -439,7 +439,7 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::sequencer::task::RGBSequenceTask::createEnhancedTask();
+                    auto task = lithium::task::task::RGBSequenceTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create RGB sequence task");
                     }
@@ -452,7 +452,7 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("filter_wheel")) params["filter_wheel"] = body["filter_wheel"].s();
                     
-                    lithium::sequencer::task::RGBSequenceTask::execute(params);
+                    lithium::task::task::RGBSequenceTask::execute(params);
                     
                     result["message"] = "RGB sequence task created and executed successfully";
                     result["taskType"] = "RGBSequenceTask";
@@ -476,7 +476,7 @@ public:
                         throw std::invalid_argument("Missing required parameter: exposure");
                     }
                     
-                    auto task = lithium::sequencer::task::GuidedExposureTask::createEnhancedTask();
+                    auto task = lithium::task::task::GuidedExposureTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create guided exposure task");
                     }
@@ -488,7 +488,7 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("guide_camera")) params["guide_camera"] = body["guide_camera"].s();
                     
-                    lithium::sequencer::task::GuidedExposureTask::execute(params);
+                    lithium::task::task::GuidedExposureTask::execute(params);
                     
                     result["message"] = "Guided exposure task created and executed successfully";
                     result["taskType"] = "GuidedExposureTask";
@@ -508,7 +508,7 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::sequencer::task::AutoCalibrationTask::createEnhancedTask();
+                    auto task = lithium::task::task::AutoCalibrationTask::createEnhancedTask();
                     if (!task) {
                         throw std::runtime_error("Failed to create auto calibration task");
                     }
@@ -520,7 +520,7 @@ public:
                     if (body.has("dark_exposure")) params["dark_exposure"] = body["dark_exposure"].d();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::sequencer::task::AutoCalibrationTask::execute(params);
+                    lithium::task::task::AutoCalibrationTask::execute(params);
                     
                     result["message"] = "Auto calibration task created and executed successfully";
                     result["taskType"] = "AutoCalibrationTask";

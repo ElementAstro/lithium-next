@@ -20,7 +20,7 @@
 #include "atom/async/safetype.hpp"
 #include "task.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 /**
  * @enum TargetStatus
@@ -343,6 +343,6 @@ private:
     void notifyError(const std::exception& e);
 };
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // LITHIUM_TARGET_HPP

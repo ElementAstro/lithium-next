@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <numeric>
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 /**
  * @class TaskTimeoutException
@@ -400,4 +400,4 @@ json Task::toJson() const {
         {"postTasks", json::array()},
     };
 }
-}  // namespace lithium::sequencer
+}  // namespace lithium::task

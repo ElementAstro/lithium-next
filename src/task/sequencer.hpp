@@ -15,7 +15,7 @@
 #include "generator.hpp"
 #include "target.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 using namespace lithium::database;
 
 /**
@@ -597,6 +597,6 @@ private:
     void processJsonWithGenerator(json& data);
 };
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // LITHIUM_TASK_SEQUENCER_HPP

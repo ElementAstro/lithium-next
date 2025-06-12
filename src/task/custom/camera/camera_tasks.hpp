@@ -20,7 +20,7 @@
 #include "safety_tasks.hpp"
 #include "platesolve_tasks.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 /**
  * @brief Namespace alias for camera tasks
@@ -28,8 +28,8 @@ namespace lithium::sequencer::task {
  * Provides a convenient way to access camera-specific functionality
  * while maintaining the flat namespace structure for compatibility.
  */
-namespace camera = lithium::sequencer::task;
+namespace camera = lithium::task::task;
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task
 
 #endif  // LITHIUM_TASK_CAMERA_ALL_TASKS_HPP

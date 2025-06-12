@@ -14,7 +14,7 @@
 #include <vector>
 #include "atom/type/json.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 using json = nlohmann::json;
 
 /**
@@ -370,6 +370,6 @@ private:
     bool validateParamType(const std::string& type, const json& value) const;
 };
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // TASK_HPP

@@ -7,7 +7,7 @@
 #include "device/manager.hpp"
 #include "task.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 /**
  * @enum DeviceOperation
@@ -220,6 +220,6 @@ private:
                                         const std::string& name);
 };
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // LITHIUM_DEVICE_TASK_HPP

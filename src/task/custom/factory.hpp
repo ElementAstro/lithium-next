@@ -24,7 +24,7 @@
 #include "../task.hpp"
 #include "atom/type/json.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 using json = nlohmann::json;
 
@@ -384,6 +384,6 @@ public:
 #define AUTO_REGISTER_TASK(TaskType, taskTypeString, info) \
     static TaskRegistrar<TaskType> _registrar_##TaskType(taskTypeString, info)
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // LITHIUM_TASK_FACTORY_HPP

@@ -2,7 +2,7 @@
 #include <spdlog/spdlog.h>
 #include "factory.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 DeviceTask::DeviceTask(const std::string& name, DeviceManager& manager)
     : Task(name, [this](const json& params) { this->execute(params); }),
@@ -468,4 +468,4 @@ static auto device_task_registrar = TaskRegistrar<DeviceTask>(
     });
 }  // namespace
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task

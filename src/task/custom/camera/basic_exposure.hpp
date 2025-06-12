@@ -13,7 +13,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType, {
                                                {FLAT, "flat"},
                                                {SNAPSHOT, "snapshot"},
                                            })
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 /**
  * @brief Derived class for creating TakeExposure tasks.
@@ -104,6 +104,6 @@ public:
     static void validatePreviewParameters(const json& params);
 };
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task
 
 #endif  // LITHIUM_TASK_CAMERA_BASIC_EXPOSURE_HPP

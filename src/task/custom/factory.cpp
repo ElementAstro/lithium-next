@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <mutex>
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 TaskFactory& TaskFactory::getInstance() {
     static TaskFactory instance;
@@ -227,4 +227,4 @@ TaskFactory::getDependencyGraph() const {
     return graph;
 }
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task

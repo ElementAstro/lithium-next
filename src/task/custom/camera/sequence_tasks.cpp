@@ -11,19 +11,13 @@
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 // ==================== SmartExposureTask Implementation ====================
 
-SmartExposureTask::SmartExposureTask(const std::string& name,
-                                     const json& config)
-    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
-    validateSmartExposureParameters(config);
-    // Store default config as parameter definitions
-    for (const auto& [key, value] : config.items()) {
-        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
-    }
-}
+/* 已在头文件内联实现 SmartExposureTask 构造函数，删除此处重复定义 */
+
+auto SmartExposureTask::taskName() -> std::string { return "SmartExposure"; }
 
 void SmartExposureTask::execute(const json& params) { executeImpl(params); }
 
@@ -62,8 +56,7 @@ void SmartExposureTask::executeImpl(const json& params) {
                                    {"offset", offset}};
 
             // Create and execute TakeExposureTask
-            auto exposureTask = std::make_unique<TakeExposureTask>(
-                "test_exposure", exposureParams);
+            auto exposureTask = TakeExposureTask::createEnhancedTask();
             exposureTask->execute(exposureParams);
 
             // In a real implementation, we would analyze the image for SNR
@@ -95,8 +88,7 @@ void SmartExposureTask::executeImpl(const json& params) {
                             {"binning", binning},
                             {"gain", gain},
                             {"offset", offset}};
-        auto finalTask =
-            std::make_unique<TakeExposureTask>("final_exposure", finalParams);
+        auto finalTask = TakeExposureTask::createEnhancedTask();
         finalTask->execute(finalParams);
 
         auto endTime = std::chrono::steady_clock::now();
@@ -149,17 +141,43 @@ void SmartExposureTask::validateSmartExposureParameters(const json& params) {
     }
 }
 
+auto SmartExposureTask::createEnhancedTask() -> std::unique_ptr<Task> {
+    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
+        try {
+            auto taskInstance = std::make_unique<SmartExposureTask>();
+            taskInstance->execute(params);
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Enhanced SmartExposure task failed: {}", e.what());
+            throw;
+        }
+    });
+
+    defineParameters(*task);
+    task->setPriority(7);
+    task->setTimeout(std::chrono::seconds(1800));  // 30 minute timeout
+    task->setLogLevel(2);
+    task->setTaskType(taskName());
+
+    return task;
+}
+
+void SmartExposureTask::defineParameters(Task& task) {
+    task.addParamDefinition("target_snr", "double", true, 50.0,
+                            "Target signal-to-noise ratio");
+    task.addParamDefinition("max_exposure", "double", false, 300.0,
+                            "Maximum exposure time in seconds");
+    task.addParamDefinition("min_exposure", "double", false, 1.0,
+                            "Minimum exposure time in seconds");
+    task.addParamDefinition("max_attempts", "int", false, 5,
+                            "Maximum optimization attempts");
+    task.addParamDefinition("binning", "int", false, 1, "Camera binning");
+    task.addParamDefinition("gain", "int", false, 100, "Camera gain");
+    task.addParamDefinition("offset", "int", false, 10, "Camera offset");
+}
+
 // ==================== DeepSkySequenceTask Implementation ====================
 
-DeepSkySequenceTask::DeepSkySequenceTask(const std::string& name,
-                                         const json& config)
-    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
-    validateDeepSkyParameters(config);
-    // Store default config as parameter definitions
-    for (const auto& [key, value] : config.items()) {
-        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
-    }
-}
+/* 已在头文件内联实现 DeepSkySequenceTask 构造函数，删除此处重复定义 */
 
 void DeepSkySequenceTask::execute(const json& params) { executeImpl(params); }
 
@@ -215,8 +233,7 @@ void DeepSkySequenceTask::executeImpl(const json& params) {
                                        {"binning", binning},
                                        {"gain", gain},
                                        {"offset", offset}};
-                auto exposureTask = std::make_unique<TakeExposureTask>(
-                    getName() + "_exp_" + std::to_string(exp), exposureParams);
+                auto exposureTask = TakeExposureTask::createEnhancedTask();
                 exposureTask->execute(exposureParams);
 
                 if (exp % 10 == 0) {
@@ -284,15 +301,9 @@ void DeepSkySequenceTask::validateDeepSkyParameters(const json& params) {
 
 // ==================== PlanetaryImagingTask Implementation ====================
 
-PlanetaryImagingTask::PlanetaryImagingTask(const std::string& name,
-                                           const json& config)
-    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
-    validatePlanetaryParameters(config);
-    // Store default config as parameter definitions
-    for (const auto& [key, value] : config.items()) {
-        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
-    }
-}
+PlanetaryImagingTask::PlanetaryImagingTask()
+    : Task("PlanetaryImaging",
+           [this](const json& params) { this->executeImpl(params); }) {}
 
 void PlanetaryImagingTask::execute(const json& params) { executeImpl(params); }
 
@@ -330,9 +341,7 @@ void PlanetaryImagingTask::executeImpl(const json& params) {
                                        {"binning", binning},
                                        {"gain", gain},
                                        {"offset", offset}};
-                auto exposureTask = std::make_unique<TakeExposureTask>(
-                    getName() + "_frame_" + std::to_string(frame),
-                    exposureParams);
+                auto exposureTask = TakeExposureTask::createEnhancedTask();
                 exposureTask->execute(exposureParams);
 
                 if (frame % 100 == 0) {
@@ -389,14 +398,7 @@ void PlanetaryImagingTask::validatePlanetaryParameters(const json& params) {
 
 // ==================== TimelapseTask Implementation ====================
 
-TimelapseTask::TimelapseTask(const std::string& name, const json& config)
-    : Task(name, [this](const json& params) { this->executeImpl(params); }) {
-    validateTimelapseParameters(config);
-    // Store default config as parameter definitions
-    for (const auto& [key, value] : config.items()) {
-        addParamDefinition(key, "auto", false, value, "Parameter for " + key);
-    }
-}
+/* 已在头文件内联实现 TimelapseTask 构造函数，删除此处重复定义 */
 
 void TimelapseTask::execute(const json& params) { executeImpl(params); }
 
@@ -437,8 +439,7 @@ void TimelapseTask::executeImpl(const json& params) {
                                    {"binning", binning},
                                    {"gain", gain},
                                    {"offset", offset}};
-            auto exposureTask = std::make_unique<TakeExposureTask>(
-                getName() + "_frame_" + std::to_string(frame), exposureParams);
+            auto exposureTask = TakeExposureTask::createEnhancedTask();
             exposureTask->execute(exposureParams);
 
             auto frameEndTime = std::chrono::steady_clock::now();
@@ -503,7 +504,7 @@ void TimelapseTask::validateTimelapseParameters(const json& params) {
 // ==================== Task Registration ====================
 
 namespace {
-using namespace lithium::sequencer;
+using namespace lithium::task;
 
 // Register SmartExposureTask
 AUTO_REGISTER_TASK(
@@ -639,4 +640,4 @@ AUTO_REGISTER_TASK(
               .dependencies = {"TakeExposure"}}));
 }  // namespace
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task

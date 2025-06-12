@@ -1,8 +1,11 @@
+// ==================== Includes and Declarations ====================
 #include "calibration_tasks.hpp"
-#include "basic_exposure.hpp"
+#include <spdlog/spdlog.h>
+#include <chrono>
+#include <cmath>
 #include <memory>
 #include <thread>
-#include <chrono>
+#include "basic_exposure.hpp"
 
 #include "../../task.hpp"
 
@@ -10,8 +13,11 @@
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
-namespace lithium::sequencer::task {
+#define MOCK_CAMERA
 
+namespace lithium::task::task {
+
+// ==================== Mock Camera Class ====================
 #ifdef MOCK_CAMERA
 class MockCamera {
 public:
@@ -38,13 +44,13 @@ public:
     void setCoolerEnabled(bool enabled) { coolerEnabled_ = enabled; }
 
 private:
-    bool exposureStatus_{};
-    double exposureTime_{};
-    int gain_{};
-    int offset_{};
+    bool exposureStatus_{false};
+    double exposureTime_{0.0};
+    int gain_{100};
+    int offset_{10};
     int binningX_{1};
     int binningY_{1};
-    double temperature_{-10.0}; // Mock temperature
+    double temperature_{-10.0};  // Mock temperature
     double targetTemperature_{-10.0};
     bool coolerEnabled_{false};
 };
@@ -56,12 +62,16 @@ auto AutoCalibrationTask::taskName() -> std::string {
     return "AutoCalibration";
 }
 
-void AutoCalibrationTask::execute(const json& params) {
-    LOG_F(INFO, "Executing AutoCalibration task with params: {}", params.dump(4));
+void AutoCalibrationTask::execute(const json& params) { executeImpl(params); }
+
+void AutoCalibrationTask::executeImpl(const json& params) {
+    spdlog::info("Executing AutoCalibration task with params: {}", params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
-    
+
     try {
+        validateCalibrationParameters(params);
+
         int darkCount = params.value("dark_count", 10);
         int biasCount = params.value("bias_count", 20);
         int flatCount = params.value("flat_count", 10);
@@ -71,59 +81,52 @@ void AutoCalibrationTask::execute(const json& params) {
         int gain = params.value("gain", 100);
         int offset = params.value("offset", 10);
 
-        LOG_F(INFO, "Starting auto calibration: {} darks, {} bias, {} flats", 
-              darkCount, biasCount, flatCount);
+        spdlog::info("Starting auto calibration: {} darks, {} bias, {} flats", darkCount, biasCount, flatCount);
 
         // Take bias frames
         if (biasCount > 0) {
-            LOG_F(INFO, "Taking {} bias frames", biasCount);
-            json biasParams = {
-                {"count", biasCount},
-                {"exposure", 0.0001}, // Minimum exposure for bias
-                {"type", ExposureType::BIAS},
-                {"binning", binning},
-                {"gain", gain},
-                {"offset", offset}
-            };
-            TakeManyExposureTask::execute(biasParams);
+            spdlog::info("Taking {} bias frames", biasCount);
+            json biasParams = {{"count", biasCount},
+                               {"exposure", 0.0001},  // Minimum exposure for bias
+                               {"type", "bias"},
+                               {"binning", binning},
+                               {"gain", gain},
+                               {"offset", offset}};
+
+            TakeManyExposureTask manyExposureTask("TakeManyExposure", [](const json&) {});
+            manyExposureTask.execute(biasParams);
         }
 
         // Take dark frames
         if (darkCount > 0) {
-            LOG_F(INFO, "Taking {} dark frames at {} seconds", darkCount, darkExposure);
-            json darkParams = {
-                {"count", darkCount},
-                {"exposure", darkExposure},
-                {"type", ExposureType::DARK},
-                {"binning", binning},
-                {"gain", gain},
-                {"offset", offset}
-            };
-            TakeManyExposureTask::execute(darkParams);
+            spdlog::info("Taking {} dark frames at {} seconds", darkCount, darkExposure);
+            json darkParams = {{"count", darkCount}, {"exposure", darkExposure},
+                               {"type", "dark"},     {"binning", binning},
+                               {"gain", gain},       {"offset", offset}};
+
+            TakeManyExposureTask manyExposureTask("TakeManyExposure", [](const json&) {});
+            manyExposureTask.execute(darkParams);
         }
 
         // Take flat frames
         if (flatCount > 0) {
-            LOG_F(INFO, "Taking {} flat frames at {} seconds", flatCount, flatExposure);
-            json flatParams = {
-                {"count", flatCount},
-                {"exposure", flatExposure},
-                {"type", ExposureType::FLAT},
-                {"binning", binning},
-                {"gain", gain},
-                {"offset", offset}
-            };
-            TakeManyExposureTask::execute(flatParams);
+            spdlog::info("Taking {} flat frames at {} seconds", flatCount, flatExposure);
+            json flatParams = {{"count", flatCount}, {"exposure", flatExposure},
+                               {"type", "flat"},     {"binning", binning},
+                               {"gain", gain},       {"offset", offset}};
+
+            TakeManyExposureTask manyExposureTask("TakeManyExposure", [](const json&) {});
+            manyExposureTask.execute(flatParams);
         }
 
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        LOG_F(INFO, "AutoCalibration task completed in {} ms", duration.count());
-        
+        spdlog::info("AutoCalibration task completed in {} ms", duration.count());
+
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        LOG_F(ERROR, "AutoCalibration task failed after {} ms: {}", duration.count(), e.what());
+        spdlog::error("AutoCalibration task failed after {} ms: {}", duration.count(), e.what());
         throw;
     }
 }
@@ -131,18 +134,20 @@ void AutoCalibrationTask::execute(const json& params) {
 auto AutoCalibrationTask::createEnhancedTask() -> std::unique_ptr<Task> {
     auto task = std::make_unique<Task>(taskName(), [](const json& params) {
         try {
-            execute(params);
+            AutoCalibrationTask taskInstance;
+            taskInstance.execute(params);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Enhanced AutoCalibration task failed: {}", e.what());
+            spdlog::error("Enhanced AutoCalibration task failed: {}", e.what());
             throw;
         }
     });
-    
+
     defineParameters(*task);
-    task->setPriority(4); // Medium priority for calibration
-    task->setTimeout(std::chrono::seconds(7200)); // 2 hour timeout
-    task->setLogLevel(2); // INFO level
-    
+    task->setPriority(4);  // Medium priority for calibration
+    task->setTimeout(std::chrono::seconds(7200));  // 2 hour timeout
+    task->setLogLevel(2);                          // INFO level
+    task->setTaskType(taskName());
+
     return task;
 }
 
@@ -164,31 +169,31 @@ void AutoCalibrationTask::validateCalibrationParameters(const json& params) {
             THROW_INVALID_ARGUMENT("Dark count must be between 0 and 100");
         }
     }
-    
+
     if (params.contains("bias_count")) {
         int count = params["bias_count"].get<int>();
         if (count < 0 || count > 100) {
             THROW_INVALID_ARGUMENT("Bias count must be between 0 and 100");
         }
     }
-    
+
     if (params.contains("flat_count")) {
         int count = params["flat_count"].get<int>();
         if (count < 0 || count > 100) {
             THROW_INVALID_ARGUMENT("Flat count must be between 0 and 100");
         }
     }
-    
+
     if (params.contains("dark_exposure")) {
         double exposure = params["dark_exposure"].get<double>();
-        if (exposure <= 0 || exposure > 3600) { // Max 1 hour
+        if (exposure <= 0 || exposure > 3600) {  // Max 1 hour
             THROW_INVALID_ARGUMENT("Dark exposure must be between 0 and 3600 seconds");
         }
     }
-    
+
     if (params.contains("flat_exposure")) {
         double exposure = params["flat_exposure"].get<double>();
-        if (exposure <= 0 || exposure > 60) { // Max 1 minute for flats
+        if (exposure <= 0 || exposure > 60) {  // Max 1 minute for flats
             THROW_INVALID_ARGUMENT("Flat exposure must be between 0 and 60 seconds");
         }
     }
@@ -196,32 +201,38 @@ void AutoCalibrationTask::validateCalibrationParameters(const json& params) {
 
 // ==================== ThermalCycleTask Implementation ====================
 
-auto ThermalCycleTask::taskName() -> std::string {
-    return "ThermalCycle";
-}
+auto ThermalCycleTask::taskName() -> std::string { return "ThermalCycle"; }
 
-void ThermalCycleTask::execute(const json& params) {
-    LOG_F(INFO, "Executing ThermalCycle task with params: {}", params.dump(4));
+void ThermalCycleTask::execute(const json& params) { executeImpl(params); }
+
+void ThermalCycleTask::executeImpl(const json& params) {
+    spdlog::info("Executing ThermalCycle task with params: {}", params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
-    
+
     try {
+        validateThermalParameters(params);
+
         double startTemp = params.value("start_temp", 20.0);
         double endTemp = params.value("end_temp", -20.0);
         double stepTemp = params.value("step_temp", -5.0);
         int exposuresPerTemp = params.value("exposures_per_temp", 5);
         double exposureTime = params.value("exposure_time", 60.0);
-        int stabilizeTime = params.value("stabilize_time", 300); // 5 minutes default
+        int stabilizeTime = params.value("stabilize_time", 300);  // 5 minutes default
 
-        LOG_F(INFO, "Starting thermal cycle from {} to {} °C in {} °C steps", 
-              startTemp, endTemp, stepTemp);
+        spdlog::info("Starting thermal cycle from {} to {} °C in {} °C steps", startTemp, endTemp, stepTemp);
 
-        // For now, only MockCamera is supported
+        // Validate step direction
+        if ((endTemp > startTemp && stepTemp < 0) ||
+            (endTemp < startTemp && stepTemp > 0)) {
+            THROW_INVALID_ARGUMENT("Step temperature direction doesn't match start/end temperature range");
+        }
+
 #ifdef MOCK_CAMERA
         std::shared_ptr<MockCamera> camera = std::make_shared<MockCamera>();
-        
+
         if (!camera) {
-            LOG_F(ERROR, "Mock camera creation failed");
+            spdlog::error("Mock camera creation failed");
             THROW_RUNTIME_ERROR("Mock camera creation failed");
         }
 
@@ -230,45 +241,50 @@ void ThermalCycleTask::execute(const json& params) {
 
         double currentTemp = startTemp;
         int tempStep = 0;
-        
-        while ((stepTemp > 0 && currentTemp <= endTemp) || 
+
+        while ((stepTemp > 0 && currentTemp <= endTemp) ||
                (stepTemp < 0 && currentTemp >= endTemp)) {
-            
-            LOG_F(INFO, "Setting temperature to {} °C (step {})", currentTemp, tempStep);
+            spdlog::info("Setting temperature to {} °C (step {})", currentTemp, tempStep);
             camera->setTargetTemperature(currentTemp);
-            
+
             // Wait for temperature stabilization
-            LOG_F(INFO, "Waiting {} seconds for temperature stabilization", stabilizeTime);
+            spdlog::info("Waiting {} seconds for temperature stabilization", stabilizeTime);
             std::this_thread::sleep_for(std::chrono::seconds(stabilizeTime));
-            
+
             // Take exposures at this temperature
-            LOG_F(INFO, "Taking {} exposures at {} °C", exposuresPerTemp, currentTemp);
-            json exposureParams = {
-                {"count", exposuresPerTemp},
-                {"exposure", exposureTime},
-                {"type", ExposureType::DARK},
-                {"binning", 1},
-                {"gain", 100},
-                {"offset", 10}
-            };
-            TakeManyExposureTask::execute(exposureParams);
-            
+            spdlog::info("Taking {} exposures at {} °C", exposuresPerTemp, currentTemp);
+            json exposureParams = {{"count", exposuresPerTemp},
+                                   {"exposure", exposureTime},
+                                   {"type", "dark"},
+                                   {"binning", 1},
+                                   {"gain", 100},
+                                   {"offset", 10}};
+
+            TakeManyExposureTask manyExposureTask("TakeManyExposure", [](const json&) {});
+            manyExposureTask.execute(exposureParams);
+
             currentTemp += stepTemp;
             tempStep++;
+
+            // Safety check to prevent infinite loops
+            if (tempStep > 100) {
+                spdlog::warn("Maximum temperature steps (100) reached, stopping thermal cycle");
+                break;
+            }
         }
 #else
-        LOG_F(ERROR, "Real camera not implemented yet");
-        THROW_RUNTIME_ERROR("Real camera not implemented yet");
+        spdlog::error("Real camera thermal control not implemented yet");
+        THROW_RUNTIME_ERROR("Real camera thermal control not implemented yet");
 #endif
 
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        LOG_F(INFO, "ThermalCycle task completed in {} ms", duration.count());
-        
+        spdlog::info("ThermalCycle task completed in {} ms", duration.count());
+
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        LOG_F(ERROR, "ThermalCycle task failed after {} ms: {}", duration.count(), e.what());
+        spdlog::error("ThermalCycle task failed after {} ms: {}", duration.count(), e.what());
         throw;
     }
 }
@@ -276,18 +292,20 @@ void ThermalCycleTask::execute(const json& params) {
 auto ThermalCycleTask::createEnhancedTask() -> std::unique_ptr<Task> {
     auto task = std::make_unique<Task>(taskName(), [](const json& params) {
         try {
-            execute(params);
+            ThermalCycleTask taskInstance;
+            taskInstance.execute(params);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Enhanced ThermalCycle task failed: {}", e.what());
+            spdlog::error("Enhanced ThermalCycle task failed: {}", e.what());
             throw;
         }
     });
-    
+
     defineParameters(*task);
-    task->setPriority(2); // Low priority for long-running tasks
-    task->setTimeout(std::chrono::seconds(14400)); // 4 hour timeout
-    task->setLogLevel(2); // INFO level
-    
+    task->setPriority(2);  // Low priority for long-running tasks
+    task->setTimeout(std::chrono::seconds(14400));  // 4 hour timeout
+    task->setLogLevel(2);                           // INFO level
+    task->setTaskType(taskName());
+
     return task;
 }
 
@@ -307,28 +325,35 @@ void ThermalCycleTask::validateThermalParameters(const json& params) {
             THROW_INVALID_ARGUMENT("Start temperature must be between -50 and 50 °C");
         }
     }
-    
+
     if (params.contains("end_temp")) {
         double temp = params["end_temp"].get<double>();
         if (temp < -50.0 || temp > 50.0) {
             THROW_INVALID_ARGUMENT("End temperature must be between -50 and 50 °C");
         }
     }
-    
+
     if (params.contains("step_temp")) {
         double step = params["step_temp"].get<double>();
-        if (std::abs(step) > 20.0) {
-            THROW_INVALID_ARGUMENT("Temperature step must be between -20 and 20 °C");
+        if (std::abs(step) > 20.0 || step == 0.0) {
+            THROW_INVALID_ARGUMENT("Temperature step must be between -20 and 20 °C and not zero");
         }
     }
-    
+
     if (params.contains("exposures_per_temp")) {
         int count = params["exposures_per_temp"].get<int>();
         if (count <= 0 || count > 50) {
             THROW_INVALID_ARGUMENT("Exposures per temperature must be between 1 and 50");
         }
     }
-    
+
+    if (params.contains("exposure_time")) {
+        double time = params["exposure_time"].get<double>();
+        if (time <= 0 || time > 3600) {
+            THROW_INVALID_ARGUMENT("Exposure time must be between 0 and 3600 seconds");
+        }
+    }
+
     if (params.contains("stabilize_time")) {
         int time = params["stabilize_time"].get<int>();
         if (time < 0 || time > 3600) {
@@ -343,13 +368,18 @@ auto FlatFieldSequenceTask::taskName() -> std::string {
     return "FlatFieldSequence";
 }
 
-void FlatFieldSequenceTask::execute(const json& params) {
-    LOG_F(INFO, "Executing FlatFieldSequence task with params: {}", params.dump(4));
+void FlatFieldSequenceTask::execute(const json& params) { executeImpl(params); }
+
+void FlatFieldSequenceTask::executeImpl(const json& params) {
+    spdlog::info("Executing FlatFieldSequence task with params: {}", params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
-    
+
     try {
-        std::vector<std::string> filters = params.value("filters", std::vector<std::string>{"L", "R", "G", "B"});
+        validateFlatFieldParameters(params);
+
+        std::vector<std::string> filters = params.value(
+            "filters", std::vector<std::string>{"L", "R", "G", "B"});
         int exposuresPerFilter = params.value("exposures_per_filter", 10);
         double baseExposure = params.value("base_exposure", 1.0);
         bool autoExposure = params.value("auto_exposure", true);
@@ -358,54 +388,53 @@ void FlatFieldSequenceTask::execute(const json& params) {
         int gain = params.value("gain", 100);
         int offset = params.value("offset", 10);
 
-        LOG_F(INFO, "Starting flat field sequence for {} filters with {} exposures each", 
-              filters.size(), exposuresPerFilter);
+        spdlog::info("Starting flat field sequence for {} filters with {} exposures each", filters.size(), exposuresPerFilter);
 
         for (const auto& filter : filters) {
-            LOG_F(INFO, "Taking flat frames for filter: {}", filter);
-            
+            spdlog::info("Taking flat frames for filter: {}", filter);
+
             double exposureTime = baseExposure;
-            
+
             // Auto-exposure logic for flats (simplified)
             if (autoExposure) {
-                LOG_F(INFO, "Determining optimal exposure time for filter {}", filter);
+                spdlog::info("Determining optimal exposure time for filter {}", filter);
                 // Take a test exposure
-                json testParams = {
-                    {"exposure", baseExposure},
-                    {"type", ExposureType::FLAT},
-                    {"binning", binning},
-                    {"gain", gain},
-                    {"offset", offset}
-                };
-                TakeExposureTask::execute(testParams);
-                
+                json testParams = {{"exposure", baseExposure},
+                                   {"type", "flat"},
+                                   {"binning", binning},
+                                   {"gain", gain},
+                                   {"offset", offset}};
+
+                TakeExposureTask exposureTask("TakeExposure", [](const json&) {});
+                exposureTask.execute(testParams);
+
                 // In a real implementation, we would analyze the histogram
                 // For now, just use the base exposure
-                LOG_F(INFO, "Using exposure time {} seconds for filter {}", exposureTime, filter);
+                spdlog::info("Using exposure time {} seconds for filter {}", exposureTime, filter);
             }
-            
+
             // Take the flat sequence
-            json flatParams = {
-                {"count", exposuresPerFilter},
-                {"exposure", exposureTime},
-                {"type", ExposureType::FLAT},
-                {"binning", binning},
-                {"gain", gain},
-                {"offset", offset}
-            };
-            TakeManyExposureTask::execute(flatParams);
-            
-            LOG_F(INFO, "Completed {} flat frames for filter {}", exposuresPerFilter, filter);
+            json flatParams = {{"count", exposuresPerFilter},
+                               {"exposure", exposureTime},
+                               {"type", "flat"},
+                               {"binning", binning},
+                               {"gain", gain},
+                               {"offset", offset}};
+
+            TakeManyExposureTask manyExposureTask("TakeManyExposure", [](const json&) {});
+            manyExposureTask.execute(flatParams);
+
+            spdlog::info("Completed {} flat frames for filter {}", exposuresPerFilter, filter);
         }
 
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        LOG_F(INFO, "FlatFieldSequence task completed in {} ms", duration.count());
-        
+        spdlog::info("FlatFieldSequence task completed in {} ms", duration.count());
+
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        LOG_F(ERROR, "FlatFieldSequence task failed after {} ms: {}", duration.count(), e.what());
+        spdlog::error("FlatFieldSequence task failed after {} ms: {}", duration.count(), e.what());
         throw;
     }
 }
@@ -413,18 +442,20 @@ void FlatFieldSequenceTask::execute(const json& params) {
 auto FlatFieldSequenceTask::createEnhancedTask() -> std::unique_ptr<Task> {
     auto task = std::make_unique<Task>(taskName(), [](const json& params) {
         try {
-            execute(params);
+            FlatFieldSequenceTask taskInstance;
+            taskInstance.execute(params);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Enhanced FlatFieldSequence task failed: {}", e.what());
+            spdlog::error("Enhanced FlatFieldSequence task failed: {}", e.what());
             throw;
         }
     });
-    
+
     defineParameters(*task);
-    task->setPriority(3); // Medium-low priority for calibration
-    task->setTimeout(std::chrono::seconds(3600)); // 1 hour timeout
-    task->setLogLevel(2); // INFO level
-    
+    task->setPriority(3);  // Medium-low priority for calibration
+    task->setTimeout(std::chrono::seconds(3600));  // 1 hour timeout
+    task->setLogLevel(2);                          // INFO level
+    task->setTaskType(taskName());
+
     return task;
 }
 
@@ -446,27 +477,137 @@ void FlatFieldSequenceTask::validateFlatFieldParameters(const json& params) {
             THROW_INVALID_ARGUMENT("Exposures per filter must be between 1 and 100");
         }
     }
-    
+
     if (params.contains("base_exposure")) {
         double exposure = params["base_exposure"].get<double>();
         if (exposure <= 0 || exposure > 60) {
             THROW_INVALID_ARGUMENT("Base exposure must be between 0 and 60 seconds");
         }
     }
-    
+
     if (params.contains("target_adu")) {
         int adu = params["target_adu"].get<int>();
         if (adu <= 0 || adu > 65535) {
             THROW_INVALID_ARGUMENT("Target ADU must be between 1 and 65535");
         }
     }
-    
+
     if (params.contains("filters") && params["filters"].is_array()) {
         auto filters = params["filters"].get<std::vector<std::string>>();
         if (filters.empty() || filters.size() > 20) {
             THROW_INVALID_ARGUMENT("Filter list must contain between 1 and 20 filters");
         }
     }
+
+    // Validate individual camera parameters
+    TakeExposureTask::validateCameraParameters(params);
 }
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task
+
+// ==================== Task Registration Section ====================
+
+namespace {
+using namespace lithium::task;
+using namespace lithium::task::task;
+
+// Register AutoCalibrationTask
+AUTO_REGISTER_TASK(
+    AutoCalibrationTask, "AutoCalibration",
+    (TaskInfo{
+        .name = "AutoCalibration",
+        .description = "Automatically takes calibration frames (darks, bias, flats)",
+        .category = "Calibration",
+        .requiredParameters = {},
+        .parameterSchema =
+            json{{"type", "object"},
+                 {"properties",
+                  json{{"dark_count", json{{"type", "integer"},
+                                           {"minimum", 0},
+                                           {"maximum", 100}}},
+                       {"bias_count", json{{"type", "integer"},
+                                           {"minimum", 0},
+                                           {"maximum", 100}}},
+                       {"flat_count", json{{"type", "integer"},
+                                           {"minimum", 0},
+                                           {"maximum", 100}}},
+                       {"dark_exposure", json{{"type", "number"},
+                                              {"minimum", 0},
+                                              {"maximum", 3600}}},
+                       {"flat_exposure", json{{"type", "number"},
+                                              {"minimum", 0},
+                                              {"maximum", 60}}},
+                       {"binning", json{{"type", "integer"},
+                                        {"minimum", 1}}},
+                       {"gain", json{{"type", "integer"},
+                                     {"minimum", 0}}},
+                       {"offset", json{{"type", "integer"},
+                                       {"minimum", 0}}}}}},
+        .version = "1.0.0",
+        .dependencies = {"TakeExposure"}}));
+
+// Register ThermalCycleTask
+AUTO_REGISTER_TASK(
+    ThermalCycleTask, "ThermalCycle",
+    (TaskInfo{
+        .name = "ThermalCycle",
+        .description = "Performs thermal cycling while taking dark frames",
+        .category = "Calibration",
+        .requiredParameters = {},
+        .parameterSchema =
+            json{{"type", "object"},
+                 {"properties",
+                  json{{"start_temp", json{{"type", "number"},
+                                           {"minimum", -50},
+                                           {"maximum", 50}}},
+                       {"end_temp", json{{"type", "number"},
+                                         {"minimum", -50},
+                                         {"maximum", 50}}},
+                       {"step_temp", json{{"type", "number"},
+                                          {"minimum", -20},
+                                          {"maximum", 20}}},
+                       {"exposures_per_temp", json{{"type", "integer"},
+                                                   {"minimum", 1},
+                                                   {"maximum", 50}}},
+                       {"exposure_time", json{{"type", "number"},
+                                              {"minimum", 0},
+                                              {"maximum", 3600}}},
+                       {"stabilize_time", json{{"type", "integer"},
+                                               {"minimum", 0},
+                                               {"maximum", 3600}}}}}},
+        .version = "1.0.0",
+        .dependencies = {"TakeExposure"}}));
+
+// Register FlatFieldSequenceTask
+AUTO_REGISTER_TASK(
+    FlatFieldSequenceTask, "FlatFieldSequence",
+    (TaskInfo{
+        .name = "FlatFieldSequence",
+        .description = "Takes flat field frames for multiple filters",
+        .category = "Calibration",
+        .requiredParameters = {},
+        .parameterSchema =
+            json{{"type", "object"},
+                 {"properties",
+                  json{{"filters", json{{"type", "array"},
+                                        {"items", json{{"type", "string"}}}}},
+                       {"exposures_per_filter", json{{"type", "integer"},
+                                                     {"minimum", 1},
+                                                     {"maximum", 100}}},
+                       {"base_exposure", json{{"type", "number"},
+                                              {"minimum", 0},
+                                              {"maximum", 60}}},
+                       {"auto_exposure", json{{"type", "boolean"}}},
+                       {"target_adu", json{{"type", "integer"},
+                                           {"minimum", 1},
+                                           {"maximum", 65535}}},
+                       {"binning", json{{"type", "integer"},
+                                        {"minimum", 1}}},
+                       {"gain", json{{"type", "integer"},
+                                     {"minimum", 0}}},
+                       {"offset", json{{"type", "integer"},
+                                       {"minimum", 0}}}}}},
+        .version = "1.0.0",
+        .dependencies = {"TakeExposure"}}));
+
+}  // namespace

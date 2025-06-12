@@ -4,7 +4,7 @@
 #include "../../task.hpp"
 #include "custom/factory.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 // ==================== 智能曝光和序列任务 ====================
 
@@ -13,14 +13,21 @@ namespace lithium::sequencer::task {
  */
 class SmartExposureTask : public Task {
 public:
-    SmartExposureTask(const std::string& name, const json& config);
+    SmartExposureTask()
+        : Task("SmartExposure",
+               [this](const json& params) { this->executeImpl(params); }) {}
 
+    static auto taskName() -> std::string;
     void execute(const json& params) override;
     static std::string getTaskType() { return "SmartExposure"; }
 
+    // Enhanced functionality using new Task base class features
+    static auto createEnhancedTask() -> std::unique_ptr<Task>;
+    static void defineParameters(Task& task);
+    static void validateSmartExposureParameters(const json& params);
+
 private:
     void executeImpl(const json& params);
-    void validateSmartExposureParameters(const json& params);
 };
 
 // ==================== 自动化拍摄序列任务 ====================
@@ -31,14 +38,21 @@ private:
  */
 class DeepSkySequenceTask : public Task {
 public:
-    DeepSkySequenceTask(const std::string& name, const json& config);
+    DeepSkySequenceTask()
+        : Task("DeepSkySequence",
+               [this](const json& params) { this->executeImpl(params); }) {}
 
+    static auto taskName() -> std::string;
     void execute(const json& params) override;
     static std::string getTaskType() { return "DeepSkySequence"; }
 
+    // Enhanced functionality using new Task base class features
+    static auto createEnhancedTask() -> std::unique_ptr<Task>;
+    static void defineParameters(Task& task);
+    static void validateDeepSkyParameters(const json& params);
+
 private:
     void executeImpl(const json& params);
-    void validateDeepSkyParameters(const json& params);
 };
 
 /**
@@ -47,14 +61,19 @@ private:
  */
 class PlanetaryImagingTask : public Task {
 public:
-    PlanetaryImagingTask(const std::string& name, const json& config);
+    PlanetaryImagingTask();
 
+    static auto taskName() -> std::string;
     void execute(const json& params) override;
     static std::string getTaskType() { return "PlanetaryImaging"; }
 
+    // Enhanced functionality using new Task base class features
+    static auto createEnhancedTask() -> std::unique_ptr<Task>;
+    static void defineParameters(Task& task);
+    static void validatePlanetaryParameters(const json& params);
+
 private:
     void executeImpl(const json& params);
-    void validatePlanetaryParameters(const json& params);
 };
 
 /**
@@ -63,16 +82,23 @@ private:
  */
 class TimelapseTask : public Task {
 public:
-    TimelapseTask(const std::string& name, const json& config);
+    TimelapseTask()
+        : Task("Timelapse",
+               [this](const json& params) { this->executeImpl(params); }) {}
 
+    static auto taskName() -> std::string;
     void execute(const json& params) override;
     static std::string getTaskType() { return "Timelapse"; }
 
+    // Enhanced functionality using new Task base class features
+    static auto createEnhancedTask() -> std::unique_ptr<Task>;
+    static void defineParameters(Task& task);
+    static void validateTimelapseParameters(const json& params);
+
 private:
     void executeImpl(const json& params);
-    void validateTimelapseParameters(const json& params);
 };
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task
 
 #endif  // LITHIUM_TASK_CAMERA_SEQUENCE_TASKS_HPP

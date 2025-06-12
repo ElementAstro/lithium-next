@@ -34,10 +34,12 @@ add_library(${PROJECT_NAME} STATIC ${PROJECT_FILES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Include directories
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${Python3_INCLUDE_DIRS})
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBS})
+
+include_directories(${Python3_INCLUDE_DIRS})
 
 # Set version properties
 set_target_properties(${PROJECT_NAME} PROPERTIES

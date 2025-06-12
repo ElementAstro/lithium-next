@@ -18,7 +18,7 @@
 #include "constant/constant.hpp"
 #include "registration.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 using json = nlohmann::json;
 
@@ -1212,4 +1212,4 @@ void ExposureSequence::setTargetPriority(const std::string& targetName,
     }
 }
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
