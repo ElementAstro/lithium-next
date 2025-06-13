@@ -286,7 +286,15 @@ void AutoFocusTask::executeImpl(const json& params) {
 }
 
 auto AutoFocusTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), createTaskExecutor<AutoFocusTask>());
+    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
+        try {
+            AutoFocusTask taskInstance;
+            taskInstance.execute(params);
+        } catch (const std::exception& e) {
+            spdlog::error("Enhanced AutoFocus task failed: {}", e.what());
+            throw;
+        }
+    });
 
     defineParameters(*task);
     task->setPriority(8);  // High priority for focus tasks
@@ -454,7 +462,15 @@ void FocusSeriesTask::executeImpl(const json& params) {
 }
 
 auto FocusSeriesTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), createTaskExecutor<FocusSeriesTask>());
+    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
+        try {
+            FocusSeriesTask taskInstance;
+            taskInstance.execute(params);
+        } catch (const std::exception& e) {
+            spdlog::error("Enhanced FocusSeries task failed: {}", e.what());
+            throw;
+        }
+    });
 
     defineParameters(*task);
     task->setPriority(6);
@@ -720,7 +736,15 @@ void FocusValidationTask::executeImpl(const json& params) {
 }
 
 auto FocusValidationTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), createTaskExecutor<FocusValidationTask>());
+    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
+        try {
+            FocusValidationTask taskInstance;
+            taskInstance.execute(params);
+        } catch (const std::exception& e) {
+            spdlog::error("Enhanced FocusValidation task failed: {}", e.what());
+            throw;
+        }
+    });
 
     defineParameters(*task);
     task->setPriority(6);
@@ -816,7 +840,15 @@ void BacklashCompensationTask::executeImpl(const json& params) {
 }
 
 auto BacklashCompensationTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<Task>(taskName(), createTaskExecutor<BacklashCompensationTask>());
+    auto task = std::make_unique<Task>(taskName(), [](const json& params) {
+        try {
+            BacklashCompensationTask taskInstance;
+            taskInstance.execute(params);
+        } catch (const std::exception& e) {
+            spdlog::error("Enhanced BacklashCompensation task failed: {}", e.what());
+            throw;
+        }
+    });
 
     defineParameters(*task);
     task->setPriority(7);
@@ -933,21 +965,6 @@ void FocusMonitoringTask::validateFocusMonitoringParameters(const json& params) 
 }
 
 }  // namespace lithium::task::task
-
-// ==================== Common Helper for Task Execution ====================
-
-template <typename TaskType>
-auto createTaskExecutor() -> std::function<void(const json&)> {
-    return [](const json& params) {
-        try {
-            TaskType taskInstance;
-            taskInstance.execute(params);
-        } catch (const std::exception& e) {
-            spdlog::error("Enhanced {} task failed: {}", TaskType::taskName(), e.what());
-            throw;
-        }
-    };
-}
 
 // ==================== Task Registration Section ====================
 

@@ -14,7 +14,7 @@
 #include "basic_exposure.hpp"
 #include "calibration_tasks.hpp"
 #include "sequence_tasks.hpp"
-#include "focus_tasks.hpp"
+#include "../focuser/focus_tasks.hpp"
 #include "filter_tasks.hpp"
 #include "guide_tasks.hpp"
 #include "safety_tasks.hpp"

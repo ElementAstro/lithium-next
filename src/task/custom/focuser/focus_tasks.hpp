@@ -1,5 +1,5 @@
-#ifndef LITHIUM_TASK_CAMERA_FOCUS_TASKS_HPP
-#define LITHIUM_TASK_CAMERA_FOCUS_TASKS_HPP
+#ifndef LITHIUM_TASK_FOCUSER_FOCUS_TASKS_HPP
+#define LITHIUM_TASK_FOCUSER_FOCUS_TASKS_HPP
 
 #include "../../task.hpp"
 
@@ -186,4 +186,4 @@ private:
 
 }  // namespace lithium::task::task
 
-#endif  // LITHIUM_TASK_CAMERA_FOCUS_TASKS_HPP
+#endif  // LITHIUM_TASK_FOCUSER_FOCUS_TASKS_HPP

@@ -27,6 +27,9 @@ set(PROJECT_FILES
     ${CUSTOM_SRC}
 )
 
+# Add subdirectories for organized build
+add_subdirectory(custom)
+
 # Required libraries
 set(PROJECT_LIBS
     atom

@@ -16,7 +16,7 @@
 
 // Import specific camera task types
 #include "task/custom/camera/basic_exposure.hpp"
-#include "../../task/custom/camera/focus_tasks.hpp"
+#include "../../task/custom/focuser/focus_tasks.hpp"
 #include "../../task/custom/camera/filter_tasks.hpp"
 #include "../../task/custom/camera/guide_tasks.hpp"
 #include "../../task/custom/camera/calibration_tasks.hpp"
