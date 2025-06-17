@@ -1,9 +1,7 @@
 #ifndef LITHIUM_TOOLS_CONVERT_HPP
 #define LITHIUM_TOOLS_CONVERT_HPP
 
-#include <algorithm>
 #include <cmath>
-#include <concepts>
 #include <optional>
 #include <string>
 #include <vector>
@@ -27,24 +25,6 @@ struct CartesianCoordinates {
 struct SphericalCoordinates {
     double rightAscension;  ///< Right Ascension in degrees
     double declination;     ///< Declination in degrees
-} ATOM_ALIGNAS(16);
-
-/**
- * @brief Represents Geographic coordinates.
- */
-template <std::floating_point T>
-struct GeographicCoords {
-    T latitude;   ///< Latitude in degrees
-    T longitude;  ///< Longitude in degrees
-} ATOM_ALIGNAS(16);
-
-/**
- * @brief Represents Celestial coordinates.
- */
-template <std::floating_point T>
-struct CelestialCoords {
-    T ra;   ///< Right Ascension in hours
-    T dec;  ///< Declination in degrees
 } ATOM_ALIGNAS(16);
 
 /**
@@ -186,34 +166,6 @@ auto radToDmsStr(double radians) -> std::string;
  * @return The string representation in HMS format.
  */
 auto radToHmsStr(double radians) -> std::string;
-
-/**
- * @brief Normalizes the right ascension to the range [0, 24) hours.
- *
- * @param ra Right ascension in hours.
- * @return Normalized right ascension in hours.
- */
-template <std::floating_point T>
-auto normalizeRightAscension(T ra) -> T {
-    constexpr T HOURS_IN_CIRCLE = 24.0;
-    ra = std::fmod(ra, HOURS_IN_CIRCLE);
-    if (ra < 0) {
-        ra += HOURS_IN_CIRCLE;
-    }
-    return ra;
-}
-
-/**
- * @brief Normalizes the declination to the range [-90, 90] degrees.
- *
- * @param dec Declination in degrees.
- * @return Normalized declination in degrees.
- */
-template <std::floating_point T>
-auto normalizeDeclination(T dec) -> T {
-    return std::clamp<T>(dec, -90.0, 90.0);
-}
-
 }  // namespace lithium::tools
 
 #endif  // LITHIUM_TOOLS_CONVERT_HPP

@@ -333,10 +333,16 @@ public:
      */
     [[nodiscard]] auto getTaskType() const -> const std::string&;
 
+    void setResult(const json& result) { result_ = result; }
+    
+    json getResult() const { return result_; }
+
 private:
     std::string name_;  ///< The name of the task.
     std::string uuid_;  ///< The unique identifier of the task.
-    std::string taskType_;  ///< The task type identifier for factory-based creation.
+    std::string
+        taskType_;  ///< The task type identifier for factory-based creation.
+    json result_;   ///< The result of the task execution.
     std::function<void(const json&)>
         action_;  ///< The action to be performed by the task.
     std::chrono::seconds timeout_{0};  ///< The timeout duration for the task.

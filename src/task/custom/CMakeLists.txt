@@ -48,9 +48,12 @@ target_link_libraries(lithium_task_custom PRIVATE
 
 # Add subdirectories
 add_subdirectory(camera)
+add_subdirectory(platesolve)
+add_subdirectory(guide)
 add_subdirectory(filter)
 add_subdirectory(focuser)
 add_subdirectory(script)
+add_subdirectory(advanced)
 
 # Install headers
 install(FILES ${CUSTOM_TASK_HEADERS}

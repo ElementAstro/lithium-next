@@ -1,8 +1,6 @@
 #include "croods.hpp"
-#include "constant.hpp"
 #include "convert.hpp"
 
-#include <array>
 #include <chrono>
 #include <cmath>
 #include <iomanip>

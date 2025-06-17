@@ -3,7 +3,7 @@
 #include <optional>
 #include <tuple>
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
@@ -17,12 +17,12 @@ auto INDITelescope::destroy() -> bool { return true; }
 auto INDITelescope::connect(const std::string &deviceName, int timeout,
                             int maxRetry) -> bool {
     if (isConnected_.load()) {
-        LOG_F(ERROR, "{} is already connected.", deviceName_);
+        spdlog::error("{} is already connected.", deviceName_);
         return false;
     }
 
     deviceName_ = deviceName;
-    LOG_F(INFO, "Connecting to {}...", deviceName_);
+    spdlog::info("Connecting to {}...", deviceName_);
     // Max: 需要获取初始的参数，然后再注册对应的回调函数
     watchDevice(deviceName_.c_str(), [this](INDI::BaseDevice device) {
         device_ = device;  // save device
@@ -31,7 +31,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
         device.watchProperty(
             "CONNECTION",
             [this](INDI::Property) {
-                LOG_F(INFO, "Connecting to {}...", deviceName_);
+                spdlog::info( "Connecting to {}...", deviceName_);
                 connectDevice(name_.c_str());
             },
             INDI::BaseDevice::WATCH_NEW);
@@ -41,9 +41,9 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 isConnected_ = property[0].getState() == ISS_ON;
                 if (isConnected_.load()) {
-                    LOG_F(INFO, "{} is connected.", deviceName_);
+                    spdlog::info( "{} is connected.", deviceName_);
                 } else {
-                    LOG_F(INFO, "{} is disconnected.", deviceName_);
+                    spdlog::info( "{} is disconnected.", deviceName_);
                 }
             },
             INDI::BaseDevice::WATCH_UPDATE);
@@ -53,16 +53,16 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyText &property) {
                 if (property.isValid()) {
                     const auto *driverName = property[0].getText();
-                    LOG_F(INFO, "Driver name: {}", driverName);
+                    spdlog::info( "Driver name: {}", driverName);
 
                     const auto *driverExec = property[1].getText();
-                    LOG_F(INFO, "Driver executable: {}", driverExec);
+                    spdlog::info( "Driver executable: {}", driverExec);
                     driverExec_ = driverExec;
                     const auto *driverVersion = property[2].getText();
-                    LOG_F(INFO, "Driver version: {}", driverVersion);
+                    spdlog::info( "Driver version: {}", driverVersion);
                     driverVersion_ = driverVersion;
                     const auto *driverInterface = property[3].getText();
-                    LOG_F(INFO, "Driver interface: {}", driverInterface);
+                    spdlog::info( "Driver interface: {}", driverInterface);
                     driverInterface_ = driverInterface;
                 }
             },
@@ -73,7 +73,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     isDebug_.store(property[0].getState() == ISS_ON);
-                    LOG_F(INFO, "Debug is {}", isDebug_.load() ? "ON" : "OFF");
+                    spdlog::info( "Debug is {}", isDebug_.load() ? "ON" : "OFF");
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -84,9 +84,9 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
                     auto period = property[0].getValue();
-                    LOG_F(INFO, "Current polling period: {}", period);
+                    spdlog::info( "Current polling period: {}", period);
                     if (period != currentPollingPeriod_.load()) {
-                        LOG_F(INFO, "Polling period change to: {}", period);
+                        spdlog::info( "Polling period change to: {}", period);
                         currentPollingPeriod_ = period;
                     }
                 }
@@ -98,7 +98,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     deviceAutoSearch_ = property[0].getState() == ISS_ON;
-                    LOG_F(INFO, "Auto search is {}",
+                    spdlog::info( "Auto search is {}",
                           deviceAutoSearch_ ? "ON" : "OFF");
                 }
             },
@@ -110,13 +110,13 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     auto connectionMode = property[0].getState();
                     if (connectionMode == ISS_ON) {
-                        LOG_F(INFO, "Connection mode is ON");
+                        spdlog::info( "Connection mode is ON");
                         connectionMode_ = ConnectionMode::SERIAL;
                     } else if (connectionMode == ISS_OFF) {
-                        LOG_F(INFO, "Connection mode is OFF");
+                        spdlog::info( "Connection mode is OFF");
                         connectionMode_ = ConnectionMode::TCP;
                     } else {
-                        LOG_F(ERROR, "Unknown connection mode");
+                        spdlog::error( "Unknown connection mode");
                         connectionMode_ = ConnectionMode::NONE;
                     }
                 }
@@ -130,7 +130,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                     for (int i = 0; i < static_cast<int>(property.size());
                          i++) {
                         if (property[i].getState() == ISS_ON) {
-                            LOG_F(INFO, "Baud rate is {}",
+                            spdlog::info( "Baud rate is {}",
                                   property[i].getLabel());
                             baudRate_ = static_cast<T_BAUD_RATE>(i);
                         }
@@ -144,7 +144,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     devicePortScan_ = property[0].getState() == ISS_ON;
-                    LOG_F(INFO, "Device port scan is {}",
+                    spdlog::info( "Device port scan is {}",
                           devicePortScan_ ? "On" : "Off");
                 }
             },
@@ -156,12 +156,12 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     if (property[0].getText() != nullptr) {
                         const auto *gps = property[0].getText();
-                        LOG_F(INFO, "Active devices: {}", gps);
+                        spdlog::info( "Active devices: {}", gps);
                         gps_ = getDevice(gps);
                     }
                     if (property[1].getText() != nullptr) {
                         const auto *dome = property[1].getText();
-                        LOG_F(INFO, "Active devices: {}", dome);
+                        spdlog::info( "Active devices: {}", dome);
                         dome_ = getDevice(dome);
                     }
                 }
@@ -173,7 +173,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     isTracking_ = property[0].getState() == ISS_ON;
-                    LOG_F(INFO, "Tracking state is {}",
+                    spdlog::info( "Tracking state is {}",
                           isTracking_.load() ? "On" : "Off");
                 }
             },
@@ -186,7 +186,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                     for (int i = 0; i < static_cast<int>(property.size());
                          i++) {
                         if (property[i].getState() == ISS_ON) {
-                            LOG_F(INFO, "Track mode is {}",
+                            spdlog::info( "Track mode is {}",
                                   property[i].getLabel());
                             trackMode_ = static_cast<TrackMode>(i);
                         }
@@ -201,8 +201,8 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     trackRateRA_ = property[0].getValue();
                     trackRateDEC_ = property[1].getValue();
-                    LOG_F(INFO, "Track rate RA: {}", trackRateRA_.load());
-                    LOG_F(INFO, "Track rate DEC: {}", trackRateDEC_.load());
+                    spdlog::info( "Track rate RA: {}", trackRateRA_.load());
+                    spdlog::info( "Track rate DEC: {}", trackRateDEC_.load());
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -213,16 +213,16 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                 {
                     if (property.isValid()) {
                         telescopeAperture_ = property[0].getValue();
-                        LOG_F(INFO, "Telescope aperture: {}",
+                        spdlog::info( "Telescope aperture: {}",
                               telescopeAperture_);
                         telescopeFocalLength_ = property[1].getValue();
-                        LOG_F(INFO, "Telescope focal length: {}",
+                        spdlog::info( "Telescope focal length: {}",
                               telescopeFocalLength_);
                         telescopeGuiderAperture_ = property[2].getValue();
-                        LOG_F(INFO, "Telescope guider aperture: {}",
+                        spdlog::info( "Telescope guider aperture: {}",
                               telescopeGuiderAperture_);
                         telescopeGuiderFocalLength_ = property[3].getValue();
-                        LOG_F(INFO, "Telescope guider focal length: {}",
+                        spdlog::info( "Telescope guider focal length: {}",
                               telescopeGuiderFocalLength_);
                     }
                 }
@@ -234,13 +234,13 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     if (property[0].getState() == ISS_ON) {
-                        LOG_F(INFO, "Telescope pier side: EAST");
+                        spdlog::info( "Telescope pier side: EAST");
                         pierSide_ = PierSide::EAST;
                     } else if (property[1].getState() == ISS_ON) {
-                        LOG_F(INFO, "Telescope pier side: WEST");
+                        spdlog::info( "Telescope pier side: WEST");
                         pierSide_ = PierSide::WEST;
                     } else {
-                        LOG_F(INFO, "Telescope pier side: NONE");
+                        spdlog::info( "Telescope pier side: NONE");
                         pierSide_ = PierSide::NONE;
                     }
                 }
@@ -252,7 +252,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     isParked_ = property[0].getState() == ISS_ON;
-                    LOG_F(INFO, "Park state: {}",
+                    spdlog::info( "Park state: {}",
                           isParked_.load() ? "parked" : "unparked");
                 }
             },
@@ -262,10 +262,10 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
                     telescopeParkPositionRA_ = property[0].getValue();
-                    LOG_F(INFO, "Park position RA: {}",
+                    spdlog::info( "Park position RA: {}",
                           telescopeParkPositionRA_);
                     telescopeParkPositionDEC_ = property[1].getValue();
-                    LOG_F(INFO, "Park position DEC: {}",
+                    spdlog::info( "Park position DEC: {}",
                           telescopeParkPositionDEC_);
                 }
             },
@@ -281,7 +281,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                             parkOption_ = ParkOptions::NONE;
                         }
                         if (property[i].getState() == ISS_ON) {
-                            LOG_F(INFO, "Park option is {}",
+                            spdlog::info( "Park option is {}",
                                   property[i].getLabel());
                             parkOption_ = static_cast<ParkOptions>(i);
                         }
@@ -295,7 +295,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     isJoystickEnabled_ = property[0].getState() == ISS_ON;
-                    LOG_F(INFO, "Joystick is {}",
+                    spdlog::info( "Joystick is {}",
                           isJoystickEnabled_ ? "on" : "off");
                 }
             },
@@ -323,7 +323,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                             slewRate_ = SlewRate::NONE;
                         }
                         if (property[i].getState() == ISS_ON) {
-                            LOG_F(INFO, "Slew rate is {}",
+                            spdlog::info( "Slew rate is {}",
                                   property[i].getLabel());
                             slewRate_ = static_cast<SlewRate>(i);
                         }
@@ -378,8 +378,8 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     targetSlewRA_ = property[0].getValue();
                     targetSlewDEC_ = property[1].getValue();
-                    LOG_F(INFO, "Target slew RA: {}", targetSlewRA_.load());
-                    LOG_F(INFO, "Target slew DEC: {}", targetSlewDEC_.load());
+                    spdlog::info( "Target slew RA: {}", targetSlewRA_.load());
+                    spdlog::info( "Target slew DEC: {}", targetSlewDEC_.load());
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -411,19 +411,25 @@ void INDITelescope::setPropertyNumber(std::string_view propertyName,
                                       double value) {}
 
 auto INDITelescope::getTelescopeInfo()
-    -> std::optional<std::tuple<double, double, double, double>> {
+    -> std::optional<TelescopeParameters> {
     INDI::PropertyNumber property = device_.getProperty("TELESCOPE_INFO");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_INFO property...");
+        spdlog::error("Unable to find TELESCOPE_INFO property...");
         return std::nullopt;
     }
-    telescopeAperture_ = property[0].getValue();
-    telescopeFocalLength_ = property[1].getValue();
-    telescopeGuiderAperture_ = property[2].getValue();
-    telescopeGuiderFocalLength_ = property[3].getValue();
-    return std::make_tuple(telescopeAperture_, telescopeFocalLength_,
-                           telescopeGuiderAperture_,
-                           telescopeGuiderFocalLength_);
+    TelescopeParameters params;
+    params.aperture = property[0].getValue();
+    params.focalLength = property[1].getValue();
+    params.guiderAperture = property[2].getValue();
+    params.guiderFocalLength = property[3].getValue();
+    
+    // Update internal state
+    telescopeAperture_ = params.aperture;
+    telescopeFocalLength_ = params.focalLength;
+    telescopeGuiderAperture_ = params.guiderAperture;
+    telescopeGuiderFocalLength_ = params.guiderFocalLength;
+    
+    return params;
 }
 
 auto INDITelescope::setTelescopeInfo(double telescopeAperture,
@@ -432,7 +438,7 @@ auto INDITelescope::setTelescopeInfo(double telescopeAperture,
                                      double guiderFocal) -> bool {
     INDI::PropertyNumber property = device_.getProperty("TELESCOPE_INFO");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_INFO property...");
+        spdlog::error( "Unable to find TELESCOPE_INFO property...");
         return false;
     }
     property[0].setValue(telescopeAperture);
@@ -446,7 +452,7 @@ auto INDITelescope::setTelescopeInfo(double telescopeAperture,
 auto INDITelescope::getPierSide() -> std::optional<PierSide> {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_PIER_SIDE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_PIER_SIDE property...");
+        spdlog::error( "Unable to find TELESCOPE_PIER_SIDE property...");
         return std::nullopt;
     }
     if (property[0].getState() == ISS_ON)
@@ -459,7 +465,7 @@ auto INDITelescope::getPierSide() -> std::optional<PierSide> {
 auto INDITelescope::getTrackRate() -> std::optional<TrackMode> {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_TRACK_RATE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_TRACK_RATE property...");
+        spdlog::error( "Unable to find TELESCOPE_TRACK_RATE property...");
         return std::nullopt;
     }
     if (property[0].getState() == ISS_ON)
@@ -476,7 +482,7 @@ auto INDITelescope::getTrackRate() -> std::optional<TrackMode> {
 auto INDITelescope::setTrackRate(TrackMode rate) -> bool {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_TRACK_RATE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_TRACK_RATE property...");
+        spdlog::error( "Unable to find TELESCOPE_TRACK_RATE property...");
         return false;
     }
     if (rate == TrackMode::SIDEREAL) {
@@ -509,7 +515,7 @@ auto INDITelescope::isTrackingEnabled() -> bool {
         device_.getProperty("TELESCOPE_TRACK_STATE");
     if (!property.isValid()) {
         isTrackingEnabled_ = false;
-        LOG_F(ERROR, "Unable to find TELESCOPE_TRACK_STATE property...");
+        spdlog::error( "Unable to find TELESCOPE_TRACK_STATE property...");
         return false;
     }
     return property[0].getState() == ISS_ON;
@@ -517,13 +523,13 @@ auto INDITelescope::isTrackingEnabled() -> bool {
 
 auto INDITelescope::enableTracking(bool enable) -> bool {
     if (!isTrackingEnabled_) {
-        LOG_F(ERROR, "Tracking is not enabled...");
+        spdlog::error( "Tracking is not enabled...");
         return false;
     }
     INDI::PropertySwitch property =
         device_.getProperty("TELESCOPE_TRACK_STATE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_TRACK_STATE property...");
+        spdlog::error( "Unable to find TELESCOPE_TRACK_STATE property...");
         return false;
     }
     property[0].setState(enable ? ISS_ON : ISS_OFF);
@@ -536,7 +542,7 @@ auto INDITelescope::abortMotion() -> bool {
     INDI::PropertySwitch property =
         device_.getProperty("TELESCOPE_ABORT_MOTION");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_ABORT_MOTION property...");
+        spdlog::error( "Unable to find TELESCOPE_ABORT_MOTION property...");
         return false;
     }
     property[0].setState(ISS_ON);
@@ -547,7 +553,7 @@ auto INDITelescope::abortMotion() -> bool {
 auto INDITelescope::getStatus() -> std::optional<std::string> {
     INDI::PropertyText property = device_.getProperty("TELESCOPE_STATUS");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_STATUS property...");
+        spdlog::error( "Unable to find TELESCOPE_STATUS property...");
         return std::nullopt;
     }
     return property[0].getText();
@@ -557,7 +563,7 @@ auto INDITelescope::setParkOption(ParkOptions option) -> bool {
     INDI::PropertySwitch property =
         device_.getProperty("TELESCOPE_PARK_OPTION");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_PARK_OPTION property...");
+        spdlog::error( "Unable to find TELESCOPE_PARK_OPTION property...");
         return false;
     }
     if (option == ParkOptions::CURRENT)
@@ -577,7 +583,7 @@ auto INDITelescope::getParkPosition()
     INDI::PropertyNumber property =
         device_.getProperty("TELESCOPE_PARK_POSITION");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_PARK_POSITION property...");
+        spdlog::error( "Unable to find TELESCOPE_PARK_POSITION property...");
         return std::nullopt;
     }
     return std::make_pair(property[0].getValue(), property[1].getValue());
@@ -587,7 +593,7 @@ auto INDITelescope::setParkPosition(double parkRA, double parkDEC) -> bool {
     INDI::PropertyNumber property =
         device_.getProperty("TELESCOPE_PARK_POSITION");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_PARK_POSITION property...");
+        spdlog::error( "Unable to find TELESCOPE_PARK_POSITION property...");
         return false;
     }
     property[0].setValue(parkRA);
@@ -599,19 +605,19 @@ auto INDITelescope::setParkPosition(double parkRA, double parkDEC) -> bool {
 auto INDITelescope::isParked() -> bool {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_PARK");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_PARK property...");
+        spdlog::error( "Unable to find TELESCOPE_PARK property...");
         return false;
     }
     return (property[0].getState() == ISS_ON);
 }
 auto INDITelescope::park(bool isParked) -> bool {
     if (!isParkEnabled_) {
-        LOG_F(ERROR, "Parking is not enabled...");
+        spdlog::error( "Parking is not enabled...");
         return false;
     }
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_PARK");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_PARK property...");
+        spdlog::error( "Unable to find TELESCOPE_PARK property...");
         return false;
     }
     property[0].setState(isParked ? ISS_ON : ISS_OFF);
@@ -623,7 +629,7 @@ auto INDITelescope::park(bool isParked) -> bool {
 auto INDITelescope::initializeHome(std::string_view command) -> bool {
     INDI::PropertySwitch property = device_.getProperty("HOME_INIT");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find HOME_INIT property...");
+        spdlog::error( "Unable to find HOME_INIT property...");
         return false;
     }
     if (command == "SLEWHOME") {
@@ -640,7 +646,7 @@ auto INDITelescope::initializeHome(std::string_view command) -> bool {
 auto INDITelescope::getSlewRate() -> std::optional<double> {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_SLEW_RATE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_SLEW_RATE property...");
+        spdlog::error( "Unable to find TELESCOPE_SLEW_RATE property...");
         return std::nullopt;
     }
     double speed = 0;
@@ -656,7 +662,7 @@ auto INDITelescope::getSlewRate() -> std::optional<double> {
 auto INDITelescope::setSlewRate(double speed) -> bool {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_SLEW_RATE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_SLEW_RATE property...");
+        spdlog::error( "Unable to find TELESCOPE_SLEW_RATE property...");
         return false;
     }
     for (int i = 0; i < property.count(); ++i) {
@@ -669,7 +675,7 @@ auto INDITelescope::setSlewRate(double speed) -> bool {
 auto INDITelescope::getTotalSlewRate() -> std::optional<double> {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_SLEW_RATE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_SLEW_RATE property...");
+        spdlog::error( "Unable to find TELESCOPE_SLEW_RATE property...");
         return std::nullopt;
     }
     return property.count();
@@ -678,7 +684,7 @@ auto INDITelescope::getTotalSlewRate() -> std::optional<double> {
 auto INDITelescope::getMoveDirectionEW() -> std::optional<MotionEW> {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_MOTION_WE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_MOTION_WE property...");
+        spdlog::error( "Unable to find TELESCOPE_MOTION_WE property...");
         return std::nullopt;
     }
     if (property[0].getState() == ISS_ON) {
@@ -693,7 +699,7 @@ auto INDITelescope::getMoveDirectionEW() -> std::optional<MotionEW> {
 auto INDITelescope::setMoveDirectionEW(MotionEW direction) -> bool {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_MOTION_WE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_MOTION_WE property...");
+        spdlog::error( "Unable to find TELESCOPE_MOTION_WE property...");
         return false;
     }
     if (direction == MotionEW::EAST) {
@@ -713,7 +719,7 @@ auto INDITelescope::setMoveDirectionEW(MotionEW direction) -> bool {
 auto INDITelescope::getMoveDirectionNS() -> std::optional<MotionNS> {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_MOTION_NS");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_MOTION_NS property...");
+        spdlog::error( "Unable to find TELESCOPE_MOTION_NS property...");
         return std::nullopt;
     }
     if (property[0].getState() == ISS_ON) {
@@ -728,7 +734,7 @@ auto INDITelescope::getMoveDirectionNS() -> std::optional<MotionNS> {
 auto INDITelescope::setMoveDirectionNS(MotionNS direction) -> bool {
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_MOTION_NS");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_MOTION_NS property...");
+        spdlog::error( "Unable to find TELESCOPE_MOTION_NS property...");
         return false;
     }
     if (direction == MotionNS::NORTH) {
@@ -749,7 +755,7 @@ auto INDITelescope::guideNS(int dir, int timeGuide) -> bool {
     INDI::PropertyNumber property =
         device_.getProperty("TELESCOPE_TIMED_GUIDE_NS");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_TIMED_GUIDE_NS property...");
+        spdlog::error( "Unable to find TELESCOPE_TIMED_GUIDE_NS property...");
         return false;
     }
     property[dir == 1 ? 1 : 0].setValue(timeGuide);
@@ -762,7 +768,7 @@ auto INDITelescope::guideEW(int dir, int timeGuide) -> bool {
     INDI::PropertyNumber property =
         device_.getProperty("TELESCOPE_TIMED_GUIDE_WE");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TELESCOPE_TIMED_GUIDE_WE property...");
+        spdlog::error( "Unable to find TELESCOPE_TIMED_GUIDE_WE property...");
         return false;
     }
     property[dir == 1 ? 1 : 0].setValue(timeGuide);
@@ -774,7 +780,7 @@ auto INDITelescope::guideEW(int dir, int timeGuide) -> bool {
 auto INDITelescope::setActionAfterPositionSet(std::string_view action) -> bool {
     INDI::PropertySwitch property = device_.getProperty("ON_COORD_SET");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find ON_COORD_SET property...");
+        spdlog::error( "Unable to find ON_COORD_SET property...");
         return false;
     }
     if (action == "STOP") {
@@ -798,7 +804,7 @@ auto INDITelescope::getRADECJ2000()
     -> std::optional<std::pair<double, double>> {
     INDI::PropertyNumber property = device_.getProperty("EQUATORIAL_COORD");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find EQUATORIAL_COORD property...");
+        spdlog::error( "Unable to find EQUATORIAL_COORD property...");
         return std::nullopt;
     }
     return std::make_pair(property[0].getValue(), property[1].getValue());
@@ -807,7 +813,7 @@ auto INDITelescope::getRADECJ2000()
 auto INDITelescope::setRADECJ2000(double RAHours, double DECDegree) -> bool {
     INDI::PropertyNumber property = device_.getProperty("EQUATORIAL_COORD");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find EQUATORIAL_COORD property...");
+        spdlog::error( "Unable to find EQUATORIAL_COORD property...");
         return false;
     }
     property[0].setValue(RAHours);
@@ -819,7 +825,7 @@ auto INDITelescope::setRADECJ2000(double RAHours, double DECDegree) -> bool {
 auto INDITelescope::getRADECJNow() -> std::optional<std::pair<double, double>> {
     INDI::PropertyNumber property = device_.getProperty("EQUATORIAL_EOD_COORD");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find EQUATORIAL_EOD_COORD property...");
+        spdlog::error( "Unable to find EQUATORIAL_EOD_COORD property...");
         return std::nullopt;
     }
     return std::make_pair(property[0].getValue(), property[1].getValue());
@@ -828,7 +834,7 @@ auto INDITelescope::getRADECJNow() -> std::optional<std::pair<double, double>> {
 auto INDITelescope::setRADECJNow(double RAHours, double DECDegree) -> bool {
     INDI::PropertyNumber property = device_.getProperty("EQUATORIAL_EOD_COORD");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find EQUATORIAL_EOD_COORD property...");
+        spdlog::error( "Unable to find EQUATORIAL_EOD_COORD property...");
         return false;
     }
     property[0].setValue(RAHours);
@@ -841,7 +847,7 @@ auto INDITelescope::getTargetRADECJNow()
     -> std::optional<std::pair<double, double>> {
     INDI::PropertyNumber property = device_.getProperty("TARGET_EOD_COORD");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TARGET_EOD_COORD property...");
+        spdlog::error( "Unable to find TARGET_EOD_COORD property...");
         return std::nullopt;
     }
     return std::make_pair(property[0].getValue(), property[1].getValue());
@@ -852,7 +858,7 @@ auto INDITelescope::setTargetRADECJNow(double RAHours,
     INDI::PropertyNumber property = device_.getProperty("TARGET_EOD_COORD");
 
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find TARGET_EOD_COORD property...");
+        spdlog::error( "Unable to find TARGET_EOD_COORD property...");
         return false;
     }
     property[0].setValue(RAHours);
@@ -876,7 +882,7 @@ auto INDITelescope::syncToRADECJNow(double RAHours, double DECDegree) -> bool {
 auto INDITelescope::getAZALT() -> std::optional<std::pair<double, double>> {
     INDI::PropertyNumber property = device_.getProperty("HORIZONTAL_COORD");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find HORIZONTAL_COORD property...");
+        spdlog::error( "Unable to find HORIZONTAL_COORD property...");
         return std::nullopt;
     }
     return std::make_pair(property[0].getValue(), property[1].getValue());
@@ -885,7 +891,7 @@ auto INDITelescope::getAZALT() -> std::optional<std::pair<double, double>> {
 auto INDITelescope::setAZALT(double AZ_DEGREE, double ALT_DEGREE) -> bool {
     INDI::PropertyNumber property = device_.getProperty("HORIZONTAL_COORD");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find HORIZONTAL_COORD property...");
+        spdlog::error( "Unable to find HORIZONTAL_COORD property...");
         return false;
     }
     property[0].setValue(AZ_DEGREE);
@@ -895,7 +901,7 @@ auto INDITelescope::setAZALT(double AZ_DEGREE, double ALT_DEGREE) -> bool {
 }
 
 ATOM_MODULE(telescope_indi, [](Component &component) {
-    LOG_F(INFO, "Registering telescope_indi module...");
+    spdlog::info( "Registering telescope_indi module...");
     component.doc("INDI telescope module.");
     component.def("initialize", &INDITelescope::initialize, "device",
                   "Initialize a focuser device.");
@@ -980,5 +986,5 @@ ATOM_MODULE(telescope_indi, [](Component &component) {
     component.defType<INDITelescope>("telescope_indi", "device",
                                      "Define a new camera instance.");
 
-    LOG_F(INFO, "Registered telescope_indi module.");
+    spdlog::info( "Registered telescope_indi module.");
 });

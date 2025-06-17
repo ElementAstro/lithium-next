@@ -7,24 +7,29 @@ find_package(spdlog REQUIRED)
 set(CAMERA_TASK_SOURCES
     basic_exposure.cpp
     calibration_tasks.cpp
-    filter_tasks.cpp
-    guide_tasks.cpp
-    platesolve_tasks.cpp
-    safety_tasks.cpp
-    sequence_tasks.cpp
+    video_tasks.cpp
+    temperature_tasks.cpp
+    frame_tasks.cpp
+    parameter_tasks.cpp
+    telescope_tasks.cpp
+    device_coordination_tasks.cpp
+    sequence_analysis_tasks.cpp
 )
 
 # Add camera task headers
 set(CAMERA_TASK_HEADERS
     basic_exposure.hpp
     calibration_tasks.hpp
+    video_tasks.hpp
+    temperature_tasks.hpp
+    frame_tasks.hpp
+    parameter_tasks.hpp
+    telescope_tasks.hpp
+    device_coordination_tasks.hpp
+    sequence_analysis_tasks.hpp
     camera_tasks.hpp
     common.hpp
-    filter_tasks.hpp
-    guide_tasks.hpp
-    platesolve_tasks.hpp
-    safety_tasks.hpp
-    sequence_tasks.hpp
+    examples.hpp
 )
 
 # Create camera task library

@@ -1,0 +1,12 @@
+Develop an astrophotography control software based on the latest C++ features, allowing users to perform automated shooting and image processing through an intelligent task control system.
+
+## Document Search 
+When searching for documentation related to cpp, spldog, curl, tinyxml2, nlohmann/json, etc., always use Context7 to obtain the latest version-specific documentation. When searching for xxx documentation, **search for the stable version of xxx documentation**. In your query, explicitly include `use context7` and specify the need for the stable version of xxx documentation. For example: use context7 to search for the latest version of C++ documentation on vectors.
+
+## MCP Interactive Feedback Rules
+
+1. During any process, task, or conversation, whether asking, responding, or completing stage tasks, must call MCP mcp-feedback-enhanced.
+2. When receiving user feedback, if feedback content is not empty, must call MCP mcp-feedback-enhanced again and adjust behavior based on feedback.
+3. Only when user explicitly indicates "end" or "no more interaction needed" can you stop calling MCP mcp-feedback-enhanced, then the process is complete.
+4. Unless receiving end command, all steps must repeatedly call MCP mcp-feedback-enhanced.
+5. Before completing the task, use the MCP mcp-feedback-enhanced to ask the user for feedback.
