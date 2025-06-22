@@ -31,14 +31,14 @@ Description: ASCOM Camera Implementation
 #include <sys/socket.h>
 #endif
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 ASCOMCamera::ASCOMCamera(std::string name) : AtomCamera(std::move(name)) {
-    LOG_F(INFO, "ASCOMCamera constructor called with name: {}", getName());
+    spdlog::info("ASCOMCamera constructor called with name: {}", getName());
 }
 
 ASCOMCamera::~ASCOMCamera() {
-    LOG_F(INFO, "ASCOMCamera destructor called");
+    spdlog::info("ASCOMCamera destructor called");
     disconnect();
 
 #ifdef _WIN32
@@ -51,12 +51,12 @@ ASCOMCamera::~ASCOMCamera() {
 }
 
 auto ASCOMCamera::initialize() -> bool {
-    LOG_F(INFO, "Initializing ASCOM Camera");
+    spdlog::info("Initializing ASCOM Camera");
 
 #ifdef _WIN32
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(hr) && hr != RPC_E_CHANGED_MODE) {
-        LOG_F(ERROR, "Failed to initialize COM: {}", hr);
+        spdlog::error("Failed to initialize COM: {}", hr);
         return false;
     }
 #else
@@ -67,7 +67,7 @@ auto ASCOMCamera::initialize() -> bool {
 }
 
 auto ASCOMCamera::destroy() -> bool {
-    LOG_F(INFO, "Destroying ASCOM Camera");
+    spdlog::info("Destroying ASCOM Camera");
 
     stopMonitoring();
     disconnect();
@@ -81,7 +81,7 @@ auto ASCOMCamera::destroy() -> bool {
 
 auto ASCOMCamera::connect(const std::string &deviceName, int timeout,
                           int maxRetry) -> bool {
-    LOG_F(INFO, "Connecting to ASCOM camera device: {}", deviceName);
+    spdlog::info("Connecting to ASCOM camera device: {}", deviceName);
 
     device_name_ = deviceName;
 
@@ -116,13 +116,13 @@ auto ASCOMCamera::connect(const std::string &deviceName, int timeout,
     connection_type_ = ConnectionType::COM_DRIVER;
     return connectToCOMDriver(deviceName);
 #else
-    LOG_F(ERROR, "COM drivers not supported on non-Windows platforms");
+    spdlog::error("COM drivers not supported on non-Windows platforms");
     return false;
 #endif
 }
 
 auto ASCOMCamera::disconnect() -> bool {
-    LOG_F(INFO, "Disconnecting ASCOM Camera");
+    spdlog::info("Disconnecting ASCOM Camera");
 
     stopMonitoring();
 
@@ -140,7 +140,7 @@ auto ASCOMCamera::disconnect() -> bool {
 }
 
 auto ASCOMCamera::scan() -> std::vector<std::string> {
-    LOG_F(INFO, "Scanning for ASCOM camera devices");
+    spdlog::info("Scanning for ASCOM camera devices");
 
     std::vector<std::string> devices;
 
@@ -165,7 +165,7 @@ auto ASCOMCamera::startExposure(double duration) -> bool {
         return false;
     }
 
-    LOG_F(INFO, "Starting exposure for {} seconds", duration);
+    spdlog::info("Starting exposure for {} seconds", duration);
 
     current_settings_.exposure_duration = duration;
 
@@ -217,7 +217,7 @@ auto ASCOMCamera::abortExposure() -> bool {
         return false;
     }
 
-    LOG_F(INFO, "Aborting exposure");
+    spdlog::info("Aborting exposure");
 
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         auto response = sendAlpacaRequest("PUT", "abortexposure");
@@ -337,7 +337,7 @@ auto ASCOMCamera::saveImage(const std::string &path) -> bool {
 
     // TODO: Implement image saving logic
     // This would involve writing the frame data to a FITS file or other format
-    LOG_F(INFO, "Saving image to: {}", path);
+    spdlog::info("Saving image to: {}", path);
     return true;
 }
 
@@ -469,7 +469,7 @@ auto ASCOMCamera::getGain() -> std::optional<int> {
 
 // Alpaca discovery and connection methods
 auto ASCOMCamera::discoverAlpacaDevices() -> std::vector<std::string> {
-    LOG_F(INFO, "Discovering Alpaca camera devices");
+    spdlog::info("Discovering Alpaca camera devices");
     std::vector<std::string> devices;
 
     // TODO: Implement Alpaca discovery protocol
@@ -484,8 +484,8 @@ auto ASCOMCamera::discoverAlpacaDevices() -> std::vector<std::string> {
 
 auto ASCOMCamera::connectToAlpacaDevice(const std::string &host, int port,
                                         int deviceNumber) -> bool {
-    LOG_F(INFO, "Connecting to Alpaca camera device at {}:{} device {}", host,
-          port, deviceNumber);
+    spdlog::info("Connecting to Alpaca camera device at {}:{} device {}", host,
+                 port, deviceNumber);
 
     alpaca_host_ = host;
     alpaca_port_ = port;
@@ -504,7 +504,7 @@ auto ASCOMCamera::connectToAlpacaDevice(const std::string &host, int port,
 }
 
 auto ASCOMCamera::disconnectFromAlpacaDevice() -> bool {
-    LOG_F(INFO, "Disconnecting from Alpaca camera device");
+    spdlog::info("Disconnecting from Alpaca camera device");
 
     if (is_connected_.load()) {
         sendAlpacaRequest("PUT", "connected", "Connected=false");
@@ -523,7 +523,7 @@ auto ASCOMCamera::sendAlpacaRequest(const std::string &method,
     // This would use libcurl or similar HTTP library
     // For now, return placeholder
 
-    LOG_F(DEBUG, "Sending Alpaca request: {} {}", method, endpoint);
+    spdlog::debug("Sending Alpaca request: {} {}", method, endpoint);
     return std::nullopt;
 }
 
@@ -600,14 +600,14 @@ auto ASCOMCamera::monitoringLoop() -> void {
 
 #ifdef _WIN32
 auto ASCOMCamera::connectToCOMDriver(const std::string &progId) -> bool {
-    LOG_F(INFO, "Connecting to COM camera driver: {}", progId);
+    spdlog::info("Connecting to COM camera driver: {}", progId);
 
     com_prog_id_ = progId;
 
     CLSID clsid;
     HRESULT hr = CLSIDFromProgID(CComBSTR(progId.c_str()), &clsid);
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to get CLSID from ProgID: {}", hr);
+        spdlog::error("Failed to get CLSID from ProgID: {}", hr);
         return false;
     }
 
@@ -615,7 +615,7 @@ auto ASCOMCamera::connectToCOMDriver(const std::string &progId) -> bool {
         clsid, nullptr, CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER,
         IID_IDispatch, reinterpret_cast<void **>(&com_camera_));
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to create COM instance: {}", hr);
+        spdlog::error("Failed to create COM instance: {}", hr);
         return false;
     }
 
@@ -636,7 +636,7 @@ auto ASCOMCamera::connectToCOMDriver(const std::string &progId) -> bool {
 }
 
 auto ASCOMCamera::disconnectFromCOMDriver() -> bool {
-    LOG_F(INFO, "Disconnecting from COM camera driver");
+    spdlog::info("Disconnecting from COM camera driver");
 
     if (com_camera_) {
         VARIANT value;
@@ -681,7 +681,7 @@ auto ASCOMCamera::invokeCOMMethod(const std::string &method, VARIANT *params,
     HRESULT hr = com_camera_->GetIDsOfNames(IID_NULL, &method_name, 1,
                                             LOCALE_USER_DEFAULT, &dispid);
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to get method ID for {}: {}", method, hr);
+        spdlog::error("Failed to get method ID for {}: {}", method, hr);
         return std::nullopt;
     }
 
@@ -693,7 +693,7 @@ auto ASCOMCamera::invokeCOMMethod(const std::string &method, VARIANT *params,
                              DISPATCH_METHOD, &dispparams, &result, nullptr,
                              nullptr);
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to invoke method {}: {}", method, hr);
+        spdlog::error("Failed to invoke method {}: {}", method, hr);
         return std::nullopt;
     }
 
@@ -711,7 +711,7 @@ auto ASCOMCamera::getCOMProperty(const std::string &property)
     HRESULT hr = com_camera_->GetIDsOfNames(IID_NULL, &property_name, 1,
                                             LOCALE_USER_DEFAULT, &dispid);
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to get property ID for {}: {}", property, hr);
+        spdlog::error("Failed to get property ID for {}: {}", property, hr);
         return std::nullopt;
     }
 
@@ -723,7 +723,7 @@ auto ASCOMCamera::getCOMProperty(const std::string &property)
                              DISPATCH_PROPERTYGET, &dispparams, &result,
                              nullptr, nullptr);
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to get property {}: {}", property, hr);
+        spdlog::error("Failed to get property {}: {}", property, hr);
         return std::nullopt;
     }
 
@@ -741,7 +741,7 @@ auto ASCOMCamera::setCOMProperty(const std::string &property,
     HRESULT hr = com_camera_->GetIDsOfNames(IID_NULL, &property_name, 1,
                                             LOCALE_USER_DEFAULT, &dispid);
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to get property ID for {}: {}", property, hr);
+        spdlog::error("Failed to get property ID for {}: {}", property, hr);
         return false;
     }
 
@@ -753,7 +753,7 @@ auto ASCOMCamera::setCOMProperty(const std::string &property,
                              DISPATCH_PROPERTYPUT, &dispparams, nullptr,
                              nullptr, nullptr);
     if (FAILED(hr)) {
-        LOG_F(ERROR, "Failed to set property {}: {}", property, hr);
+        spdlog::error("Failed to set property {}: {}", property, hr);
         return false;
     }
 

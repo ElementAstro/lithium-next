@@ -20,15 +20,15 @@ Description: ASCOM Rotator Implementation
 #include "ascom_alpaca_client.hpp"
 #endif
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 ASCOMRotator::ASCOMRotator(std::string name) 
     : AtomRotator(std::move(name)) {
-    LOG_F(INFO, "ASCOMRotator constructor called with name: {}", getName());
+    spdlog::info("ASCOMRotator constructor called with name: {}", getName());
 }
 
 ASCOMRotator::~ASCOMRotator() {
-    LOG_F(INFO, "ASCOMRotator destructor called");
+    spdlog::info("ASCOMRotator destructor called");
     disconnect();
     
 #ifdef _WIN32
@@ -40,13 +40,13 @@ ASCOMRotator::~ASCOMRotator() {
 }
 
 auto ASCOMRotator::initialize() -> bool {
-    LOG_F(INFO, "Initializing ASCOM Rotator");
+    spdlog::info("Initializing ASCOM Rotator");
     
     // Initialize COM on Windows
 #ifdef _WIN32
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(hr) && hr != RPC_E_CHANGED_MODE) {
-        LOG_F(ERROR, "Failed to initialize COM");
+        spdlog::error("Failed to initialize COM");
         return false;
     }
 #endif
@@ -55,7 +55,7 @@ auto ASCOMRotator::initialize() -> bool {
 }
 
 auto ASCOMRotator::destroy() -> bool {
-    LOG_F(INFO, "Destroying ASCOM Rotator");
+    spdlog::info("Destroying ASCOM Rotator");
     
     stopMonitoring();
     disconnect();
@@ -68,7 +68,7 @@ auto ASCOMRotator::destroy() -> bool {
 }
 
 auto ASCOMRotator::connect(const std::string &deviceName, int timeout, int maxRetry) -> bool {
-    LOG_F(INFO, "Connecting to ASCOM rotator device: {}", deviceName);
+    spdlog::info("Connecting to ASCOM rotator device: {}", deviceName);
     
     device_name_ = deviceName;
     
@@ -85,13 +85,13 @@ auto ASCOMRotator::connect(const std::string &deviceName, int timeout, int maxRe
     connection_type_ = ConnectionType::COM_DRIVER;
     return connectToCOMDriver(deviceName);
 #else
-    LOG_F(ERROR, "COM drivers not supported on non-Windows platforms");
+    spdlog::error("COM drivers not supported on non-Windows platforms");
     return false;
 #endif
 }
 
 auto ASCOMRotator::disconnect() -> bool {
-    LOG_F(INFO, "Disconnecting ASCOM Rotator");
+    spdlog::info("Disconnecting ASCOM Rotator");
     
     stopMonitoring();
     
@@ -110,7 +110,7 @@ auto ASCOMRotator::disconnect() -> bool {
 }
 
 auto ASCOMRotator::scan() -> std::vector<std::string> {
-    LOG_F(INFO, "Scanning for ASCOM rotator devices");
+    spdlog::info("Scanning for ASCOM rotator devices");
     
     std::vector<std::string> devices;
     
@@ -161,7 +161,7 @@ auto ASCOMRotator::moveToAngle(double angle) -> bool {
         return false;
     }
     
-    LOG_F(INFO, "Moving rotator to angle: {:.2f}°", angle);
+    spdlog::info("Moving rotator to angle: {:.2f}°", angle);
     
     // Normalize angle to 0-360 range
     while (angle < 0) angle += 360.0;
@@ -191,7 +191,7 @@ auto ASCOMRotator::abortMove() -> bool {
         return false;
     }
     
-    LOG_F(INFO, "Aborting rotator movement");
+    spdlog::info("Aborting rotator movement");
     
     auto response = sendAlpacaRequest("PUT", "halt");
     if (response) {
@@ -207,7 +207,7 @@ auto ASCOMRotator::syncPosition(double angle) -> bool {
         return false;
     }
     
-    LOG_F(INFO, "Syncing rotator position to: {:.2f}°", angle);
+    spdlog::info("Syncing rotator position to: {:.2f}°", angle);
     
     // Send sync command to ASCOM device
     std::string params = "Position=" + std::to_string(angle);
@@ -229,7 +229,7 @@ auto ASCOMRotator::getDirection() -> std::optional<RotatorDirection> {
 
 auto ASCOMRotator::setDirection(RotatorDirection direction) -> bool {
     // ASCOM rotators typically don't support direction setting
-    LOG_F(WARNING, "Direction setting not supported for ASCOM rotators");
+    spdlog::warn("Direction setting not supported for ASCOM rotators");
     return false;
 }
 
@@ -254,7 +254,7 @@ auto ASCOMRotator::getSpeed() -> std::optional<double> {
 }
 
 auto ASCOMRotator::setSpeed(double speed) -> bool {
-    LOG_F(WARNING, "Speed control not supported for most ASCOM rotators");
+    spdlog::warn("Speed control not supported for most ASCOM rotators");
     return false;
 }
 
@@ -276,7 +276,7 @@ auto ASCOMRotator::getMaxPosition() -> double {
 }
 
 auto ASCOMRotator::setLimits(double min, double max) -> bool {
-    LOG_F(WARNING, "Position limits not configurable for ASCOM rotators");
+    spdlog::warn("Position limits not configurable for ASCOM rotators");
     return false;
 }
 
@@ -287,12 +287,12 @@ auto ASCOMRotator::getBacklash() -> double {
 }
 
 auto ASCOMRotator::setBacklash(double backlash) -> bool {
-    LOG_F(WARNING, "Backlash compensation typically not supported via ASCOM");
+    spdlog::warn("Backlash compensation typically not supported via ASCOM");
     return false;
 }
 
 auto ASCOMRotator::enableBacklashCompensation(bool enable) -> bool {
-    LOG_F(WARNING, "Backlash compensation typically not supported via ASCOM");
+    spdlog::warn("Backlash compensation typically not supported via ASCOM");
     return false;
 }
 
@@ -312,12 +312,12 @@ auto ASCOMRotator::hasTemperatureSensor() -> bool {
 
 // Presets
 auto ASCOMRotator::savePreset(int slot, double angle) -> bool {
-    LOG_F(WARNING, "Presets not implemented in ASCOM rotator");
+    spdlog::warn("Presets not implemented in ASCOM rotator");
     return false;
 }
 
 auto ASCOMRotator::loadPreset(int slot) -> bool {
-    LOG_F(WARNING, "Presets not implemented in ASCOM rotator");
+    spdlog::warn("Presets not implemented in ASCOM rotator");
     return false;
 }
 

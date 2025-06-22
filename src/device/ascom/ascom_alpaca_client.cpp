@@ -8,9 +8,10 @@
 
 Date: 2023-6-1
 
-Description: Enhanced ASCOM Alpaca REST Client Implementation
+Description: Enhanced ASCOM Alpaca REST Client Implementation - API Version 9
+Compatible
 
-*************************************************/
+**************************************************/
 
 #include "ascom_alpaca_client.hpp"
 
@@ -22,57 +23,74 @@ Description: Enhanced ASCOM Alpaca REST Client Implementation
 
 #ifndef _WIN32
 #include <arpa/inet.h>
+#include <ifaddrs.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
-// SimpleJson implementation
-std::string SimpleJson::toString() const {
-    switch (type_) {
-        case JsonType::Null:
-            return "null";
-        case JsonType::Bool:
-            return bool_value_ ? "true" : "false";
-        case JsonType::Number:
-            return std::to_string(number_value_);
-        case JsonType::String:
-            return "\"" + string_value_ + "\"";
-        case JsonType::Array:
-        case JsonType::Object:
-        default:
-            return "{}";
+namespace {
+// ASCOM Error codes and descriptions (API v9)
+const std::unordered_map<int, std::string> ASCOM_ERROR_DESCRIPTIONS = {
+    {0x0, "Success"},
+    {0x401, "Invalid value"},
+    {0x402, "Value not set"},
+    {0x407, "Not connected"},
+    {0x408, "Invalid while parked"},
+    {0x409, "Invalid while slaved"},
+    {0x40B, "Invalid operation"},
+    {0x40C, "Action not implemented"},
+    {0x500, "Unspecified error"}};
+
+// Device type mappings
+const std::unordered_map<AscomDeviceType, std::string> DEVICE_TYPE_STRINGS = {
+    {AscomDeviceType::Camera, "camera"},
+    {AscomDeviceType::CoverCalibrator, "covercalibrator"},
+    {AscomDeviceType::Dome, "dome"},
+    {AscomDeviceType::FilterWheel, "filterwheel"},
+    {AscomDeviceType::Focuser, "focuser"},
+    {AscomDeviceType::ObservingConditions, "observingconditions"},
+    {AscomDeviceType::Rotator, "rotator"},
+    {AscomDeviceType::SafetyMonitor, "safetymonitor"},
+    {AscomDeviceType::Switch, "switch"},
+    {AscomDeviceType::Telescope, "telescope"}};
+
+// Utility function to generate UUID for unique client ID
+std::string generateUUID() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 15);
+    std::uniform_int_distribution<> dis2(8, 11);
+
+    std::stringstream ss;
+    int i;
+    ss << std::hex;
+    for (i = 0; i < 8; i++) {
+        ss << dis(gen);
     }
-}
-
-SimpleJson SimpleJson::fromString(const std::string& str) {
-    std::string trimmed = str;
-    trimmed.erase(0, trimmed.find_first_not_of(" \t\n\r"));
-    trimmed.erase(trimmed.find_last_not_of(" \t\n\r") + 1);
-
-    if (trimmed == "null") {
-        return SimpleJson();
-    } else if (trimmed == "true") {
-        return SimpleJson(true);
-    } else if (trimmed == "false") {
-        return SimpleJson(false);
-    } else if (trimmed.front() == '"' && trimmed.back() == '"') {
-        return SimpleJson(trimmed.substr(1, trimmed.length() - 2));
-    } else {
-        try {
-            if (trimmed.find('.') != std::string::npos) {
-                return SimpleJson(std::stod(trimmed));
-            } else {
-                return SimpleJson(std::stoi(trimmed));
-            }
-        } catch (...) {
-            return SimpleJson(trimmed);
-        }
+    ss << "-";
+    for (i = 0; i < 4; i++) {
+        ss << dis(gen);
     }
+    ss << "-4";
+    for (i = 0; i < 3; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    ss << dis2(gen);
+    for (i = 0; i < 3; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    for (i = 0; i < 12; i++) {
+        ss << dis(gen);
+    }
+    return ss.str();
 }
+}  // namespace
 
 // ASCOMAlpacaClient implementation
 ASCOMAlpacaClient::ASCOMAlpacaClient()
@@ -84,7 +102,8 @@ ASCOMAlpacaClient::ASCOMAlpacaClient()
       is_connected_(false),
       initialized_(false),
       last_error_code_(0),
-      transaction_id_(0),
+      client_transaction_id_(1),
+      last_server_transaction_id_(0),
       event_polling_active_(false),
       event_polling_interval_(std::chrono::milliseconds(100)),
       request_count_(0),
@@ -92,20 +111,29 @@ ASCOMAlpacaClient::ASCOMAlpacaClient()
       failed_requests_(0),
       compression_enabled_(false),
       keep_alive_enabled_(true),
-      user_agent_("ASCOM Alpaca Client/1.0"),
+      user_agent_("ASCOM Alpaca Client/2.0 API-v9"),
       ssl_enabled_(false),
       ssl_verify_peer_(true),
-      verbose_logging_(false) {
+      verbose_logging_(false),
+      log_requests_responses_(false),
+      caching_enabled_(false),
+      default_cache_ttl_(std::chrono::seconds(30)),
+      request_queuing_enabled_(false),
+      api_version_(AlpacaAPIVersion::V1),
+      device_type_enum_(AscomDeviceType::Camera) {
 #ifndef _WIN32
     curl_handle_ = nullptr;
     curl_headers_ = nullptr;
 #endif
 
-    LOG_F(INFO, "ASCOMAlpacaClient created");
+    // Initialize supported API versions
+    supported_api_versions_ = {1, 2, 3};  // API v9 supports multiple versions
+
+    spdlog::info("Enhanced ASCOMAlpacaClient created (API v9 compatible)");
 }
 
 ASCOMAlpacaClient::~ASCOMAlpacaClient() {
-    LOG_F(INFO, "ASCOMAlpacaClient destructor called");
+    spdlog::info("ASCOMAlpacaClient destructor called");
     cleanup();
 }
 
@@ -114,7 +142,7 @@ bool ASCOMAlpacaClient::initialize() {
         return true;
     }
 
-    LOG_F(INFO, "Initializing ASCOM Alpaca Client");
+    spdlog::info("Initializing ASCOM Alpaca Client");
 
 #ifndef _WIN32
     if (!initializeCurl()) {
@@ -140,7 +168,7 @@ void ASCOMAlpacaClient::cleanup() {
         return;
     }
 
-    LOG_F(INFO, "Cleaning up ASCOM Alpaca Client");
+    spdlog::info("Cleaning up ASCOM Alpaca Client");
 
     stopEventPolling();
     disconnect();
@@ -155,20 +183,21 @@ void ASCOMAlpacaClient::cleanup() {
 void ASCOMAlpacaClient::setServerAddress(const std::string& host, int port) {
     host_ = host;
     port_ = port;
-    LOG_F(INFO, "Set server address to {}:{}", host, port);
+    spdlog::info("Set server address to {}:{}", host, port);
 }
 
 void ASCOMAlpacaClient::setDeviceInfo(const std::string& deviceType,
                                       int deviceNumber) {
     device_type_ = deviceType;
     device_number_ = deviceNumber;
-    LOG_F(INFO, "Set device info: {} #{}", deviceType, deviceNumber);
+    spdlog::info("Set device info: {} #{}", deviceType, deviceNumber);
 }
 
 std::vector<AlpacaDevice> ASCOMAlpacaClient::discoverDevices(
-    const std::string& host, int port) {
-    LOG_F(INFO, "Discovering Alpaca devices on {}:{}",
-          host.empty() ? "network" : host, port);
+    const std::string& host, int port, DiscoveryProtocol protocol) {
+    spdlog::info("Discovering Alpaca devices on {}:{} using {} protocol",
+                 host.empty() ? "network" : host, port,
+                 protocol == DiscoveryProtocol::IPv4 ? "IPv4" : "IPv6");
 
     std::vector<AlpacaDevice> devices;
 
@@ -178,7 +207,7 @@ std::vector<AlpacaDevice> ASCOMAlpacaClient::discoverDevices(
         devices.insert(devices.end(), hostDevices.begin(), hostDevices.end());
     } else {
         // Use discovery protocol
-        auto discoveredHosts = AlpacaDiscovery::discoverHosts(5);
+        auto discoveredHosts = AlpacaDiscovery::discoverHosts(5, protocol);
         for (const auto& discoveredHost : discoveredHosts) {
             auto hostDevices = queryDevicesFromHost(discoveredHost, port);
             devices.insert(devices.end(), hostDevices.begin(),
@@ -186,7 +215,7 @@ std::vector<AlpacaDevice> ASCOMAlpacaClient::discoverDevices(
         }
     }
 
-    LOG_F(INFO, "Discovered {} Alpaca devices", devices.size());
+    spdlog::info("Discovered {} Alpaca devices", devices.size());
     return devices;
 }
 
@@ -234,8 +263,8 @@ bool ASCOMAlpacaClient::connect() {
     }
 
     is_connected_.store(true);
-    LOG_F(INFO, "Connected to Alpaca device: {}:{} {}/{}", host_, port_,
-          device_type_, device_number_);
+    spdlog::info("Connected to Alpaca device: {}:{} {}/{}", host_, port_,
+                 device_type_, device_number_);
 
     return true;
 }
@@ -249,7 +278,7 @@ bool ASCOMAlpacaClient::disconnect() {
     performRequest(HttpMethod::PUT, "connected", "Connected=false");
 
     is_connected_.store(false);
-    LOG_F(INFO, "Disconnected from Alpaca device");
+    spdlog::info("Disconnected from Alpaca device");
 
     return true;
 }
@@ -284,19 +313,14 @@ bool ASCOMAlpacaClient::setProperty(const std::string& property,
     }
 
     std::string params;
-    switch (value.getType()) {
-        case JsonType::Bool:
-            params = property + "=" + (value.asBool() ? "true" : "false");
-            break;
-        case JsonType::Number:
-            params = property + "=" + std::to_string(value.asNumber());
-            break;
-        case JsonType::String:
-            params = property + "=" + escapeUrl(value.asString());
-            break;
-        default:
-            params = property + "=" + escapeUrl(value.toString());
-            break;
+    if (value.is_boolean()) {
+        params = property + "=" + (value.get<bool>() ? "true" : "false");
+    } else if (value.is_number()) {
+        params = property + "=" + std::to_string(value.get<double>());
+    } else if (value.is_string()) {
+        params = property + "=" + escapeUrl(value.get<std::string>());
+    } else {
+        params = property + "=" + escapeUrl(value.dump());
     }
 
     auto response = performRequest(HttpMethod::PUT, property, params);
@@ -365,7 +389,7 @@ bool ASCOMAlpacaClient::setMultipleProperties(
     for (const auto& [property, value] : properties) {
         if (!setProperty(property, value)) {
             allSuccess = false;
-            LOG_F(ERROR, "Failed to set property: {}", property);
+            spdlog::error("Failed to set property: {}", property);
         }
     }
 
@@ -430,7 +454,7 @@ void ASCOMAlpacaClient::startEventPolling(std::chrono::milliseconds interval) {
     event_thread_ = std::make_unique<std::thread>(
         &ASCOMAlpacaClient::eventPollingLoop, this);
 
-    LOG_F(INFO, "Started event polling with {}ms interval", interval.count());
+    spdlog::info("Started event polling with {}ms interval", interval.count());
 }
 
 void ASCOMAlpacaClient::stopEventPolling() {
@@ -444,7 +468,7 @@ void ASCOMAlpacaClient::stopEventPolling() {
     }
     event_thread_.reset();
 
-    LOG_F(INFO, "Stopped event polling");
+    spdlog::info("Stopped event polling");
 }
 
 void ASCOMAlpacaClient::setEventCallback(
@@ -505,16 +529,17 @@ HttpResponse ASCOMAlpacaClient::performRequest(HttpMethod method,
     std::string url = buildURL(endpoint);
     std::string fullParams = params;
 
-    // Add client transaction ID
+    // Add client transaction ID (API v9 compliant)
     if (!fullParams.empty()) {
         fullParams += "&";
     }
     fullParams += "ClientID=" + std::to_string(client_id_);
-    fullParams += "&ClientTransactionID=" + std::to_string(++transaction_id_);
+    fullParams +=
+        "&ClientTransactionID=" + std::to_string(generateClientTransactionId());
 
     if (verbose_logging_) {
-        LOG_F(DEBUG, "Alpaca request: {} {} with params: {}",
-              methodToString(method), url, fullParams);
+        spdlog::debug("Alpaca request: {} {} with params: {}",
+                      methodToString(method), url, fullParams);
     }
 
 #ifndef _WIN32
@@ -633,9 +658,9 @@ HttpResponse ASCOMAlpacaClient::performRequest(HttpMethod method,
     updateStatistics(response.success, duration);
 
     if (verbose_logging_) {
-        LOG_F(DEBUG, "Alpaca response: {} ({}ms) - {}", response.status_code,
-              duration.count(),
-              response.success ? "SUCCESS" : response.error_message);
+        spdlog::debug("Alpaca response: {} ({}ms) - {}", response.status_code,
+                      duration.count(),
+                      response.success ? "SUCCESS" : response.error_message);
     }
 
     return response;
@@ -662,19 +687,14 @@ std::string ASCOMAlpacaClient::buildParameters(
 
         oss << escapeUrl(key) << "=";
 
-        switch (value.getType()) {
-            case JsonType::Bool:
-                oss << (value.asBool() ? "true" : "false");
-                break;
-            case JsonType::Number:
-                oss << value.asNumber();
-                break;
-            case JsonType::String:
-                oss << escapeUrl(value.asString());
-                break;
-            default:
-                oss << escapeUrl(value.toString());
-                break;
+        if (value.is_boolean()) {
+            oss << (value.get<bool>() ? "true" : "false");
+        } else if (value.is_number()) {
+            oss << value.get<double>();
+        } else if (value.is_string()) {
+            oss << escapeUrl(value.get<std::string>());
+        } else {
+            oss << escapeUrl(value.dump());
         }
     }
 
@@ -736,7 +756,7 @@ std::optional<AlpacaResponse> ASCOMAlpacaClient::parseAlpacaResponse(
             valueStr.erase(0, valueStr.find_first_not_of(" \t"));
             valueStr.erase(valueStr.find_last_not_of(" \t") + 1);
 
-            response.value = SimpleJson::fromString(valueStr);
+            response.value = valueStr;
         }
     }
 
@@ -756,7 +776,7 @@ void ASCOMAlpacaClient::setError(const std::string& message, int code) {
     std::lock_guard<std::mutex> lock(error_mutex_);
     last_error_ = message;
     last_error_code_ = code;
-    LOG_F(ERROR, "Alpaca Client Error: {} (Code: {})", message, code);
+    spdlog::error("Alpaca Client Error: {} (Code: {})", message, code);
 }
 
 void ASCOMAlpacaClient::updateStatistics(
@@ -791,7 +811,7 @@ void ASCOMAlpacaClient::eventPollingLoop() {
                     event_callback_("connected", *state);
                 }
             } catch (const std::exception& e) {
-                LOG_F(WARNING, "Event polling error: {}", e.what());
+                spdlog::warn("Event polling error: {}", e.what());
             }
         }
 
@@ -818,13 +838,11 @@ std::string ASCOMAlpacaClient::escapeUrl(const std::string& str) const {
     return escaped.str();
 }
 
-std::string ASCOMAlpacaClient::jsonToString(const json& j) {
-    return j.toString();
-}
+std::string ASCOMAlpacaClient::jsonToString(const json& j) { return j.dump(); }
 
 std::optional<json> ASCOMAlpacaClient::stringToJson(const std::string& str) {
     try {
-        return SimpleJson::fromString(str);
+        return json::parse(str);
     } catch (...) {
         return std::nullopt;
     }
@@ -840,6 +858,10 @@ std::string ASCOMAlpacaClient::methodToString(HttpMethod method) {
             return "POST";
         case HttpMethod::DELETE:
             return "DELETE";
+        case HttpMethod::HEAD:
+            return "HEAD";
+        case HttpMethod::OPTIONS:
+            return "OPTIONS";
         default:
             return "UNKNOWN";
     }
@@ -886,11 +908,11 @@ bool ASCOMAlpacaClient::initializeCurl() {
     curl_handle_ = curl_easy_init();
 
     if (!curl_handle_) {
-        LOG_F(ERROR, "Failed to initialize cURL");
+        spdlog::error("Failed to initialize cURL");
         return false;
     }
 
-    LOG_F(INFO, "cURL initialized successfully");
+    spdlog::info("cURL initialized successfully");
     return true;
 }
 
@@ -941,7 +963,7 @@ size_t ASCOMAlpacaClient::headerCallback(
 
 // AlpacaDiscovery implementation
 std::vector<AlpacaDevice> AlpacaDiscovery::discoverAllDevices(
-    int timeoutSeconds) {
+    int timeoutSeconds, DiscoveryProtocol protocol) {
     std::vector<AlpacaDevice> allDevices;
 
     auto hosts = discoverHosts(timeoutSeconds);
@@ -960,7 +982,8 @@ std::vector<AlpacaDevice> AlpacaDiscovery::discoverAllDevices(
     return allDevices;
 }
 
-std::vector<std::string> AlpacaDiscovery::discoverHosts(int timeoutSeconds) {
+std::vector<std::string> AlpacaDiscovery::discoverHosts(
+    int timeoutSeconds, DiscoveryProtocol protocol) {
     std::vector<std::string> hosts;
 
 #ifndef _WIN32
@@ -1022,108 +1045,3 @@ bool AlpacaDiscovery::isAlpacaServer(const std::string& host, int port) {
 
     return client.testConnection();
 }
-
-// AlpacaUtils implementation
-namespace AlpacaUtils {
-
-json toJson(bool value) { return SimpleJson(value); }
-
-json toJson(int value) { return SimpleJson(value); }
-
-json toJson(double value) { return SimpleJson(value); }
-
-json toJson(const std::string& value) { return SimpleJson(value); }
-
-json toJson(const std::vector<std::string>& value) {
-    // Simplified - would need proper array support
-    return SimpleJson("array");
-}
-
-json toJson(const std::vector<int>& value) { return SimpleJson("array"); }
-
-json toJson(const std::vector<double>& value) { return SimpleJson("array"); }
-
-template <>
-std::optional<bool> fromJson<bool>(const json& j) {
-    if (j.getType() == JsonType::Bool) {
-        return j.asBool();
-    }
-    return std::nullopt;
-}
-
-template <>
-std::optional<int> fromJson<int>(const json& j) {
-    if (j.getType() == JsonType::Number) {
-        return static_cast<int>(j.asNumber());
-    }
-    return std::nullopt;
-}
-
-template <>
-std::optional<double> fromJson<double>(const json& j) {
-    if (j.getType() == JsonType::Number) {
-        return j.asNumber();
-    }
-    return std::nullopt;
-}
-
-template <>
-std::optional<std::string> fromJson<std::string>(const json& j) {
-    if (j.getType() == JsonType::String) {
-        return j.asString();
-    }
-    return std::nullopt;
-}
-
-std::vector<uint16_t> jsonArrayToUInt16(const json& jsonArray) {
-    // TODO: Implement array parsing
-    return {};
-}
-
-std::vector<uint32_t> jsonArrayToUInt32(const json& jsonArray) {
-    // TODO: Implement array parsing
-    return {};
-}
-
-std::vector<double> jsonArrayToDouble(const json& jsonArray) {
-    // TODO: Implement array parsing
-    return {};
-}
-
-std::string getErrorDescription(int errorCode) {
-    switch (errorCode) {
-        case 0x400:
-            return "Bad Request";
-        case 0x401:
-            return "Unauthorized";
-        case 0x404:
-            return "Not Found";
-        case 0x500:
-            return "Internal Server Error";
-        case 0x800:
-            return "Not Implemented";
-        case 0x801:
-            return "Invalid Value";
-        case 0x802:
-            return "Value Not Set";
-        case 0x803:
-            return "Not Connected";
-        case 0x804:
-            return "Invalid While Parked";
-        case 0x805:
-            return "Invalid While Slaved";
-        case 0x806:
-            return "Invalid Coordinates";
-        case 0x807:
-            return "Invalid While Moving";
-        default:
-            return "Unknown Error";
-    }
-}
-
-bool isRetryableError(int errorCode) {
-    // Network errors that might be temporary
-    return (errorCode >= 500 && errorCode < 600) || errorCode == 0x803;
-}
-
-}  // namespace AlpacaUtils

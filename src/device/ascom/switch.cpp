@@ -22,17 +22,16 @@ Description: ASCOM Switch Implementation
 #include "ascom_alpaca_client.hpp"
 #endif
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
-ASCOMSwitch::ASCOMSwitch(std::string name) 
-    : AtomSwitch(std::move(name)) {
-    LOG_F(INFO, "ASCOMSwitch constructor called with name: {}", getName());
+ASCOMSwitch::ASCOMSwitch(std::string name) : AtomSwitch(std::move(name)) {
+    spdlog::info("ASCOMSwitch constructor called with name: {}", getName());
 }
 
 ASCOMSwitch::~ASCOMSwitch() {
-    LOG_F(INFO, "ASCOMSwitch destructor called");
+    spdlog::info("ASCOMSwitch destructor called");
     disconnect();
-    
+
 #ifdef _WIN32
     if (com_switch_) {
         com_switch_->Release();
@@ -42,38 +41,39 @@ ASCOMSwitch::~ASCOMSwitch() {
 }
 
 auto ASCOMSwitch::initialize() -> bool {
-    LOG_F(INFO, "Initializing ASCOM Switch");
-    
+    spdlog::info("Initializing ASCOM Switch");
+
     // Initialize COM on Windows
 #ifdef _WIN32
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(hr) && hr != RPC_E_CHANGED_MODE) {
-        LOG_F(ERROR, "Failed to initialize COM");
+        spdlog::error("Failed to initialize COM");
         return false;
     }
 #endif
-    
+
     return true;
 }
 
 auto ASCOMSwitch::destroy() -> bool {
-    LOG_F(INFO, "Destroying ASCOM Switch");
-    
+    spdlog::info("Destroying ASCOM Switch");
+
     stopMonitoring();
     disconnect();
-    
+
 #ifdef _WIN32
     CoUninitialize();
 #endif
-    
+
     return true;
 }
 
-auto ASCOMSwitch::connect(const std::string &deviceName, int timeout, int maxRetry) -> bool {
-    LOG_F(INFO, "Connecting to ASCOM switch device: {}", deviceName);
-    
+auto ASCOMSwitch::connect(const std::string& deviceName, int timeout,
+                          int maxRetry) -> bool {
+    spdlog::info("Connecting to ASCOM switch device: {}", deviceName);
+
     device_name_ = deviceName;
-    
+
     // Determine connection type
     if (deviceName.find("://") != std::string::npos) {
         // Alpaca REST API - parse URL
@@ -81,41 +81,41 @@ auto ASCOMSwitch::connect(const std::string &deviceName, int timeout, int maxRet
         // Parse host, port, device number from URL
         return connectToAlpacaDevice("localhost", 11111, 0);
     }
-    
+
 #ifdef _WIN32
     // Try as COM ProgID
     connection_type_ = ConnectionType::COM_DRIVER;
     return connectToCOMDriver(deviceName);
 #else
-    LOG_F(ERROR, "COM drivers not supported on non-Windows platforms");
+    spdlog::error("COM drivers not supported on non-Windows platforms");
     return false;
 #endif
 }
 
 auto ASCOMSwitch::disconnect() -> bool {
-    LOG_F(INFO, "Disconnecting ASCOM Switch");
-    
+    spdlog::info("Disconnecting ASCOM Switch");
+
     stopMonitoring();
-    
+
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         disconnectFromAlpacaDevice();
     }
-    
+
 #ifdef _WIN32
     if (connection_type_ == ConnectionType::COM_DRIVER) {
         disconnectFromCOMDriver();
     }
 #endif
-    
+
     is_connected_.store(false);
     return true;
 }
 
 auto ASCOMSwitch::scan() -> std::vector<std::string> {
-    LOG_F(INFO, "Scanning for ASCOM switch devices");
-    
+    spdlog::info("Scanning for ASCOM switch devices");
+
     std::vector<std::string> devices;
-    
+
 #ifdef _WIN32
     // Scan Windows registry for ASCOM Switch drivers
     // TODO: Implement registry scanning
@@ -124,28 +124,26 @@ auto ASCOMSwitch::scan() -> std::vector<std::string> {
     // Scan for Alpaca devices
     auto alpacaDevices = discoverAlpacaDevices();
     devices.insert(devices.end(), alpacaDevices.begin(), alpacaDevices.end());
-    
+
     return devices;
 }
 
-auto ASCOMSwitch::isConnected() const -> bool {
-    return is_connected_.load();
-}
+auto ASCOMSwitch::isConnected() const -> bool { return is_connected_.load(); }
 
 // Switch management methods
 auto ASCOMSwitch::addSwitch(const ::SwitchInfo& switchInfo) -> bool {
     // ASCOM switches are typically predefined by the driver
-    LOG_F(WARNING, "Adding switches not supported for ASCOM devices");
+    spdlog::warn("Adding switches not supported for ASCOM devices");
     return false;
 }
 
 auto ASCOMSwitch::removeSwitch(uint32_t index) -> bool {
-    LOG_F(WARNING, "Removing switches not supported for ASCOM devices");
+    spdlog::warn("Removing switches not supported for ASCOM devices");
     return false;
 }
 
 auto ASCOMSwitch::removeSwitch(const std::string& name) -> bool {
-    LOG_F(WARNING, "Removing switches not supported for ASCOM devices");
+    spdlog::warn("Removing switches not supported for ASCOM devices");
     return false;
 }
 
@@ -153,11 +151,11 @@ auto ASCOMSwitch::getSwitchCount() -> uint32_t {
     if (!isConnected()) {
         return 0;
     }
-    
+
     if (switch_count_ > 0) {
         return switch_count_;
     }
-    
+
     // Get switch count from ASCOM device
     updateSwitchInfo();
     return switch_count_;
@@ -167,23 +165,24 @@ auto ASCOMSwitch::getSwitchInfo(uint32_t index) -> std::optional<::SwitchInfo> {
     if (index >= switches_.size()) {
         return std::nullopt;
     }
-    
+
     // Convert internal format to interface format
     const auto& internal = switches_[index];
     ::SwitchInfo info;
     info.name = internal.name;
     info.description = internal.description;
-    info.label = internal.name; // Use name as label
+    info.label = internal.name;  // Use name as label
     info.state = internal.state ? SwitchState::ON : SwitchState::OFF;
     info.type = SwitchType::TOGGLE;
     info.enabled = internal.can_write;
     info.index = index;
-    info.powerConsumption = 0.0; // Not supported by ASCOM
-    
+    info.powerConsumption = 0.0;  // Not supported by ASCOM
+
     return info;
 }
 
-auto ASCOMSwitch::getSwitchInfo(const std::string& name) -> std::optional<::SwitchInfo> {
+auto ASCOMSwitch::getSwitchInfo(const std::string& name)
+    -> std::optional<::SwitchInfo> {
     auto index = getSwitchIndex(name);
     if (index) {
         return getSwitchInfo(*index);
@@ -191,7 +190,8 @@ auto ASCOMSwitch::getSwitchInfo(const std::string& name) -> std::optional<::Swit
     return std::nullopt;
 }
 
-auto ASCOMSwitch::getSwitchIndex(const std::string& name) -> std::optional<uint32_t> {
+auto ASCOMSwitch::getSwitchIndex(const std::string& name)
+    -> std::optional<uint32_t> {
     for (size_t i = 0; i < switches_.size(); ++i) {
         if (switches_[i].name == name) {
             return static_cast<uint32_t>(i);
@@ -202,14 +202,14 @@ auto ASCOMSwitch::getSwitchIndex(const std::string& name) -> std::optional<uint3
 
 auto ASCOMSwitch::getAllSwitches() -> std::vector<::SwitchInfo> {
     std::vector<::SwitchInfo> result;
-    
+
     for (uint32_t i = 0; i < getSwitchCount(); ++i) {
         auto info = getSwitchInfo(i);
         if (info) {
             result.push_back(*info);
         }
     }
-    
+
     return result;
 }
 
@@ -218,22 +218,24 @@ auto ASCOMSwitch::setSwitchState(uint32_t index, SwitchState state) -> bool {
     if (!isConnected() || index >= switches_.size()) {
         return false;
     }
-    
+
     bool boolState = (state == SwitchState::ON);
-    
+
     // Send command to ASCOM device
-    std::string params = "Id=" + std::to_string(index) + "&State=" + (boolState ? "true" : "false");
+    std::string params = "Id=" + std::to_string(index) +
+                         "&State=" + (boolState ? "true" : "false");
     auto response = sendAlpacaRequest("PUT", "setswitch", params);
-    
+
     if (response) {
         switches_[index].state = boolState;
         return true;
     }
-    
+
     return false;
 }
 
-auto ASCOMSwitch::setSwitchState(const std::string& name, SwitchState state) -> bool {
+auto ASCOMSwitch::setSwitchState(const std::string& name, SwitchState state)
+    -> bool {
     auto index = getSwitchIndex(name);
     if (index) {
         return setSwitchState(*index, state);
@@ -245,14 +247,15 @@ auto ASCOMSwitch::getSwitchState(uint32_t index) -> std::optional<SwitchState> {
     if (!isConnected() || index >= switches_.size()) {
         return std::nullopt;
     }
-    
+
     // Update from device
     updateSwitchInfo();
-    
+
     return switches_[index].state ? SwitchState::ON : SwitchState::OFF;
 }
 
-auto ASCOMSwitch::getSwitchState(const std::string& name) -> std::optional<SwitchState> {
+auto ASCOMSwitch::getSwitchState(const std::string& name)
+    -> std::optional<SwitchState> {
     auto index = getSwitchIndex(name);
     if (index) {
         return getSwitchState(*index);
@@ -263,7 +266,9 @@ auto ASCOMSwitch::getSwitchState(const std::string& name) -> std::optional<Switc
 auto ASCOMSwitch::toggleSwitch(uint32_t index) -> bool {
     auto currentState = getSwitchState(index);
     if (currentState) {
-        SwitchState newState = (*currentState == SwitchState::ON) ? SwitchState::OFF : SwitchState::ON;
+        SwitchState newState = (*currentState == SwitchState::ON)
+                                   ? SwitchState::OFF
+                                   : SwitchState::ON;
         return setSwitchState(index, newState);
     }
     return false;
@@ -279,87 +284,91 @@ auto ASCOMSwitch::toggleSwitch(const std::string& name) -> bool {
 
 auto ASCOMSwitch::setAllSwitches(SwitchState state) -> bool {
     bool allSuccess = true;
-    
+
     for (uint32_t i = 0; i < getSwitchCount(); ++i) {
         if (!setSwitchState(i, state)) {
             allSuccess = false;
         }
     }
-    
+
     return allSuccess;
 }
 
 // Batch operations
-auto ASCOMSwitch::setSwitchStates(const std::vector<std::pair<uint32_t, SwitchState>>& states) -> bool {
+auto ASCOMSwitch::setSwitchStates(
+    const std::vector<std::pair<uint32_t, SwitchState>>& states) -> bool {
     bool allSuccess = true;
-    
+
     for (const auto& [index, state] : states) {
         if (!setSwitchState(index, state)) {
             allSuccess = false;
         }
     }
-    
+
     return allSuccess;
 }
 
-auto ASCOMSwitch::setSwitchStates(const std::vector<std::pair<std::string, SwitchState>>& states) -> bool {
+auto ASCOMSwitch::setSwitchStates(
+    const std::vector<std::pair<std::string, SwitchState>>& states) -> bool {
     bool allSuccess = true;
-    
+
     for (const auto& [name, state] : states) {
         if (!setSwitchState(name, state)) {
             allSuccess = false;
         }
     }
-    
+
     return allSuccess;
 }
 
-auto ASCOMSwitch::getAllSwitchStates() -> std::vector<std::pair<uint32_t, SwitchState>> {
+auto ASCOMSwitch::getAllSwitchStates()
+    -> std::vector<std::pair<uint32_t, SwitchState>> {
     std::vector<std::pair<uint32_t, SwitchState>> states;
-    
+
     for (uint32_t i = 0; i < getSwitchCount(); ++i) {
         auto state = getSwitchState(i);
         if (state) {
             states.emplace_back(i, *state);
         }
     }
-    
+
     return states;
 }
 
 // Group management - placeholder implementations
 auto ASCOMSwitch::addGroup(const SwitchGroup& group) -> bool {
-    LOG_F(WARNING, "Switch groups not implemented");
+    spdlog::warn("Switch groups not implemented");
     return false;
 }
 
 auto ASCOMSwitch::removeGroup(const std::string& name) -> bool {
-    LOG_F(WARNING, "Switch groups not implemented");
+    spdlog::warn("Switch groups not implemented");
     return false;
 }
 
-auto ASCOMSwitch::getGroupCount() -> uint32_t {
-    return 0;
-}
+auto ASCOMSwitch::getGroupCount() -> uint32_t { return 0; }
 
-auto ASCOMSwitch::getGroupInfo(const std::string& name) -> std::optional<SwitchGroup> {
+auto ASCOMSwitch::getGroupInfo(const std::string& name)
+    -> std::optional<SwitchGroup> {
     return std::nullopt;
 }
 
-auto ASCOMSwitch::getAllGroups() -> std::vector<SwitchGroup> {
-    return {};
-}
+auto ASCOMSwitch::getAllGroups() -> std::vector<SwitchGroup> { return {}; }
 
-auto ASCOMSwitch::addSwitchToGroup(const std::string& groupName, uint32_t switchIndex) -> bool {
+auto ASCOMSwitch::addSwitchToGroup(const std::string& groupName,
+                                   uint32_t switchIndex) -> bool {
     return false;
 }
 
-auto ASCOMSwitch::removeSwitchFromGroup(const std::string& groupName, uint32_t switchIndex) -> bool {
+auto ASCOMSwitch::removeSwitchFromGroup(const std::string& groupName,
+                                        uint32_t switchIndex) -> bool {
     return false;
 }
 
 // Group control - placeholder implementations
-auto ASCOMSwitch::setGroupState(const std::string& groupName, uint32_t switchIndex, SwitchState state) -> bool {
+auto ASCOMSwitch::setGroupState(const std::string& groupName,
+                                uint32_t switchIndex, SwitchState state)
+    -> bool {
     return false;
 }
 
@@ -367,23 +376,23 @@ auto ASCOMSwitch::setGroupAllOff(const std::string& groupName) -> bool {
     return false;
 }
 
-auto ASCOMSwitch::getGroupStates(const std::string& groupName) -> std::vector<std::pair<uint32_t, SwitchState>> {
+auto ASCOMSwitch::getGroupStates(const std::string& groupName)
+    -> std::vector<std::pair<uint32_t, SwitchState>> {
     return {};
 }
 
 // Timer functionality - placeholder implementations
 auto ASCOMSwitch::setSwitchTimer(uint32_t index, uint32_t durationMs) -> bool {
-    LOG_F(WARNING, "Switch timers not implemented");
+    spdlog::warn("Switch timers not implemented");
     return false;
 }
 
-auto ASCOMSwitch::setSwitchTimer(const std::string& name, uint32_t durationMs) -> bool {
+auto ASCOMSwitch::setSwitchTimer(const std::string& name, uint32_t durationMs)
+    -> bool {
     return false;
 }
 
-auto ASCOMSwitch::cancelSwitchTimer(uint32_t index) -> bool {
-    return false;
-}
+auto ASCOMSwitch::cancelSwitchTimer(uint32_t index) -> bool { return false; }
 
 auto ASCOMSwitch::cancelSwitchTimer(const std::string& name) -> bool {
     return false;
@@ -393,14 +402,13 @@ auto ASCOMSwitch::getRemainingTime(uint32_t index) -> std::optional<uint32_t> {
     return std::nullopt;
 }
 
-auto ASCOMSwitch::getRemainingTime(const std::string& name) -> std::optional<uint32_t> {
+auto ASCOMSwitch::getRemainingTime(const std::string& name)
+    -> std::optional<uint32_t> {
     return std::nullopt;
 }
 
 // Power monitoring
-auto ASCOMSwitch::getTotalPowerConsumption() -> double {
-    return 0.0;
-}
+auto ASCOMSwitch::getTotalPowerConsumption() -> double { return 0.0; }
 
 // ASCOM-specific methods
 auto ASCOMSwitch::getASCOMDriverInfo() -> std::optional<std::string> {
@@ -415,7 +423,7 @@ auto ASCOMSwitch::getASCOMInterfaceVersion() -> std::optional<int> {
     return interface_version_;
 }
 
-auto ASCOMSwitch::setASCOMClientID(const std::string &clientId) -> bool {
+auto ASCOMSwitch::setASCOMClientID(const std::string& clientId) -> bool {
     client_id_ = clientId;
     return true;
 }
@@ -431,11 +439,12 @@ auto ASCOMSwitch::discoverAlpacaDevices() -> std::vector<std::string> {
     return devices;
 }
 
-auto ASCOMSwitch::connectToAlpacaDevice(const std::string &host, int port, int deviceNumber) -> bool {
+auto ASCOMSwitch::connectToAlpacaDevice(const std::string& host, int port,
+                                        int deviceNumber) -> bool {
     alpaca_host_ = host;
     alpaca_port_ = port;
     alpaca_device_number_ = deviceNumber;
-    
+
     // Test connection
     auto response = sendAlpacaRequest("GET", "connected");
     if (response) {
@@ -444,7 +453,7 @@ auto ASCOMSwitch::connectToAlpacaDevice(const std::string &host, int port, int d
         startMonitoring();
         return true;
     }
-    
+
     return false;
 }
 
@@ -454,24 +463,21 @@ auto ASCOMSwitch::disconnectFromAlpacaDevice() -> bool {
 }
 
 #ifdef _WIN32
-auto ASCOMSwitch::connectToCOMDriver(const std::string &progId) -> bool {
+auto ASCOMSwitch::connectToCOMDriver(const std::string& progId) -> bool {
     com_prog_id_ = progId;
-    
-    HRESULT hr = CoCreateInstance(
-        CLSID_NULL, // Would need to resolve ProgID to CLSID
-        nullptr,
-        CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER,
-        IID_IDispatch,
-        reinterpret_cast<void**>(&com_switch_)
-    );
-    
+
+    HRESULT hr =
+        CoCreateInstance(CLSID_NULL,  // Would need to resolve ProgID to CLSID
+                         nullptr, CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER,
+                         IID_IDispatch, reinterpret_cast<void**>(&com_switch_));
+
     if (SUCCEEDED(hr)) {
         is_connected_.store(true);
         updateSwitchInfo();
         startMonitoring();
         return true;
     }
-    
+
     return false;
 }
 
@@ -490,13 +496,16 @@ auto ASCOMSwitch::showASCOMChooser() -> std::optional<std::string> {
 #endif
 
 // Helper methods
-auto ASCOMSwitch::sendAlpacaRequest(const std::string &method, const std::string &endpoint,
-                                   const std::string &params) -> std::optional<std::string> {
+auto ASCOMSwitch::sendAlpacaRequest(const std::string& method,
+                                    const std::string& endpoint,
+                                    const std::string& params)
+    -> std::optional<std::string> {
     // TODO: Implement HTTP request to Alpaca server
     return std::nullopt;
 }
 
-auto ASCOMSwitch::parseAlpacaResponse(const std::string &response) -> std::optional<std::string> {
+auto ASCOMSwitch::parseAlpacaResponse(const std::string& response)
+    -> std::optional<std::string> {
     // TODO: Parse JSON response
     return std::nullopt;
 }
@@ -505,17 +514,18 @@ auto ASCOMSwitch::updateSwitchInfo() -> bool {
     if (!isConnected()) {
         return false;
     }
-    
+
     // Get switch count and information from device
-    switch_count_ = 0; // Default, would query from device
-    
+    switch_count_ = 0;  // Default, would query from device
+
     return true;
 }
 
 auto ASCOMSwitch::startMonitoring() -> void {
     if (!monitor_thread_) {
         stop_monitoring_.store(false);
-        monitor_thread_ = std::make_unique<std::thread>(&ASCOMSwitch::monitoringLoop, this);
+        monitor_thread_ =
+            std::make_unique<std::thread>(&ASCOMSwitch::monitoringLoop, this);
     }
 }
 
@@ -534,24 +544,26 @@ auto ASCOMSwitch::monitoringLoop() -> void {
         if (isConnected()) {
             updateSwitchInfo();
         }
-        
+
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
 #ifdef _WIN32
-auto ASCOMSwitch::invokeCOMMethod(const std::string &method, VARIANT* params, 
-                                 int param_count) -> std::optional<VARIANT> {
+auto ASCOMSwitch::invokeCOMMethod(const std::string& method, VARIANT* params,
+                                  int param_count) -> std::optional<VARIANT> {
     // TODO: Implement COM method invocation
     return std::nullopt;
 }
 
-auto ASCOMSwitch::getCOMProperty(const std::string &property) -> std::optional<VARIANT> {
+auto ASCOMSwitch::getCOMProperty(const std::string& property)
+    -> std::optional<VARIANT> {
     // TODO: Implement COM property getter
     return std::nullopt;
 }
 
-auto ASCOMSwitch::setCOMProperty(const std::string &property, const VARIANT &value) -> bool {
+auto ASCOMSwitch::setCOMProperty(const std::string& property,
+                                 const VARIANT& value) -> bool {
     // TODO: Implement COM property setter
     return false;
 }
