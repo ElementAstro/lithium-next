@@ -1,81 +1,84 @@
 #include "statistics_manager.hpp"
-#include <numeric>
 
 namespace lithium::device::indi::focuser {
 
-bool StatisticsManager::initialize(FocuserState& state) {
-    state_ = &state;
-    state_->logger_->info("{}: Initializing statistics manager", getComponentName());
+StatisticsManager::StatisticsManager(std::shared_ptr<INDIFocuserCore> core)
+    : FocuserComponentBase(std::move(core)) {
+    sessionStart_ = std::chrono::steady_clock::now();
+}
+
+bool StatisticsManager::initialize() {
+    auto core = getCore();
+    if (!core) {
+        return false;
+    }
     
-    // Initialize history arrays
-    stepHistory_.fill(0);
-    durationHistory_.fill(0);
-    historyIndex_ = 0;
-    historyCount_ = 0;
-    
+    sessionStart_ = std::chrono::steady_clock::now();
+    core->getLogger()->info("{}: Initializing statistics manager", getComponentName());
     return true;
 }
 
-void StatisticsManager::cleanup() {
-    if (state_) {
-        state_->logger_->info("{}: Cleaning up statistics manager", getComponentName());
+void StatisticsManager::shutdown() {
+    auto core = getCore();
+    if (core) {
+        sessionEnd_ = std::chrono::steady_clock::now();
+        core->getLogger()->info("{}: Shutting down statistics manager", getComponentName());
     }
-    state_ = nullptr;
 }
 
 uint64_t StatisticsManager::getTotalSteps() const {
-    if (!state_) {
-        return 0;
-    }
-    return state_->totalSteps_.load();
-}
-
-int StatisticsManager::getLastMoveSteps() const {
-    if (!state_) {
-        return 0;
-    }
-    return state_->lastMoveSteps_.load();
-}
-
-int StatisticsManager::getLastMoveDuration() const {
-    if (!state_) {
-        return 0;
-    }
-    return state_->lastMoveDuration_.load();
+    // In the new architecture, this could be stored in persistent storage
+    // For now, we'll use a static variable
+    static uint64_t totalSteps = 0;
+    return totalSteps;
 }
 
 bool StatisticsManager::resetTotalSteps() {
-    if (!state_) {
-        return false;
-    }
-
-    state_->totalSteps_ = 0;
-    totalMoves_ = 0;
-    historyIndex_ = 0;
-    historyCount_ = 0;
-    stepHistory_.fill(0);
-    durationHistory_.fill(0);
+    static uint64_t totalSteps = 0;
+    totalSteps = 0;
     
-    state_->logger_->info("Reset total steps and move counters");
+    auto core = getCore();
+    if (core) {
+        core->getLogger()->info("Reset total steps counter");
+    }
     return true;
 }
 
-void StatisticsManager::recordMovement(int steps, int durationMs) {
-    if (!state_) {
-        return;
+int StatisticsManager::getLastMoveSteps() const {
+    if (historyCount_ == 0) {
+        return 0;
     }
+    
+    // Get the most recent entry
+    size_t lastIndex = (historyIndex_ + HISTORY_SIZE - 1) % HISTORY_SIZE;
+    return stepHistory_[lastIndex];
+}
 
-    state_->lastMoveSteps_ = steps;
-    state_->totalSteps_ += std::abs(steps);
-    ++totalMoves_;
-    
-    if (durationMs > 0) {
-        state_->lastMoveDuration_ = durationMs;
+int StatisticsManager::getLastMoveDuration() const {
+    if (historyCount_ == 0) {
+        return 0;
     }
     
-    updateHistory(std::abs(steps), durationMs);
+    // Get the most recent entry
+    size_t lastIndex = (historyIndex_ + HISTORY_SIZE - 1) % HISTORY_SIZE;
+    return durationHistory_[lastIndex];
+}
+
+void StatisticsManager::recordMovement(int steps, int durationMs) {
+    // Update static total steps
+    static uint64_t totalSteps = 0;
+    totalSteps += std::abs(steps);
     
-    state_->logger_->debug("Recorded movement: {} steps, {} ms", steps, durationMs);
+    // Update move count
+    totalMoves_++;
+    
+    // Update history
+    updateHistory(steps, durationMs);
+    
+    auto core = getCore();
+    if (core) {
+        core->getLogger()->debug("Recorded move: {} steps, {} ms", steps, durationMs);
+    }
 }
 
 double StatisticsManager::getAverageStepsPerMove() const {
@@ -83,24 +86,35 @@ double StatisticsManager::getAverageStepsPerMove() const {
         return 0.0;
     }
     
-    if (historyCount_ > 0) {
-        // Use history for more recent average
-        size_t count = std::min(historyCount_, HISTORY_SIZE);
-        int total = std::accumulate(stepHistory_.begin(), stepHistory_.begin() + count, 0);
-        return static_cast<double>(total) / count;
-    }
-    
-    return static_cast<double>(getTotalSteps()) / totalMoves_;
-}
-
-double StatisticsManager::getAverageMoveDuration() const {
-    if (historyCount_ == 0) {
+    uint64_t validHistoryCount = std::min(historyCount_, HISTORY_SIZE);
+    if (validHistoryCount == 0) {
         return 0.0;
     }
     
-    size_t count = std::min(historyCount_, HISTORY_SIZE);
-    int total = std::accumulate(durationHistory_.begin(), durationHistory_.begin() + count, 0);
-    return static_cast<double>(total) / count;
+    int totalSteps = 0;
+    for (size_t i = 0; i < validHistoryCount; ++i) {
+        totalSteps += std::abs(stepHistory_[i]);
+    }
+    
+    return static_cast<double>(totalSteps) / validHistoryCount;
+}
+
+double StatisticsManager::getAverageMoveDuration() const {
+    if (totalMoves_ == 0) {
+        return 0.0;
+    }
+    
+    uint64_t validHistoryCount = std::min(historyCount_, HISTORY_SIZE);
+    if (validHistoryCount == 0) {
+        return 0.0;
+    }
+    
+    int totalDuration = 0;
+    for (size_t i = 0; i < validHistoryCount; ++i) {
+        totalDuration += durationHistory_[i];
+    }
+    
+    return static_cast<double>(totalDuration) / validHistoryCount;
 }
 
 uint64_t StatisticsManager::getTotalMoves() const {
@@ -112,21 +126,20 @@ void StatisticsManager::startSession() {
     sessionStartSteps_ = getTotalSteps();
     sessionStartMoves_ = totalMoves_;
     
-    if (state_) {
-        state_->logger_->info("Started new focuser session");
+    auto core = getCore();
+    if (core) {
+        core->getLogger()->info("Started new statistics session");
     }
 }
 
 void StatisticsManager::endSession() {
     sessionEnd_ = std::chrono::steady_clock::now();
     
-    if (state_) {
+    auto core = getCore();
+    if (core) {
         auto duration = getSessionDuration();
-        auto steps = getSessionSteps();
-        auto moves = getSessionMoves();
-        
-        state_->logger_->info("Ended focuser session - Duration: {}ms, Steps: {}, Moves: {}", 
-                             duration.count(), steps, moves);
+        core->getLogger()->info("Ended statistics session - Duration: {} ms, Steps: {}, Moves: {}",
+                               duration.count(), getSessionSteps(), getSessionMoves());
     }
 }
 
@@ -139,14 +152,8 @@ uint64_t StatisticsManager::getSessionMoves() const {
 }
 
 std::chrono::milliseconds StatisticsManager::getSessionDuration() const {
-    auto end = (sessionEnd_.time_since_epoch().count() > 0) ? 
-               sessionEnd_ : std::chrono::steady_clock::now();
-    
-    if (sessionStart_.time_since_epoch().count() == 0) {
-        return std::chrono::milliseconds(0);
-    }
-    
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - sessionStart_);
+    auto endTime = (sessionEnd_ > sessionStart_) ? sessionEnd_ : std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(endTime - sessionStart_);
 }
 
 void StatisticsManager::updateHistory(int steps, int duration) {
@@ -154,9 +161,10 @@ void StatisticsManager::updateHistory(int steps, int duration) {
     durationHistory_[historyIndex_] = duration;
     
     historyIndex_ = (historyIndex_ + 1) % HISTORY_SIZE;
+    
     if (historyCount_ < HISTORY_SIZE) {
-        ++historyCount_;
+        historyCount_++;
     }
 }
 
-} // namespace lithium::device::indi::focuser
+}  // namespace lithium::device::indi::focuser

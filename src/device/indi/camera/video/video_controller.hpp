@@ -19,7 +19,7 @@ namespace lithium::device::indi::camera {
  */
 class VideoController : public ComponentBase {
 public:
-    explicit VideoController(INDICameraCore* core);
+    explicit VideoController(std::shared_ptr<INDICameraCore> core);
     ~VideoController() override = default;
 
     // ComponentBase interface

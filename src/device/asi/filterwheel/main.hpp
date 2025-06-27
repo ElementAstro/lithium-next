@@ -16,6 +16,7 @@ Description: ASI Electronic Filter Wheel (EFW) dedicated module
 
 #include "device/template/filterwheel.hpp"
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -26,6 +27,8 @@ Description: ASI Electronic Filter Wheel (EFW) dedicated module
 namespace lithium::device::asi::filterwheel {
 class ASIFilterwheelController;
 }
+
+#include "controller_stub.hpp"
 
 namespace lithium::device::asi::filterwheel {
 
@@ -154,12 +157,12 @@ public:
 
 private:
     std::unique_ptr<ASIFilterwheelController> controller_;
+    
+    // Constants
+    static constexpr int MAX_FILTERS = 20;
+    
+    // Internal storage for filter information
+    std::array<FilterInfo, MAX_FILTERS> filters_;
 };
 
-/**
- * @brief Factory function to create ASI Filter Wheel instances
- */
-std::unique_ptr<ASIFilterWheel> createASIFilterWheel(
-    const std::string& name = "ASI EFW");
-
-}  // namespace lithium::device::asi::filterwheel
+} // namespace lithium::device::asi::filterwheel

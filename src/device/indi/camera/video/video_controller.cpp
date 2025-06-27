@@ -6,7 +6,7 @@
 
 namespace lithium::device::indi::camera {
 
-VideoController::VideoController(INDICameraCore* core) 
+VideoController::VideoController(std::shared_ptr<INDICameraCore> core) 
     : ComponentBase(core) {
     spdlog::debug("Creating video controller");
     setupVideoFormats();

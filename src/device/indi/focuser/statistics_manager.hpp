@@ -3,7 +3,7 @@
 
 #include <array>
 #include <chrono>
-#include "types.hpp"
+#include "component_base.hpp"
 
 namespace lithium::device::indi::focuser {
 
@@ -16,28 +16,29 @@ namespace lithium::device::indi::focuser {
  * buffer for moving averages and supports session-based tracking for advanced
  * analysis.
  */
-class StatisticsManager : public IFocuserComponent {
+class StatisticsManager : public FocuserComponentBase {
 public:
     /**
-     * @brief Default constructor.
+     * @brief Constructor with shared core.
+     * @param core Shared pointer to the INDIFocuserCore
      */
-    StatisticsManager() = default;
+    explicit StatisticsManager(std::shared_ptr<INDIFocuserCore> core);
+    
     /**
      * @brief Virtual destructor.
      */
     ~StatisticsManager() override = default;
 
     /**
-     * @brief Initialize the statistics manager with the shared focuser state.
-     * @param state Reference to the shared FocuserState structure.
+     * @brief Initialize the statistics manager.
      * @return true if initialization was successful, false otherwise.
      */
-    bool initialize(FocuserState& state) override;
+    bool initialize() override;
 
     /**
-     * @brief Cleanup resources and detach from the focuser state.
+     * @brief Shutdown and cleanup the component.
      */
-    void cleanup() override;
+    void shutdown() override;
 
     /**
      * @brief Get the component's name for logging and identification.
@@ -135,11 +136,6 @@ public:
     std::chrono::milliseconds getSessionDuration() const;
 
 private:
-    /**
-     * @brief Pointer to the shared focuser state structure.
-     */
-    FocuserState* state_{nullptr};
-
     // Extended statistics
     /**
      * @brief Total number of move operations performed.

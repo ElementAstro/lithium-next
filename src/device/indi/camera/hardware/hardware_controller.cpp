@@ -2,11 +2,10 @@
 #include "../core/indi_camera_core.hpp"
 
 #include <spdlog/spdlog.h>
-#include <algorithm>
 
 namespace lithium::device::indi::camera {
 
-HardwareController::HardwareController(INDICameraCore* core) 
+HardwareController::HardwareController(std::shared_ptr<INDICameraCore> core) 
     : ComponentBase(core) {
     spdlog::debug("Creating hardware controller");
     initializeDefaults();

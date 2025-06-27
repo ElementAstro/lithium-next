@@ -5,7 +5,7 @@
 
 namespace lithium::device::indi::camera {
 
-TemperatureController::TemperatureController(INDICameraCore* core) 
+TemperatureController::TemperatureController(std::shared_ptr<INDICameraCore> core) 
     : ComponentBase(core) {
     spdlog::debug("Creating temperature controller");
 }
@@ -22,8 +22,9 @@ auto TemperatureController::initialize() -> bool {
     // Initialize temperature info
     temperatureInfo_.current = 0.0;
     temperatureInfo_.target = 0.0;
-    temperatureInfo_.power = 0.0;
-    temperatureInfo_.hasCooler = false;
+    temperatureInfo_.coolingPower = 0.0;
+    temperatureInfo_.coolerOn = false;
+    temperatureInfo_.canSetTemperature = false;
     
     return true;
 }
@@ -219,7 +220,7 @@ void TemperatureController::handleCoolerProperty(INDI::Property property) {
     
     bool coolerOn = (coolerProperty[0].getState() == ISS_ON);
     isCooling_.store(coolerOn);
-    temperatureInfo_.hasCooler = true;
+    temperatureInfo_.canSetTemperature = true;
     
     spdlog::debug("Cooler state: {}", coolerOn ? "ON" : "OFF");
 }
@@ -236,7 +237,7 @@ void TemperatureController::handleCoolerPowerProperty(INDI::Property property) {
     
     double power = powerProperty[0].getValue();
     coolingPower_.store(power);
-    temperatureInfo_.power = power;
+    temperatureInfo_.coolingPower = power;
     
     spdlog::debug("Cooling power: {}%", power);
 }
@@ -244,8 +245,8 @@ void TemperatureController::handleCoolerPowerProperty(INDI::Property property) {
 void TemperatureController::updateTemperatureInfo() {
     temperatureInfo_.current = currentTemperature_.load();
     temperatureInfo_.target = targetTemperature_.load();
-    temperatureInfo_.power = coolingPower_.load();
-    temperatureInfo_.hasCooler = hasCooler();
+    temperatureInfo_.coolingPower = coolingPower_.load();
+    temperatureInfo_.canSetTemperature = hasCooler();
 }
 
 } // namespace lithium::device::indi::camera

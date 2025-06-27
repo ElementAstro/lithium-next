@@ -19,7 +19,7 @@ namespace lithium::device::indi::camera {
  */
 class HardwareController : public ComponentBase {
 public:
-    explicit HardwareController(INDICameraCore* core);
+    explicit HardwareController(std::shared_ptr<INDICameraCore> core);
     ~HardwareController() override = default;
 
     // ComponentBase interface

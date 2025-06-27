@@ -8,7 +8,7 @@
 
 namespace lithium::device::indi::camera {
 
-ImageProcessor::ImageProcessor(INDICameraCore* core) 
+ImageProcessor::ImageProcessor(std::shared_ptr<INDICameraCore> core) 
     : ComponentBase(core) {
     spdlog::debug("Creating image processor");
     setupImageFormats();
@@ -178,29 +178,28 @@ auto ImageProcessor::validateImageData(const void* data, size_t size) -> bool {
 }
 
 auto ImageProcessor::processReceivedImage(const INDI::PropertyBlob& property) -> void {
-    if (!property.isValid()) {
-        spdlog::error("Invalid blob property");
+    if (!property.isValid() || property[0].getBlobLen() == 0) {
+        spdlog::error("Invalid blob property or empty image data");
         return;
     }
     
-    auto blob = property.getBlob();
-    if (!blob || blob->getSize() == 0) {
-        spdlog::error("Received empty image blob");
-        return;
-    }
+    size_t imageSize = property[0].getBlobLen();
+    const void* imageData = property[0].getBlob();
+    const char* format = property[0].getFormat();
+    
+    spdlog::info("Processing image: size={}, format={}", imageSize, format ? format : "unknown");
     
     // Validate image data
-    if (!validateImageData(blob->getData(), blob->getSize())) {
+    if (!validateImageData(imageData, imageSize)) {
         spdlog::error("Invalid image data received");
         return;
     }
     
     // Create frame structure
     auto frame = std::make_shared<AtomCameraFrame>();
-    frame->data = blob->getData();
-    frame->size = blob->getSize();
-    frame->timestamp = std::chrono::system_clock::now();
-    frame->format = detectImageFormat(blob->getData(), blob->getSize());
+    frame->data = const_cast<void*>(imageData);
+    frame->size = imageSize;
+    frame->format = detectImageFormat(imageData, imageSize);
     
     // Analyze image quality if it's raw data
     if (frame->format == "RAW" || frame->format == "FITS") {
@@ -266,20 +265,11 @@ void ImageProcessor::updateImageStatistics(std::shared_ptr<AtomCameraFrame> fram
         return;
     }
     
-    // Update frame metadata
-    frame->quality.mean = lastImageMean_.load();
-    frame->quality.stddev = lastImageStdDev_.load();
-    frame->quality.min = lastImageMin_.load();
-    frame->quality.max = lastImageMax_.load();
-    
-    // Calculate additional statistics
-    if (frame->quality.stddev > 0) {
-        frame->quality.snr = frame->quality.mean / frame->quality.stddev;
-    } else {
-        frame->quality.snr = 0.0;
-    }
-    
-    frame->quality.dynamicRange = frame->quality.max - frame->quality.min;
+    // Quality information is stored in member variables and can be retrieved via getLastImageQuality()
+    // The AtomCameraFrame struct doesn't have quality fields, so we keep quality data separate
+    spdlog::debug("Image quality analysis complete - mean: {}, stddev: {}, min: {}, max: {}", 
+                  lastImageMean_.load(), lastImageStdDev_.load(), 
+                  lastImageMin_.load(), lastImageMax_.load());
 }
 
 auto ImageProcessor::detectImageFormat(const void* data, size_t size) -> std::string {

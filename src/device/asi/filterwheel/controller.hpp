@@ -21,13 +21,18 @@ a clean, maintainable, and testable interface for ASI EFW control.
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <mutex>
 
-#include "./components/calibration_system.hpp"
-#include "./components/configuration_manager.hpp"
-#include "./components/hardware_interface.hpp"
-#include "./components/monitoring_system.hpp"
-#include "./components/position_manager.hpp"
-#include "./components/sequence_manager.hpp"
+// Forward declarations for components to avoid circular dependencies
+namespace lithium::device::asi::filterwheel::components {
+class HardwareInterface;
+class PositionManager;
+class ConfigurationManager;
+class SequenceManager;
+class MonitoringSystem;
+class CalibrationSystem;
+}
 
 namespace lithium::device::asi::filterwheel {
 
@@ -129,19 +134,19 @@ public:
     // Component access (for advanced usage)
     std::shared_ptr<components::HardwareInterface> getHardwareInterface() const;
     std::shared_ptr<components::PositionManager> getPositionManager() const;
-    std::shared_ptr<ConfigurationManager> getConfigurationManager() const;
+    std::shared_ptr<components::ConfigurationManager> getConfigurationManager() const;
     std::shared_ptr<components::SequenceManager> getSequenceManager() const;
-    std::shared_ptr<MonitoringSystem> getMonitoringSystem() const;
-    std::shared_ptr<CalibrationSystem> getCalibrationSystem() const;
+    std::shared_ptr<components::MonitoringSystem> getMonitoringSystem() const;
+    std::shared_ptr<components::CalibrationSystem> getCalibrationSystem() const;
 
 private:
     // Component instances
     std::shared_ptr<components::HardwareInterface> hardware_interface_;
     std::shared_ptr<components::PositionManager> position_manager_;
-    std::shared_ptr<ConfigurationManager> configuration_manager_;
+    std::shared_ptr<components::ConfigurationManager> configuration_manager_;
     std::shared_ptr<components::SequenceManager> sequence_manager_;
-    std::shared_ptr<MonitoringSystem> monitoring_system_;
-    std::shared_ptr<CalibrationSystem> calibration_system_;
+    std::shared_ptr<components::MonitoringSystem> monitoring_system_;
+    std::shared_ptr<components::CalibrationSystem> calibration_system_;
 
     // State
     bool initialized_;

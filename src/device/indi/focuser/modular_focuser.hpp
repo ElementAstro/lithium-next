@@ -4,6 +4,7 @@
 #include <libindi/baseclient.h>
 #include <libindi/basedevice.h>
 #include <memory>
+#include <atomic>
 
 #include "device/template/focuser.hpp"
 #include "movement_controller.hpp"
@@ -108,8 +109,8 @@ protected:
     void newMessage(INDI::BaseDevice baseDevice, int messageID) override;
 
 private:
-    // Shared state
-    std::unique_ptr<FocuserState> state_;
+    // Shared core
+    std::shared_ptr<INDIFocuserCore> core_;
 
     // Component managers
     std::unique_ptr<PropertyManager> propertyManager_;
@@ -117,6 +118,10 @@ private:
     std::unique_ptr<TemperatureManager> temperatureManager_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<StatisticsManager> statisticsManager_;
+
+    // Local autofocus state (not supported by INDI directly)
+    std::atomic_bool isAutoFocusing_{false};
+    std::atomic<double> autoFocusProgress_{0.0};
 
     // Component initialization
     bool initializeComponents();

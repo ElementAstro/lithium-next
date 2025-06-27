@@ -20,7 +20,7 @@ namespace lithium::device::indi::camera {
  */
 class ExposureController : public ComponentBase {
 public:
-    explicit ExposureController(INDICameraCore* core);
+    explicit ExposureController(std::shared_ptr<INDICameraCore> core);
     ~ExposureController() override = default;
 
     // ComponentBase interface

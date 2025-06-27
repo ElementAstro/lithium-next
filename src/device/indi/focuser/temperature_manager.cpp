@@ -3,28 +3,36 @@
 
 namespace lithium::device::indi::focuser {
 
-bool TemperatureManager::initialize(FocuserState& state) {
-    state_ = &state;
-    lastCompensationTemperature_ = state_->temperature_.load();
-    state_->logger_->info("{}: Initializing temperature manager",
-                          getComponentName());
+TemperatureManager::TemperatureManager(std::shared_ptr<INDIFocuserCore> core)
+    : FocuserComponentBase(std::move(core)) {
+    lastCompensationTemperature_ = 20.0; // Default starting temperature
+}
+
+bool TemperatureManager::initialize() {
+    auto core = getCore();
+    if (!core) {
+        return false;
+    }
+    
+    lastCompensationTemperature_ = core->getTemperature();
+    core->getLogger()->info("{}: Initializing temperature manager", getComponentName());
     return true;
 }
 
-void TemperatureManager::cleanup() {
-    if (state_) {
-        state_->logger_->info("{}: Cleaning up temperature manager",
-                              getComponentName());
+void TemperatureManager::shutdown() {
+    auto core = getCore();
+    if (core) {
+        core->getLogger()->info("{}: Shutting down temperature manager", getComponentName());
     }
-    state_ = nullptr;
 }
 
 std::optional<double> TemperatureManager::getExternalTemperature() const {
-    if (!state_ || !state_->device_.isValid()) {
+    auto core = getCore();
+    if (!core || !core->getDevice().isValid()) {
         return std::nullopt;
     }
-    INDI::PropertyNumber property =
-        state_->device_.getProperty("FOCUS_TEMPERATURE");
+    
+    INDI::PropertyNumber property = core->getDevice().getProperty("FOCUS_TEMPERATURE");
     if (!property.isValid()) {
         return std::nullopt;
     }
@@ -32,11 +40,12 @@ std::optional<double> TemperatureManager::getExternalTemperature() const {
 }
 
 std::optional<double> TemperatureManager::getChipTemperature() const {
-    if (!state_ || !state_->device_.isValid()) {
+    auto core = getCore();
+    if (!core || !core->getDevice().isValid()) {
         return std::nullopt;
     }
-    INDI::PropertyNumber property =
-        state_->device_.getProperty("CHIP_TEMPERATURE");
+    
+    INDI::PropertyNumber property = core->getDevice().getProperty("CHIP_TEMPERATURE");
     if (!property.isValid()) {
         return std::nullopt;
     }
@@ -44,84 +53,157 @@ std::optional<double> TemperatureManager::getChipTemperature() const {
 }
 
 bool TemperatureManager::hasTemperatureSensor() const {
-    if (!state_ || !state_->device_.isValid()) {
+    auto core = getCore();
+    if (!core || !core->getDevice().isValid()) {
         return false;
     }
-    const auto tempProperty = state_->device_.getProperty("FOCUS_TEMPERATURE");
-    const auto chipProperty = state_->device_.getProperty("CHIP_TEMPERATURE");
-    return tempProperty.isValid() || chipProperty.isValid();
+    
+    const auto tempProperty = core->getDevice().getProperty("FOCUS_TEMPERATURE");
+    return tempProperty.isValid();
 }
 
 TemperatureCompensation TemperatureManager::getTemperatureCompensation() const {
-    if (!state_) {
-        return {};
+    auto core = getCore();
+    TemperatureCompensation comp;
+    
+    if (!core || !core->getDevice().isValid()) {
+        return comp; // Return default compensation settings
     }
-    return state_->tempCompensation_;
+    
+    // Try to read temperature compensation settings from device properties
+    INDI::PropertySwitch enabledProp = core->getDevice().getProperty("TEMP_COMPENSATION_ENABLED");
+    if (enabledProp.isValid()) {
+        comp.enabled = enabledProp[0].getState() == ISS_ON;
+    }
+    
+    INDI::PropertyNumber coeffProp = core->getDevice().getProperty("TEMP_COMPENSATION_COEFF");
+    if (coeffProp.isValid()) {
+        comp.coefficient = coeffProp[0].getValue();
+    }
+    
+    return comp;
 }
 
-bool TemperatureManager::setTemperatureCompensation(
-    const TemperatureCompensation& comp) {
-    if (!state_) {
+bool TemperatureManager::setTemperatureCompensation(const TemperatureCompensation& comp) {
+    auto core = getCore();
+    if (!core || !core->getDevice().isValid() || !core->getClient()) {
         return false;
     }
-    state_->tempCompensation_ = comp;
-    state_->logger_->info(
-        "Temperature compensation set: enabled={}, coefficient={}",
-        comp.enabled, comp.coefficient);
-    return true;
+    
+    bool success = true;
+    
+    // Set compensation coefficient
+    INDI::PropertyNumber coeffProp = core->getDevice().getProperty("TEMP_COMPENSATION_COEFF");
+    if (coeffProp.isValid()) {
+        coeffProp[0].value = comp.coefficient;
+        core->getClient()->sendNewProperty(coeffProp);
+        core->getLogger()->info("Set temperature compensation coefficient to {:.4f}", comp.coefficient);
+    } else {
+        success = false;
+    }
+    
+    // Set enabled/disabled state
+    INDI::PropertySwitch enabledProp = core->getDevice().getProperty("TEMP_COMPENSATION_ENABLED");
+    if (enabledProp.isValid()) {
+        enabledProp[0].setState(comp.enabled ? ISS_ON : ISS_OFF);
+        enabledProp[1].setState(comp.enabled ? ISS_OFF : ISS_ON);
+        core->getClient()->sendNewProperty(enabledProp);
+        core->getLogger()->info("Temperature compensation {}", comp.enabled ? "enabled" : "disabled");
+    } else {
+        success = false;
+    }
+    
+    return success;
 }
 
 bool TemperatureManager::enableTemperatureCompensation(bool enable) {
-    if (!state_) {
+    auto core = getCore();
+    if (!core || !core->getDevice().isValid() || !core->getClient()) {
         return false;
     }
-    state_->tempCompensationEnabled_ = enable;
-    state_->tempCompensation_.enabled = enable;
-    state_->logger_->info("Temperature compensation {}",
-                          enable ? "enabled" : "disabled");
+    
+    INDI::PropertySwitch enabledProp = core->getDevice().getProperty("TEMP_COMPENSATION_ENABLED");
+    if (!enabledProp.isValid()) {
+        core->getLogger()->warn("Temperature compensation property not available");
+        return false;
+    }
+    
+    enabledProp[0].setState(enable ? ISS_ON : ISS_OFF);
+    enabledProp[1].setState(enable ? ISS_OFF : ISS_ON);
+    core->getClient()->sendNewProperty(enabledProp);
+    
+    core->getLogger()->info("Temperature compensation {}", enable ? "enabled" : "disabled");
     return true;
 }
 
 bool TemperatureManager::isTemperatureCompensationEnabled() const {
-    return state_ && state_->tempCompensationEnabled_.load();
+    auto core = getCore();
+    if (!core || !core->getDevice().isValid()) {
+        return false;
+    }
+    
+    INDI::PropertySwitch enabledProp = core->getDevice().getProperty("TEMP_COMPENSATION_ENABLED");
+    if (!enabledProp.isValid()) {
+        return false;
+    }
+    
+    return enabledProp[0].getState() == ISS_ON;
 }
 
 void TemperatureManager::checkTemperatureCompensation() {
-    if (!state_ || !isTemperatureCompensationEnabled()) {
+    auto core = getCore();
+    if (!core) {
         return;
     }
-    auto currentTemp = getExternalTemperature();
-    if (!currentTemp) {
-        return;
+    
+    if (!isTemperatureCompensationEnabled()) {
+        return; // Compensation is disabled
     }
-    double temperatureDelta = *currentTemp - lastCompensationTemperature_;
+    
+    double currentTemp = core->getTemperature();
+    double temperatureDelta = currentTemp - lastCompensationTemperature_;
+    
+    // Only compensate if temperature change is significant (> 0.1°C)
     if (std::abs(temperatureDelta) > 0.1) {
         applyTemperatureCompensation(temperatureDelta);
-        lastCompensationTemperature_ = *currentTemp;
+        lastCompensationTemperature_ = currentTemp;
     }
 }
 
-double TemperatureManager::calculateCompensationSteps(
-    double temperatureDelta) const {
-    if (!state_) {
+double TemperatureManager::calculateCompensationSteps(double temperatureDelta) const {
+    auto comp = getTemperatureCompensation();
+    if (!comp.enabled) {
         return 0.0;
     }
-    return temperatureDelta * state_->tempCompensation_.coefficient;
+    
+    // Steps = coefficient * temperature_change
+    // Positive coefficient means focus moves out when temperature increases
+    return comp.coefficient * temperatureDelta;
 }
 
 void TemperatureManager::applyTemperatureCompensation(double temperatureDelta) {
-    if (!state_) {
+    auto core = getCore();
+    if (!core) {
         return;
     }
+    
     double compensationSteps = calculateCompensationSteps(temperatureDelta);
-    if (std::abs(compensationSteps) >= 1.0) {
-        int steps = static_cast<int>(std::round(compensationSteps));
-        state_->tempCompensation_.compensationOffset += compensationSteps;
-        state_->logger_->info(
-            "Applying temperature compensation: {} steps for {}°C change",
-            steps, temperatureDelta);
-        // Note: Actual movement would be handled by MovementController
-        // This component just calculates and tracks the compensation
+    if (std::abs(compensationSteps) < 1.0) {
+        return; // Too small to matter
+    }
+    
+    int steps = static_cast<int>(std::round(compensationSteps));
+    
+    core->getLogger()->info("Applying temperature compensation: {:.2f}°C change requires {} steps", 
+                           temperatureDelta, steps);
+    
+    // Apply compensation through INDI
+    if (core->getDevice().isValid() && core->getClient()) {
+        INDI::PropertyNumber relPosProp = core->getDevice().getProperty("REL_FOCUS_POSITION");
+        if (relPosProp.isValid()) {
+            relPosProp[0].value = steps;
+            core->getClient()->sendNewProperty(relPosProp);
+        }
     }
 }
 

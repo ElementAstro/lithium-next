@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <ranges>
 #include <thread>
 
 #ifdef _WIN32
@@ -28,20 +29,46 @@
 #include "atom/utils/to_string.hpp"
 #include "spdlog/spdlog.h"
 
-
 namespace fs = std::filesystem;
 
 namespace lithium {
 
-ModuleLoader::ModuleLoader(std::string_view dirName)
-    : threadPool_(std::make_shared<atom::async::ThreadPool<>>(
-          std::thread::hardware_concurrency())),
-      modulesDir_(dirName) {
+ModuleLoader::ModuleLoader(std::string_view dirName) : modulesDir_(dirName) {
     spdlog::debug("Module manager initialized with directory: {}", dirName);
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    for (unsigned i = 0; i < num_threads; ++i) {
+        workers_.emplace_back([this](std::stop_token stoken) {
+            while (!stoken.stop_requested()) {
+                Task task;
+                {
+                    std::unique_lock lock(queueMutex_);
+                    condition_.wait(lock, [&] {
+                        return stoken.stop_requested() || !taskQueue_.empty();
+                    });
+                    if (stoken.stop_requested())
+                        break;
+                    task = std::move(taskQueue_.front());
+                    taskQueue_.pop();
+                }
+                task();
+            }
+        });
+    }
 }
 
 ModuleLoader::~ModuleLoader() {
     spdlog::debug("Module manager destroying...");
+    for (auto& worker : workers_) {
+        if (worker.joinable()) {
+            worker.request_stop();
+        }
+    }
+    condition_.notify_all();
+    for (auto& worker : workers_) {
+        if (worker.joinable()) {
+            worker.join();
+        }
+    }
     try {
         auto result = unloadAllModules();
         if (!result) {
@@ -64,6 +91,68 @@ auto ModuleLoader::createShared(std::string_view dirName)
     return std::make_shared<ModuleLoader>(dirName);
 }
 
+auto ModuleLoader::registerModule(std::string_view name, std::string_view path,
+                                  const std::vector<std::string>& dependencies)
+    -> ModuleResult<void> {
+    std::unique_lock lock(sharedMutex_);
+    if (registeredModules_.contains(toStdString(name))) {
+        return std::unexpected("Module already registered: " +
+                               toStdString(name));
+    }
+    registeredModules_[toStdString(name)] = {toStdString(path), dependencies};
+    return {};
+}
+
+auto ModuleLoader::loadRegisteredModules() -> std::future<ModuleResult<void>> {
+    auto promise = std::make_shared<std::promise<ModuleResult<void>>>();
+    auto future = promise->get_future();
+
+    {
+        std::unique_lock lock(queueMutex_);
+        taskQueue_.emplace([this, promise]() {
+            DependencyGraph depGraph;
+            for (const auto& [name, reg_mod] : registeredModules_) {
+                depGraph.addNode(name, Version());
+                for (const auto& dep : reg_mod.dependencies) {
+                    depGraph.addNode(dep, Version());
+                    depGraph.addDependency(name, dep, Version());
+                }
+            }
+
+            if (depGraph.hasCycle()) {
+                promise->set_value(std::unexpected(
+                    "Circular dependency detected among registered modules."));
+                return;
+            }
+
+            auto sorted_modules = depGraph.topologicalSort();
+            if (!sorted_modules) {
+                promise->set_value(
+                    std::unexpected("Failed to sort modules topologically."));
+                return;
+            }
+
+            std::reverse(sorted_modules->begin(), sorted_modules->end());
+
+            for (const auto& name : *sorted_modules) {
+                if (registeredModules_.contains(name)) {
+                    auto& reg_mod = registeredModules_.at(name);
+                    auto result = loadModule(reg_mod.path, name);
+                    if (!result) {
+                        promise->set_value(
+                            std::unexpected("Failed to load module: " + name +
+                                            " with error: " + result.error()));
+                        return;
+                    }
+                }
+            }
+            promise->set_value({});
+        });
+    }
+    condition_.notify_one();
+    return future;
+}
+
 auto ModuleLoader::loadModule(std::string_view path, std::string_view name)
     -> ModuleResult<bool> {
     spdlog::debug("Loading module: {} from path: {}", name, path);
@@ -83,7 +172,7 @@ auto ModuleLoader::loadModule(std::string_view path, std::string_view name)
         return std::unexpected("Module file not found: " + toStdString(path));
     }
 
-    if (!verifyModuleIntegrity(modulePath)) {
+    if (!verifyModuleIntegrity(modulePath, true)) {
         return std::unexpected("Module integrity check failed: " +
                                toStdString(path));
     }
@@ -433,54 +522,6 @@ auto ModuleLoader::validateDependencies(std::string_view name) const -> bool {
     return dependencyGraph_.validateDependencies(toStdString(name));
 }
 
-auto ModuleLoader::loadModulesInOrder() -> ModuleResult<bool> {
-    spdlog::debug("Loading modules in dependency order");
-
-    try {
-        auto sortedModulesOpt = dependencyGraph_.topologicalSort();
-        if (!sortedModulesOpt) {
-            return std::unexpected(
-                "Failed to sort modules due to circular dependencies");
-        }
-
-        auto& sortedModules = *sortedModulesOpt;
-        std::vector<std::string> failedModules;
-
-        // Lock for checking modules
-        std::shared_lock readLock(sharedMutex_);
-        std::vector<std::pair<std::string, std::string>> modulesToLoad;
-
-        for (const auto& name : sortedModules) {
-            auto mod = getModule(name);
-            if (mod) {
-                modulesToLoad.emplace_back(mod->path, name);
-            }
-        }
-        readLock.unlock();
-
-        // Load modules in parallel but respect dependencies
-        auto futures = loadModulesAsync(modulesToLoad);
-        for (size_t i = 0; i < futures.size(); ++i) {
-            auto result = futures[i].get();
-            if (!result) {
-                failedModules.push_back(modulesToLoad[i].second);
-                spdlog::error("Failed to load module {}: {}",
-                              modulesToLoad[i].second, result.error());
-            }
-        }
-
-        if (!failedModules.empty()) {
-            return std::unexpected("Failed to load modules: " +
-                                   atom::utils::toString(failedModules));
-        }
-
-        return true;
-    } catch (const std::exception& e) {
-        spdlog::error("Exception during module loading in order: {}", e.what());
-        return std::unexpected(std::string("Exception: ") + e.what());
-    }
-}
-
 auto ModuleLoader::getDependencies(std::string_view name) const
     -> std::vector<std::string> {
     spdlog::debug("Getting dependencies for module: {}", name);
@@ -491,43 +532,6 @@ auto ModuleLoader::getDependencies(std::string_view name) const
     }
 
     return dependencyGraph_.getDependencies(toStdString(name));
-}
-
-void ModuleLoader::setThreadPoolSize(size_t size) {
-    spdlog::debug("Setting thread pool size to {}", size);
-
-    if (size == 0) {
-        spdlog::error("Thread pool size cannot be zero");
-        throw std::invalid_argument("Thread pool size cannot be zero");
-    }
-
-    threadPool_ = std::make_shared<atom::async::ThreadPool<>>(size);
-}
-
-auto ModuleLoader::loadModulesAsync(
-    std::span<const std::pair<std::string, std::string>> modules)
-    -> std::vector<std::future<ModuleResult<bool>>> {
-    spdlog::debug("Asynchronously loading {} modules", modules.size());
-
-    std::vector<std::future<ModuleResult<bool>>> results;
-    results.reserve(modules.size());
-
-    // Add all modules to dependency graph first
-    {
-        std::unique_lock lock(sharedMutex_);
-        for (const auto& [_, name] : modules) {
-            if (dependencyGraph_.getDependencies(name).empty()) {
-                dependencyGraph_.addNode(name, Version());
-            }
-        }
-    }
-
-    // Asynchronously load modules
-    for (const auto& [path, name] : modules) {
-        results.push_back(loadModuleAsync(path, name));
-    }
-
-    return results;
 }
 
 auto ModuleLoader::getModuleByHash(std::size_t hash) const
@@ -560,46 +564,8 @@ auto ModuleLoader::computeModuleHash(std::string_view path) const
     }
 }
 
-auto ModuleLoader::loadModuleAsync(std::string_view path, std::string_view name)
-    -> std::future<ModuleResult<bool>> {
-    return threadPool_->enqueue(
-        [this, pathStr = toStdString(path), nameStr = toStdString(name)]() {
-            auto startTime = std::chrono::system_clock::now();
-            auto result = loadModule(pathStr, nameStr);
-            auto endTime = std::chrono::system_clock::now();
-
-            if (result) {
-                std::unique_lock lock(sharedMutex_);
-                if (auto modInfo = getModule(nameStr)) {
-                    modInfo->stats.loadCount++;
-
-                    auto duration =
-                        std::chrono::duration_cast<std::chrono::milliseconds>(
-                            endTime - startTime);
-
-                    // Update average load time using weighted average
-                    modInfo->stats.averageLoadTime =
-                        (modInfo->stats.averageLoadTime *
-                             (modInfo->stats.loadCount - 1) +
-                         duration.count()) /
-                        modInfo->stats.loadCount;
-
-                    modInfo->stats.lastAccess = endTime;
-                }
-            } else {
-                // Update failure statistics
-                std::unique_lock lock(sharedMutex_);
-                if (auto modInfo = getModule(nameStr)) {
-                    modInfo->stats.failureCount++;
-                }
-            }
-
-            return result;
-        });
-}
-
-auto ModuleLoader::verifyModuleIntegrity(
-    const std::filesystem::path& path) const -> bool {
+auto ModuleLoader::verifyModuleIntegrity(const std::filesystem::path& path,
+                                         bool checkArch) const -> bool {
     spdlog::debug("Verifying integrity of module: {}", path.string());
 
     try {
@@ -727,6 +693,79 @@ auto ModuleLoader::verifyModuleIntegrity(
             return false;
         }
 #endif
+
+        // Architecture check
+        if (checkArch) {
+            file.seekg(0, std::ios::beg);  // Reset file pointer
+#ifdef _WIN32
+            IMAGE_DOS_HEADER dosHeader;
+            file.read(reinterpret_cast<char*>(&dosHeader), sizeof(dosHeader));
+            if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE) {
+                spdlog::error("Invalid DOS signature for {}.", path.string());
+                return false;
+            }
+
+            file.seekg(dosHeader.e_lfanew);
+            IMAGE_NT_HEADERS ntHeaders;
+            file.read(reinterpret_cast<char*>(&ntHeaders), sizeof(ntHeaders));
+
+            if (ntHeaders.Signature != IMAGE_NT_SIGNATURE) {
+                spdlog::error("Invalid NT signature for {}.", path.string());
+                return false;
+            }
+
+            if (ntHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE_I386) {
+#ifdef _M_X64
+                spdlog::error(
+                    "Attempting to load 32-bit module on 64-bit system: {}",
+                    path.string());
+                return false;
+#endif
+            } else if (ntHeaders.FileHeader.Machine ==
+                       IMAGE_FILE_MACHINE_AMD64) {
+#ifndef _M_X664
+                spdlog::error(
+                    "Attempting to load 64-bit module on 32-bit system: {}",
+                    path.string());
+                return false;
+#endif
+            } else {
+                spdlog::warn("Unknown machine type for module {}: {}",
+                             path.string(), ntHeaders.FileHeader.Machine);
+            }
+#elif defined(__linux__) || defined(__unix__)
+            Elf64_Ehdr elf_header;
+            file.read(reinterpret_cast<char*>(&elf_header), sizeof(elf_header));
+
+            if (elf_header.e_ident[EI_CLASS] == ELFCLASS32) {
+#ifdef __x86_64__
+                spdlog::error(
+                    "Attempting to load 32-bit ELF module on 64-bit system: {}",
+                    path.string());
+                return false;
+#endif
+            } else if (elf_header.e_ident[EI_CLASS] == ELFCLASS64) {
+#ifndef __x86_64__
+                spdlog::error(
+                    "Attempting to load 64-bit ELF module on 32-bit system: {}",
+                    path.string());
+                return false;
+#endif
+            } else {
+                spdlog::warn("Unknown ELF class for module {}: {}",
+                             path.string(), (int)elf_header.e_ident[EI_CLASS]);
+            }
+#elif defined(__APPLE__)
+            // Mach-O architecture check (simplified)
+            // This would typically involve parsing the fat header for universal
+            // binaries or checking the CPU type in the Mach-O header for
+            // single-arch binaries. For simplicity, we'll assume a basic check
+            // for now. A more robust solution would use libmach-o or similar.
+            spdlog::warn(
+                "Mach-O architecture check not fully implemented for: {}",
+                path.string());
+#endif
+        }
 
         // Compute and store hash for future integrity comparisons
         auto hash = computeModuleHash(path.string());

@@ -18,7 +18,7 @@ namespace lithium::device::indi::camera {
  */
 class PropertyHandler : public ComponentBase {
 public:
-    explicit PropertyHandler(INDICameraCore* core);
+    explicit PropertyHandler(std::shared_ptr<INDICameraCore> core);
     ~PropertyHandler() override = default;
 
     // ComponentBase interface

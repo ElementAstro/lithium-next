@@ -1,3 +1,21 @@
+/*
+ * indi_camera.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-12-18
+
+Description: Component-based INDI Camera Implementation
+
+This modular camera implementation orchestrates INDI camera components 
+following the ASCOM architecture pattern for clean, maintainable, 
+and testable code.
+
+*************************************************/
+
 #ifndef LITHIUM_INDI_CAMERA_HPP
 #define LITHIUM_INDI_CAMERA_HPP
 
@@ -14,6 +32,7 @@
 
 #include <memory>
 #include <string>
+#include <atomic>
 
 namespace lithium::device::indi::camera {
 
@@ -169,10 +188,40 @@ private:
     std::shared_ptr<SequenceManager> sequenceManager_;
     std::shared_ptr<PropertyHandler> propertyHandler_;
 
-    // Helper methods
-    void initializeComponents();
+    // State management (following ASCOM pattern)
+    std::atomic<bool> initialized_{false};
+
+    // Helper methods (following ASCOM pattern)
+    auto initializeComponents() -> bool;
+    auto shutdownComponents() -> bool;
+    auto validateComponentsReady() const -> bool;
     void registerPropertyHandlers();
     void setupComponentCommunication();
+};
+
+/**
+ * @brief Factory class for creating INDI camera controllers
+ * 
+ * Following the ASCOM pattern, this factory provides methods for
+ * creating modular INDI camera controller instances.
+ */
+class INDICameraFactory {
+public:
+    /**
+     * @brief Create a new modular INDI camera controller
+     * @param deviceName Camera device name/identifier
+     * @return Unique pointer to controller instance
+     */
+    static auto createModularController(const std::string& deviceName) 
+        -> std::unique_ptr<INDICamera>;
+
+    /**
+     * @brief Create a shared INDI camera controller
+     * @param deviceName Camera device name/identifier
+     * @return Shared pointer to controller instance
+     */
+    static auto createSharedController(const std::string& deviceName) 
+        -> std::shared_ptr<INDICamera>;
 };
 
 } // namespace lithium::device::indi::camera

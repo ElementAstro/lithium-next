@@ -1,6 +1,6 @@
 #include "property_manager.hpp"
-#include "hardware_interface.hpp"
 #include <algorithm>
+#include "hardware_interface.hpp"
 
 namespace lithium::device::asi::camera::components {
 
@@ -15,18 +15,18 @@ bool PropertyManager::initialize() {
     }
 
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     try {
         // Load property capabilities
         if (!loadPropertyCapabilities()) {
             return false;
         }
-        
+
         // Load current property values
         if (!loadCurrentPropertyValues()) {
             return false;
         }
-        
+
         initialized_ = true;
         return true;
     } catch (const std::exception&) {
@@ -38,32 +38,34 @@ bool PropertyManager::refresh() {
     if (!initialized_) {
         return initialize();
     }
-    
+
     std::lock_guard<std::mutex> lock(propertiesMutex_);
     return loadCurrentPropertyValues();
 }
 
-std::vector<PropertyManager::PropertyInfo> PropertyManager::getAllProperties() const {
+std::vector<PropertyManager::PropertyInfo> PropertyManager::getAllProperties()
+    const {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     std::vector<PropertyInfo> result;
     result.reserve(properties_.size());
-    
+
     for (const auto& [controlType, prop] : properties_) {
         result.push_back(prop);
     }
-    
+
     return result;
 }
 
-std::optional<PropertyManager::PropertyInfo> PropertyManager::getProperty(ASI_CONTROL_TYPE controlType) const {
+std::optional<PropertyManager::PropertyInfo> PropertyManager::getProperty(
+    ASI_CONTROL_TYPE controlType) const {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(controlType);
     if (it != properties_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
@@ -74,83 +76,86 @@ bool PropertyManager::hasProperty(ASI_CONTROL_TYPE controlType) const {
 
 std::vector<ASI_CONTROL_TYPE> PropertyManager::getAvailableProperties() const {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     std::vector<ASI_CONTROL_TYPE> result;
     result.reserve(properties_.size());
-    
+
     for (const auto& [controlType, prop] : properties_) {
         if (prop.isAvailable) {
             result.push_back(controlType);
         }
     }
-    
+
     return result;
 }
 
-bool PropertyManager::setProperty(ASI_CONTROL_TYPE controlType, long value, bool isAuto) {
+bool PropertyManager::setProperty(ASI_CONTROL_TYPE controlType, long value,
+                                  bool isAuto) {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(controlType);
     if (it == properties_.end() || !it->second.isWritable) {
         return false;
     }
-    
+
     auto& prop = it->second;
-    
+
     // Validate value
     if (!validatePropertyValue(controlType, value)) {
         return false;
     }
-    
+
     // Clamp value to valid range
     value = clampPropertyValue(controlType, value);
-    
+
     // Apply to hardware - stub implementation
-    
+
     // Update cached value
     updatePropertyValue(controlType, value, isAuto);
-    
+
     return true;
 }
 
-bool PropertyManager::getProperty(ASI_CONTROL_TYPE controlType, long& value, bool& isAuto) const {
+bool PropertyManager::getProperty(ASI_CONTROL_TYPE controlType, long& value,
+                                  bool& isAuto) const {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(controlType);
     if (it == properties_.end()) {
         return false;
     }
-    
+
     value = it->second.currentValue;
     isAuto = it->second.isAuto;
     return true;
 }
 
-bool PropertyManager::setPropertyAuto(ASI_CONTROL_TYPE controlType, bool enable) {
+bool PropertyManager::setPropertyAuto(ASI_CONTROL_TYPE controlType,
+                                      bool enable) {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(controlType);
     if (it == properties_.end() || !it->second.isAutoSupported) {
         return false;
     }
-    
+
     // Apply to hardware - stub implementation
-    
+
     // Update cached value
     it->second.isAuto = enable;
     notifyPropertyChange(controlType, it->second.currentValue, enable);
-    
+
     return true;
 }
 
 bool PropertyManager::resetProperty(ASI_CONTROL_TYPE controlType) {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(controlType);
     if (it == properties_.end()) {
         return false;
     }
-    
+
     return setProperty(controlType, it->second.defaultValue, false);
 }
 
@@ -171,7 +176,8 @@ int PropertyManager::getGain() const {
 std::pair<int, int> PropertyManager::getGainRange() const {
     auto prop = getProperty(ASI_GAIN);
     if (prop) {
-        return {static_cast<int>(prop->minValue), static_cast<int>(prop->maxValue)};
+        return {static_cast<int>(prop->minValue),
+                static_cast<int>(prop->maxValue)};
     }
     return {0, 0};
 }
@@ -239,7 +245,8 @@ int PropertyManager::getOffset() const {
 std::pair<int, int> PropertyManager::getOffsetRange() const {
     auto prop = getProperty(ASI_OFFSET);
     if (prop) {
-        return {static_cast<int>(prop->minValue), static_cast<int>(prop->maxValue)};
+        return {static_cast<int>(prop->minValue),
+                static_cast<int>(prop->maxValue)};
     }
     return {0, 0};
 }
@@ -249,9 +256,9 @@ bool PropertyManager::setROI(const ROI& roi) {
     if (!validateROI(roi)) {
         return false;
     }
-    
+
     // Apply to hardware - stub implementation
-    
+
     currentROI_ = roi;
     notifyROIChange(roi);
     return true;
@@ -262,13 +269,11 @@ bool PropertyManager::setROI(int x, int y, int width, int height) {
     return setROI(roi);
 }
 
-PropertyManager::ROI PropertyManager::getROI() const {
-    return currentROI_;
-}
+PropertyManager::ROI PropertyManager::getROI() const { return currentROI_; }
 
 PropertyManager::ROI PropertyManager::getMaxROI() const {
     // Return maximum possible ROI - stub implementation
-    return ROI{0, 0, 4096, 4096}; // Placeholder values
+    return ROI{0, 0, 4096, 4096};  // Placeholder values
 }
 
 bool PropertyManager::validateROI(const ROI& roi) const {
@@ -285,9 +290,9 @@ bool PropertyManager::setBinning(const BinningMode& binning) {
     if (!validateBinning(binning)) {
         return false;
     }
-    
+
     // Apply to hardware - stub implementation
-    
+
     currentBinning_ = binning;
     notifyBinningChange(binning);
     return true;
@@ -302,14 +307,13 @@ PropertyManager::BinningMode PropertyManager::getBinning() const {
     return currentBinning_;
 }
 
-std::vector<PropertyManager::BinningMode> PropertyManager::getSupportedBinning() const {
+std::vector<PropertyManager::BinningMode> PropertyManager::getSupportedBinning()
+    const {
     // Return supported binning modes - stub implementation
-    return {
-        {1, 1, "1x1 (No Binning)"},
-        {2, 2, "2x2 Binning"},
-        {3, 3, "3x3 Binning"},
-        {4, 4, "4x4 Binning"}
-    };
+    return {{1, 1, "1x1 (No Binning)"},
+            {2, 2, "2x2 Binning"},
+            {3, 3, "3x3 Binning"},
+            {4, 4, "4x4 Binning"}};
 }
 
 bool PropertyManager::validateBinning(const BinningMode& binning) const {
@@ -327,16 +331,16 @@ ASI_IMG_TYPE PropertyManager::getImageFormat() const {
     return currentImageFormat_;
 }
 
-std::vector<PropertyManager::ImageFormat> PropertyManager::getSupportedImageFormats() const {
+std::vector<PropertyManager::ImageFormat>
+PropertyManager::getSupportedImageFormats() const {
     // Return supported image formats - stub implementation
-    return {
-        {ASI_IMG_RAW8, "RAW8", "8-bit RAW format", 1, false},
-        {ASI_IMG_RAW16, "RAW16", "16-bit RAW format", 2, false},
-        {ASI_IMG_RGB24, "RGB24", "24-bit RGB format", 3, true}
-    };
+    return {{ASI_IMG_RAW8, "RAW8", "8-bit RAW format", 1, false},
+            {ASI_IMG_RAW16, "RAW16", "16-bit RAW format", 2, false},
+            {ASI_IMG_RGB24, "RGB24", "24-bit RGB format", 3, true}};
 }
 
-PropertyManager::ImageFormat PropertyManager::getImageFormatInfo(ASI_IMG_TYPE format) const {
+PropertyManager::ImageFormat PropertyManager::getImageFormatInfo(
+    ASI_IMG_TYPE format) const {
     auto formats = getSupportedImageFormats();
     for (const auto& fmt : formats) {
         if (fmt.type == format) {
@@ -347,7 +351,8 @@ PropertyManager::ImageFormat PropertyManager::getImageFormatInfo(ASI_IMG_TYPE fo
 }
 
 // Callbacks
-void PropertyManager::setPropertyChangeCallback(PropertyChangeCallback callback) {
+void PropertyManager::setPropertyChangeCallback(
+    PropertyChangeCallback callback) {
     std::lock_guard<std::mutex> lock(callbackMutex_);
     propertyChangeCallback_ = std::move(callback);
 }
@@ -363,22 +368,24 @@ void PropertyManager::setBinningChangeCallback(BinningChangeCallback callback) {
 }
 
 // Validation
-bool PropertyManager::validatePropertyValue(ASI_CONTROL_TYPE controlType, long value) const {
+bool PropertyManager::validatePropertyValue(ASI_CONTROL_TYPE controlType,
+                                            long value) const {
     auto it = properties_.find(controlType);
     if (it == properties_.end()) {
         return false;
     }
-    
+
     const auto& prop = it->second;
     return value >= prop.minValue && value <= prop.maxValue;
 }
 
-long PropertyManager::clampPropertyValue(ASI_CONTROL_TYPE controlType, long value) const {
+long PropertyManager::clampPropertyValue(ASI_CONTROL_TYPE controlType,
+                                         long value) const {
     auto it = properties_.find(controlType);
     if (it == properties_.end()) {
         return value;
     }
-    
+
     const auto& prop = it->second;
     return std::clamp(value, prop.minValue, prop.maxValue);
 }
@@ -386,7 +393,7 @@ long PropertyManager::clampPropertyValue(ASI_CONTROL_TYPE controlType, long valu
 // Private methods
 bool PropertyManager::loadPropertyCapabilities() {
     // Load property capabilities from hardware - stub implementation
-    
+
     // Add common ASI camera properties
     PropertyInfo gain;
     gain.name = "Gain";
@@ -399,7 +406,7 @@ bool PropertyManager::loadPropertyCapabilities() {
     gain.isWritable = true;
     gain.isAvailable = true;
     properties_[ASI_GAIN] = gain;
-    
+
     PropertyInfo exposure;
     exposure.name = "Exposure";
     exposure.controlType = ASI_EXPOSURE;
@@ -411,7 +418,7 @@ bool PropertyManager::loadPropertyCapabilities() {
     exposure.isWritable = true;
     exposure.isAvailable = true;
     properties_[ASI_EXPOSURE] = exposure;
-    
+
     PropertyInfo offset;
     offset.name = "Offset";
     offset.controlType = ASI_OFFSET;
@@ -423,7 +430,7 @@ bool PropertyManager::loadPropertyCapabilities() {
     offset.isWritable = true;
     offset.isAvailable = true;
     properties_[ASI_OFFSET] = offset;
-    
+
     return true;
 }
 
@@ -432,7 +439,8 @@ bool PropertyManager::loadCurrentPropertyValues() {
     return true;
 }
 
-PropertyManager::PropertyInfo PropertyManager::createPropertyInfo(const ASI_CONTROL_CAPS& caps) const {
+PropertyManager::PropertyInfo PropertyManager::createPropertyInfo(
+    const ASI_CONTROL_CAPS& caps) const {
     PropertyInfo prop;
     prop.name = std::string(caps.Name);
     prop.description = std::string(caps.Description);
@@ -446,7 +454,8 @@ PropertyManager::PropertyInfo PropertyManager::createPropertyInfo(const ASI_CONT
     return prop;
 }
 
-void PropertyManager::updatePropertyValue(ASI_CONTROL_TYPE controlType, long value, bool isAuto) {
+void PropertyManager::updatePropertyValue(ASI_CONTROL_TYPE controlType,
+                                          long value, bool isAuto) {
     auto it = properties_.find(controlType);
     if (it != properties_.end()) {
         it->second.currentValue = value;
@@ -455,7 +464,8 @@ void PropertyManager::updatePropertyValue(ASI_CONTROL_TYPE controlType, long val
     }
 }
 
-void PropertyManager::notifyPropertyChange(ASI_CONTROL_TYPE controlType, long value, bool isAuto) {
+void PropertyManager::notifyPropertyChange(ASI_CONTROL_TYPE controlType,
+                                           long value, bool isAuto) {
     std::lock_guard<std::mutex> lock(callbackMutex_);
     if (propertyChangeCallback_) {
         propertyChangeCallback_(controlType, value, isAuto);
@@ -478,16 +488,14 @@ void PropertyManager::notifyBinningChange(const BinningMode& binning) {
 
 bool PropertyManager::isValidROI(const ROI& roi) const {
     auto maxROI = getMaxROI();
-    return roi.x >= 0 && roi.y >= 0 && 
-           roi.x + roi.width <= maxROI.width && 
+    return roi.x >= 0 && roi.y >= 0 && roi.x + roi.width <= maxROI.width &&
            roi.y + roi.height <= maxROI.height;
 }
 
 bool PropertyManager::isValidBinning(const BinningMode& binning) const {
     auto supported = getSupportedBinning();
-    return std::find(supported.begin(), supported.end(), binning) != supported.end();
+    return std::find(supported.begin(), supported.end(), binning) !=
+           supported.end();
 }
 
-} // namespace lithium::device::asi::camera::components
-
-} // namespace lithium::device::asi::camera::components
+}  // namespace lithium::device::asi::camera::components

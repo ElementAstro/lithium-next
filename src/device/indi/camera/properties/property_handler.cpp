@@ -6,7 +6,7 @@
 
 namespace lithium::device::indi::camera {
 
-PropertyHandler::PropertyHandler(INDICameraCore* core) 
+PropertyHandler::PropertyHandler(std::shared_ptr<INDICameraCore> core) 
     : ComponentBase(core) {
     spdlog::debug("Creating property handler");
 }
@@ -102,7 +102,7 @@ auto PropertyHandler::setPropertyNumber(const std::string& propertyName, double 
     
     try {
         auto device = getCore()->getDevice();
-        INDI::PropertyNumber property = device.getProperty(propertyName);
+        INDI::PropertyNumber property = device.getProperty(propertyName.c_str());
         if (!property.isValid()) {
             spdlog::error("Property {} not found", propertyName);
             return false;
@@ -133,7 +133,7 @@ auto PropertyHandler::setPropertySwitch(const std::string& propertyName,
     
     try {
         auto device = getCore()->getDevice();
-        INDI::PropertySwitch property = device.getProperty(propertyName);
+        INDI::PropertySwitch property = device.getProperty(propertyName.c_str());
         if (!property.isValid()) {
             spdlog::error("Property {} not found", propertyName);
             return false;
@@ -165,7 +165,7 @@ auto PropertyHandler::setPropertyText(const std::string& propertyName,
     
     try {
         auto device = getCore()->getDevice();
-        INDI::PropertyText property = device.getProperty(propertyName);
+        INDI::PropertyText property = device.getProperty(propertyName.c_str());
         if (!property.isValid()) {
             spdlog::error("Property {} not found", propertyName);
             return false;
@@ -229,7 +229,7 @@ void PropertyHandler::updateAvailableProperties() {
         };
         
         for (const auto& propName : commonProperties) {
-            INDI::Property prop = device.getProperty(propName);
+            INDI::Property prop = device.getProperty(propName.c_str());
             if (prop.isValid()) {
                 availableProperties_.push_back(propName);
             }

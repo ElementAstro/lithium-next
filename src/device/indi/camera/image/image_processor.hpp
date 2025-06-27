@@ -19,7 +19,7 @@ namespace lithium::device::indi::camera {
  */
 class ImageProcessor : public ComponentBase {
 public:
-    explicit ImageProcessor(INDICameraCore* core);
+    explicit ImageProcessor(std::shared_ptr<INDICameraCore> core);
     ~ImageProcessor() override = default;
 
     // ComponentBase interface

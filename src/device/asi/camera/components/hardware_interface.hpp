@@ -18,26 +18,19 @@ and SDK integration.
 
 #pragma once
 
+#include <atomic>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
-#include <mutex>
-#include <atomic>
 
-// Forward declarations for ASI SDK types
-#ifdef LITHIUM_ASI_CAMERA_ENABLED
-extern "C" {
-    #include "ASICamera2.h"
-}
-#else
-#include "../asi_camera_sdk_stub.hpp"
-#endif
+#include <libasi/ASICamera2.h>
 
 namespace lithium::device::asi::camera::components {
 
 /**
  * @brief Hardware Interface for ASI Camera SDK communication
- * 
+ *
  * This component encapsulates all direct interaction with the ASI Camera SDK,
  * providing a clean C++ interface for hardware operations while managing
  * SDK lifecycle, device enumeration, connection management, and low-level
@@ -106,12 +99,17 @@ public:
 
     // Control Management
     std::vector<ControlCaps> getControlCapabilities();
-    bool setControlValue(ASI_CONTROL_TYPE controlType, long value, bool isAuto = false);
-    bool getControlValue(ASI_CONTROL_TYPE controlType, long& value, bool& isAuto);
+    bool setControlValue(ASI_CONTROL_TYPE controlType, long value,
+                         bool isAuto = false);
+    bool getControlValue(ASI_CONTROL_TYPE controlType, long& value,
+                         bool& isAuto);
     bool hasControl(ASI_CONTROL_TYPE controlType);
 
     // Image Capture Operations
-    bool startExposure(int width, int height, int binning, ASI_IMG_TYPE imageType);
+    bool startExposure(int width, int height, int binning,
+                       ASI_IMG_TYPE imageType);
+    bool startExposure(int width, int height, int binning,
+                       ASI_IMG_TYPE imageType, bool isDarkFrame);
     bool stopExposure();
     ASI_EXPOSURE_STATUS getExposureStatus();
     bool getImageData(unsigned char* buffer, long bufferSize);
@@ -119,14 +117,17 @@ public:
     // Video Capture Operations
     bool startVideoCapture();
     bool stopVideoCapture();
-    bool getVideoData(unsigned char* buffer, long bufferSize, int waitMs = 1000);
+    bool getVideoData(unsigned char* buffer, long bufferSize,
+                      int waitMs = 1000);
 
     // ROI and Binning
     bool setROI(int startX, int startY, int width, int height, int binning);
-    bool getROI(int& startX, int& startY, int& width, int& height, int& binning);
+    bool getROI(int& startX, int& startY, int& width, int& height,
+                int& binning);
 
     // Image Format
-    bool setImageFormat(int width, int height, int binning, ASI_IMG_TYPE imageType);
+    bool setImageFormat(int width, int height, int binning,
+                        ASI_IMG_TYPE imageType);
     ASI_IMG_TYPE getImageFormat();
 
     // Camera Modes
@@ -137,7 +138,7 @@ public:
     std::string getSDKVersion();
     std::string getDriverVersion();
     std::string getLastSDKError() const { return lastError_; }
-    
+
     // Guiding Support (ST4)
     bool pulseGuide(ASI_GUIDE_DIRECTION direction, int durationMs);
     bool stopGuide();
@@ -145,6 +146,24 @@ public:
     // Advanced Features
     bool setFlipStatus(ASI_FLIP_STATUS flipStatus);
     ASI_FLIP_STATUS getFlipStatus();
+
+    // GPS Support
+    bool getGPSData(ASI_GPS_DATA& startLineGPS, ASI_GPS_DATA& endLineGPS);
+    bool getVideoDataWithGPS(unsigned char* buffer, long bufferSize, int waitMs,
+                             ASI_GPS_DATA& gpsData);
+    bool getImageDataWithGPS(unsigned char* buffer, long bufferSize,
+                             ASI_GPS_DATA& gpsData);
+
+    // Serial Number Support
+    std::string getSerialNumber();
+
+    // Trigger Camera Support
+    bool getSupportedCameraModes(std::vector<ASI_CAMERA_MODE>& modes);
+    bool sendSoftTrigger(bool start);
+    bool setTriggerOutputConfig(ASI_TRIG_OUTPUT_PIN pin, bool pinHigh,
+                                long delayUs, long durationUs);
+    bool getTriggerOutputConfig(ASI_TRIG_OUTPUT_PIN pin, bool& pinHigh,
+                                long& delayUs, long& durationUs);
 
 private:
     // Connection state
@@ -175,4 +194,4 @@ private:
     int findCameraByName(const std::string& name);
 };
 
-} // namespace lithium::device::asi::camera::components
+}  // namespace lithium::device::asi::camera::components

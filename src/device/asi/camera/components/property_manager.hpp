@@ -26,7 +26,7 @@ including gain, offset, ROI, binning, and advanced camera features.
 #include <functional>
 #include <optional>
 
-#include "../asi_camera_sdk_stub.hpp"
+#include <libasi/ASICamera2.h>
 
 namespace lithium::device::asi::camera::components {
 

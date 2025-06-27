@@ -2,7 +2,7 @@
 #define LITHIUM_INDI_FOCUSER_PROPERTY_MANAGER_HPP
 
 #include <libindi/baseclient.h>
-#include "types.hpp"
+#include "component_base.hpp"
 
 namespace lithium::device::indi::focuser {
 
@@ -13,30 +13,31 @@ namespace lithium::device::indi::focuser {
  * device, handling property updates, and synchronizing the focuser state with
  * the device. It provides modular setup for different property groups
  * (connection, driver info, configuration, focus, temperature, backlash) and
- * interacts with the shared FocuserState.
+ * interacts with the shared INDIFocuserCore.
  */
-class PropertyManager : public IFocuserComponent {
+class PropertyManager : public FocuserComponentBase {
 public:
     /**
-     * @brief Default constructor.
+     * @brief Constructor with shared core.
+     * @param core Shared pointer to the INDIFocuserCore
      */
-    PropertyManager() = default;
+    explicit PropertyManager(std::shared_ptr<INDIFocuserCore> core);
+    
     /**
      * @brief Virtual destructor.
      */
     ~PropertyManager() override = default;
 
     /**
-     * @brief Initialize the property manager with the shared focuser state.
-     * @param state Reference to the shared FocuserState structure.
+     * @brief Initialize the property manager.
      * @return true if initialization was successful, false otherwise.
      */
-    bool initialize(FocuserState& state) override;
+    bool initialize() override;
 
     /**
-     * @brief Cleanup resources and detach from the focuser state.
+     * @brief Cleanup resources and shutdown the component.
      */
-    void cleanup() override;
+    void shutdown() override;
 
     /**
      * @brief Get the component's name for logging and identification.
@@ -50,58 +51,63 @@ public:
      * This method sets up all relevant property watchers on the INDI device,
      * ensuring that the focuser state is kept in sync with device property
      * changes.
-     *
-     * @param device Reference to the INDI device.
-     * @param state Reference to the shared focuser state.
      */
-    void setupPropertyWatchers(INDI::BaseDevice& device, FocuserState& state);
+    void setupPropertyWatchers();
+
+    /**
+     * @brief Handle property updates from the INDI device.
+     * @param property The property that was updated
+     */
+    void handlePropertyUpdate(const INDI::Property& property);
 
 private:
     /**
      * @brief Setup property watchers for connection-related properties.
-     * @param device Reference to the INDI device.
-     * @param state Reference to the shared focuser state.
      */
-    void setupConnectionProperties(INDI::BaseDevice& device,
-                                   FocuserState& state);
+    void setupConnectionProperties();
+    
     /**
      * @brief Setup property watchers for driver information properties.
-     * @param device Reference to the INDI device.
-     * @param state Reference to the shared focuser state.
      */
-    void setupDriverInfoProperties(INDI::BaseDevice& device,
-                                   FocuserState& state);
+    void setupDriverInfoProperties();
+    
     /**
      * @brief Setup property watchers for configuration properties.
-     * @param device Reference to the INDI device.
-     * @param state Reference to the shared focuser state.
      */
-    void setupConfigurationProperties(INDI::BaseDevice& device,
-                                      FocuserState& state);
+    void setupConfigurationProperties();
+    
     /**
      * @brief Setup property watchers for focus-related properties.
-     * @param device Reference to the INDI device.
-     * @param state Reference to the shared focuser state.
      */
-    void setupFocusProperties(INDI::BaseDevice& device, FocuserState& state);
+    void setupFocusProperties();
+    
     /**
      * @brief Setup property watchers for temperature-related properties.
-     * @param device Reference to the INDI device.
-     * @param state Reference to the shared focuser state.
      */
-    void setupTemperatureProperties(INDI::BaseDevice& device,
-                                    FocuserState& state);
+    void setupTemperatureProperties();
+    
     /**
      * @brief Setup property watchers for backlash-related properties.
-     * @param device Reference to the INDI device.
-     * @param state Reference to the shared focuser state.
      */
-    void setupBacklashProperties(INDI::BaseDevice& device, FocuserState& state);
+    void setupBacklashProperties();
 
     /**
-     * @brief Pointer to the shared focuser state structure.
+     * @brief Handle switch property updates.
+     * @param property The switch property that was updated
      */
-    FocuserState* state_{nullptr};
+    void handleSwitchPropertyUpdate(const INDI::PropertySwitch& property);
+
+    /**
+     * @brief Handle number property updates.
+     * @param property The number property that was updated
+     */
+    void handleNumberPropertyUpdate(const INDI::PropertyNumber& property);
+
+    /**
+     * @brief Handle text property updates.
+     * @param property The text property that was updated
+     */
+    void handleTextPropertyUpdate(const INDI::PropertyText& property);
 };
 
 }  // namespace lithium::device::indi::focuser

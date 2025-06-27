@@ -1,7 +1,7 @@
 #ifndef LITHIUM_INDI_FOCUSER_TEMPERATURE_MANAGER_HPP
 #define LITHIUM_INDI_FOCUSER_TEMPERATURE_MANAGER_HPP
 
-#include "types.hpp"
+#include "component_base.hpp"
 
 namespace lithium::device::indi::focuser {
 
@@ -12,31 +12,32 @@ namespace lithium::device::indi::focuser {
  * This class provides interfaces for reading temperature sensors,
  * enabling/disabling temperature compensation, and applying compensation logic
  * to maintain focus accuracy as temperature changes. It interacts with the
- * shared FocuserState and is designed to be used as a component in the focuser
+ * shared INDIFocuserCore and is designed to be used as a component in the focuser
  * control system.
  */
-class TemperatureManager : public IFocuserComponent {
+class TemperatureManager : public FocuserComponentBase {
 public:
     /**
-     * @brief Default constructor.
+     * @brief Constructor with shared core.
+     * @param core Shared pointer to the INDIFocuserCore
      */
-    TemperatureManager() = default;
+    explicit TemperatureManager(std::shared_ptr<INDIFocuserCore> core);
+    
     /**
      * @brief Virtual destructor.
      */
     ~TemperatureManager() override = default;
 
     /**
-     * @brief Initialize the temperature manager with the shared focuser state.
-     * @param state Reference to the shared FocuserState structure.
+     * @brief Initialize the temperature manager.
      * @return true if initialization was successful, false otherwise.
      */
-    bool initialize(FocuserState& state) override;
+    bool initialize() override;
 
     /**
-     * @brief Cleanup resources and detach from the focuser state.
+     * @brief Shutdown and cleanup the component.
      */
-    void cleanup() override;
+    void shutdown() override;
 
     /**
      * @brief Get the component's name for logging and identification.
@@ -119,11 +120,6 @@ public:
     double calculateCompensationSteps(double temperatureDelta) const;
 
 private:
-    /**
-     * @brief Pointer to the shared focuser state structure.
-     */
-    FocuserState* state_{nullptr};
-
     /**
      * @brief Last temperature value used for compensation (Celsius).
      */

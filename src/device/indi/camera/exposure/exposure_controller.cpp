@@ -3,11 +3,10 @@
 
 #include <spdlog/spdlog.h>
 #include <fstream>
-#include <stdexcept>
 
 namespace lithium::device::indi::camera {
 
-ExposureController::ExposureController(INDICameraCore* core) 
+ExposureController::ExposureController(std::shared_ptr<INDICameraCore> core) 
     : ComponentBase(core) {
     spdlog::debug("Creating exposure controller");
 }
@@ -238,7 +237,7 @@ void ExposureController::handleBlobProperty(INDI::Property property) {
     }
     
     INDI::PropertyBlob blobProperty = property;
-    if (!blobProperty.isValid() || blobProperty.getBlobLen() == 0) {
+    if (!blobProperty.isValid() || blobProperty[0].getBlobLen() == 0) {
         return;
     }
     
@@ -246,27 +245,27 @@ void ExposureController::handleBlobProperty(INDI::Property property) {
 }
 
 void ExposureController::processReceivedImage(const INDI::PropertyBlob& property) {
-    if (!property.isValid()) {
+    if (!property.isValid() || property[0].getBlobLen() == 0) {
+        spdlog::warn("Invalid image data received");
         return;
     }
     
-    auto blob = property.getBlob();
-    if (!blob || blob->getSize() == 0) {
-        spdlog::error("Received empty image blob");
-        return;
-    }
+    size_t imageSize = property[0].getBlobLen();
+    const void* imageData = property[0].getBlob();
+    const char* format = property[0].getFormat();
+    
+    spdlog::info("Processing exposure image: size={}, format={}", imageSize, format ? format : "unknown");
     
     // Validate image data
-    if (!validateImageData(blob->getData(), blob->getSize())) {
+    if (!validateImageData(imageData, imageSize)) {
         spdlog::error("Invalid image data received");
         return;
     }
     
     // Create frame structure
     auto frame = std::make_shared<AtomCameraFrame>();
-    frame->data = blob->getData();
-    frame->size = blob->getSize();
-    frame->timestamp = std::chrono::system_clock::now();
+    frame->data = const_cast<void*>(imageData);
+    frame->size = imageSize;
     
     // Store the frame
     getCore()->setCurrentFrame(frame);

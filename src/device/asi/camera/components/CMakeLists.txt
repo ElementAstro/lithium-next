@@ -1,17 +1,17 @@
 cmake_minimum_required(VERSION 3.20)
-project(lithium_device_asi_camera_components)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# ASI Camera Components
+project(lithium_asi_camera_components LANGUAGES CXX)
 
 # Component source files
 set(COMPONENT_SOURCES
     hardware_interface.cpp
     exposure_manager.cpp
-    # video_manager.cpp          # To be implemented
-    # temperature_controller.cpp # To be implemented  
-    # property_manager.cpp       # To be implemented
-    # sequence_manager.cpp       # To be implemented
-    # image_processor.cpp        # To be implemented
+    video_manager.cpp
+    temperature_controller.cpp
+    property_manager.cpp
+    sequence_manager.cpp      # Using existing header but needs implementation
+    image_processor.cpp
 )
 
 # Component header files
@@ -27,6 +27,47 @@ set(COMPONENT_HEADERS
 
 # Create shared library for ASI camera components
 add_library(asi_camera_components SHARED ${COMPONENT_SOURCES})
+set_property(TARGET asi_camera_components PROPERTY POSITION_INDEPENDENT_CODE 1)
+
+# Target properties
+target_compile_features(asi_camera_components PRIVATE cxx_std_20)
+target_compile_options(asi_camera_components PRIVATE
+    $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>
+    $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra -Wpedantic>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+)
+
+# Link libraries
+target_link_libraries(asi_camera_components PUBLIC
+    loguru
+    atom-system
+    atom-io
+    atom-utils
+    atom-component
+    atom-error
+    atom-type
+)
+
+# Threading support
+find_package(Threads REQUIRED)
+target_link_libraries(asi_camera_components PRIVATE Threads::Threads)
+
+# Include directories
+target_include_directories(asi_camera_components PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+# Installation
+install(TARGETS asi_camera_components
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# Install headers
+install(FILES ${COMPONENT_HEADERS}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/asi/camera/components
+)
 
 # Set library properties
 set_target_properties(asi_camera_components PROPERTIES

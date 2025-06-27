@@ -1,0 +1,26 @@
+/*
+ * parking_controller.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+#ifndef LITHIUM_DEVICE_INDI_DOME_PARKING_CONTROLLER_HPP
+#define LITHIUM_DEVICE_INDI_DOME_PARKING_CONTROLLER_HPP
+
+#include "component_base.hpp"
+
+namespace lithium::device::indi {
+
+class ParkingController : public DomeComponentBase {
+public:
+    explicit ParkingController(std::shared_ptr<INDIDomeCore> core)
+        : DomeComponentBase(std::move(core), "ParkingController") {}
+    
+    auto initialize() -> bool override { return true; }
+    auto cleanup() -> bool override { return true; }
+    void handlePropertyUpdate(const INDI::Property& property) override {}
+};
+
+} // namespace lithium::device::indi
+
+#endif

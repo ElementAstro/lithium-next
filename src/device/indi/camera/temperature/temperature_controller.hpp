@@ -8,23 +8,17 @@
 #include <optional>
 
 namespace lithium::device::indi::camera {
-// 温度信息结构体定义，修复 hasCooler 未定义问题
-struct TemperatureInfo {
-    double current = 0.0;
-    double target = 0.0;
-    double power = 0.0;
-    bool hasCooler = false;
-};
 
 /**
  * @brief Temperature control component for INDI cameras
  * 
  * This component handles camera cooling operations, temperature
- * monitoring, and thermal management.
+ * monitoring, and thermal management. Uses the global TemperatureInfo
+ * struct from the camera template for consistency.
  */
 class TemperatureController : public ComponentBase {
 public:
-    explicit TemperatureController(INDICameraCore* core);
+    explicit TemperatureController(std::shared_ptr<INDICameraCore> core);
     ~TemperatureController() override = default;
 
     // ComponentBase interface

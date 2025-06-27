@@ -3,70 +3,65 @@
 namespace lithium::device::indi::focuser {
 
 ModularINDIFocuser::ModularINDIFocuser(std::string name)
-    : AtomFocuser(std::move(name)), state_(std::make_unique<FocuserState>()) {
-    // Initialize logger
-    state_->logger_ = spdlog::get("focuser");
-    if (!state_->logger_) {
-        state_->logger_ = spdlog::default_logger();
-    }
+    : AtomFocuser(std::move(name)), core_(std::make_shared<INDIFocuserCore>(name_)) {
+    
+    core_->getLogger()->info("Creating modular INDI focuser: {}", name_);
 
-    state_->logger_->info("Creating modular INDI focuser: {}", name_);
-
-    // Create component managers
-    propertyManager_ = std::make_unique<PropertyManager>();
-    movementController_ = std::make_unique<MovementController>();
-    temperatureManager_ = std::make_unique<TemperatureManager>();
-    presetManager_ = std::make_unique<PresetManager>();
-    statisticsManager_ = std::make_unique<StatisticsManager>();
+    // Create component managers with shared core
+    propertyManager_ = std::make_unique<PropertyManager>(core_);
+    movementController_ = std::make_unique<MovementController>(core_);
+    temperatureManager_ = std::make_unique<TemperatureManager>(core_);
+    presetManager_ = std::make_unique<PresetManager>(core_);
+    statisticsManager_ = std::make_unique<StatisticsManager>(core_);
 }
 
 bool ModularINDIFocuser::initialize() {
-    state_->logger_->info("Initializing modular INDI focuser");
+    core_->getLogger()->info("Initializing modular INDI focuser");
     return initializeComponents();
 }
 
 bool ModularINDIFocuser::destroy() {
-    state_->logger_->info("Destroying modular INDI focuser");
+    core_->getLogger()->info("Destroying modular INDI focuser");
     cleanupComponents();
     return true;
 }
 
 bool ModularINDIFocuser::connect(const std::string& deviceName, int timeout,
                                  int maxRetry) {
-    if (state_->isConnected_.load()) {
-        state_->logger_->error("{} is already connected.", state_->deviceName_);
+    if (core_->isConnected()) {
+        core_->getLogger()->error("{} is already connected.", core_->getDeviceName());
         return false;
     }
 
-    state_->deviceName_ = deviceName;
-    state_->logger_->info("Connecting to {}...", deviceName);
+    core_->setDeviceName(deviceName);
+    core_->getLogger()->info("Connecting to {}...", deviceName);
 
     setupInitialConnection(deviceName);
     return true;
 }
 
 bool ModularINDIFocuser::disconnect() {
-    if (!state_->isConnected_.load()) {
-        state_->logger_->warn("Device {} is not connected",
-                              state_->deviceName_);
+    if (!core_->isConnected()) {
+        core_->getLogger()->warn("Device {} is not connected",
+                              core_->getDeviceName());
         return false;
     }
 
     disconnectServer();
-    state_->isConnected_ = false;
-    state_->logger_->info("Disconnected from {}", state_->deviceName_);
+    core_->setConnected(false);
+    core_->getLogger()->info("Disconnected from {}", core_->getDeviceName());
     return true;
 }
 
 std::vector<std::string> ModularINDIFocuser::scan() {
     // INDI doesn't provide a direct scan method
     // This would typically be handled by the INDI server
-    state_->logger_->warn("Scan method not directly supported by INDI");
+    core_->getLogger()->warn("Scan method not directly supported by INDI");
     return {};
 }
 
 bool ModularINDIFocuser::isConnected() const {
-    return state_->isConnected_.load();
+    return core_->isConnected();
 }
 
 // Movement control methods (delegated to MovementController)
@@ -133,7 +128,7 @@ bool ModularINDIFocuser::moveSteps(int steps) {
 bool ModularINDIFocuser::moveToPosition(int position) {
     bool result = movementController_->moveToPosition(position);
     if (result) {
-        int currentPos = state_->currentPosition_.load();
+        int currentPos = core_->getCurrentPosition();
         int steps = position - currentPos;
         statisticsManager_->recordMovement(steps);
     }
@@ -173,16 +168,16 @@ bool ModularINDIFocuser::moveOutward(int steps) {
 }
 
 // Backlash compensation
-int ModularINDIFocuser::getBacklash() { return state_->backlashSteps_.load(); }
+int ModularINDIFocuser::getBacklash() { return core_->getBacklashSteps(); }
 
 bool ModularINDIFocuser::setBacklash(int backlash) {
     INDI::PropertyNumber property =
-        state_->device_.getProperty("FOCUS_BACKLASH_STEPS");
+        core_->getDevice().getProperty("FOCUS_BACKLASH_STEPS");
     if (!property.isValid()) {
-        state_->logger_->warn(
+        core_->getLogger()->warn(
             "Unable to find FOCUS_BACKLASH_STEPS property, setting internal "
             "value");
-        state_->backlashSteps_ = backlash;
+        core_->setBacklashSteps(backlash);
         return true;
     }
     property[0].value = backlash;
@@ -192,12 +187,12 @@ bool ModularINDIFocuser::setBacklash(int backlash) {
 
 bool ModularINDIFocuser::enableBacklashCompensation(bool enable) {
     INDI::PropertySwitch property =
-        state_->device_.getProperty("FOCUS_BACKLASH_TOGGLE");
+        core_->getDevice().getProperty("FOCUS_BACKLASH_TOGGLE");
     if (!property.isValid()) {
-        state_->logger_->warn(
+        core_->getLogger()->warn(
             "Unable to find FOCUS_BACKLASH_TOGGLE property, setting internal "
             "value");
-        state_->backlashEnabled_ = enable;
+        core_->setBacklashEnabled(enable);
         return true;
     }
     if (enable) {
@@ -212,7 +207,7 @@ bool ModularINDIFocuser::enableBacklashCompensation(bool enable) {
 }
 
 bool ModularINDIFocuser::isBacklashCompensationEnabled() {
-    return state_->backlashEnabled_.load();
+    return core_->isBacklashEnabled();
 }
 
 // Temperature management (delegated to TemperatureManager)
@@ -245,24 +240,24 @@ bool ModularINDIFocuser::enableTemperatureCompensation(bool enable) {
 bool ModularINDIFocuser::startAutoFocus() {
     // INDI doesn't typically have built-in autofocus
     // This would be handled by client software like Ekos
-    state_->logger_->warn("Auto-focus not directly supported by INDI drivers");
-    state_->isAutoFocusing_ = true;
-    state_->autoFocusProgress_ = 0.0;
+    core_->getLogger()->warn("Auto-focus not directly supported by INDI drivers");
+    isAutoFocusing_.store(true);
+    autoFocusProgress_.store(0.0);
     return false;
 }
 
 bool ModularINDIFocuser::stopAutoFocus() {
-    state_->isAutoFocusing_ = false;
-    state_->autoFocusProgress_ = 0.0;
+    isAutoFocusing_.store(false);
+    autoFocusProgress_.store(0.0);
     return true;
 }
 
 bool ModularINDIFocuser::isAutoFocusing() {
-    return state_->isAutoFocusing_.load();
+    return isAutoFocusing_.load();
 }
 
 double ModularINDIFocuser::getAutoFocusProgress() {
-    return state_->autoFocusProgress_.load();
+    return autoFocusProgress_.load();
 }
 
 // Preset management (delegated to PresetManager)
@@ -306,23 +301,23 @@ int ModularINDIFocuser::getLastMoveDuration() {
 void ModularINDIFocuser::newMessage(INDI::BaseDevice baseDevice,
                                     int messageID) {
     auto message = baseDevice.messageQueue(messageID);
-    state_->logger_->info("Message from {}: {}", baseDevice.getDeviceName(),
+    core_->getLogger()->info("Message from {}: {}", baseDevice.getDeviceName(),
                           message);
 }
 
 bool ModularINDIFocuser::initializeComponents() {
     bool success = true;
 
-    success &= propertyManager_->initialize(*state_);
-    success &= movementController_->initialize(*state_);
-    success &= temperatureManager_->initialize(*state_);
-    success &= presetManager_->initialize(*state_);
-    success &= statisticsManager_->initialize(*state_);
+    success &= propertyManager_->initialize();
+    success &= movementController_->initialize();
+    success &= temperatureManager_->initialize();
+    success &= presetManager_->initialize();
+    success &= statisticsManager_->initialize();
 
     if (success) {
-        state_->logger_->info("All components initialized successfully");
+        core_->getLogger()->info("All components initialized successfully");
     } else {
-        state_->logger_->error("Failed to initialize some components");
+        core_->getLogger()->error("Failed to initialize some components");
     }
 
     return success;
@@ -330,31 +325,31 @@ bool ModularINDIFocuser::initializeComponents() {
 
 void ModularINDIFocuser::cleanupComponents() {
     if (statisticsManager_)
-        statisticsManager_->cleanup();
+        statisticsManager_->shutdown();
     if (presetManager_)
-        presetManager_->cleanup();
+        presetManager_->shutdown();
     if (temperatureManager_)
-        temperatureManager_->cleanup();
+        temperatureManager_->shutdown();
     if (movementController_)
-        movementController_->cleanup();
+        movementController_->shutdown();
     if (propertyManager_)
-        propertyManager_->cleanup();
+        propertyManager_->shutdown();
 }
 
 void ModularINDIFocuser::setupDeviceWatchers() {
-    watchDevice(state_->deviceName_.c_str(), [this](INDI::BaseDevice device) {
-        state_->device_ = device;
-        state_->logger_->info("Device {} discovered", state_->deviceName_);
+    watchDevice(core_->getDeviceName().c_str(), [this](INDI::BaseDevice device) {
+        core_->setDevice(device);
+        core_->getLogger()->info("Device {} discovered", core_->getDeviceName());
 
         // Setup property watchers
-        propertyManager_->setupPropertyWatchers(device, *state_);
+        propertyManager_->setupPropertyWatchers();
 
         // Setup connection property watcher
         device.watchProperty(
             "CONNECTION",
             [this](INDI::Property) {
-                state_->logger_->info("Connecting to {}...",
-                                      state_->deviceName_);
+                core_->getLogger()->info("Connecting to {}...",
+                                      core_->getDeviceName());
                 connectDevice(name_.c_str());
             },
             INDI::BaseDevice::WATCH_NEW);
@@ -367,7 +362,7 @@ void ModularINDIFocuser::setupInitialConnection(const std::string& deviceName) {
     // Start statistics session
     statisticsManager_->startSession();
 
-    state_->logger_->info("Setup complete for device: {}", deviceName);
+    core_->getLogger()->info("Setup complete for device: {}", deviceName);
 }
 
 }  // namespace lithium::device::indi::focuser

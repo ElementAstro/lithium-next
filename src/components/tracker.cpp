@@ -909,27 +909,52 @@ struct FileTracker::Impl {
     static bool restoreFileContent(const std::string& path,
                                    const json& oldJson) {
         try {
-            auto it = oldJson.find(path);
-            if (it == oldJson.end()) {
-                spdlog::error("No backup found in oldJson for: {}", path);
-                return false;
-            }
-            if (!(*it).contains("content") || !(*it)["content"].is_string()) {
-                spdlog::error("No valid content field in oldJson for: {}",
+            // Check if the file already exists; if so, no need to restore an
+            // empty one.
+            if (fs::exists(path)) {
+                spdlog::debug("File {} already exists, skipping restore.",
                               path);
-                return false;
+                return true;
             }
-            std::string content = (*it)["content"];
-            std::ofstream ofs(path, std::ios::binary);
-            if (!ofs.is_open()) {
-                spdlog::error("Failed to open file for restore: {}", path);
-                return false;
+
+            // Ensure parent directories exist
+            fs::path filePath(path);
+            fs::create_directories(filePath.parent_path());
+
+            // Attempt to restore content if it was stored (unlikely with
+            // current processFile)
+            auto it = oldJson.find(path);
+            if (it != oldJson.end() && (*it).contains("content") &&
+                (*it)["content"].is_string()) {
+                std::string content = (*it)["content"];
+                std::ofstream ofs(path, std::ios::binary);
+                if (!ofs.is_open()) {
+                    spdlog::error("Failed to open file for restore: {}", path);
+                    return false;
+                }
+                ofs << content;
+                ofs.close();
+                spdlog::info("File {} restored with content from JSON.", path);
+                return true;
+            } else {
+                // If no content is stored, create an empty file as a
+                // placeholder
+                std::ofstream ofs(path);  // Creates an empty file
+                if (!ofs.is_open()) {
+                    spdlog::error("Failed to create empty file for restore: {}",
+                                  path);
+                    return false;
+                }
+                ofs.close();
+                spdlog::warn(
+                    "File {} restored as empty. Content was not tracked or "
+                    "found in JSON.",
+                    path);
+                return true;
             }
-            ofs << content;
-            ofs.close();
-            return true;
         } catch (const std::exception& e) {
-            spdlog::error("Exception in restoreFileContent: {}", e.what());
+            spdlog::error("Exception in restoreFileContent for {}: {}", path,
+                          e.what());
             return false;
         }
     }

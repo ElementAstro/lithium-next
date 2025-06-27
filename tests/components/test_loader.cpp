@@ -1,135 +1,86 @@
-#include <gtest/gtest.h>
-#include <memory>
-
+#include <catch2/catch_test_macros.hpp>
 #include "components/loader.hpp"
+#include <fstream>
 
-namespace lithium::test {
+// For creating dummy shared libraries for testing
+#if defined(_WIN32)
+    #include <windows.h>
+    const std::string LIB_EXT = ".dll";
+    const std::string DUMMY_LIB_A_CONTENT = ""; // Cannot create DLLs on the fly easily
+    const std::string DUMMY_LIB_B_CONTENT = "";
+#else
+    #include <dlfcn.h>
+    const std::string LIB_EXT = ".so";
+    // Simple C code to compile into a shared library
+    const std::string DUMMY_LIB_A_SRC = "extern \"C\" int func_a() { return 42; }";
+    const std::string DUMMY_LIB_B_SRC = "extern \"C\" int func_b() { return 84; }";
+#endif
 
-class ModuleLoaderTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        loader = std::make_unique<ModuleLoader>("test_modules");
+// Helper to create a dummy library for testing
+void create_dummy_lib(const std::string& name, const std::string& src) {
+#ifndef _WIN32
+    std::string src_file = name + ".cpp";
+    std::string lib_file = "lib" + name + LIB_EXT;
+    std::ofstream out(src_file);
+    out << src;
+    out.close();
+    std::string command = "g++ -shared -fPIC -o " + lib_file + " " + src_file;
+    system(command.c_str());
+#endif
+}
+
+TEST_CASE("ModuleLoader Modernized", "[loader]") {
+    create_dummy_lib("test_mod_a", DUMMY_LIB_A_SRC);
+    create_dummy_lib("test_mod_b", DUMMY_LIB_B_SRC);
+
+    lithium::ModuleLoader loader(".");
+
+    SECTION("Register and Load Modules") {
+        auto reg_result_a = loader.registerModule("mod_a", "./libtest_mod_a" + LIB_EXT, {});
+        REQUIRE(reg_result_a.has_value());
+
+        auto reg_result_b = loader.registerModule("mod_b", "./libtest_mod_b" + LIB_EXT, {"mod_a"});
+        REQUIRE(reg_result_b.has_value());
+
+        auto load_future = loader.loadRegisteredModules();
+        auto load_result = load_future.get();
+
+        REQUIRE(load_result.has_value());
+        REQUIRE(loader.hasModule("mod_a"));
+        REQUIRE(loader.hasModule("mod_b"));
     }
 
-    void TearDown() override { loader.reset(); }
+    SECTION("Load non-existent module") {
+        auto result = loader.loadModule("./nonexistent.so", "nonexistent");
+        REQUIRE_FALSE(result.has_value());
+    }
 
-    std::unique_ptr<ModuleLoader> loader;
-};
+    SECTION("Unload module") {
+        loader.registerModule("mod_a", "./libtest_mod_a" + LIB_EXT, {});
+        loader.loadRegisteredModules().get();
+        REQUIRE(loader.hasModule("mod_a"));
+        auto unload_result = loader.unloadModule("mod_a");
+        REQUIRE(unload_result.has_value());
+        REQUIRE_FALSE(loader.hasModule("mod_a"));
+    }
 
-TEST_F(ModuleLoaderTest, CreateSharedDefault) {
-    auto sharedLoader = ModuleLoader::createShared();
-    EXPECT_NE(sharedLoader, nullptr);
+    SECTION("Diagnostics") {
+        loader.registerModule("mod_a", "./libtest_mod_a" + LIB_EXT, {});
+        loader.loadRegisteredModules().get();
+        auto diagnostics = loader.getModuleDiagnostics("mod_a");
+        REQUIRE(diagnostics.has_value());
+        REQUIRE(diagnostics->status == lithium::ModuleInfo::Status::LOADED);
+        REQUIRE(diagnostics->path == "./libtest_mod_a" + LIB_EXT);
+    }
+    
+    SECTION("Circular Dependency Detection") {
+        loader.registerModule("mod_c", "./libtest_mod_a.so", {"mod_d"});
+        loader.registerModule("mod_d", "./libtest_mod_b.so", {"mod_c"});
+        auto load_future = loader.loadRegisteredModules();
+        auto load_result = load_future.get();
+        REQUIRE_FALSE(load_result.has_value());
+        if(!load_result.has_value()) {
+            REQUIRE(load_result.error() == "Circular dependency detected among registered modules.");
+        }
+    }
 }
-
-TEST_F(ModuleLoaderTest, CreateSharedWithDir) {
-    auto sharedLoader = ModuleLoader::createShared("custom_modules");
-    EXPECT_NE(sharedLoader, nullptr);
-}
-
-TEST_F(ModuleLoaderTest, LoadModule) {
-    EXPECT_TRUE(loader->loadModule("path/to/module.so", "testModule"));
-    EXPECT_TRUE(loader->hasModule("testModule"));
-}
-
-TEST_F(ModuleLoaderTest, UnloadModule) {
-    loader->loadModule("path/to/module.so", "testModule");
-    EXPECT_TRUE(loader->unloadModule("testModule"));
-    EXPECT_FALSE(loader->hasModule("testModule"));
-}
-
-TEST_F(ModuleLoaderTest, UnloadAllModules) {
-    loader->loadModule("path/to/module1.so", "testModule1");
-    loader->loadModule("path/to/module2.so", "testModule2");
-    EXPECT_TRUE(loader->unloadAllModules());
-    EXPECT_FALSE(loader->hasModule("testModule1"));
-    EXPECT_FALSE(loader->hasModule("testModule2"));
-}
-
-TEST_F(ModuleLoaderTest, HasModule) {
-    loader->loadModule("path/to/module.so", "testModule");
-    EXPECT_TRUE(loader->hasModule("testModule"));
-    EXPECT_FALSE(loader->hasModule("nonExistentModule"));
-}
-
-TEST_F(ModuleLoaderTest, GetModule) {
-    loader->loadModule("path/to/module.so", "testModule");
-    auto module = loader->getModule("testModule");
-    EXPECT_NE(module, nullptr);
-    EXPECT_EQ(loader->getModule("nonExistentModule"), nullptr);
-}
-
-TEST_F(ModuleLoaderTest, EnableModule) {
-    loader->loadModule("path/to/module.so", "testModule");
-    EXPECT_TRUE(loader->enableModule("testModule"));
-    EXPECT_TRUE(loader->isModuleEnabled("testModule"));
-}
-
-TEST_F(ModuleLoaderTest, DisableModule) {
-    loader->loadModule("path/to/module.so", "testModule");
-    loader->enableModule("testModule");
-    EXPECT_TRUE(loader->disableModule("testModule"));
-    EXPECT_FALSE(loader->isModuleEnabled("testModule"));
-}
-
-TEST_F(ModuleLoaderTest, IsModuleEnabled) {
-    loader->loadModule("path/to/module.so", "testModule");
-    loader->enableModule("testModule");
-    EXPECT_TRUE(loader->isModuleEnabled("testModule"));
-    loader->disableModule("testModule");
-    EXPECT_FALSE(loader->isModuleEnabled("testModule"));
-}
-
-TEST_F(ModuleLoaderTest, GetAllExistedModules) {
-    loader->loadModule("path/to/module1.so", "testModule1");
-    loader->loadModule("path/to/module2.so", "testModule2");
-    auto modules = loader->getAllExistedModules();
-    EXPECT_EQ(modules.size(), 2);
-    EXPECT_NE(std::find(modules.begin(), modules.end(), "testModule1"),
-              modules.end());
-    EXPECT_NE(std::find(modules.begin(), modules.end(), "testModule2"),
-              modules.end());
-}
-
-TEST_F(ModuleLoaderTest, HasFunction) {
-    loader->loadModule("path/to/module.so", "testModule");
-    EXPECT_TRUE(loader->hasFunction("testModule", "testFunction"));
-    EXPECT_FALSE(loader->hasFunction("testModule", "nonExistentFunction"));
-}
-
-TEST_F(ModuleLoaderTest, ReloadModule) {
-    loader->loadModule("path/to/module.so", "testModule");
-    EXPECT_TRUE(loader->reloadModule("testModule"));
-    EXPECT_TRUE(loader->hasModule("testModule"));
-}
-
-TEST_F(ModuleLoaderTest, GetModuleStatus) {
-    loader->loadModule("path/to/module.so", "testModule");
-    EXPECT_EQ(loader->getModuleStatus("testModule"),
-              ModuleInfo::Status::LOADED);
-    loader->unloadModule("testModule");
-    EXPECT_EQ(loader->getModuleStatus("testModule"),
-              ModuleInfo::Status::UNLOADED);
-}
-
-TEST_F(ModuleLoaderTest, ValidateDependencies) {
-    loader->loadModule("path/to/module.so", "testModule");
-    auto module = loader->getModule("testModule");
-    module->dependencies.push_back("dependencyModule");
-    EXPECT_FALSE(loader->validateDependencies("testModule"));
-    loader->loadModule("path/to/dependency.so", "dependencyModule");
-    loader->enableModule("dependencyModule");
-    EXPECT_TRUE(loader->validateDependencies("testModule"));
-}
-
-TEST_F(ModuleLoaderTest, LoadModulesInOrder) {
-    loader->loadModule("path/to/module1.so", "testModule1");
-    loader->loadModule("path/to/module2.so", "testModule2");
-    auto module1 = loader->getModule("testModule1");
-    auto module2 = loader->getModule("testModule2");
-    module1->dependencies.push_back("testModule2");
-    EXPECT_TRUE(loader->loadModulesInOrder());
-    EXPECT_TRUE(loader->isModuleEnabled("testModule1"));
-    EXPECT_TRUE(loader->isModuleEnabled("testModule2"));
-}
-
-}  // namespace lithium::test

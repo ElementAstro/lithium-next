@@ -1,7 +1,7 @@
 #ifndef LITHIUM_INDI_FOCUSER_PRESET_MANAGER_HPP
 #define LITHIUM_INDI_FOCUSER_PRESET_MANAGER_HPP
 
-#include "types.hpp"
+#include "component_base.hpp"
 
 namespace lithium::device::indi::focuser {
 
@@ -13,28 +13,29 @@ namespace lithium::device::indi::focuser {
  * focuser to predefined positions, improving efficiency and repeatability in
  * astrophotography workflows.
  */
-class PresetManager : public IFocuserComponent {
+class PresetManager : public FocuserComponentBase {
 public:
     /**
-     * @brief Default constructor.
+     * @brief Constructor with shared core.
+     * @param core Shared pointer to the INDIFocuserCore
      */
-    PresetManager() = default;
+    explicit PresetManager(std::shared_ptr<INDIFocuserCore> core);
+    
     /**
      * @brief Virtual destructor.
      */
     ~PresetManager() override = default;
 
     /**
-     * @brief Initialize the preset manager with the shared focuser state.
-     * @param state Reference to the shared FocuserState structure.
+     * @brief Initialize the preset manager.
      * @return true if initialization was successful, false otherwise.
      */
-    bool initialize(FocuserState& state) override;
+    bool initialize() override;
 
     /**
-     * @brief Cleanup resources and detach from the focuser state.
+     * @brief Shutdown and cleanup the component.
      */
-    void cleanup() override;
+    void shutdown() override;
 
     /**
      * @brief Get the component's name for logging and identification.
@@ -118,11 +119,6 @@ public:
                                          int tolerance = 50) const;
 
 private:
-    /**
-     * @brief Pointer to the shared focuser state structure.
-     */
-    FocuserState* state_{nullptr};
-
     /**
      * @brief Check if the given slot index is valid for the preset array.
      * @param slot The slot index to check.

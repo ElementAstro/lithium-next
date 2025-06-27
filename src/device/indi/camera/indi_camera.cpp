@@ -1,3 +1,21 @@
+/*
+ * indi_camera.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-12-18
+
+Description: Component-based INDI Camera Implementation
+
+This modular camera implementation orchestrates INDI camera components 
+following the ASCOM architecture pattern for clean, maintainable, 
+and testable code.
+
+*************************************************/
+
 #include "indi_camera.hpp"
 
 #include <spdlog/spdlog.h>
@@ -6,68 +24,68 @@ namespace lithium::device::indi::camera {
 
 INDICamera::INDICamera(std::string deviceName)
     : AtomCamera(deviceName) {
-    spdlog::info("Creating component-based INDI camera for device: {}", deviceName);
-    
-    // Create core component first
-    core_ = std::make_shared<INDICameraCore>(deviceName);
-    
-    // Create all other components
-    exposureController_ = std::make_shared<ExposureController>(core_);
-    videoController_ = std::make_shared<VideoController>(core_);
-    temperatureController_ = std::make_shared<TemperatureController>(core_);
-    hardwareController_ = std::make_shared<HardwareController>(core_);
-    imageProcessor_ = std::make_shared<ImageProcessor>(core_);
-    sequenceManager_ = std::make_shared<SequenceManager>(core_);
-    propertyHandler_ = std::make_shared<PropertyHandler>(core_);
-    
-    initializeComponents();
+    spdlog::info("Creating modular INDI camera for device: {}", deviceName);
 }
 
 auto INDICamera::initialize() -> bool {
-    spdlog::info("Initializing component-based INDI camera");
+    spdlog::info("Initializing modular INDI camera controller");
     
-    // Initialize core first
-    if (!core_->initialize()) {
-        spdlog::error("Failed to initialize core component");
+    if (initialized_) {
+        spdlog::warn("Controller already initialized");
+        return true;
+    }
+    
+    if (!initializeComponents()) {
+        spdlog::error("Failed to initialize components");
         return false;
     }
     
-    // Initialize all components
-    if (!exposureController_->initialize() ||
-        !videoController_->initialize() ||
-        !temperatureController_->initialize() ||
-        !hardwareController_->initialize() ||
-        !imageProcessor_->initialize() ||
-        !sequenceManager_->initialize() ||
-        !propertyHandler_->initialize()) {
-        spdlog::error("Failed to initialize one or more camera components");
-        return false;
-    }
-    
-    setupComponentCommunication();
-    registerPropertyHandlers();
-    
-    spdlog::info("All camera components initialized successfully");
+    initialized_ = true;
+    spdlog::info("INDI camera controller initialized successfully");
     return true;
 }
 
 auto INDICamera::destroy() -> bool {
-    spdlog::info("Destroying component-based INDI camera");
+    spdlog::info("Destroying modular INDI camera controller");
     
-    // Destroy components in reverse order
-    propertyHandler_->destroy();
-    sequenceManager_->destroy();
-    imageProcessor_->destroy();
-    hardwareController_->destroy();
-    temperatureController_->destroy();
-    videoController_->destroy();
-    exposureController_->destroy();
-    core_->destroy();
+    if (!initialized_) {
+        spdlog::warn("Controller not initialized");
+        return true;
+    }
     
+    // Disconnect if connected
+    if (isConnected()) {
+        disconnect();
+    }
+    
+    if (!shutdownComponents()) {
+        spdlog::error("Failed to shutdown components properly");
+        return false;
+    }
+    
+    initialized_ = false;
+    spdlog::info("INDI camera controller destroyed successfully");
     return true;
 }
 
 auto INDICamera::connect(const std::string& deviceName, int timeout, int maxRetry) -> bool {
+    spdlog::info("Connecting to INDI camera: {} (timeout: {}ms, retries: {})", deviceName, timeout, maxRetry);
+    
+    if (!initialized_) {
+        spdlog::error("Controller not initialized");
+        return false;
+    }
+    
+    if (isConnected()) {
+        spdlog::warn("Already connected");
+        return true;
+    }
+    
+    if (!validateComponentsReady()) {
+        spdlog::error("Components not ready for connection");
+        return false;
+    }
+    
     return core_->connect(deviceName, timeout, maxRetry);
 }
 
@@ -83,7 +101,7 @@ auto INDICamera::scan() -> std::vector<std::string> {
     return core_->scan();
 }
 
-// Exposure control delegation
+// Exposure control delegation (clean and direct)
 auto INDICamera::startExposure(double duration) -> bool {
     return exposureController_->startExposure(duration);
 }
@@ -124,7 +142,7 @@ auto INDICamera::resetExposureCount() -> bool {
     return exposureController_->resetExposureCount();
 }
 
-// Video control delegation
+// Video control delegation (clean and direct)
 auto INDICamera::startVideo() -> bool {
     return videoController_->startVideo();
 }
@@ -149,6 +167,7 @@ auto INDICamera::getVideoFormats() -> std::vector<std::string> {
     return videoController_->getVideoFormats();
 }
 
+// Enhanced video control delegation (direct calls)
 auto INDICamera::startVideoRecording(const std::string& filename) -> bool {
     return videoController_->startVideoRecording(filename);
 }
@@ -177,7 +196,7 @@ auto INDICamera::getVideoGain() const -> int {
     return videoController_->getVideoGain();
 }
 
-// Temperature control delegation
+// Temperature control delegation (direct calls)
 auto INDICamera::startCooling(double targetTemp) -> bool {
     return temperatureController_->startCooling(targetTemp);
 }
@@ -210,7 +229,7 @@ auto INDICamera::setTemperature(double temperature) -> bool {
     return temperatureController_->setTemperature(temperature);
 }
 
-// Hardware control delegation
+// Hardware control delegation (streamlined following ASCOM pattern)
 auto INDICamera::isColor() const -> bool {
     return hardwareController_->isColor();
 }
@@ -402,17 +421,138 @@ auto INDICamera::getLastImageQuality() const -> std::map<std::string, double> {
 }
 
 // Private helper methods
-void INDICamera::initializeComponents() {
-    spdlog::debug("Initializing component relationships");
+// Helper methods following ASCOM pattern
+auto INDICamera::initializeComponents() -> bool {
+    spdlog::info("Initializing INDI camera components");
     
-    // Register all components with the core
-    core_->registerComponent(exposureController_);
-    core_->registerComponent(videoController_);
-    core_->registerComponent(temperatureController_);
-    core_->registerComponent(hardwareController_);
-    core_->registerComponent(imageProcessor_);
-    core_->registerComponent(sequenceManager_);
-    core_->registerComponent(propertyHandler_);
+    try {
+        // Create core component first
+        core_ = std::make_shared<INDICameraCore>(getName());
+        if (!core_->initialize()) {
+            spdlog::error("Failed to initialize core component");
+            return false;
+        }
+        
+        // Create exposure controller
+        exposureController_ = std::make_shared<ExposureController>(core_);
+        if (!exposureController_->initialize()) {
+            spdlog::error("Failed to initialize exposure controller");
+            return false;
+        }
+        
+        // Create video controller
+        videoController_ = std::make_shared<VideoController>(core_);
+        if (!videoController_->initialize()) {
+            spdlog::error("Failed to initialize video controller");
+            return false;
+        }
+        
+        // Create temperature controller
+        temperatureController_ = std::make_shared<TemperatureController>(core_);
+        if (!temperatureController_->initialize()) {
+            spdlog::error("Failed to initialize temperature controller");
+            return false;
+        }
+        
+        // Create hardware controller
+        hardwareController_ = std::make_shared<HardwareController>(core_);
+        if (!hardwareController_->initialize()) {
+            spdlog::error("Failed to initialize hardware controller");
+            return false;
+        }
+        
+        // Create image processor
+        imageProcessor_ = std::make_shared<ImageProcessor>(core_);
+        if (!imageProcessor_->initialize()) {
+            spdlog::error("Failed to initialize image processor");
+            return false;
+        }
+        
+        // Create sequence manager
+        sequenceManager_ = std::make_shared<SequenceManager>(core_);
+        if (!sequenceManager_->initialize()) {
+            spdlog::error("Failed to initialize sequence manager");
+            return false;
+        }
+        
+        // Create property handler
+        propertyHandler_ = std::make_shared<PropertyHandler>(core_);
+        if (!propertyHandler_->initialize()) {
+            spdlog::error("Failed to initialize property handler");
+            return false;
+        }
+        
+        // Setup component communication and register property handlers
+        setupComponentCommunication();
+        registerPropertyHandlers();
+        
+        spdlog::info("All INDI camera components initialized successfully");
+        return true;
+        
+    } catch (const std::exception& e) {
+        spdlog::error("Exception during component initialization: {}", e.what());
+        return false;
+    }
+}
+
+auto INDICamera::shutdownComponents() -> bool {
+    spdlog::info("Shutting down INDI camera components");
+    
+    try {
+        // Destroy components in reverse order
+        if (propertyHandler_) {
+            propertyHandler_->destroy();
+            propertyHandler_.reset();
+        }
+        
+        if (sequenceManager_) {
+            sequenceManager_->destroy();
+            sequenceManager_.reset();
+        }
+        
+        if (imageProcessor_) {
+            imageProcessor_->destroy();
+            imageProcessor_.reset();
+        }
+        
+        if (hardwareController_) {
+            hardwareController_->destroy();
+            hardwareController_.reset();
+        }
+        
+        if (temperatureController_) {
+            temperatureController_->destroy();
+            temperatureController_.reset();
+        }
+        
+        if (videoController_) {
+            videoController_->destroy();
+            videoController_.reset();
+        }
+        
+        if (exposureController_) {
+            exposureController_->destroy();
+            exposureController_.reset();
+        }
+        
+        if (core_) {
+            core_->destroy();
+            core_.reset();
+        }
+        
+        spdlog::info("All INDI camera components shut down successfully");
+        return true;
+        
+    } catch (const std::exception& e) {
+        spdlog::error("Exception during component shutdown: {}", e.what());
+        return false;
+    }
+}
+
+auto INDICamera::validateComponentsReady() const -> bool {
+    return core_ && exposureController_ && videoController_ && 
+           temperatureController_ && hardwareController_ && 
+           imageProcessor_ && sequenceManager_ && propertyHandler_;
 }
 
 void INDICamera::registerPropertyHandlers() {
@@ -453,6 +593,20 @@ void INDICamera::setupComponentCommunication() {
     
     // Setup any other inter-component communication as needed
     // For example, callbacks between components
+}
+
+// =========================================================================
+// Factory Implementation (following ASCOM pattern)
+// =========================================================================
+
+auto INDICameraFactory::createModularController(const std::string& deviceName) 
+    -> std::unique_ptr<INDICamera> {
+    return std::make_unique<INDICamera>(deviceName);
+}
+
+auto INDICameraFactory::createSharedController(const std::string& deviceName) 
+    -> std::shared_ptr<INDICamera> {
+    return std::make_shared<INDICamera>(deviceName);
 }
 
 } // namespace lithium::device::indi::camera

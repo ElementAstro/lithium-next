@@ -6,7 +6,7 @@
 
 namespace lithium::device::indi::camera {
 
-SequenceManager::SequenceManager(INDICameraCore* core) 
+SequenceManager::SequenceManager(std::shared_ptr<INDICameraCore> core) 
     : ComponentBase(core) {
     spdlog::debug("Creating sequence manager");
 }

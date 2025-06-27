@@ -23,7 +23,7 @@ class ExposureController;
  */
 class SequenceManager : public ComponentBase {
 public:
-    explicit SequenceManager(INDICameraCore* core);
+    explicit SequenceManager(std::shared_ptr<INDICameraCore> core);
     ~SequenceManager() override;
 
     // ComponentBase interface
