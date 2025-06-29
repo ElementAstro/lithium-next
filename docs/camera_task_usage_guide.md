@@ -268,13 +268,13 @@ try {
     auto task = std::make_unique<TakeExposureTask>("TakeExposure", nullptr);
     json params = {{"exposure_time", 10.0}};
     task->execute(params);
-    
+
 } catch (const atom::error::InvalidArgument& e) {
     std::cerr << "Parameter error: " << e.what() << std::endl;
-    
+
 } catch (const atom::error::RuntimeError& e) {
     std::cerr << "Runtime error: " << e.what() << std::endl;
-    
+
 } catch (const std::exception& e) {
     std::cerr << "Unexpected error: " << e.what() << std::endl;
 }

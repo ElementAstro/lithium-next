@@ -20,7 +20,7 @@ std::unique_ptr<AtomCamera> DeviceFactory::createCamera(const std::string& name,
             // TODO: Create native camera when available
             break;
     }
-    
+
     // Fallback to mock
     return std::make_unique<MockCamera>(name);
 }
@@ -39,7 +39,7 @@ std::unique_ptr<AtomTelescope> DeviceFactory::createTelescope(const std::string&
             // TODO: Create native telescope when available
             break;
     }
-    
+
     // Fallback to mock
     return std::make_unique<MockTelescope>(name);
 }
@@ -58,7 +58,7 @@ std::unique_ptr<AtomFocuser> DeviceFactory::createFocuser(const std::string& nam
             // TODO: Create native focuser when available
             break;
     }
-    
+
     // Fallback to mock
     return std::make_unique<MockFocuser>(name);
 }
@@ -77,7 +77,7 @@ std::unique_ptr<AtomFilterWheel> DeviceFactory::createFilterWheel(const std::str
             // TODO: Create native filter wheel when available
             break;
     }
-    
+
     // Fallback to mock
     return std::make_unique<MockFilterWheel>(name);
 }
@@ -96,7 +96,7 @@ std::unique_ptr<AtomRotator> DeviceFactory::createRotator(const std::string& nam
             // TODO: Create native rotator when available
             break;
     }
-    
+
     // Fallback to mock
     return std::make_unique<MockRotator>(name);
 }
@@ -115,7 +115,7 @@ std::unique_ptr<AtomDome> DeviceFactory::createDome(const std::string& name, Dev
             // TODO: Create native dome when available
             break;
     }
-    
+
     // Fallback to mock
     return std::make_unique<MockDome>(name);
 }
@@ -127,7 +127,7 @@ std::unique_ptr<AtomDriver> DeviceFactory::createDevice(DeviceType type, const s
     if (it != device_creators_.end()) {
         return it->second(name);
     }
-    
+
     // Use built-in creators
     switch (type) {
         case DeviceType::CAMERA:
@@ -157,29 +157,29 @@ std::unique_ptr<AtomDriver> DeviceFactory::createDevice(DeviceType type, const s
         default:
             break;
     }
-    
+
     return nullptr;
 }
 
 std::vector<DeviceBackend> DeviceFactory::getAvailableBackends(DeviceType type) const {
     std::vector<DeviceBackend> backends;
-    
+
     // Mock backend is always available
     backends.push_back(DeviceBackend::MOCK);
-    
+
     // Check for INDI availability
     if (isINDIAvailable()) {
         backends.push_back(DeviceBackend::INDI);
     }
-    
+
     // Check for ASCOM availability
     if (isASCOMAvailable()) {
         backends.push_back(DeviceBackend::ASCOM);
     }
-    
+
     // Check for native drivers
     backends.push_back(DeviceBackend::NATIVE);
-    
+
     return backends;
 }
 
@@ -200,7 +200,7 @@ bool DeviceFactory::isBackendAvailable(DeviceType type, DeviceBackend backend) c
 
 std::vector<DeviceFactory::DeviceInfo> DeviceFactory::discoverDevices(DeviceType type, DeviceBackend backend) const {
     std::vector<DeviceInfo> devices;
-    
+
     if (backend == DeviceBackend::MOCK || backend == DeviceBackend::MOCK) {
         // Add mock devices
         if (type == DeviceType::CAMERA || type == DeviceType::UNKNOWN) {
@@ -222,11 +222,11 @@ std::vector<DeviceFactory::DeviceInfo> DeviceFactory::discoverDevices(DeviceType
             devices.push_back({"MockDome", DeviceType::DOME, DeviceBackend::MOCK, "Simulated observatory dome", "1.0.0"});
         }
     }
-    
+
     // TODO: Add INDI device discovery
     // TODO: Add ASCOM device discovery
     // TODO: Add native device discovery
-    
+
     return devices;
 }
 

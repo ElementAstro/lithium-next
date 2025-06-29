@@ -4,10 +4,10 @@
 /**
  * @file camera_examples.hpp
  * @brief Examples demonstrating the usage of the optimized camera task system
- * 
+ *
  * This file contains practical examples showing how to use the comprehensive
  * camera task system for various astrophotography scenarios.
- * 
+ *
  * @date 2024-12-26
  * @author Max Qian <lightapt.com>
  * @copyright Copyright (C) 2023-2024 Max Qian
@@ -22,7 +22,7 @@ using json = nlohmann::json;
 
 /**
  * @brief Example: Complete imaging session setup
- * 
+ *
  * Demonstrates setting up a complete imaging session with:
  * - Temperature stabilization
  * - Parameter optimization
@@ -48,7 +48,7 @@ public:
                         {"tolerance", 1.0}
                     }}
                 },
-                
+
                 // 2. Parameter Optimization
                 {
                     {"task", "AutoParameter"},
@@ -57,7 +57,7 @@ public:
                         {"iterations", 5}
                     }}
                 },
-                
+
                 // 3. Frame Configuration
                 {
                     {"task", "FrameConfig"},
@@ -69,7 +69,7 @@ public:
                         {"upload_mode", "LOCAL"}
                     }}
                 },
-                
+
                 // 4. Calibration Frames
                 {
                     {"task", "AutoCalibration"},
@@ -81,7 +81,7 @@ public:
                         {"flat_exposure", 5}
                     }}
                 },
-                
+
                 // 5. Science Exposures
                 {
                     {"task", "TakeManyExposure"},
@@ -101,7 +101,7 @@ public:
 
 /**
  * @brief Example: Video streaming and monitoring
- * 
+ *
  * Demonstrates video functionality for:
  * - Live view setup
  * - Recording sessions
@@ -123,7 +123,7 @@ public:
                         {"fps", 30.0}
                     }}
                 },
-                
+
                 // 2. Monitor Stream Quality
                 {
                     {"task", "VideoStreamMonitor"},
@@ -132,7 +132,7 @@ public:
                         {"report_interval", 10}
                     }}
                 },
-                
+
                 // 3. Record Video
                 {
                     {"task", "RecordVideo"},
@@ -143,7 +143,7 @@ public:
                         {"fps", 30.0}
                     }}
                 },
-                
+
                 // 4. Stop Video Stream
                 {
                     {"task", "StopVideo"},
@@ -156,7 +156,7 @@ public:
 
 /**
  * @brief Example: ROI (Region of Interest) imaging
- * 
+ *
  * Demonstrates subframe imaging for:
  * - Planetary imaging
  * - Variable star monitoring
@@ -179,7 +179,7 @@ public:
                         {"height", 1000}
                     }}
                 },
-                
+
                 // 2. Set High Speed Binning
                 {
                     {"task", "BinningConfig"},
@@ -188,7 +188,7 @@ public:
                         {"vertical", 2}
                     }}
                 },
-                
+
                 // 3. Optimize for Speed
                 {
                     {"task", "AutoParameter"},
@@ -196,7 +196,7 @@ public:
                         {"target", "speed"}
                     }}
                 },
-                
+
                 // 4. High-Cadence Exposures
                 {
                     {"task", "TakeManyExposure"},
@@ -216,7 +216,7 @@ public:
 
 /**
  * @brief Example: Temperature monitoring session
- * 
+ *
  * Demonstrates thermal management for:
  * - Long exposure sessions
  * - Thermal noise characterization
@@ -239,7 +239,7 @@ public:
                         {"check_interval", 60}
                     }}
                 },
-                
+
                 // 2. Cooling Optimization
                 {
                     {"task", "CoolingOptimization"},
@@ -248,7 +248,7 @@ public:
                         {"optimization_time", 600}
                     }}
                 },
-                
+
                 // 3. Temperature Stabilization
                 {
                     {"task", "TemperatureStabilization"},
@@ -259,7 +259,7 @@ public:
                         {"check_interval", 30}
                     }}
                 },
-                
+
                 // 4. Continuous Monitoring
                 {
                     {"task", "TemperatureMonitor"},
@@ -275,7 +275,7 @@ public:
 
 /**
  * @brief Example: Parameter profile management
- * 
+ *
  * Demonstrates profile system for:
  * - Different target types (galaxies, nebulae, planets)
  * - Equipment configurations
@@ -304,7 +304,7 @@ public:
                         {"name", "deep_sky_profile"}
                     }}
                 },
-                
+
                 // 2. Setup Planetary Profile
                 {
                     {"task", "GainControl"},
@@ -321,7 +321,7 @@ public:
                         {"name", "planetary_profile"}
                     }}
                 },
-                
+
                 // 3. List Available Profiles
                 {
                     {"task", "ParameterProfile"},
@@ -329,7 +329,7 @@ public:
                         {"action", "list"}
                     }}
                 },
-                
+
                 // 4. Load Deep Sky Profile
                 {
                     {"task", "ParameterProfile"},
@@ -345,7 +345,7 @@ public:
 
 /**
  * @brief Helper function to execute a task sequence
- * 
+ *
  * This function demonstrates how to programmatically execute
  * the task sequences defined in the examples above.
  */

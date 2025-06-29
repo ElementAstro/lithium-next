@@ -25,15 +25,15 @@ if(ENABLE_PLAYERONE_CAMERA)
     if(PLAYERONE_INCLUDE_DIR AND PLAYERONE_LIBRARY)
         set(PLAYERONE_FOUND TRUE)
         message(STATUS "PlayerOne SDK found: ${PLAYERONE_LIBRARY}")
-        
+
         # Define macro for conditional compilation
         add_definitions(-DLITHIUM_PLAYERONE_CAMERA_ENABLED)
-        
+
         # Create PlayerOne camera library
         add_library(lithium_playerone_camera SHARED
             playerone_camera.cpp
         )
-        
+
         target_include_directories(lithium_playerone_camera
             PUBLIC
                 ${CMAKE_CURRENT_SOURCE_DIR}
@@ -41,7 +41,7 @@ if(ENABLE_PLAYERONE_CAMERA)
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )
-        
+
         target_link_libraries(lithium_playerone_camera
             PUBLIC
                 ${PLAYERONE_LIBRARY}
@@ -50,7 +50,7 @@ if(ENABLE_PLAYERONE_CAMERA)
             PRIVATE
                 Threads::Threads
         )
-        
+
         # Set properties
         set_target_properties(lithium_playerone_camera PROPERTIES
             CXX_STANDARD 20
@@ -58,18 +58,18 @@ if(ENABLE_PLAYERONE_CAMERA)
             VERSION ${PROJECT_VERSION}
             SOVERSION ${PROJECT_VERSION_MAJOR}
         )
-        
+
         # Install library
         install(TARGETS lithium_playerone_camera
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         )
-        
+
         # Install headers
         install(FILES playerone_camera.hpp
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/playerone
         )
-        
+
     else()
         message(WARNING "PlayerOne SDK not found. PlayerOne camera support will be disabled.")
         set(PLAYERONE_FOUND FALSE)

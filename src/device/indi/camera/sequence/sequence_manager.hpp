@@ -17,7 +17,7 @@ class ExposureController;
 
 /**
  * @brief Sequence management component for INDI cameras
- * 
+ *
  * This component handles automated image sequences including
  * multi-frame captures, timed sequences, and automated workflows.
  */
@@ -52,22 +52,22 @@ private:
     std::atomic<int> sequenceTotal_{0};
     std::atomic<double> sequenceExposure_{1.0};
     std::atomic<double> sequenceInterval_{0.0};
-    
+
     // Timing
     std::chrono::system_clock::time_point sequenceStartTime_;
     std::chrono::system_clock::time_point lastSequenceCapture_;
-    
+
     // Worker thread
     std::thread sequenceThread_;
     std::atomic_bool stopSequenceFlag_{false};
-    
+
     // Callbacks
     std::function<void(int, std::shared_ptr<AtomCameraFrame>)> frameCallback_;
     std::function<void(bool)> completeCallback_;
-    
+
     // Component references
     ExposureController* exposureController_{nullptr};
-    
+
     // Sequence execution
     void sequenceWorker();
     void handleSequenceCapture();

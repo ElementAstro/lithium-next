@@ -41,7 +41,7 @@ public:
     auto getPosition() -> std::optional<int> override;
     auto setPosition(int position) -> bool override;
 
-    // Implementation of AtomFilterWheel interface  
+    // Implementation of AtomFilterWheel interface
     auto isMoving() const -> bool override;
     auto getFilterCount() -> int override;
     auto isValidPosition(int position) -> bool override;

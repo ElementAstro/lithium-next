@@ -15,13 +15,13 @@ bool ConfigurationManager::initialize() {
     }
 
     core->getLogger()->info("Initializing ConfigurationManager");
-    
+
     // Load existing configurations from file
     loadConfigurationsFromFile();
-    
-    core->getLogger()->info("ConfigurationManager initialized with {} configurations", 
+
+    core->getLogger()->info("ConfigurationManager initialized with {} configurations",
                            configurations_.size());
-    
+
     initialized_ = true;
     return true;
 }
@@ -30,11 +30,11 @@ void ConfigurationManager::shutdown() {
     auto core = getCore();
     if (core) {
         core->getLogger()->info("Shutting down ConfigurationManager");
-        
+
         // Save configurations before shutdown
         saveConfigurationsToFile();
     }
-    
+
     configurations_.clear();
     initialized_ = false;
 }
@@ -53,7 +53,7 @@ bool ConfigurationManager::saveFilterConfiguration(const std::string& name) {
     try {
         auto config = captureCurrentConfiguration(name);
         configurations_[name] = config;
-        
+
         if (saveConfigurationsToFile()) {
             core->getLogger()->info("Filter configuration '{}' saved successfully", name);
             return true;
@@ -84,7 +84,7 @@ bool ConfigurationManager::loadFilterConfiguration(const std::string& name) {
             // Update last used time
             it->second.lastUsed = std::chrono::system_clock::now();
             saveConfigurationsToFile();
-            
+
             core->getLogger()->info("Filter configuration '{}' loaded successfully", name);
             return true;
         } else {
@@ -110,7 +110,7 @@ bool ConfigurationManager::deleteFilterConfiguration(const std::string& name) {
     }
 
     configurations_.erase(it);
-    
+
     if (saveConfigurationsToFile()) {
         core->getLogger()->info("Configuration '{}' deleted successfully", name);
         return true;
@@ -123,11 +123,11 @@ bool ConfigurationManager::deleteFilterConfiguration(const std::string& name) {
 std::vector<std::string> ConfigurationManager::getAvailableConfigurations() const {
     std::vector<std::string> names;
     names.reserve(configurations_.size());
-    
+
     for (const auto& [name, config] : configurations_) {
         names.push_back(name);
     }
-    
+
     return names;
 }
 
@@ -153,7 +153,7 @@ bool ConfigurationManager::exportConfiguration(const std::string& name, const st
 
     // Implementation would serialize configuration to JSON/XML
     // For now, just log the operation
-    core->getLogger()->info("Export configuration '{}' to '{}' - feature not yet implemented", 
+    core->getLogger()->info("Export configuration '{}' to '{}' - feature not yet implemented",
                            name, filePath);
     return true; // Placeholder
 }
@@ -178,11 +178,11 @@ bool ConfigurationManager::saveConfigurationsToFile() {
 
     try {
         std::string configPath = getConfigurationFilePath();
-        
+
         // Create directory if it doesn't exist
         std::filesystem::path path(configPath);
         std::filesystem::create_directories(path.parent_path());
-        
+
         // For now, just create an empty file to indicate successful save
         // Real implementation would serialize configurations to JSON/XML
         std::ofstream file(configPath);
@@ -190,11 +190,11 @@ bool ConfigurationManager::saveConfigurationsToFile() {
             core->getLogger()->error("Failed to open configuration file for writing: {}", configPath);
             return false;
         }
-        
+
         // Write placeholder content
         file << "# Filter Wheel Configurations for " << core->getDeviceName() << std::endl;
         file << "# " << configurations_.size() << " configurations stored" << std::endl;
-        
+
         core->getLogger()->debug("Configurations saved to: {}", configPath);
         return true;
     } catch (const std::exception& e) {
@@ -211,12 +211,12 @@ bool ConfigurationManager::loadConfigurationsFromFile() {
 
     try {
         std::string configPath = getConfigurationFilePath();
-        
+
         if (!std::filesystem::exists(configPath)) {
             core->getLogger()->debug("No existing configuration file found: {}", configPath);
             return true; // Not an error, just no saved configs
         }
-        
+
         // For now, just check if file exists
         // Real implementation would deserialize configurations from JSON/XML
         core->getLogger()->debug("Configuration file found: {}", configPath);
@@ -232,25 +232,25 @@ std::string ConfigurationManager::getConfigurationFilePath() const {
     if (!core) {
         return "";
     }
-    
+
     // Store in user config directory
-    return std::string(std::getenv("HOME")) + "/.config/lithium/filterwheel/" + 
+    return std::string(std::getenv("HOME")) + "/.config/lithium/filterwheel/" +
            core->getDeviceName() + "_configurations.txt";
 }
 
 FilterWheelConfiguration ConfigurationManager::captureCurrentConfiguration(const std::string& name) {
     auto core = getCore();
-    
+
     FilterWheelConfiguration config;
     config.name = name;
     config.created = std::chrono::system_clock::now();
     config.lastUsed = config.created;
-    
+
     if (core) {
         // Capture current filter names and slot count
         config.filters.clear();
         config.maxSlots = core->getMaxSlot();
-        
+
         const auto& slotNames = core->getSlotNames();
         for (size_t i = 0; i < slotNames.size() && i < static_cast<size_t>(config.maxSlots); ++i) {
             FilterInfo filter;
@@ -258,10 +258,10 @@ FilterWheelConfiguration ConfigurationManager::captureCurrentConfiguration(const
             filter.type = "Unknown"; // Could be enhanced to capture more details
             config.filters.push_back(filter);
         }
-        
+
         config.description = "Configuration for " + core->getDeviceName();
     }
-    
+
     return config;
 }
 
@@ -277,12 +277,12 @@ bool ConfigurationManager::applyConfiguration(const FilterWheelConfiguration& co
         for (const auto& filter : config.filters) {
             names.push_back(filter.name);
         }
-        
+
         // Update core state
         core->setSlotNames(names);
         core->setMaxSlot(config.maxSlots);
-        
-        core->getLogger()->debug("Applied configuration: {} filters, max slots: {}", 
+
+        core->getLogger()->debug("Applied configuration: {} filters, max slots: {}",
                                 names.size(), config.maxSlots);
         return true;
     } catch (const std::exception& e) {
@@ -295,7 +295,7 @@ bool ConfigurationManager::isValidConfigurationName(const std::string& name) con
     if (name.empty() || name.length() > 50) {
         return false;
     }
-    
+
     // Check for invalid characters
     const std::string invalidChars = "\\/:*?\"<>|";
     return name.find_first_of(invalidChars) == std::string::npos;

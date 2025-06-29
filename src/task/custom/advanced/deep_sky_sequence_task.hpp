@@ -1,14 +1,14 @@
 #ifndef LITHIUM_TASK_ADVANCED_DEEP_SKY_SEQUENCE_TASK_HPP
 #define LITHIUM_TASK_ADVANCED_DEEP_SKY_SEQUENCE_TASK_HPP
 
-#include "../../task.hpp" 
+#include "../../task.hpp"
 #include "../factory.hpp"
 
 namespace lithium::task::task {
 
 /**
  * @brief Deep sky sequence task.
- * 
+ *
  * Performs automated deep sky imaging sequence with multiple filters,
  * dithering support, and progress tracking.
  */

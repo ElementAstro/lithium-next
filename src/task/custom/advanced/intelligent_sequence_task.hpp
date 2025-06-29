@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Intelligent Imaging Sequence Task
- * 
+ *
  * Advanced multi-target imaging sequence with intelligent decision making,
  * weather monitoring, and dynamic target selection based on conditions.
  * Inspired by NINA's advanced sequencer with conditions and triggers.

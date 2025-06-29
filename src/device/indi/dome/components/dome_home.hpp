@@ -70,7 +70,7 @@ public:
      * @return True if home position is set, false otherwise.
      */
     [[nodiscard]] auto isHomeSet() -> bool;
-    
+
     /**
      * @brief Enable or disable auto-home functionality.
      * @param enable True to enable, false to disable.
@@ -96,7 +96,7 @@ public:
      * @return True if enabled, false otherwise.
      */
     [[nodiscard]] auto isAutoHomeOnStartupEnabled() -> bool;
-    
+
     /**
      * @brief Handle an INDI property update related to home position.
      * @param property The INDI property to process.
@@ -107,7 +107,7 @@ public:
      * @brief Synchronize internal state with the device's current properties.
      */
     void synchronizeWithDevice();
-    
+
     /**
      * @brief Register a callback for home position events.
      * @param callback Function to call on home found/set events.
@@ -118,14 +118,14 @@ public:
 private:
     INDIDomeClient* client_; ///< Associated INDI dome client
     mutable std::mutex home_mutex_; ///< Mutex for thread-safe state access
-    
+
     std::optional<double> home_position_; ///< Current home position (azimuth)
     std::atomic<bool> auto_home_enabled_{false}; ///< Auto-home enabled flag
     std::atomic<bool> auto_home_on_startup_{false}; ///< Auto-home on startup flag
     std::atomic<bool> home_finding_in_progress_{false}; ///< Home finding in progress flag
-    
+
     HomeCallback home_callback_; ///< Registered home event callback
-    
+
     /**
      * @brief Notify the registered callback of a home event.
      * @param homeFound True if home was found/set, false otherwise.
@@ -138,7 +138,7 @@ private:
      * @return True if home was found, false otherwise.
      */
     [[nodiscard]] auto performHomeFinding() -> bool;
-    
+
     /**
      * @brief Get the INDI property for home position (switch type).
      * @return Pointer to the property view, or nullptr if not found.

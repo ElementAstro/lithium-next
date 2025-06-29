@@ -457,7 +457,7 @@ public:
     /**
      * @brief Set Region of Interest (ROI)
      * @param x X coordinate
-     * @param y Y coordinate  
+     * @param y Y coordinate
      * @param width Width
      * @param height Height
      * @return true if set successfully, false otherwise
@@ -528,7 +528,7 @@ private:
     std::atomic<bool> m_initialized{false};
     std::atomic<bool> m_connected{false};
     mutable std::mutex m_state_mutex;
-    
+
     // Error handling
     mutable std::string m_last_error;
     mutable std::mutex m_error_mutex;

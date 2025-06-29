@@ -33,7 +33,7 @@ class HardwareInterface;
 
 /**
  * @brief Temperature Controller for ASCOM Camera
- * 
+ *
  * Manages cooling operations, temperature monitoring, and thermal
  * protection with temperature history tracking.
  */
@@ -77,10 +77,10 @@ public:
             double coolerPower;
             bool coolerEnabled;
         };
-        
+
         std::deque<DataPoint> data;
         size_t maxSize = 1000;  // Maximum history points to keep
-        
+
         void addPoint(double temp, double power, bool enabled);
         std::vector<DataPoint> getLastPoints(size_t count) const;
         std::vector<DataPoint> getPointsSince(std::chrono::steady_clock::time_point since) const;
@@ -144,7 +144,7 @@ public:
      * @return true if cooler available
      */
     bool hasCooler() const;
-    
+
     // =========================================================================
     // Temperature Control
     // =========================================================================

@@ -1,6 +1,6 @@
 Develop an astrophotography control software based on the latest C++ features, allowing users to perform automated shooting and image processing through an intelligent task control system.
 
-## Document Search 
+## Document Search
 When searching for documentation related to cpp, spldog, curl, tinyxml2, nlohmann/json, etc., always use Context7 to obtain the latest version-specific documentation. When searching for xxx documentation, **search for the stable version of xxx documentation**. In your query, explicitly include `use context7` and specify the need for the stable version of xxx documentation. For example: use context7 to search for the latest version of C++ documentation on vectors.
 
 ## MCP Interactive Feedback Rules

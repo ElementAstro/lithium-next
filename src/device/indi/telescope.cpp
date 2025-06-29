@@ -422,13 +422,13 @@ auto INDITelescope::getTelescopeInfo()
     params.focalLength = property[1].getValue();
     params.guiderAperture = property[2].getValue();
     params.guiderFocalLength = property[3].getValue();
-    
+
     // Update internal state
     telescopeAperture_ = params.aperture;
     telescopeFocalLength_ = params.focalLength;
     telescopeGuiderAperture_ = params.guiderAperture;
     telescopeGuiderFocalLength_ = params.guiderFocalLength;
-    
+
     return params;
 }
 

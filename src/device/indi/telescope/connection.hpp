@@ -10,7 +10,7 @@
 
 /**
  * @brief Connection management component for INDI telescopes
- * 
+ *
  * Handles device connection, disconnection, and discovery
  */
 class TelescopeConnection {
@@ -102,10 +102,10 @@ private:
     T_BAUD_RATE baudRate_{T_BAUD_RATE::B9600};
     bool deviceAutoSearch_{true};
     bool isDebug_{false};
-    
+
     // INDI device reference
     INDI::BaseDevice device_;
-    
+
     // Helper methods
     auto watchConnectionProperties() -> void;
     auto watchDriverInfo() -> void;

@@ -25,7 +25,7 @@ class QHYCameraCore;
 
 /**
  * @brief Base interface for all QHY camera components
- * 
+ *
  * This interface provides common functionality and access patterns
  * for all camera components. Each component can access the core
  * camera instance and QHY SDK through this interface.

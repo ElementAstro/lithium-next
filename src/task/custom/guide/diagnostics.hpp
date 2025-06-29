@@ -17,7 +17,7 @@ using json = nlohmann::json;
 class GuideDiagnosticsTask : public Task {
 public:
     GuideDiagnosticsTask();
-    
+
     static auto taskName() -> std::string;
     void execute(const json& params) override;
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
@@ -29,7 +29,7 @@ private:
     void analyzeGuideStarQuality();
     void checkMountPerformance();
     void generateDiagnosticReport();
-    
+
     struct DiagnosticResults {
         bool calibration_valid;
         double calibration_angle_error;
@@ -41,7 +41,7 @@ private:
         std::vector<std::string> warnings;
         std::vector<std::string> errors;
     };
-    
+
     DiagnosticResults results_;
 };
 
@@ -52,7 +52,7 @@ private:
 class PerformanceAnalysisTask : public Task {
 public:
     PerformanceAnalysisTask();
-    
+
     static auto taskName() -> std::string;
     void execute(const json& params) override;
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
@@ -63,7 +63,7 @@ private:
     void calculateStatistics();
     void identifyTrends();
     void generatePerformanceReport();
-    
+
     struct GuideDataPoint {
         std::chrono::steady_clock::time_point timestamp;
         double ra_error;
@@ -71,9 +71,9 @@ private:
         double star_brightness;
         bool correction_applied;
     };
-    
+
     std::vector<GuideDataPoint> guide_data_;
-    
+
     struct PerformanceStats {
         double rms_ra;
         double rms_dec;
@@ -83,7 +83,7 @@ private:
         double drift_rate_ra;
         double drift_rate_dec;
     };
-    
+
     PerformanceStats stats_;
 };
 
@@ -94,7 +94,7 @@ private:
 class AutoTroubleshootTask : public Task {
 public:
     AutoTroubleshootTask();
-    
+
     static auto taskName() -> std::string;
     void execute(const json& params) override;
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
@@ -104,7 +104,7 @@ private:
     void diagnoseIssue();
     void attemptAutomaticFix();
     void provideTroubleshootingSteps();
-    
+
     enum class IssueType {
         NoIssue,
         PoorCalibration,
@@ -115,7 +115,7 @@ private:
         HardwareFailure,
         Unknown
     };
-    
+
     IssueType detected_issue_;
     std::vector<std::string> troubleshooting_steps_;
 };
@@ -127,7 +127,7 @@ private:
 class GuideLogAnalysisTask : public Task {
 public:
     GuideLogAnalysisTask();
-    
+
     static auto taskName() -> std::string;
     void execute(const json& params) override;
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
@@ -138,7 +138,7 @@ private:
     void extractGuideData();
     void identifyPatterns();
     void generateLogReport();
-    
+
     struct LogEntry {
         std::chrono::system_clock::time_point timestamp;
         std::string event_type;
@@ -148,7 +148,7 @@ private:
         double ra_correction;
         double dec_correction;
     };
-    
+
     std::vector<LogEntry> log_entries_;
 };
 

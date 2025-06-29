@@ -7,4 +7,4 @@ Utility modules for the build system helper.
 from .config import BuildConfig
 from .factory import BuilderFactory
 
-__all__ = ['BuildConfig', 'BuilderFactory']
+__all__ = ["BuildConfig", "BuilderFactory"]

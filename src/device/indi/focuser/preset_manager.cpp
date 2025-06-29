@@ -15,7 +15,7 @@ bool PresetManager::initialize() {
     if (!core) {
         return false;
     }
-    
+
     core->getLogger()->info("{}: Initializing preset manager", getComponentName());
     return true;
 }
@@ -35,9 +35,9 @@ bool PresetManager::savePreset(int slot, int position) {
         }
         return false;
     }
-    
+
     presets_[slot] = position;
-    
+
     auto core = getCore();
     if (core) {
         core->getLogger()->info("Saved preset {} with position {}", slot, position);
@@ -53,15 +53,15 @@ bool PresetManager::loadPreset(int slot) {
         }
         return false;
     }
-    
+
     if (!presets_[slot]) {
         core->getLogger()->error("Preset slot {} is empty", slot);
         return false;
     }
-    
+
     int position = *presets_[slot];
     core->getLogger()->info("Loading preset {} with position {}", slot, position);
-    
+
     // Send position command via INDI
     if (core->getDevice().isValid() && core->getClient()) {
         INDI::PropertyNumber absProp = core->getDevice().getProperty("ABS_FOCUS_POSITION");
@@ -95,7 +95,7 @@ bool PresetManager::deletePreset(int slot) {
         }
         return false;
     }
-    
+
     if (!presets_[slot]) {
         auto core = getCore();
         if (core) {
@@ -103,9 +103,9 @@ bool PresetManager::deletePreset(int slot) {
         }
         return true; // Already empty, consider it success
     }
-    
+
     presets_[slot] = std::nullopt;
-    
+
     auto core = getCore();
     if (core) {
         core->getLogger()->info("Deleted preset {}", slot);
@@ -148,7 +148,7 @@ bool PresetManager::saveCurrentPosition(int slot) {
         }
         return false;
     }
-    
+
     int currentPosition = core->getCurrentPosition();
     return savePreset(slot, currentPosition);
 }
@@ -156,7 +156,7 @@ bool PresetManager::saveCurrentPosition(int slot) {
 std::optional<int> PresetManager::findNearestPreset(int position, int tolerance) const {
     int nearestSlot = -1;
     int minDistance = tolerance + 1; // Start with distance larger than tolerance
-    
+
     for (int i = 0; i < static_cast<int>(presets_.size()); ++i) {
         if (presets_[i]) {
             int distance = std::abs(*presets_[i] - position);
@@ -166,7 +166,7 @@ std::optional<int> PresetManager::findNearestPreset(int position, int tolerance)
             }
         }
     }
-    
+
     if (nearestSlot >= 0) {
         return nearestSlot;
     }

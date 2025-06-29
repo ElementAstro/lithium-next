@@ -15,12 +15,12 @@ auto DomeComponentBase::isOurProperty(const INDI::Property& property) const -> b
     if (!property.isValid()) {
         return false;
     }
-    
+
     auto core = getCore();
     if (!core) {
         return false;
     }
-    
+
     return property.getDeviceName() == core->getDeviceName();
 }
 

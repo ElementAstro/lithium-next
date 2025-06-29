@@ -11,7 +11,7 @@ bool MovementController::initialize() {
     if (!core) {
         return false;
     }
-    
+
     core->getLogger()->info("{}: Initializing movement controller", getComponentName());
     return true;
 }
@@ -39,7 +39,7 @@ bool MovementController::moveSteps(int steps) {
     }
 
     property[0].value = steps;
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -69,9 +69,9 @@ bool MovementController::moveToPosition(int position) {
 
     int currentPos = core->getCurrentPosition();
     int steps = position - currentPos;
-    
+
     property[0].value = position;
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -89,13 +89,13 @@ bool MovementController::moveInward(int steps) {
     if (!core) {
         return false;
     }
-    
+
     // Set direction to inward first
     if (!setDirection(FocusDirection::IN)) {
         core->getLogger()->error("Failed to set focuser direction to inward");
         return false;
     }
-    
+
     return moveSteps(steps);
 }
 
@@ -104,13 +104,13 @@ bool MovementController::moveOutward(int steps) {
     if (!core) {
         return false;
     }
-    
+
     // Set direction to outward first
     if (!setDirection(FocusDirection::OUT)) {
         core->getLogger()->error("Failed to set focuser direction to outward");
         return false;
     }
-    
+
     return moveSteps(steps);
 }
 
@@ -130,7 +130,7 @@ bool MovementController::moveForDuration(int durationMs) {
     }
 
     property[0].value = durationMs;
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -158,7 +158,7 @@ bool MovementController::abortMove() {
     }
 
     property[0].setState(ISS_ON);
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -187,7 +187,7 @@ bool MovementController::syncPosition(int position) {
     }
 
     property[0].value = position;
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -216,7 +216,7 @@ bool MovementController::setSpeed(double speed) {
     }
 
     property[0].value = speed;
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -239,7 +239,7 @@ std::optional<double> MovementController::getSpeed() const {
     if (!property.isValid()) {
         return std::nullopt;
     }
-    
+
     return property[0].value;
 }
 
@@ -253,7 +253,7 @@ int MovementController::getMaxSpeed() const {
     if (!property.isValid()) {
         return 1;
     }
-    
+
     return static_cast<int>(property[0].max);
 }
 
@@ -267,7 +267,7 @@ std::pair<int, int> MovementController::getSpeedRange() const {
     if (!property.isValid()) {
         return {1, 1};
     }
-    
+
     return {static_cast<int>(property[0].min), static_cast<int>(property[0].max)};
 }
 
@@ -290,19 +290,19 @@ bool MovementController::setDirection(FocusDirection direction) {
     for (int i = 0; i < property.count(); i++) {
         property[i].setState(ISS_OFF);
     }
-    
+
     // Set the appropriate direction
     if (direction == FocusDirection::IN) {
         property.findWidgetByName("FOCUS_INWARD")->setState(ISS_ON);
     } else {
         property.findWidgetByName("FOCUS_OUTWARD")->setState(ISS_ON);
     }
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
         core->setDirection(direction);
-        core->getLogger()->info("Setting direction to {} via INDI", 
+        core->getLogger()->info("Setting direction to {} via INDI",
                               direction == FocusDirection::IN ? "inward" : "outward");
         return true;
     } else {
@@ -321,16 +321,16 @@ std::optional<FocusDirection> MovementController::getDirection() const {
     if (!property.isValid()) {
         return std::nullopt;
     }
-    
+
     auto inwardWidget = property.findWidgetByName("FOCUS_INWARD");
     auto outwardWidget = property.findWidgetByName("FOCUS_OUTWARD");
-    
+
     if (inwardWidget && inwardWidget->getState() == ISS_ON) {
         return FocusDirection::IN;
     } else if (outwardWidget && outwardWidget->getState() == ISS_ON) {
         return FocusDirection::OUT;
     }
-    
+
     return std::nullopt;
 }
 
@@ -344,7 +344,7 @@ std::optional<int> MovementController::getPosition() const {
     if (!property.isValid()) {
         return std::nullopt;
     }
-    
+
     return static_cast<int>(property[0].value);
 }
 
@@ -358,7 +358,7 @@ bool MovementController::isMoving() const {
     if (!property.isValid()) {
         return false;
     }
-    
+
     // Check if any motion switch is active
     for (int i = 0; i < property.count(); i++) {
         if (property[i].getState() == ISS_ON) {
@@ -384,7 +384,7 @@ bool MovementController::setMaxLimit(int maxLimit) {
     }
 
     property[0].value = maxLimit;
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -407,7 +407,7 @@ std::optional<int> MovementController::getMaxLimit() const {
     if (!property.isValid()) {
         return std::nullopt;
     }
-    
+
     return static_cast<int>(property[0].value);
 }
 
@@ -427,7 +427,7 @@ bool MovementController::setMinLimit(int minLimit) {
     }
 
     property[0].value = minLimit;
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -450,7 +450,7 @@ std::optional<int> MovementController::getMinLimit() const {
     if (!property.isValid()) {
         return std::nullopt;
     }
-    
+
     return static_cast<int>(property[0].value);
 }
 
@@ -473,13 +473,13 @@ bool MovementController::setReversed(bool reversed) {
     for (int i = 0; i < property.count(); i++) {
         property[i].setState(ISS_OFF);
     }
-    
+
     if (reversed) {
         property[0].setState(ISS_ON);  // Enable reverse
     } else {
         property[1].setState(ISS_ON);  // Disable reverse
     }
-    
+
     // Real INDI client interaction
     if (core->getClient()) {
         core->getClient()->sendNewProperty(property);
@@ -502,7 +502,7 @@ std::optional<bool> MovementController::isReversed() const {
     if (!property.isValid()) {
         return std::nullopt;
     }
-    
+
     if (property[0].getState() == ISS_ON) {
         return true;
     }
@@ -521,7 +521,7 @@ void MovementController::updateStatistics(int steps) {
     // Update core position tracking
     int currentPos = core->getCurrentPosition();
     core->setCurrentPosition(currentPos + steps);
-    
+
     // Record the move for statistics
     auto now = std::chrono::steady_clock::now();
     if (lastMoveStart_.time_since_epoch().count() > 0) {
@@ -562,7 +562,7 @@ bool MovementController::sendPropertyUpdate(const std::string& propertyName, con
     for (size_t i = 0; i < states.size() && i < static_cast<size_t>(property.count()); i++) {
         property[i].setState(states[i] ? ISS_ON : ISS_OFF);
     }
-    
+
     core->getClient()->sendNewProperty(property);
     return true;
 }

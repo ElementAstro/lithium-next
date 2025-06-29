@@ -69,7 +69,7 @@ public:
     // =========================================================================
     // AtomDriver Interface Implementation
     // =========================================================================
-    
+
     auto initialize() -> bool override;
     auto destroy() -> bool override;
     auto connect(const std::string &deviceName, int timeout = 5000, int maxRetry = 3) -> bool override;
@@ -80,7 +80,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Exposure Control
     // =========================================================================
-    
+
     auto startExposure(double duration) -> bool override;
     auto abortExposure() -> bool override;
     auto isExposing() const -> bool override;
@@ -97,7 +97,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Video/streaming control
     // =========================================================================
-    
+
     auto startVideo() -> bool override;
     auto stopVideo() -> bool override;
     auto isVideoRunning() const -> bool override;
@@ -108,7 +108,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Temperature control
     // =========================================================================
-    
+
     auto startCooling(double targetTemp) -> bool override;
     auto stopCooling() -> bool override;
     auto isCoolerOn() const -> bool override;
@@ -121,7 +121,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Color information
     // =========================================================================
-    
+
     auto isColor() const -> bool override;
     auto getBayerPattern() const -> BayerPattern override;
     auto setBayerPattern(BayerPattern pattern) -> bool override;
@@ -129,7 +129,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Parameter control
     // =========================================================================
-    
+
     auto setGain(int gain) -> bool override;
     auto getGain() -> std::optional<int> override;
     auto getGainRange() -> std::pair<int, int> override;
@@ -143,7 +143,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Frame settings
     // =========================================================================
-    
+
     auto getResolution() -> std::optional<AtomCameraFrame::Resolution> override;
     auto setResolution(int x, int y, int width, int height) -> bool override;
     auto getMaxResolution() -> AtomCameraFrame::Resolution override;
@@ -159,7 +159,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Pixel information
     // =========================================================================
-    
+
     auto getPixelSize() -> double override;
     auto getPixelSizeX() -> double override;
     auto getPixelSizeY() -> double override;
@@ -168,7 +168,7 @@ public:
     // =========================================================================
     // AtomCamera Interface Implementation - Advanced features
     // =========================================================================
-    
+
     auto hasShutter() -> bool override;
     auto setShutter(bool open) -> bool override;
     auto getShutterStatus() -> bool override;
@@ -208,7 +208,7 @@ public:
     // =========================================================================
     // Component Access - For advanced operations
     // =========================================================================
-    
+
     /**
      * @brief Get hardware interface component
      * @return Shared pointer to hardware interface
@@ -254,7 +254,7 @@ public:
     // =========================================================================
     // ASCOM-specific methods
     // =========================================================================
-    
+
     /**
      * @brief Get ASCOM driver information
      * @return Driver information string
@@ -323,7 +323,7 @@ public:
      * @param name Camera name/identifier
      * @return Unique pointer to controller instance
      */
-    static auto createModularController(const std::string& name) 
+    static auto createModularController(const std::string& name)
         -> std::unique_ptr<ASCOMCameraController>;
 
     /**
@@ -331,7 +331,7 @@ public:
      * @param name Camera name/identifier
      * @return Shared pointer to controller instance
      */
-    static auto createSharedController(const std::string& name) 
+    static auto createSharedController(const std::string& name)
         -> std::shared_ptr<ASCOMCameraController>;
 };
 

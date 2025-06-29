@@ -5,7 +5,7 @@
 
 namespace lithium::device::indi::camera {
 
-HardwareController::HardwareController(std::shared_ptr<INDICameraCore> core) 
+HardwareController::HardwareController(std::shared_ptr<INDICameraCore> core)
     : ComponentBase(core) {
     spdlog::debug("Creating hardware controller");
     initializeDefaults();
@@ -30,9 +30,9 @@ auto HardwareController::handleProperty(INDI::Property property) -> bool {
     if (!property.isValid()) {
         return false;
     }
-    
+
     std::string propertyName = property.getName();
-    
+
     if (propertyName == "CCD_GAIN") {
         handleGainProperty(property);
         return true;
@@ -58,7 +58,7 @@ auto HardwareController::handleProperty(INDI::Property property) -> bool {
         handleFanProperty(property);
         return true;
     }
-    
+
     return false;
 }
 
@@ -79,7 +79,7 @@ auto HardwareController::setGain(int gain) -> bool {
 
         int minGain = static_cast<int>(minGain_.load());
         int maxGain = static_cast<int>(maxGain_.load());
-        
+
         if (gain < minGain || gain > maxGain) {
             spdlog::error("Gain {} out of range [{}, {}]", gain, minGain, maxGain);
             return false;
@@ -89,7 +89,7 @@ auto HardwareController::setGain(int gain) -> bool {
         ccdGain[0].setValue(gain);
         getCore()->sendNewProperty(ccdGain);
         currentGain_.store(gain);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to set gain: {}", e.what());
@@ -125,7 +125,7 @@ auto HardwareController::setOffset(int offset) -> bool {
 
         int minOffset = minOffset_.load();
         int maxOffset = maxOffset_.load();
-        
+
         if (offset < minOffset || offset > maxOffset) {
             spdlog::error("Offset {} out of range [{}, {}]", offset, minOffset, maxOffset);
             return false;
@@ -135,7 +135,7 @@ auto HardwareController::setOffset(int offset) -> bool {
         ccdOffset[0].setValue(offset);
         getCore()->sendNewProperty(ccdOffset);
         currentOffset_.store(offset);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to set offset: {}", e.what());
@@ -182,7 +182,7 @@ auto HardwareController::getResolution() -> std::optional<AtomCameraFrame::Resol
     res.height = frameHeight_.load();
     res.maxWidth = maxFrameX_.load();
     res.maxHeight = maxFrameY_.load();
-    
+
     return res;
 }
 
@@ -206,12 +206,12 @@ auto HardwareController::setResolution(int x, int y, int width, int height) -> b
         ccdFrame[2].setValue(width);   // Width
         ccdFrame[3].setValue(height);  // Height
         getCore()->sendNewProperty(ccdFrame);
-        
+
         frameX_.store(x);
         frameY_.store(y);
         frameWidth_.store(width);
         frameHeight_.store(height);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to set resolution: {}", e.what());
@@ -256,9 +256,9 @@ auto HardwareController::setBinning(int horizontal, int vertical) -> bool {
 
         int maxHor = maxBinHor_.load();
         int maxVer = maxBinVer_.load();
-        
+
         if (horizontal > maxHor || vertical > maxVer) {
-            spdlog::error("Binning [{}, {}] exceeds maximum [{}, {}]", 
+            spdlog::error("Binning [{}, {}] exceeds maximum [{}, {}]",
                          horizontal, vertical, maxHor, maxVer);
             return false;
         }
@@ -267,10 +267,10 @@ auto HardwareController::setBinning(int horizontal, int vertical) -> bool {
         ccdBinning[0].setValue(horizontal);
         ccdBinning[1].setValue(vertical);
         getCore()->sendNewProperty(ccdBinning);
-        
+
         binHor_.store(horizontal);
         binVer_.store(vertical);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to set binning: {}", e.what());
@@ -329,7 +329,7 @@ auto HardwareController::setFrameType(FrameType type) -> bool {
 
         getCore()->sendNewProperty(ccdFrameType);
         currentFrameType_ = type;
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to set frame type: {}", e.what());
@@ -373,7 +373,7 @@ auto HardwareController::hasShutter() -> bool {
     if (!getCore()->isConnected()) {
         return false;
     }
-    
+
     try {
         auto device = getCore()->getDevice();
         INDI::PropertySwitch shutterControl = device.getProperty("CCD_SHUTTER");
@@ -407,7 +407,7 @@ auto HardwareController::setShutter(bool open) -> bool {
 
         getCore()->sendNewProperty(shutterControl);
         shutterOpen_.store(open);
-        
+
         spdlog::info("Shutter {}", open ? "opened" : "closed");
         return true;
     } catch (const std::exception& e) {
@@ -425,7 +425,7 @@ auto HardwareController::hasFan() -> bool {
     if (!getCore()->isConnected()) {
         return false;
     }
-    
+
     try {
         auto device = getCore()->getDevice();
         INDI::PropertyNumber fanControl = device.getProperty("CCD_FAN");
@@ -453,7 +453,7 @@ auto HardwareController::setFanSpeed(int speed) -> bool {
         fanControl[0].setValue(speed);
         getCore()->sendNewProperty(fanControl);
         fanSpeed_.store(speed);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to set fan speed: {}", e.what());
@@ -504,12 +504,12 @@ void HardwareController::handleGainProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber gainProperty = property;
     if (!gainProperty.isValid()) {
         return;
     }
-    
+
     if (gainProperty.size() > 0) {
         currentGain_.store(static_cast<int>(gainProperty[0].getValue()));
         minGain_.store(static_cast<int>(gainProperty[0].getMin()));
@@ -521,12 +521,12 @@ void HardwareController::handleOffsetProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber offsetProperty = property;
     if (!offsetProperty.isValid()) {
         return;
     }
-    
+
     if (offsetProperty.size() > 0) {
         currentOffset_.store(static_cast<int>(offsetProperty[0].getValue()));
         minOffset_.store(static_cast<int>(offsetProperty[0].getMin()));
@@ -538,12 +538,12 @@ void HardwareController::handleFrameProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber frameProperty = property;
     if (!frameProperty.isValid() || frameProperty.size() < 4) {
         return;
     }
-    
+
     frameX_.store(static_cast<int>(frameProperty[0].getValue()));
     frameY_.store(static_cast<int>(frameProperty[1].getValue()));
     frameWidth_.store(static_cast<int>(frameProperty[2].getValue()));
@@ -554,12 +554,12 @@ void HardwareController::handleBinningProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber binProperty = property;
     if (!binProperty.isValid() || binProperty.size() < 2) {
         return;
     }
-    
+
     binHor_.store(static_cast<int>(binProperty[0].getValue()));
     binVer_.store(static_cast<int>(binProperty[1].getValue()));
     maxBinHor_.store(static_cast<int>(binProperty[0].getMax()));
@@ -570,12 +570,12 @@ void HardwareController::handleInfoProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber infoProperty = property;
     if (!infoProperty.isValid()) {
         return;
     }
-    
+
     // CCD_INFO typically contains: MaxX, MaxY, PixelSize, PixelSizeX, PixelSizeY, BitDepth
     if (infoProperty.size() >= 6) {
         maxFrameX_.store(static_cast<int>(infoProperty[0].getValue()));
@@ -591,12 +591,12 @@ void HardwareController::handleFrameTypeProperty(INDI::Property property) {
     if (property.getType() != INDI_SWITCH) {
         return;
     }
-    
+
     INDI::PropertySwitch frameTypeProperty = property;
     if (!frameTypeProperty.isValid()) {
         return;
     }
-    
+
     // Find which frame type is selected
     for (int i = 0; i < frameTypeProperty.size(); i++) {
         if (frameTypeProperty[i].getState() == ISS_ON) {
@@ -610,12 +610,12 @@ void HardwareController::handleShutterProperty(INDI::Property property) {
     if (property.getType() != INDI_SWITCH) {
         return;
     }
-    
+
     INDI::PropertySwitch shutterProperty = property;
     if (!shutterProperty.isValid() || shutterProperty.size() < 2) {
         return;
     }
-    
+
     // Typically: OPEN=0, CLOSE=1
     shutterOpen_.store(shutterProperty[0].getState() == ISS_ON);
 }
@@ -624,12 +624,12 @@ void HardwareController::handleFanProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber fanProperty = property;
     if (!fanProperty.isValid()) {
         return;
     }
-    
+
     if (fanProperty.size() > 0) {
         fanSpeed_.store(static_cast<int>(fanProperty[0].getValue()));
     }
@@ -640,31 +640,31 @@ void HardwareController::initializeDefaults() {
     currentGain_.store(0);
     minGain_.store(0);
     maxGain_.store(100);
-    
+
     currentOffset_.store(0);
     minOffset_.store(0);
     maxOffset_.store(100);
-    
+
     frameX_.store(0);
     frameY_.store(0);
     frameWidth_.store(0);
     frameHeight_.store(0);
     maxFrameX_.store(0);
     maxFrameY_.store(0);
-    
+
     framePixel_.store(0.0);
     framePixelX_.store(0.0);
     framePixelY_.store(0.0);
     frameDepth_.store(16);
-    
+
     binHor_.store(1);
     binVer_.store(1);
     maxBinHor_.store(1);
     maxBinVer_.store(1);
-    
+
     shutterOpen_.store(true);
     fanSpeed_.store(0);
-    
+
     currentFrameType_ = FrameType::FITS;
     currentUploadMode_ = UploadMode::CLIENT;
     bayerPattern_ = BayerPattern::MONO;

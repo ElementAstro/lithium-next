@@ -11,7 +11,7 @@ bool PropertyManager::initialize() {
     if (!core) {
         return false;
     }
-    
+
     core->getLogger()->info("{}: Initializing property manager", getComponentName());
     setupPropertyWatchers();
     return true;
@@ -45,16 +45,16 @@ void PropertyManager::setupConnectionProperties() {
     }
 
     auto& device = core->getDevice();
-    
+
     // Watch CONNECTION property
     device.watchProperty("CONNECTION",
         [this](const INDI::PropertySwitch& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             bool connected = property[0].getState() == ISS_ON;
             core->setConnected(connected);
-            core->getLogger()->info("{} is {}", 
+            core->getLogger()->info("{} is {}",
                 core->getDeviceName(),
                 connected ? "connected" : "disconnected");
         },
@@ -68,13 +68,13 @@ void PropertyManager::setupDriverInfoProperties() {
     }
 
     auto& device = core->getDevice();
-    
+
     // Watch DRIVER_INFO property
     device.watchProperty("DRIVER_INFO",
         [this](const INDI::PropertyText& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             core->getLogger()->debug("Driver info updated for {}", core->getDeviceName());
             // Driver info is typically read-only, so we just log it
         },
@@ -88,13 +88,13 @@ void PropertyManager::setupConfigurationProperties() {
     }
 
     auto& device = core->getDevice();
-    
+
     // Watch polling period
     device.watchProperty("POLLING_PERIOD",
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             core->getLogger()->debug("Polling period updated for {}", core->getDeviceName());
         },
         INDI::BaseDevice::WATCH_UPDATE);
@@ -107,13 +107,13 @@ void PropertyManager::setupFocusProperties() {
     }
 
     auto& device = core->getDevice();
-    
+
     // Watch absolute position
     device.watchProperty("ABS_FOCUS_POSITION",
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             int position = static_cast<int>(property[0].getValue());
             core->setCurrentPosition(position);
             core->getLogger()->debug("Absolute position updated: {}", position);
@@ -125,7 +125,7 @@ void PropertyManager::setupFocusProperties() {
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             int relPosition = static_cast<int>(property[0].getValue());
             core->setRelativePosition(relPosition);
             core->getLogger()->debug("Relative position updated: {}", relPosition);
@@ -137,7 +137,7 @@ void PropertyManager::setupFocusProperties() {
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             double speed = property[0].getValue();
             core->setCurrentSpeed(speed);
             core->getLogger()->debug("Focus speed updated: {}", speed);
@@ -149,7 +149,7 @@ void PropertyManager::setupFocusProperties() {
         [this](const INDI::PropertySwitch& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             FocusDirection direction = FocusDirection::IN;
             // Check which switch element is on
             for (int i = 0; i < property.count(); i++) {
@@ -163,7 +163,7 @@ void PropertyManager::setupFocusProperties() {
                 }
             }
             core->setDirection(direction);
-            core->getLogger()->debug("Focus direction updated: {}", 
+            core->getLogger()->debug("Focus direction updated: {}",
                 direction == FocusDirection::IN ? "IN" : "OUT");
         },
         INDI::BaseDevice::WATCH_UPDATE);
@@ -173,7 +173,7 @@ void PropertyManager::setupFocusProperties() {
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             int maxPos = static_cast<int>(property[0].getValue());
             core->setMaxPosition(maxPos);
             core->getLogger()->debug("Max position updated: {}", maxPos);
@@ -185,11 +185,11 @@ void PropertyManager::setupFocusProperties() {
         [this](const INDI::PropertySwitch& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             bool reversed = false;
             // Find the enabled switch element
             for (int i = 0; i < property.count(); i++) {
-                if (property[i].getState() == ISS_ON && 
+                if (property[i].getState() == ISS_ON &&
                     strcmp(property[i].getName(), "INDI_ENABLED") == 0) {
                     reversed = true;
                     break;
@@ -205,18 +205,18 @@ void PropertyManager::setupFocusProperties() {
         [this](const INDI::PropertySwitch& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             bool moving = false;
             // Find the busy switch element
             for (int i = 0; i < property.count(); i++) {
-                if (property[i].getState() == ISS_ON && 
+                if (property[i].getState() == ISS_ON &&
                     strcmp(property[i].getName(), "FOCUS_BUSY") == 0) {
                     moving = true;
                     break;
                 }
             }
             core->setMoving(moving);
-            core->getLogger()->debug("Focus state updated: {}", 
+            core->getLogger()->debug("Focus state updated: {}",
                 moving ? "MOVING" : "IDLE");
         },
         INDI::BaseDevice::WATCH_UPDATE);
@@ -229,13 +229,13 @@ void PropertyManager::setupTemperatureProperties() {
     }
 
     auto& device = core->getDevice();
-    
+
     // Watch temperature reading
     device.watchProperty("FOCUS_TEMPERATURE",
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             double temperature = property[0].getValue();
             core->setTemperature(temperature);
             core->getLogger()->debug("Temperature updated: {:.2f}°C", temperature);
@@ -247,7 +247,7 @@ void PropertyManager::setupTemperatureProperties() {
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             double chipTemp = property[0].getValue();
             core->setChipTemperature(chipTemp);
             core->getLogger()->debug("Chip temperature updated: {:.2f}°C", chipTemp);
@@ -262,24 +262,24 @@ void PropertyManager::setupBacklashProperties() {
     }
 
     auto& device = core->getDevice();
-    
+
     // Watch backlash enable/disable
     device.watchProperty("FOCUS_BACKLASH_TOGGLE",
         [this](const INDI::PropertySwitch& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             bool enabled = false;
             // Find the enabled switch element
             for (int i = 0; i < property.count(); i++) {
-                if (property[i].getState() == ISS_ON && 
+                if (property[i].getState() == ISS_ON &&
                     strcmp(property[i].getName(), "INDI_ENABLED") == 0) {
                     enabled = true;
                     break;
                 }
             }
             core->setBacklashEnabled(enabled);
-            core->getLogger()->debug("Backlash compensation: {}", 
+            core->getLogger()->debug("Backlash compensation: {}",
                 enabled ? "ENABLED" : "DISABLED");
         },
         INDI::BaseDevice::WATCH_UPDATE);
@@ -289,7 +289,7 @@ void PropertyManager::setupBacklashProperties() {
         [this](const INDI::PropertyNumber& property) {
             auto core = getCore();
             if (!core) return;
-            
+
             int steps = static_cast<int>(property[0].getValue());
             core->setBacklashSteps(steps);
             core->getLogger()->debug("Backlash steps updated: {}", steps);
@@ -300,10 +300,10 @@ void PropertyManager::setupBacklashProperties() {
 void PropertyManager::handleSwitchPropertyUpdate(const INDI::PropertySwitch& property) {
     auto core = getCore();
     if (!core) return;
-    
+
     const std::string& name = property.getName();
     core->getLogger()->debug("Switch property '{}' updated", name);
-    
+
     // Handle specific switch properties
     if (name == "CONNECTION") {
         bool connected = property[0].getState() == ISS_ON;
@@ -324,7 +324,7 @@ void PropertyManager::handleSwitchPropertyUpdate(const INDI::PropertySwitch& pro
     } else if (name == "FOCUS_REVERSE") {
         bool reversed = false;
         for (int i = 0; i < property.count(); i++) {
-            if (property[i].getState() == ISS_ON && 
+            if (property[i].getState() == ISS_ON &&
                 strcmp(property[i].getName(), "INDI_ENABLED") == 0) {
                 reversed = true;
                 break;
@@ -334,7 +334,7 @@ void PropertyManager::handleSwitchPropertyUpdate(const INDI::PropertySwitch& pro
     } else if (name == "FOCUS_STATE") {
         bool moving = false;
         for (int i = 0; i < property.count(); i++) {
-            if (property[i].getState() == ISS_ON && 
+            if (property[i].getState() == ISS_ON &&
                 strcmp(property[i].getName(), "FOCUS_BUSY") == 0) {
                 moving = true;
                 break;
@@ -344,7 +344,7 @@ void PropertyManager::handleSwitchPropertyUpdate(const INDI::PropertySwitch& pro
     } else if (name == "FOCUS_BACKLASH_TOGGLE") {
         bool enabled = false;
         for (int i = 0; i < property.count(); i++) {
-            if (property[i].getState() == ISS_ON && 
+            if (property[i].getState() == ISS_ON &&
                 strcmp(property[i].getName(), "INDI_ENABLED") == 0) {
                 enabled = true;
                 break;
@@ -357,10 +357,10 @@ void PropertyManager::handleSwitchPropertyUpdate(const INDI::PropertySwitch& pro
 void PropertyManager::handleNumberPropertyUpdate(const INDI::PropertyNumber& property) {
     auto core = getCore();
     if (!core) return;
-    
+
     const std::string& name = property.getName();
     core->getLogger()->debug("Number property '{}' updated", name);
-    
+
     // Handle specific number properties
     if (name == "ABS_FOCUS_POSITION") {
         int position = static_cast<int>(property[0].getValue());
@@ -389,10 +389,10 @@ void PropertyManager::handleNumberPropertyUpdate(const INDI::PropertyNumber& pro
 void PropertyManager::handleTextPropertyUpdate(const INDI::PropertyText& property) {
     auto core = getCore();
     if (!core) return;
-    
+
     const std::string& name = property.getName();
     core->getLogger()->debug("Text property '{}' updated", name);
-    
+
     // Handle specific text properties if needed
     // Most text properties are informational (like DRIVER_INFO)
 }

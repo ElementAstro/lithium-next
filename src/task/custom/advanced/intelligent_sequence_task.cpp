@@ -19,7 +19,7 @@ auto IntelligentSequenceTask::taskName() -> std::string { return "IntelligentSeq
 void IntelligentSequenceTask::execute(const json& params) { executeImpl(params); }
 
 void IntelligentSequenceTask::executeImpl(const json& params) {
-    LOG_F(INFO, "Executing IntelligentSequence task '{}' with params: {}", 
+    LOG_F(INFO, "Executing IntelligentSequence task '{}' with params: {}",
           getName(), params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
@@ -37,7 +37,7 @@ void IntelligentSequenceTask::executeImpl(const json& params) {
         LOG_F(INFO, "Starting intelligent sequence for {} targets over {:.1f}h",
               targets.size(), sessionDuration);
 
-        auto sessionEnd = std::chrono::steady_clock::now() + 
+        auto sessionEnd = std::chrono::steady_clock::now() +
                          std::chrono::hours(static_cast<int>(sessionDuration));
 
         int completedTargets = 0;
@@ -74,7 +74,7 @@ void IntelligentSequenceTask::executeImpl(const json& params) {
             try {
                 executeTargetSequence(bestTarget);
                 completedTargets++;
-                
+
                 // Mark target as completed for dynamic selection
                 if (dynamicTargetSelection) {
                     for (auto& target : targets) {
@@ -84,11 +84,11 @@ void IntelligentSequenceTask::executeImpl(const json& params) {
                         }
                     }
                 }
-                
+
             } catch (const std::exception& e) {
-                LOG_F(ERROR, "Failed to complete target {}: {}", 
+                LOG_F(ERROR, "Failed to complete target {}: {}",
                       bestTarget["name"].get<std::string>(), e.what());
-                
+
                 if (!dynamicTargetSelection) {
                     completedTargets++; // Skip failed target in sequential mode
                 }
@@ -147,7 +147,7 @@ json IntelligentSequenceTask::selectBestTarget(const std::vector<json>& targets)
 bool IntelligentSequenceTask::checkWeatherConditions() {
     // In real implementation, this would check actual weather data
     // For now, simulate with random conditions
-    
+
     // Simulate cloud cover (0-100%)
     double cloudCover = 20.0; // Placeholder
     // Simulate wind speed (km/h)
@@ -172,7 +172,7 @@ bool IntelligentSequenceTask::checkTargetVisibility(const json& target) {
     double currentAltitude = 45.0; // Placeholder
 
     bool isVisible = currentAltitude >= minAltitude;
-    
+
     if (!isVisible) {
         LOG_F(INFO, "Target {} not visible - altitude {:.1f}° < {:.1f}°",
               target["name"].get<std::string>(), currentAltitude, minAltitude);
@@ -230,7 +230,7 @@ double IntelligentSequenceTask::calculateTargetPriority(const json& target) {
         priority += 1.0;
     }
 
-    LOG_F(INFO, "Target {} priority: {:.2f}", 
+    LOG_F(INFO, "Target {} priority: {:.2f}",
           target["name"].get<std::string>(), priority);
 
     return priority;

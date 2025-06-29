@@ -17,7 +17,7 @@ using json = nlohmann::json;
 class GuidedExposureTask : public Task {
 public:
     GuidedExposureTask();
-    
+
     static auto taskName() -> std::string;
     void execute(const json& params) override;
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
@@ -33,7 +33,7 @@ private:
 class AutoGuidingTask : public Task {
 public:
     AutoGuidingTask();
-    
+
     static auto taskName() -> std::string;
     void execute(const json& params) override;
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
@@ -49,7 +49,7 @@ private:
 class GuidedSequenceTask : public Task {
 public:
     GuidedSequenceTask();
-    
+
     static auto taskName() -> std::string;
     void execute(const json& params) override;
     static auto createEnhancedTask() -> std::unique_ptr<Task>;

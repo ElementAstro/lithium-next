@@ -16,7 +16,7 @@ auto ObservatoryAutomationTask::taskName() -> std::string { return "ObservatoryA
 void ObservatoryAutomationTask::execute(const json& params) { executeImpl(params); }
 
 void ObservatoryAutomationTask::executeImpl(const json& params) {
-    LOG_F(INFO, "Executing ObservatoryAutomation task '{}' with params: {}", 
+    LOG_F(INFO, "Executing ObservatoryAutomation task '{}' with params: {}",
           getName(), params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
@@ -88,18 +88,18 @@ void ObservatoryAutomationTask::executeImpl(const json& params) {
 
         } else if (operation == "emergency_stop") {
             LOG_F(CRITICAL, "Emergency stop initiated!");
-            
+
             // Immediate safety actions
             if (enableRoofControl) {
                 LOG_F(INFO, "Emergency roof closure");
                 closeRoof();
             }
-            
+
             if (enableTelescopeControl) {
                 LOG_F(INFO, "Emergency telescope park");
                 parkTelescope();
             }
-            
+
             LOG_F(CRITICAL, "Emergency stop completed - all systems secured");
 
         } else {
@@ -124,59 +124,59 @@ void ObservatoryAutomationTask::executeImpl(const json& params) {
 
 void ObservatoryAutomationTask::performStartupSequence() {
     LOG_F(INFO, "Performing observatory startup sequence");
-    
+
     // Power on equipment in sequence
     LOG_F(INFO, "Powering on observatory equipment");
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    
+
     // Initialize communication systems
     LOG_F(INFO, "Initializing communication systems");
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    
+
     // Check power systems
     LOG_F(INFO, "Checking power systems");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     LOG_F(INFO, "Startup sequence completed");
 }
 
 void ObservatoryAutomationTask::performShutdownSequence() {
     LOG_F(INFO, "Performing observatory shutdown sequence");
-    
+
     // Power down equipment in reverse order
     LOG_F(INFO, "Powering down non-essential equipment");
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    
+
     // Secure communication systems
     LOG_F(INFO, "Securing communication systems");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Final power down
     LOG_F(INFO, "Final power down sequence");
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    
+
     LOG_F(INFO, "Shutdown sequence completed");
 }
 
 void ObservatoryAutomationTask::initializeEquipment() {
     LOG_F(INFO, "Initializing observatory equipment");
-    
+
     // Initialize mount
     LOG_F(INFO, "Initializing telescope mount");
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    
+
     // Initialize camera
     LOG_F(INFO, "Initializing camera system");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Initialize focuser
     LOG_F(INFO, "Initializing focuser");
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     // Initialize filter wheel
     LOG_F(INFO, "Initializing filter wheel");
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     // Check all systems
     if (checkEquipmentStatus()) {
         LOG_F(INFO, "All equipment initialized successfully");
@@ -187,133 +187,133 @@ void ObservatoryAutomationTask::initializeEquipment() {
 
 void ObservatoryAutomationTask::performSafetyChecks() {
     LOG_F(INFO, "Performing comprehensive safety checks");
-    
+
     // Check weather conditions
     LOG_F(INFO, "Checking weather conditions");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Check power systems
     LOG_F(INFO, "Checking power system integrity");
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     // Check mechanical systems
     LOG_F(INFO, "Checking mechanical system status");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Check network connectivity
     LOG_F(INFO, "Checking network connectivity");
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     LOG_F(INFO, "All safety checks passed");
 }
 
 void ObservatoryAutomationTask::openRoof() {
     LOG_F(INFO, "Opening observatory roof");
-    
+
     // Pre-open checks
     LOG_F(INFO, "Performing pre-open safety checks");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Open roof
     LOG_F(INFO, "Activating roof opening mechanism");
     std::this_thread::sleep_for(std::chrono::seconds(30)); // Simulate roof opening time
-    
+
     // Verify roof position
     LOG_F(INFO, "Verifying roof is fully open");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     LOG_F(INFO, "Roof opened successfully");
 }
 
 void ObservatoryAutomationTask::closeRoof() {
     LOG_F(INFO, "Closing observatory roof");
-    
+
     // Pre-close checks
     LOG_F(INFO, "Ensuring telescope is clear of roof path");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Close roof
     LOG_F(INFO, "Activating roof closing mechanism");
     std::this_thread::sleep_for(std::chrono::seconds(30)); // Simulate roof closing time
-    
+
     // Verify roof position
     LOG_F(INFO, "Verifying roof is fully closed and secured");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     LOG_F(INFO, "Roof closed and secured");
 }
 
 void ObservatoryAutomationTask::parkTelescope() {
     LOG_F(INFO, "Parking telescope to safe position");
-    
+
     // Stop any current operations
     LOG_F(INFO, "Stopping current telescope operations");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Move to park position
     LOG_F(INFO, "Moving telescope to park position");
     std::this_thread::sleep_for(std::chrono::seconds(15)); // Simulate slewing time
-    
+
     // Lock telescope
     LOG_F(INFO, "Locking telescope in park position");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     LOG_F(INFO, "Telescope parked successfully");
 }
 
 void ObservatoryAutomationTask::unparkTelescope() {
     LOG_F(INFO, "Unparking telescope");
-    
+
     // Unlock telescope
     LOG_F(INFO, "Unlocking telescope from park position");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Initialize tracking
     LOG_F(INFO, "Initializing telescope tracking");
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    
+
     // Verify tracking
     LOG_F(INFO, "Verifying telescope tracking status");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     LOG_F(INFO, "Telescope unparked and tracking");
 }
 
 void ObservatoryAutomationTask::coolCamera(double targetTemperature) {
     LOG_F(INFO, "Cooling camera to {} degrees Celsius", targetTemperature);
-    
+
     // Start cooling
     LOG_F(INFO, "Activating camera cooling system");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     // Monitor cooling progress (simplified)
     LOG_F(INFO, "Camera cooling in progress...");
     std::this_thread::sleep_for(std::chrono::seconds(10)); // Simulate initial cooling
-    
+
     LOG_F(INFO, "Camera cooling initiated - target: {:.1f}°C", targetTemperature);
 }
 
 void ObservatoryAutomationTask::warmCamera() {
     LOG_F(INFO, "Warming camera for shutdown");
-    
+
     // Gradual warming to prevent condensation
     LOG_F(INFO, "Initiating gradual camera warming");
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    
+
     // Turn off cooling
     LOG_F(INFO, "Disabling camera cooling system");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     LOG_F(INFO, "Camera warming completed");
 }
 
 bool ObservatoryAutomationTask::checkEquipmentStatus() {
     LOG_F(INFO, "Checking equipment status");
-    
+
     // In real implementation, this would check actual equipment
     // For now, simulate successful status check
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    
+
     LOG_F(INFO, "Equipment status check completed");
     return true; // Simulate success
 }

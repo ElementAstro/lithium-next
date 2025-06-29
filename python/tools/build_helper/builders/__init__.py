@@ -8,4 +8,4 @@ from .cmake import CMakeBuilder
 from .meson import MesonBuilder
 from .bazel import BazelBuilder
 
-__all__ = ['CMakeBuilder', 'MesonBuilder', 'BazelBuilder']
+__all__ = ["CMakeBuilder", "MesonBuilder", "BazelBuilder"]

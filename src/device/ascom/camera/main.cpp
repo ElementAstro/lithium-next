@@ -25,7 +25,7 @@ namespace lithium::device::ascom::camera {
 // ASCOMCameraMain Implementation
 // =========================================================================
 
-ASCOMCameraMain::ASCOMCameraMain() 
+ASCOMCameraMain::ASCOMCameraMain()
     : state_(CameraState::DISCONNECTED) {
     LOG_F(INFO, "ASCOMCameraMain created");
 }
@@ -39,29 +39,29 @@ ASCOMCameraMain::~ASCOMCameraMain() {
 
 bool ASCOMCameraMain::initialize(const CameraConfig& config) {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     try {
         config_ = config;
-        
+
         // Create the controller
         controller_ = std::make_shared<ASCOMCameraController>("ASCOM Camera");
         if (!controller_) {
             setError("Failed to create ASCOM camera controller");
             return false;
         }
-        
+
         // Initialize controller
         if (!controller_->initialize()) {
             setError("Failed to initialize camera controller");
             return false;
         }
-        
+
         setState(CameraState::DISCONNECTED);
         clearLastError();
-        
+
         LOG_F(INFO, "ASCOM camera initialized with device: {}", config_.deviceName);
         return true;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception during initialization: ") + e.what());
         LOG_F(ERROR, "Exception during ASCOM camera initialization: {}", e.what());
@@ -71,32 +71,32 @@ bool ASCOMCameraMain::initialize(const CameraConfig& config) {
 
 bool ASCOMCameraMain::connect() {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     if (state_ == CameraState::CONNECTED) {
         return true; // Already connected
     }
-    
+
     if (!controller_) {
         setError("Camera not initialized");
         return false;
     }
-    
+
     try {
         setState(CameraState::CONNECTING);
-        
+
         // Connect via controller
         if (!controller_->connect(config_.deviceName)) {
             setState(CameraState::ERROR);
             setError("Failed to connect to ASCOM camera");
             return false;
         }
-        
+
         setState(CameraState::CONNECTED);
         clearLastError();
-        
+
         LOG_F(INFO, "Connected to ASCOM camera: {}", config_.deviceName);
         return true;
-        
+
     } catch (const std::exception& e) {
         setState(CameraState::ERROR);
         setError(std::string("Exception during connection: ") + e.what());
@@ -107,22 +107,22 @@ bool ASCOMCameraMain::connect() {
 
 bool ASCOMCameraMain::disconnect() {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     if (state_ == CameraState::DISCONNECTED) {
         return true; // Already disconnected
     }
-    
+
     try {
         if (controller_) {
             controller_->disconnect();
         }
-        
+
         setState(CameraState::DISCONNECTED);
         clearLastError();
-        
+
         LOG_F(INFO, "Disconnected from ASCOM camera");
         return true;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception during disconnection: ") + e.what());
         LOG_F(ERROR, "Exception during ASCOM camera disconnection: {}", e.what());
@@ -132,8 +132,8 @@ bool ASCOMCameraMain::disconnect() {
 
 bool ASCOMCameraMain::isConnected() const {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    return state_ == CameraState::CONNECTED || 
-           state_ == CameraState::EXPOSING || 
+    return state_ == CameraState::CONNECTED ||
+           state_ == CameraState::EXPOSING ||
            state_ == CameraState::READING ||
            state_ == CameraState::IDLE;
 }
@@ -165,21 +165,21 @@ bool ASCOMCameraMain::startExposure(double duration, bool isDark) {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         setState(CameraState::EXPOSING);
-        
+
         bool result = controller_->startExposure(duration);
         if (!result) {
             setState(CameraState::IDLE);
             setError("Failed to start exposure");
             return false;
         }
-        
+
         clearLastError();
         LOG_F(INFO, "Started exposure: {} seconds, dark={}", duration, isDark);
         return true;
-        
+
     } catch (const std::exception& e) {
         setState(CameraState::ERROR);
         setError(std::string("Exception during exposure start: ") + e.what());
@@ -193,7 +193,7 @@ bool ASCOMCameraMain::abortExposure() {
         setError("Camera not initialized");
         return false;
     }
-    
+
     try {
         bool result = controller_->abortExposure();
         if (result) {
@@ -204,7 +204,7 @@ bool ASCOMCameraMain::abortExposure() {
             setError("Failed to abort exposure");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception during exposure abort: ") + e.what());
         LOG_F(ERROR, "Exception during exposure abort: {}", e.what());
@@ -216,7 +216,7 @@ bool ASCOMCameraMain::isExposing() const {
     if (!controller_) {
         return false;
     }
-    
+
     return controller_->isExposing();
 }
 
@@ -225,7 +225,7 @@ std::shared_ptr<AtomCameraFrame> ASCOMCameraMain::getLastImage() {
         setError("Camera not initialized");
         return nullptr;
     }
-    
+
     try {
         auto frame = controller_->getExposureResult();
         if (frame) {
@@ -233,7 +233,7 @@ std::shared_ptr<AtomCameraFrame> ASCOMCameraMain::getLastImage() {
             clearLastError();
         }
         return frame;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception getting last image: ") + e.what());
         LOG_F(ERROR, "Exception getting last image: {}", e.what());
@@ -246,10 +246,10 @@ std::shared_ptr<AtomCameraFrame> ASCOMCameraMain::downloadImage() {
         setError("Camera not connected");
         return nullptr;
     }
-    
+
     try {
         setState(CameraState::READING);
-        
+
         auto frame = controller_->getExposureResult();
         if (frame) {
             setState(CameraState::IDLE);
@@ -259,9 +259,9 @@ std::shared_ptr<AtomCameraFrame> ASCOMCameraMain::downloadImage() {
             setState(CameraState::ERROR);
             setError("Failed to download image");
         }
-        
+
         return frame;
-        
+
     } catch (const std::exception& e) {
         setState(CameraState::ERROR);
         setError(std::string("Exception during image download: ") + e.what());
@@ -327,7 +327,7 @@ bool ASCOMCameraMain::setCCDTemperature(double temperature) {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         bool result = controller_->setTemperature(temperature);
         if (result) {
@@ -337,7 +337,7 @@ bool ASCOMCameraMain::setCCDTemperature(double temperature) {
             setError("Failed to set CCD temperature");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception setting CCD temperature: ") + e.what());
         LOG_F(ERROR, "Exception setting CCD temperature: {}", e.what());
@@ -366,7 +366,7 @@ bool ASCOMCameraMain::setCoolingEnabled(bool enable) {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         bool result = enable ? controller_->startCooling(20.0) : controller_->stopCooling();
         if (result) {
@@ -376,7 +376,7 @@ bool ASCOMCameraMain::setCoolingEnabled(bool enable) {
             setError("Failed to set cooling state");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception setting cooling state: ") + e.what());
         LOG_F(ERROR, "Exception setting cooling state: {}", e.what());
@@ -393,7 +393,7 @@ bool ASCOMCameraMain::startLiveMode() {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         bool result = controller_->startVideo();
         if (result) {
@@ -403,7 +403,7 @@ bool ASCOMCameraMain::startLiveMode() {
             setError("Failed to start live mode");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception starting live mode: ") + e.what());
         LOG_F(ERROR, "Exception starting live mode: {}", e.what());
@@ -416,7 +416,7 @@ bool ASCOMCameraMain::stopLiveMode() {
         setError("Camera not initialized");
         return false;
     }
-    
+
     try {
         bool result = controller_->stopVideo();
         if (result) {
@@ -426,7 +426,7 @@ bool ASCOMCameraMain::stopLiveMode() {
             setError("Failed to stop live mode");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception stopping live mode: ") + e.what());
         LOG_F(ERROR, "Exception stopping live mode: {}", e.what());
@@ -444,7 +444,7 @@ std::shared_ptr<AtomCameraFrame> ASCOMCameraMain::getLiveFrame() {
         setError("Camera not initialized");
         return nullptr;
     }
-    
+
     try {
         return controller_->getVideoFrame();
     } catch (const std::exception& e) {
@@ -463,7 +463,7 @@ bool ASCOMCameraMain::setROI(int startX, int startY, int width, int height) {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         bool result = controller_->setResolution(startX, startY, width, height);
         if (result) {
@@ -473,7 +473,7 @@ bool ASCOMCameraMain::setROI(int startX, int startY, int width, int height) {
             setError("Failed to set ROI");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception setting ROI: ") + e.what());
         LOG_F(ERROR, "Exception setting ROI: {}", e.what());
@@ -486,7 +486,7 @@ bool ASCOMCameraMain::resetROI() {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         auto maxRes = controller_->getMaxResolution();
         bool result = controller_->setResolution(0, 0, maxRes.width, maxRes.height);
@@ -497,7 +497,7 @@ bool ASCOMCameraMain::resetROI() {
             setError("Failed to reset ROI");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception resetting ROI: ") + e.what());
         LOG_F(ERROR, "Exception resetting ROI: {}", e.what());
@@ -510,7 +510,7 @@ bool ASCOMCameraMain::setBinning(int binning) {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         bool result = controller_->setBinning(binning, binning);
         if (result) {
@@ -520,7 +520,7 @@ bool ASCOMCameraMain::setBinning(int binning) {
             setError("Failed to set binning");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception setting binning: ") + e.what());
         LOG_F(ERROR, "Exception setting binning: {}", e.what());
@@ -539,7 +539,7 @@ bool ASCOMCameraMain::setGain(int gain) {
         setError("Camera not connected");
         return false;
     }
-    
+
     try {
         bool result = controller_->setGain(gain);
         if (result) {
@@ -549,7 +549,7 @@ bool ASCOMCameraMain::setGain(int gain) {
             setError("Failed to set gain");
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setError(std::string("Exception setting gain: ") + e.what());
         LOG_F(ERROR, "Exception setting gain: {}", e.what());
@@ -571,7 +571,7 @@ std::map<std::string, double> ASCOMCameraMain::getStatistics() const {
     if (!controller_) {
         return {};
     }
-    
+
     try {
         return controller_->getFrameStatistics();
     } catch (const std::exception& e) {
@@ -611,15 +611,15 @@ ASCOMCameraMain::CameraState ASCOMCameraMain::convertControllerState() const {
     if (!controller_) {
         return CameraState::DISCONNECTED;
     }
-    
+
     if (!controller_->isConnected()) {
         return CameraState::DISCONNECTED;
     }
-    
+
     if (controller_->isExposing()) {
         return CameraState::EXPOSING;
     }
-    
+
     return CameraState::IDLE;
 }
 
@@ -647,7 +647,7 @@ std::shared_ptr<ASCOMCameraMain> createASCOMCamera(const std::string& deviceName
     ASCOMCameraMain::CameraConfig config;
     config.deviceName = deviceName;
     config.progId = deviceName; // Assume deviceName is the ProgID for COM
-    
+
     return createASCOMCamera(config);
 }
 
@@ -655,25 +655,25 @@ std::vector<std::string> discoverASCOMCameras() {
     // This would typically enumerate ASCOM cameras via registry or Alpaca discovery
     // For now, return a placeholder list
     LOG_F(INFO, "Discovering ASCOM cameras...");
-    
+
     std::vector<std::string> cameras;
-    
+
     // Add some common ASCOM camera drivers for testing
     cameras.push_back("ASCOM.Simulator.Camera");
     cameras.push_back("ASCOM.ASICamera2.Camera");
     cameras.push_back("ASCOM.QHYCamera.Camera");
-    
+
     LOG_F(INFO, "Found {} ASCOM cameras", cameras.size());
     return cameras;
 }
 
-std::optional<CameraCapabilities> 
+std::optional<CameraCapabilities>
 getASCOMCameraCapabilities(const std::string& deviceName) {
     try {
         // This would typically query the ASCOM driver for capabilities
         // For now, return default capabilities
         LOG_F(INFO, "Getting capabilities for ASCOM camera: {}", deviceName);
-        
+
         CameraCapabilities caps;
         caps.maxWidth = 1920;
         caps.maxHeight = 1080;
@@ -693,9 +693,9 @@ getASCOMCameraCapabilities(const std::string& deviceName) {
         caps.electronsPerADU = 0.37;
         caps.fullWellCapacity = 25000.0;
         caps.maxADU = 65535;
-        
+
         return caps;
-        
+
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Exception getting ASCOM camera capabilities: {}", e.what());
         return std::nullopt;

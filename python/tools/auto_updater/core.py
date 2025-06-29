@@ -12,8 +12,14 @@ from typing import Any, Dict, Optional, Union
 from tqdm import tqdm
 
 from .types import (
-    UpdateStatus, NetworkError, VerificationError, InstallationError,
-    UpdaterError, ProgressCallback, UpdaterConfig, PathLike
+    UpdateStatus,
+    NetworkError,
+    VerificationError,
+    InstallationError,
+    UpdaterError,
+    ProgressCallback,
+    UpdaterConfig,
+    PathLike,
 )
 from .utils import compare_versions, calculate_file_hash
 from .logger import logger
@@ -38,7 +44,7 @@ class AutoUpdater:
     def __init__(
         self,
         config: Union[Dict[str, Any], UpdaterConfig],
-        progress_callback: Optional[ProgressCallback] = None
+        progress_callback: Optional[ProgressCallback] = None,
     ):
         """
         Initialize the AutoUpdater.
@@ -74,11 +80,12 @@ class AutoUpdater:
             ThreadPoolExecutor: The executor object
         """
         if self._executor is None:
-            self._executor = ThreadPoolExecutor(
-                max_workers=self.config.num_threads)
+            self._executor = ThreadPoolExecutor(max_workers=self.config.num_threads)
         return self._executor
 
-    def _report_progress(self, status: UpdateStatus, progress: float, message: str) -> None:
+    def _report_progress(
+        self, status: UpdateStatus, progress: float, message: str
+    ) -> None:
         """
         Report progress to the callback if provided.
 
@@ -103,8 +110,7 @@ class AutoUpdater:
         Raises:
             NetworkError: If there is an issue connecting to the update server
         """
-        self._report_progress(UpdateStatus.CHECKING, 0.0,
-                              "Checking for updates...")
+        self._report_progress(UpdateStatus.CHECKING, 0.0, "Checking for updates...")
 
         try:
             # Make request with retry logic
@@ -120,34 +126,32 @@ class AutoUpdater:
                     time.sleep(1 * (attempt + 1))  # Backoff delay
 
             if response is None:
-                raise NetworkError(
-                    "Failed to get a response from the update server.")
+                raise NetworkError("Failed to get a response from the update server.")
 
             # Parse update information
             data = response.json()
             self.update_info = data
 
             # Check if update is available
-            latest_version = data.get('version')
+            latest_version = data.get("version")
             if not latest_version:
                 logger.warning("Version information missing in update data")
                 return False
 
-            is_newer = compare_versions(
-                self.config.current_version, latest_version) < 0
+            is_newer = compare_versions(self.config.current_version, latest_version) < 0
 
             if is_newer:
                 self._report_progress(
                     UpdateStatus.UPDATE_AVAILABLE,
                     1.0,
-                    f"Update available: {latest_version}"
+                    f"Update available: {latest_version}",
                 )
                 return True
             else:
                 self._report_progress(
                     UpdateStatus.UP_TO_DATE,
                     1.0,
-                    f"Already up to date: {self.config.current_version}"
+                    f"Already up to date: {self.config.current_version}",
                 )
                 return False
 
@@ -174,28 +178,31 @@ class AutoUpdater:
             response.raise_for_status()
 
             # Get file size if available
-            total_size = int(response.headers.get('content-length', 0))
+            total_size = int(response.headers.get("content-length", 0))
 
             # Set up progress bar
             with tqdm(
                 total=total_size,
-                unit='B',
+                unit="B",
                 unit_scale=True,
-                desc=f"Downloading {dest_path.name}"
+                desc=f"Downloading {dest_path.name}",
             ) as progress_bar:
-                with open(dest_path, 'wb') as f:
+                with open(dest_path, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:  # Filter out keep-alive chunks
                             f.write(chunk)
                             progress_bar.update(len(chunk))
 
                             # Report progress at intervals
-                            if total_size > 0 and progress_bar.n % (total_size // 10 + 1) == 0:
+                            if (
+                                total_size > 0
+                                and progress_bar.n % (total_size // 10 + 1) == 0
+                            ):
                                 progress = progress_bar.n / total_size
                                 self._report_progress(
                                     UpdateStatus.DOWNLOADING,
                                     progress,
-                                    f"Downloaded {progress_bar.n} of {total_size} bytes"
+                                    f"Downloaded {progress_bar.n} of {total_size} bytes",
                                 )
 
         except requests.exceptions.RequestException as e:
@@ -214,33 +221,33 @@ class AutoUpdater:
         """
         if not self.update_info:
             raise UpdaterError(
-                "No update information available. Call check_for_updates first.")
+                "No update information available. Call check_for_updates first."
+            )
 
         self._report_progress(
             UpdateStatus.DOWNLOADING,
             0.0,
-            f"Downloading update {self.update_info['version']}..."
+            f"Downloading update {self.update_info['version']}...",
         )
 
-        download_url = self.update_info.get('download_url')
+        download_url = self.update_info.get("download_url")
         if not download_url:
-            raise UpdaterError(
-                "Download URL not provided in update information")
+            raise UpdaterError("Download URL not provided in update information")
 
         # Prepare download path
         if self.config.temp_dir is None:
             raise UpdaterError(
-                "Temporary directory (temp_dir) is not set in configuration.")
-        download_path = self.config.temp_dir / \
-            f"update_{self.update_info['version']}.zip"
+                "Temporary directory (temp_dir) is not set in configuration."
+            )
+        download_path = (
+            self.config.temp_dir / f"update_{self.update_info['version']}.zip"
+        )
 
         # Download the file
         self.download_file(download_url, download_path)
 
         self._report_progress(
-            UpdateStatus.DOWNLOADING,
-            1.0,
-            f"Download complete: {download_path}"
+            UpdateStatus.DOWNLOADING, 1.0, f"Download complete: {download_path}"
         )
         return download_path
 
@@ -258,42 +265,39 @@ class AutoUpdater:
             raise UpdaterError("No update information available")
 
         self._report_progress(
-            UpdateStatus.VERIFYING,
-            0.0,
-            "Verifying downloaded update..."
+            UpdateStatus.VERIFYING, 0.0, "Verifying downloaded update..."
         )
 
         # Verify file hash if configured and hash is provided
-        if self.config.verify_hash and 'file_hash' in self.update_info:
-            expected_hash = self.update_info['file_hash']
+        if self.config.verify_hash and "file_hash" in self.update_info:
+            expected_hash = self.update_info["file_hash"]
             self._report_progress(
                 UpdateStatus.VERIFYING,
                 0.3,
-                f"Calculating {self.config.hash_algorithm} hash..."
+                f"Calculating {self.config.hash_algorithm} hash...",
             )
 
             calculated_hash = calculate_file_hash(
-                download_path, self.config.hash_algorithm)
+                download_path, self.config.hash_algorithm
+            )
 
             if calculated_hash.lower() != expected_hash.lower():
                 self._report_progress(
                     UpdateStatus.FAILED,
                     1.0,
-                    f"Hash verification failed. Expected: {expected_hash}, Got: {calculated_hash}"
+                    f"Hash verification failed. Expected: {expected_hash}, Got: {calculated_hash}",
                 )
                 return False
 
             self._report_progress(
-                UpdateStatus.VERIFYING,
-                1.0,
-                "Hash verification passed"
+                UpdateStatus.VERIFYING, 1.0, "Hash verification passed"
             )
         else:
             # If no hash verification is needed
             self._report_progress(
                 UpdateStatus.VERIFYING,
                 1.0,
-                "Hash verification skipped (not configured or hash not provided)"
+                "Hash verification skipped (not configured or hash not provided)",
             )
 
         return True
@@ -309,18 +313,16 @@ class AutoUpdater:
             InstallationError: If backup fails
         """
         self._report_progress(
-            UpdateStatus.BACKING_UP,
-            0.0,
-            "Backing up current installation..."
+            UpdateStatus.BACKING_UP, 0.0, "Backing up current installation..."
         )
 
         # Create timestamped backup directory
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         if self.config.backup_dir is None:
-            raise InstallationError(
-                "Backup directory is not set in configuration.")
-        backup_dir = self.config.backup_dir / \
-            f"backup_{self.config.current_version}_{timestamp}"
+            raise InstallationError("Backup directory is not set in configuration.")
+        backup_dir = (
+            self.config.backup_dir / f"backup_{self.config.current_version}_{timestamp}"
+        )
         backup_dir.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -334,7 +336,8 @@ class AutoUpdater:
             # Get all files in installation directory
             all_items = list(self.config.install_dir.glob("**/*"))
             items_to_backup = [
-                item for item in all_items
+                item
+                for item in all_items
                 if not any(p in item.parents or p == item for p in excluded_dirs)
                 and not item.is_dir()  # Only count files for progress tracking
             ]
@@ -342,9 +345,7 @@ class AutoUpdater:
             total_items = len(items_to_backup)
             if total_items == 0:
                 self._report_progress(
-                    UpdateStatus.BACKING_UP,
-                    1.0,
-                    "No files to backup"
+                    UpdateStatus.BACKING_UP, 1.0, "No files to backup"
                 )
                 return backup_dir
 
@@ -364,8 +365,7 @@ class AutoUpdater:
                 for item in items_to_backup:
                     rel_path = item.relative_to(self.config.install_dir)
                     dest_path = backup_dir / rel_path
-                    futures.append(executor.submit(
-                        shutil.copy2, item, dest_path))
+                    futures.append(executor.submit(shutil.copy2, item, dest_path))
 
                 # Process results as they complete
                 for future in futures:
@@ -378,34 +378,29 @@ class AutoUpdater:
                         self._report_progress(
                             UpdateStatus.BACKING_UP,
                             processed / total_items,
-                            f"Backed up {processed}/{total_items} files"
+                            f"Backed up {processed}/{total_items} files",
                         )
 
             # Create a manifest file with backup information
             manifest = {
                 "timestamp": timestamp,
                 "version": self.config.current_version,
-                "backup_path": str(backup_dir)
+                "backup_path": str(backup_dir),
             }
 
-            with open(backup_dir / "backup_manifest.json", 'w') as f:
+            with open(backup_dir / "backup_manifest.json", "w") as f:
                 json.dump(manifest, f, indent=2)
 
             self._report_progress(
-                UpdateStatus.BACKING_UP,
-                1.0,
-                f"Backup complete: {backup_dir}"
+                UpdateStatus.BACKING_UP, 1.0, f"Backup complete: {backup_dir}"
             )
             return backup_dir
 
         except Exception as e:
-            self._report_progress(
-                UpdateStatus.FAILED,
-                0.0,
-                f"Backup failed: {e}"
-            )
+            self._report_progress(UpdateStatus.FAILED, 0.0, f"Backup failed: {e}")
             raise InstallationError(
-                f"Failed to backup current installation: {e}") from e
+                f"Failed to backup current installation: {e}"
+            ) from e
 
     def extract_update(self, download_path: Path) -> Path:
         """
@@ -421,14 +416,13 @@ class AutoUpdater:
             InstallationError: If extraction fails
         """
         self._report_progress(
-            UpdateStatus.EXTRACTING,
-            0.0,
-            "Extracting update files..."
+            UpdateStatus.EXTRACTING, 0.0, "Extracting update files..."
         )
 
         if self.config.temp_dir is None:
             raise InstallationError(
-                "Temporary directory (temp_dir) is not set in configuration.")
+                "Temporary directory (temp_dir) is not set in configuration."
+            )
         extract_dir = self.config.temp_dir / "extracted"
 
         # Clean up existing extraction directory if it exists
@@ -440,7 +434,7 @@ class AutoUpdater:
 
         try:
             # Extract the archive
-            with zipfile.ZipFile(download_path, 'r') as zip_ref:
+            with zipfile.ZipFile(download_path, "r") as zip_ref:
                 # Get total number of items for progress tracking
                 total_items = len(zip_ref.namelist())
 
@@ -453,21 +447,15 @@ class AutoUpdater:
                         self._report_progress(
                             UpdateStatus.EXTRACTING,
                             i / total_items,
-                            f"Extracted {i}/{total_items} files"
+                            f"Extracted {i}/{total_items} files",
                         )
 
-            self._report_progress(
-                UpdateStatus.EXTRACTING,
-                1.0,
-                "Extraction complete"
-            )
+            self._report_progress(UpdateStatus.EXTRACTING, 1.0, "Extraction complete")
             return extract_dir
 
         except zipfile.BadZipFile as e:
             self._report_progress(
-                UpdateStatus.FAILED,
-                0.0,
-                f"Failed to extract update: {e}"
+                UpdateStatus.FAILED, 0.0, f"Failed to extract update: {e}"
             )
             raise InstallationError(f"Failed to extract update: {e}") from e
 
@@ -485,9 +473,7 @@ class AutoUpdater:
             InstallationError: If installation fails
         """
         self._report_progress(
-            UpdateStatus.INSTALLING,
-            0.0,
-            "Installing update files..."
+            UpdateStatus.INSTALLING, 0.0, "Installing update files..."
         )
 
         try:
@@ -522,29 +508,28 @@ class AutoUpdater:
                     self._report_progress(
                         UpdateStatus.INSTALLING,
                         i / total_files,
-                        f"Installed {i}/{total_files} files"
+                        f"Installed {i}/{total_files} files",
                     )
 
             # Run custom post-install actions
-            if self.config.custom_params is not None and 'post_install' in self.config.custom_params:
+            if (
+                self.config.custom_params is not None
+                and "post_install" in self.config.custom_params
+            ):
                 self._report_progress(
-                    UpdateStatus.FINALIZING,
-                    0.9,
-                    "Running post-install actions..."
+                    UpdateStatus.FINALIZING, 0.9, "Running post-install actions..."
                 )
-                self.config.custom_params['post_install']()
+                self.config.custom_params["post_install"]()
 
             if self.update_info is not None:
                 self._report_progress(
                     UpdateStatus.COMPLETE,
                     1.0,
-                    f"Update to version {self.update_info['version']} installed successfully"
+                    f"Update to version {self.update_info['version']} installed successfully",
                 )
             else:
                 self._report_progress(
-                    UpdateStatus.COMPLETE,
-                    1.0,
-                    "Update installed successfully"
+                    UpdateStatus.COMPLETE, 1.0, "Update installed successfully"
                 )
 
             # Log the update
@@ -553,11 +538,7 @@ class AutoUpdater:
             return True
 
         except Exception as e:
-            self._report_progress(
-                UpdateStatus.FAILED,
-                0.0,
-                f"Installation failed: {e}"
-            )
+            self._report_progress(UpdateStatus.FAILED, 0.0, f"Installation failed: {e}")
             raise InstallationError(f"Failed to install update: {e}") from e
 
     def rollback(self, backup_dir: Path) -> bool:
@@ -574,37 +555,35 @@ class AutoUpdater:
             InstallationError: If rollback fails
         """
         self._report_progress(
-            UpdateStatus.BACKING_UP,
-            0.0,
-            f"Rolling back to backup: {backup_dir}"
+            UpdateStatus.BACKING_UP, 0.0, f"Rolling back to backup: {backup_dir}"
         )
 
         try:
             # Check if backup directory exists
             if not backup_dir.exists():
-                raise InstallationError(
-                    f"Backup directory not found: {backup_dir}")
+                raise InstallationError(f"Backup directory not found: {backup_dir}")
 
             # Check for manifest file
             manifest_path = backup_dir / "backup_manifest.json"
             if manifest_path.exists():
-                with open(manifest_path, 'r') as f:
+                with open(manifest_path, "r") as f:
                     manifest = json.load(f)
-                version = manifest.get('version', 'unknown')
+                version = manifest.get("version", "unknown")
             else:
-                version = 'unknown'
+                version = "unknown"
 
             # Get all files in backup
             backup_files = list(backup_dir.glob("**/*"))
-            files_to_restore = [f for f in backup_files if f.is_file()
-                                and f.name != "backup_manifest.json"]
+            files_to_restore = [
+                f
+                for f in backup_files
+                if f.is_file() and f.name != "backup_manifest.json"
+            ]
 
             total_files = len(files_to_restore)
             if total_files == 0:
                 self._report_progress(
-                    UpdateStatus.ROLLED_BACK,
-                    1.0,
-                    "No files found in backup"
+                    UpdateStatus.ROLLED_BACK, 1.0, "No files found in backup"
                 )
                 return False
 
@@ -624,22 +603,16 @@ class AutoUpdater:
                     self._report_progress(
                         UpdateStatus.BACKING_UP,
                         i / total_files,
-                        f"Restored {i}/{total_files} files"
+                        f"Restored {i}/{total_files} files",
                     )
 
             self._report_progress(
-                UpdateStatus.ROLLED_BACK,
-                1.0,
-                f"Rollback to version {version} complete"
+                UpdateStatus.ROLLED_BACK, 1.0, f"Rollback to version {version} complete"
             )
             return True
 
         except Exception as e:
-            self._report_progress(
-                UpdateStatus.FAILED,
-                0.0,
-                f"Rollback failed: {e}"
-            )
+            self._report_progress(UpdateStatus.FAILED, 0.0, f"Rollback failed: {e}")
             raise InstallationError(f"Failed to rollback: {e}") from e
 
     def _log_update(self) -> None:
@@ -652,21 +625,23 @@ class AutoUpdater:
         try:
             # Load existing log or create new one
             if log_file.exists():
-                with open(log_file, 'r') as f:
+                with open(log_file, "r") as f:
                     log_data = json.load(f)
             else:
                 log_data = {"updates": []}
 
             # Add new entry
-            log_data["updates"].append({
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "from_version": self.config.current_version,
-                "to_version": self.update_info['version'],
-                "download_url": self.update_info.get('download_url', '')
-            })
+            log_data["updates"].append(
+                {
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "from_version": self.config.current_version,
+                    "to_version": self.update_info["version"],
+                    "download_url": self.update_info.get("download_url", ""),
+                }
+            )
 
             # Write log
-            with open(log_file, 'w') as f:
+            with open(log_file, "w") as f:
                 json.dump(log_data, f, indent=2)
 
         except Exception as e:
@@ -716,13 +691,14 @@ class AutoUpdater:
                 raise VerificationError("Update verification failed")
 
             # Run custom post-download actions if specified
-            if self.config.custom_params is not None and 'post_download' in self.config.custom_params:
+            if (
+                self.config.custom_params is not None
+                and "post_download" in self.config.custom_params
+            ):
                 self._report_progress(
-                    UpdateStatus.FINALIZING,
-                    0.0,
-                    "Running post-download actions..."
+                    UpdateStatus.FINALIZING, 0.0, "Running post-download actions..."
                 )
-                self.config.custom_params['post_download']()
+                self.config.custom_params["post_download"]()
 
             # Backup current installation
             backup_dir = self.backup_current_installation()
@@ -742,9 +718,7 @@ class AutoUpdater:
 
         except Exception as e:
             self._report_progress(
-                UpdateStatus.FAILED,
-                0.0,
-                f"Update process failed: {e}"
+                UpdateStatus.FAILED, 0.0, f"Update process failed: {e}"
             )
             raise
         finally:

@@ -8,7 +8,7 @@ namespace lithium::task::custom::focuser {
 
 /**
  * @brief Task for measuring and compensating focuser backlash
- * 
+ *
  * Backlash occurs when changing direction due to mechanical play
  * in gears. This task measures backlash and compensates for it
  * during focusing operations.
@@ -106,29 +106,29 @@ private:
     TaskResult performBasicMeasurement(BacklashMeasurement& measurement);
     TaskResult performDetailedMeasurement(BacklashMeasurement& measurement);
     TaskResult performHysteresisMeasurement(BacklashMeasurement& measurement);
-    
+
     // Analysis helpers
-    int analyzeBacklashFromData(const std::vector<std::pair<int, double>>& data, 
+    int analyzeBacklashFromData(const std::vector<std::pair<int, double>>& data,
                                bool inward_direction);
     double calculateMeasurementConfidence(const BacklashMeasurement& measurement);
     bool isBacklashMeasurementValid(const BacklashMeasurement& measurement);
-    
+
     // Compensation logic
     TaskResult applyBacklashCompensation(int target_position, int current_position);
     bool needsDirectionChange(int current_position, int target_position);
     int calculateOvershoot(int backlash_amount, int target_position);
-    
+
     // Movement helpers
     TaskResult moveAndSettle(int position);
     TaskResult moveInDirection(int steps, bool inward);
     TaskResult waitForSettling();
-    
+
     // Data management
     void saveMeasurement(const BacklashMeasurement& measurement);
     void saveCompensationEvent(const CompensationEvent& event);
     void pruneOldMeasurements();
     void pruneOldEvents();
-    
+
     // Analysis and optimization
     BacklashMeasurement calculateAverageMeasurement() const;
     double calculateBacklashVariability() const;
@@ -137,29 +137,29 @@ private:
 private:
     std::shared_ptr<device::Camera> camera_;
     Config config_;
-    
+
     // Backlash data
     std::deque<BacklashMeasurement> measurement_history_;
     std::deque<CompensationEvent> compensation_history_;
     std::optional<BacklashMeasurement> current_measurement_;
-    
+
     // Movement tracking
     int last_position_ = 0;
     bool last_direction_inward_ = true;
     std::chrono::steady_clock::time_point last_move_time_;
-    
+
     // Calibration state
     bool calibration_in_progress_ = false;
     std::vector<std::pair<int, double>> calibration_data_;
-    
+
     // Statistics cache
     mutable Statistics cached_statistics_;
     mutable std::chrono::steady_clock::time_point statistics_cache_time_;
-    
+
     // Thread safety
     mutable std::mutex measurement_mutex_;
     mutable std::mutex compensation_mutex_;
-    
+
     // Constants
     static constexpr size_t MAX_MEASUREMENT_HISTORY = 100;
     static constexpr size_t MAX_COMPENSATION_HISTORY = 1000;
@@ -201,7 +201,7 @@ protected:
 public:
     void setConfig(const Config& config);
     Config getConfig() const;
-    
+
     DetectionResult getLastResult() const;
 
 private:
@@ -226,11 +226,11 @@ public:
 
     static Recommendation analyzeBacklashData(
         const std::vector<BacklashCompensationTask::BacklashMeasurement>& measurements);
-    
+
     static Recommendation optimizeForFocuser(
         const std::string& focuser_model,
         const std::vector<BacklashCompensationTask::BacklashMeasurement>& measurements);
-    
+
     static bool shouldRecalibrate(
         const std::vector<BacklashCompensationTask::BacklashMeasurement>& measurements,
         std::chrono::steady_clock::time_point last_calibration);

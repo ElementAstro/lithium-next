@@ -22,7 +22,7 @@ public:
      * @param core Shared pointer to the INDIFocuserCore
      */
     explicit TemperatureManager(std::shared_ptr<INDIFocuserCore> core);
-    
+
     /**
      * @brief Virtual destructor.
      */

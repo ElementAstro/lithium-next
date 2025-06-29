@@ -42,20 +42,20 @@ public:
 
     auto slewToTarget(double ra, double dec, bool enableTracking = true) -> bool {
         if (!state_.isConnected) return false;
-        
+
         state_.targetRA = ra;
         state_.targetDEC = dec;
         state_.isSlewing = true;
         state_.status = "Slewing";
-        
+
         spdlog::info("Telescope slewing to RA: {:.2f}h, DEC: {:.2f}°", ra, dec);
-        
+
         // Simulate slew time based on distance
         double deltaRA = std::abs(ra - state_.ra);
         double deltaDEC = std::abs(dec - state_.dec);
         double distance = std::sqrt(deltaRA*deltaRA + deltaDEC*deltaDEC);
         int slewTimeMs = static_cast<int>(distance * 1000 / state_.slewRate);
-        
+
         // Simulate slewing in background
         std::thread([this, ra, dec, enableTracking, slewTimeMs]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(slewTimeMs));
@@ -66,13 +66,13 @@ public:
             state_.status = enableTracking ? "Tracking" : "Idle";
             spdlog::info("Telescope slew completed. Now at RA: {:.2f}h, DEC: {:.2f}°", ra, dec);
         }).detach();
-        
+
         return true;
     }
 
     auto enableTracking(bool enable) -> bool {
         if (state_.isSlewing) return false;
-        
+
         state_.isTracking = enable;
         state_.status = enable ? "Tracking" : "Idle";
         spdlog::info("Telescope tracking: {}", enable ? "ON" : "OFF");
@@ -81,7 +81,7 @@ public:
 
     auto park() -> bool {
         if (state_.isSlewing) return false;
-        
+
         state_.isParked = true;
         state_.isTracking = false;
         state_.status = "Parked";
@@ -130,11 +130,11 @@ public:
 
     auto performMeridianFlip() -> bool {
         if (!checkMeridianFlip()) return true;
-        
+
         spdlog::info("Performing meridian flip");
         state_.isSlewing = true;
         state_.status = "Meridian Flip";
-        
+
         std::thread([this]() {
             std::this_thread::sleep_for(std::chrono::seconds(30));
             state_.pierSide = (state_.pierSide == 0) ? 1 : 0;
@@ -142,7 +142,7 @@ public:
             state_.status = "Tracking";
             spdlog::info("Meridian flip completed");
         }).detach();
-        
+
         return true;
     }
 
@@ -191,37 +191,37 @@ auto TelescopeGotoImagingTask::taskName() -> std::string {
 void TelescopeGotoImagingTask::execute(const json& params) {
     try {
         validateTelescopeParameters(params);
-        
+
         double targetRA = params["target_ra"];
         double targetDEC = params["target_dec"];
         bool enableTracking = params.value("enable_tracking", true);
         bool waitForSlew = params.value("wait_for_slew", true);
-        
+
         spdlog::info("Telescope goto imaging: RA {:.3f}h, DEC {:.3f}°", targetRA, targetDEC);
-        
+
 #ifdef MOCK_TELESCOPE
         auto& telescope = MockTelescope::getInstance();
-        
+
         if (!telescope.slewToTarget(targetRA, targetDEC, enableTracking)) {
             throw atom::error::RuntimeError("Failed to start telescope slew");
         }
-        
+
         if (waitForSlew) {
             // Wait for slew to complete
             while (telescope.getState().isSlewing) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 spdlog::debug("Waiting for telescope slew to complete...");
             }
-            
+
             // Check if tracking is enabled as requested
             if (enableTracking && !telescope.getState().isTracking) {
                 telescope.enableTracking(true);
             }
         }
 #endif
-        
+
         LOG_F(INFO, "Telescope goto imaging completed successfully");
-        
+
     } catch (const std::exception& e) {
         handleTelescopeError(*this, e);
         throw;
@@ -229,12 +229,12 @@ void TelescopeGotoImagingTask::execute(const json& params) {
 }
 
 auto TelescopeGotoImagingTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<TelescopeGotoImagingTask>("TelescopeGotoImaging", 
+    auto task = std::make_unique<TelescopeGotoImagingTask>("TelescopeGotoImaging",
         [](const json& params) {
             TelescopeGotoImagingTask taskInstance("TelescopeGotoImaging", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -247,7 +247,7 @@ void TelescopeGotoImagingTask::defineParameters(Task& task) {
         .defaultValue = 12.0,
         .description = "Target right ascension in hours (0-24)"
     });
-    
+
     task.addParameter({
         .name = "target_dec",
         .type = "number",
@@ -255,7 +255,7 @@ void TelescopeGotoImagingTask::defineParameters(Task& task) {
         .defaultValue = 45.0,
         .description = "Target declination in degrees (-90 to +90)"
     });
-    
+
     task.addParameter({
         .name = "enable_tracking",
         .type = "boolean",
@@ -263,7 +263,7 @@ void TelescopeGotoImagingTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Enable tracking after slew"
     });
-    
+
     task.addParameter({
         .name = "wait_for_slew",
         .type = "boolean",
@@ -277,18 +277,18 @@ void TelescopeGotoImagingTask::validateTelescopeParameters(const json& params) {
     if (!params.contains("target_ra")) {
         throw atom::error::InvalidArgument("Missing required parameter: target_ra");
     }
-    
+
     if (!params.contains("target_dec")) {
         throw atom::error::InvalidArgument("Missing required parameter: target_dec");
     }
-    
+
     double ra = params["target_ra"];
     double dec = params["target_dec"];
-    
+
     if (ra < 0.0 || ra >= 24.0) {
         throw atom::error::InvalidArgument("Right ascension must be between 0 and 24 hours");
     }
-    
+
     if (dec < -90.0 || dec > 90.0) {
         throw atom::error::InvalidArgument("Declination must be between -90 and +90 degrees");
     }
@@ -308,22 +308,22 @@ auto TrackingControlTask::taskName() -> std::string {
 void TrackingControlTask::execute(const json& params) {
     try {
         validateTrackingParameters(params);
-        
+
         bool enable = params["enable"];
         std::string trackMode = params.value("track_mode", "sidereal");
-        
+
         spdlog::info("Setting telescope tracking: {} (mode: {})", enable ? "ON" : "OFF", trackMode);
-        
+
 #ifdef MOCK_TELESCOPE
         auto& telescope = MockTelescope::getInstance();
-        
+
         if (!telescope.enableTracking(enable)) {
             throw atom::error::RuntimeError("Failed to set tracking mode");
         }
 #endif
-        
+
         LOG_F(INFO, "Tracking control completed successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("TrackingControlTask failed: {}", e.what());
         throw;
@@ -331,12 +331,12 @@ void TrackingControlTask::execute(const json& params) {
 }
 
 auto TrackingControlTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<TrackingControlTask>("TrackingControl", 
+    auto task = std::make_unique<TrackingControlTask>("TrackingControl",
         [](const json& params) {
             TrackingControlTask taskInstance("TrackingControl", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -349,7 +349,7 @@ void TrackingControlTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Enable or disable telescope tracking"
     });
-    
+
     task.addParameter({
         .name = "track_mode",
         .type = "string",
@@ -363,7 +363,7 @@ void TrackingControlTask::validateTrackingParameters(const json& params) {
     if (!params.contains("enable")) {
         throw atom::error::InvalidArgument("Missing required parameter: enable");
     }
-    
+
     if (params.contains("track_mode")) {
         std::string mode = params["track_mode"];
         std::vector<std::string> validModes = {"sidereal", "solar", "lunar", "custom"};
@@ -382,46 +382,46 @@ auto MeridianFlipTask::taskName() -> std::string {
 void MeridianFlipTask::execute(const json& params) {
     try {
         validateMeridianFlipParameters(params);
-        
+
         bool autoCheck = params.value("auto_check", true);
         bool forceFlip = params.value("force_flip", false);
         double timeLimit = params.value("time_limit", 300.0);
-        
+
         spdlog::info("Meridian flip check: auto={}, force={}", autoCheck, forceFlip);
-        
+
 #ifdef MOCK_TELESCOPE
         auto& telescope = MockTelescope::getInstance();
-        
+
         bool needsFlip = forceFlip || (autoCheck && telescope.checkMeridianFlip());
-        
+
         if (needsFlip) {
             spdlog::info("Meridian flip required, executing...");
-            
+
             if (!telescope.performMeridianFlip()) {
                 throw atom::error::RuntimeError("Failed to perform meridian flip");
             }
-            
+
             // Wait for flip completion with timeout
             auto startTime = std::chrono::steady_clock::now();
             while (telescope.getState().isSlewing) {
                 auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
                     std::chrono::steady_clock::now() - startTime).count();
-                
+
                 if (elapsed > timeLimit) {
                     throw atom::error::RuntimeError("Meridian flip timeout");
                 }
-                
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
-            
+
             spdlog::info("Meridian flip completed successfully");
         } else {
             spdlog::info("No meridian flip required");
         }
 #endif
-        
+
         LOG_F(INFO, "Meridian flip task completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("MeridianFlipTask failed: {}", e.what());
         throw;
@@ -429,12 +429,12 @@ void MeridianFlipTask::execute(const json& params) {
 }
 
 auto MeridianFlipTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<MeridianFlipTask>("MeridianFlip", 
+    auto task = std::make_unique<MeridianFlipTask>("MeridianFlip",
         [](const json& params) {
             MeridianFlipTask taskInstance("MeridianFlip", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -447,7 +447,7 @@ void MeridianFlipTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Automatically check if meridian flip is needed"
     });
-    
+
     task.addParameter({
         .name = "force_flip",
         .type = "boolean",
@@ -455,7 +455,7 @@ void MeridianFlipTask::defineParameters(Task& task) {
         .defaultValue = false,
         .description = "Force meridian flip regardless of position"
     });
-    
+
     task.addParameter({
         .name = "time_limit",
         .type = "number",
@@ -484,18 +484,18 @@ void TelescopeParkTask::execute(const json& params) {
     try {
         bool park = params.value("park", true);
         bool stopTracking = params.value("stop_tracking", true);
-        
+
         spdlog::info("Telescope park operation: {}", park ? "PARK" : "UNPARK");
-        
+
 #ifdef MOCK_TELESCOPE
         auto& telescope = MockTelescope::getInstance();
-        
+
         if (park) {
             if (stopTracking) {
                 telescope.enableTracking(false);
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
-            
+
             if (!telescope.park()) {
                 throw atom::error::RuntimeError("Failed to park telescope");
             }
@@ -505,9 +505,9 @@ void TelescopeParkTask::execute(const json& params) {
             }
         }
 #endif
-        
+
         LOG_F(INFO, "Telescope park operation completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("TelescopeParkTask failed: {}", e.what());
         throw;
@@ -515,12 +515,12 @@ void TelescopeParkTask::execute(const json& params) {
 }
 
 auto TelescopeParkTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<TelescopeParkTask>("TelescopePark", 
+    auto task = std::make_unique<TelescopeParkTask>("TelescopePark",
         [](const json& params) {
             TelescopeParkTask taskInstance("TelescopePark", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -533,7 +533,7 @@ void TelescopeParkTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Park (true) or unpark (false) telescope"
     });
-    
+
     task.addParameter({
         .name = "stop_tracking",
         .type = "boolean",
@@ -554,41 +554,41 @@ void PointingModelTask::execute(const json& params) {
         int pointCount = params.value("point_count", 20);
         bool autoSelect = params.value("auto_select", true);
         double exposureTime = params.value("exposure_time", 3.0);
-        
+
         spdlog::info("Building pointing model with {} points", pointCount);
-        
+
         // This would integrate with plate solving and star catalogues
         // For now, simulate the process
-        
+
         for (int i = 0; i < pointCount; ++i) {
             // Select target point (would use star catalogue)
             double ra = 2.0 + (i * 20.0 / pointCount);  // Spread across sky
             double dec = -60.0 + (i * 120.0 / pointCount);
-            
-            spdlog::info("Pointing model point {}/{}: RA {:.2f}h, DEC {:.2f}°", 
+
+            spdlog::info("Pointing model point {}/{}: RA {:.2f}h, DEC {:.2f}°",
                         i+1, pointCount, ra, dec);
-            
+
 #ifdef MOCK_TELESCOPE
             auto& telescope = MockTelescope::getInstance();
-            
+
             // Slew to target
             telescope.slewToTarget(ra, dec, false);
             while (telescope.getState().isSlewing) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            
+
             // Simulate exposure and plate solving
             std::this_thread::sleep_for(std::chrono::milliseconds(
                 static_cast<int>(exposureTime * 1000)));
-            
+
             // Simulate sync (in real implementation, use plate solve result)
             telescope.sync(ra + 0.001, dec + 0.001);  // Small error correction
 #endif
         }
-        
+
         spdlog::info("Pointing model completed with {} points", pointCount);
         LOG_F(INFO, "Pointing model task completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("PointingModelTask failed: {}", e.what());
         throw;
@@ -596,12 +596,12 @@ void PointingModelTask::execute(const json& params) {
 }
 
 auto PointingModelTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<PointingModelTask>("PointingModel", 
+    auto task = std::make_unique<PointingModelTask>("PointingModel",
         [](const json& params) {
             PointingModelTask taskInstance("PointingModel", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -614,7 +614,7 @@ void PointingModelTask::defineParameters(Task& task) {
         .defaultValue = 20,
         .description = "Number of points to measure"
     });
-    
+
     task.addParameter({
         .name = "auto_select",
         .type = "boolean",
@@ -622,7 +622,7 @@ void PointingModelTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Automatically select pointing stars"
     });
-    
+
     task.addParameter({
         .name = "exposure_time",
         .type = "number",
@@ -639,7 +639,7 @@ void PointingModelTask::validatePointingModelParameters(const json& params) {
             throw atom::error::InvalidArgument("Point count must be between 5 and 100");
         }
     }
-    
+
     if (params.contains("exposure_time")) {
         double exposure = params["exposure_time"];
         if (exposure < 0.1 || exposure > 60.0) {
@@ -658,14 +658,14 @@ void SlewSpeedOptimizationTask::execute(const json& params) {
     try {
         std::string optimizationTarget = params.value("target", "accuracy");
         bool adaptiveSpeed = params.value("adaptive_speed", true);
-        
+
         spdlog::info("Optimizing slew speed for: {}", optimizationTarget);
-        
+
 #ifdef MOCK_TELESCOPE
         auto& telescope = MockTelescope::getInstance();
-        
+
         double optimalSpeed = 2.0;  // Default
-        
+
         if (optimizationTarget == "speed") {
             optimalSpeed = 4.0;  // Fast slews
         } else if (optimizationTarget == "accuracy") {
@@ -673,14 +673,14 @@ void SlewSpeedOptimizationTask::execute(const json& params) {
         } else if (optimizationTarget == "balanced") {
             optimalSpeed = 2.5;  // Balanced approach
         }
-        
+
         telescope.setSlewRate(optimalSpeed);
-        
+
         spdlog::info("Slew speed optimized to: {:.1f}", optimalSpeed);
 #endif
-        
+
         LOG_F(INFO, "Slew speed optimization completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("SlewSpeedOptimizationTask failed: {}", e.what());
         throw;
@@ -688,12 +688,12 @@ void SlewSpeedOptimizationTask::execute(const json& params) {
 }
 
 auto SlewSpeedOptimizationTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<SlewSpeedOptimizationTask>("SlewSpeedOptimization", 
+    auto task = std::make_unique<SlewSpeedOptimizationTask>("SlewSpeedOptimization",
         [](const json& params) {
             SlewSpeedOptimizationTask taskInstance("SlewSpeedOptimization", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -706,7 +706,7 @@ void SlewSpeedOptimizationTask::defineParameters(Task& task) {
         .defaultValue = "accuracy",
         .description = "Optimization target (speed, accuracy, balanced)"
     });
-    
+
     task.addParameter({
         .name = "adaptive_speed",
         .type = "boolean",

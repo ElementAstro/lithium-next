@@ -40,7 +40,7 @@ QHYCameraCore::~QHYCameraCore() {
 
 auto QHYCameraCore::initialize() -> bool {
     std::lock_guard<std::mutex> lock(componentsMutex_);
-    
+
     if (isInitialized_) {
         LOG_F(WARNING, "QHY camera core already initialized");
         return true;
@@ -66,7 +66,7 @@ auto QHYCameraCore::initialize() -> bool {
 
 auto QHYCameraCore::destroy() -> bool {
     std::lock_guard<std::mutex> lock(componentsMutex_);
-    
+
     if (!isInitialized_) {
         return true;
     }
@@ -99,7 +99,7 @@ auto QHYCameraCore::connect(const std::string& deviceName, int timeout, int maxR
 
     // Try to connect with retries
     for (int retry = 0; retry < maxRetry; ++retry) {
-        LOG_F(INFO, "Attempting to connect to QHY camera: {} (attempt {}/{})", 
+        LOG_F(INFO, "Attempting to connect to QHY camera: {} (attempt {}/{})",
               deviceName, retry + 1, maxRetry);
 
         cameraId_ = findCameraByName(deviceName.empty() ? deviceName_ : deviceName);
@@ -175,7 +175,7 @@ auto QHYCameraCore::scan() -> std::vector<std::string> {
 #ifdef LITHIUM_QHY_CAMERA_ENABLED
     uint32_t cameraCount = ScanQHYCCD();
     char cameraId[32];
-    
+
     for (uint32_t i = 0; i < cameraCount; ++i) {
         if (GetQHYCCDId(i, cameraId) == QHYCCD_SUCCESS) {
             devices.emplace_back(cameraId);
@@ -225,13 +225,13 @@ auto QHYCameraCore::unregisterComponent(ComponentBase* component) -> void {
 auto QHYCameraCore::updateCameraState(CameraState state) -> void {
     CameraState oldState = currentState_;
     currentState_ = state;
-    
+
     if (oldState != state) {
-        LOG_F(INFO, "Camera state changed: {} -> {}", 
+        LOG_F(INFO, "Camera state changed: {} -> {}",
               static_cast<int>(oldState), static_cast<int>(state));
-        
+
         notifyComponents(state);
-        
+
         std::lock_guard<std::mutex> lock(callbacksMutex_);
         if (stateChangeCallback_) {
             stateChangeCallback_(state);
@@ -258,7 +258,7 @@ auto QHYCameraCore::setControlValue(CONTROL_ID controlId, double value) -> bool 
     if (!isConnected_ || !cameraHandle_) {
         return false;
     }
-    
+
     uint32_t result = SetQHYCCDParam(cameraHandle_, controlId, value);
     if (result == QHYCCD_SUCCESS) {
         LOG_F(INFO, "Set QHY control {} to {}", controlId, value);
@@ -278,7 +278,7 @@ auto QHYCameraCore::getControlValue(CONTROL_ID controlId, double* value) -> bool
     if (!isConnected_ || !cameraHandle_ || !value) {
         return false;
     }
-    
+
     *value = GetQHYCCDParam(cameraHandle_, controlId);
     return true;
 #else
@@ -292,7 +292,7 @@ auto QHYCameraCore::getControlMinMaxStep(CONTROL_ID controlId, double* min, doub
     if (!isConnected_ || !cameraHandle_) {
         return false;
     }
-    
+
     uint32_t result = GetQHYCCDParamMinMaxStep(cameraHandle_, controlId, min, max, step);
     return result == QHYCCD_SUCCESS;
 #else
@@ -308,7 +308,7 @@ auto QHYCameraCore::isControlAvailable(CONTROL_ID controlId) -> bool {
     if (!isConnected_ || !cameraHandle_) {
         return false;
     }
-    
+
     uint32_t result = IsQHYCCDControlAvailable(cameraHandle_, controlId);
     return result == QHYCCD_SUCCESS;
 #else
@@ -321,9 +321,9 @@ auto QHYCameraCore::setParameter(const std::string& name, double value) -> void 
         std::lock_guard<std::mutex> lock(parametersMutex_);
         parameters_[name] = value;
     }
-    
+
     notifyParameterChange(name, value);
-    
+
     std::lock_guard<std::mutex> lock(callbacksMutex_);
     if (parameterChangeCallback_) {
         parameterChangeCallback_(name, value);
@@ -355,7 +355,7 @@ auto QHYCameraCore::getSDKVersion() const -> std::string {
 #ifdef LITHIUM_QHY_CAMERA_ENABLED
     uint32_t year, month, day, subday;
     GetQHYCCDSDKVersion(&year, &month, &day, &subday);
-    return std::to_string(year) + "." + std::to_string(month) + "." + 
+    return std::to_string(year) + "." + std::to_string(month) + "." +
            std::to_string(day) + "." + std::to_string(subday);
 #else
     return "2023.12.18.1 (Stub)";
@@ -379,7 +379,7 @@ auto QHYCameraCore::enableUSB3Traffic(bool enable) -> bool {
     if (!isConnected_ || !cameraHandle_) {
         return false;
     }
-    
+
     if (isControlAvailable(CONTROL_USBTRAFFIC)) {
         double traffic = enable ? 100.0 : 30.0;  // Default values
         return setControlValue(CONTROL_USBTRAFFIC, traffic);
@@ -393,7 +393,7 @@ auto QHYCameraCore::setUSB3Traffic(int traffic) -> bool {
     if (!isConnected_ || !cameraHandle_) {
         return false;
     }
-    
+
     if (isControlAvailable(CONTROL_USBTRAFFIC)) {
         return setControlValue(CONTROL_USBTRAFFIC, static_cast<double>(traffic));
     }
@@ -406,7 +406,7 @@ auto QHYCameraCore::getUSB3Traffic() -> int {
     if (!isConnected_ || !cameraHandle_) {
         return 0;
     }
-    
+
     double traffic = 0.0;
     if (getControlValue(CONTROL_USBTRAFFIC, &traffic)) {
         return static_cast<int>(traffic);
@@ -464,7 +464,7 @@ auto QHYCameraCore::findCameraByName(const std::string& name) -> std::string {
 #ifdef LITHIUM_QHY_CAMERA_ENABLED
     uint32_t cameraCount = ScanQHYCCD();
     char cameraId[32];
-    
+
     for (uint32_t i = 0; i < cameraCount; ++i) {
         if (GetQHYCCDId(i, cameraId) == QHYCCD_SUCCESS) {
             if (name.empty() || std::string(cameraId).find(name) != std::string::npos) {
@@ -484,22 +484,22 @@ auto QHYCameraCore::loadCameraCapabilities() -> bool {
     if (!cameraHandle_) {
         return false;
     }
-    
+
     // Detect hardware features
     hasColorCamera_ = isControlAvailable(CONTROL_WBR) && isControlAvailable(CONTROL_WBB);
     hasCooler_ = isControlAvailable(CONTROL_COOLER);
     hasFilterWheel_ = isControlAvailable(CONTROL_CFW);
     hasUSB3_ = isControlAvailable(CONTROL_USBTRAFFIC);
-    
+
     // Get camera type from ID
     cameraType_ = cameraId_;
-    
+
     // Try to get firmware version if available
     firmwareVersion_ = "N/A";
-    
+
     // Generate serial number from camera ID
     serialNumber_ = cameraId_;
-    
+
     return true;
 #else
     // Stub implementation

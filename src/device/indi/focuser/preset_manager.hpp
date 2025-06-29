@@ -20,7 +20,7 @@ public:
      * @param core Shared pointer to the INDIFocuserCore
      */
     explicit PresetManager(std::shared_ptr<INDIFocuserCore> core);
-    
+
     /**
      * @brief Virtual destructor.
      */

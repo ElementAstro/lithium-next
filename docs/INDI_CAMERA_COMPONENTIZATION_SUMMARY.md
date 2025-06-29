@@ -17,7 +17,7 @@ The monolithic INDI camera class has been successfully split into a modular, com
 - `temperature/temperature_controller.hpp/.cpp` - Cooling system control
 - `hardware/hardware_controller.hpp/.cpp` - Gain, offset, shutter, fan controls
 - `image/image_processor.hpp/.cpp` - Image processing and analysis
-- `sequence/sequence_manager.hpp/.cpp` - Automated capture sequences  
+- `sequence/sequence_manager.hpp/.cpp` - Automated capture sequences
 - `properties/property_handler.hpp/.cpp` - INDI property management
 
 ### 3. Integration Files
@@ -76,7 +76,7 @@ Components communicate through:
 
 ### Memory Management
 - Smart pointers used throughout
-- RAII principles applied consistently  
+- RAII principles applied consistently
 - Automatic cleanup on component destruction
 - No memory leaks or dangling references
 
@@ -137,7 +137,7 @@ The component architecture enables:
 
 ### Maintainability
 - **Coupling**: Reduced from high to low
-- **Cohesion**: Increased significantly  
+- **Cohesion**: Increased significantly
 - **Testing**: Unit testing now practical
 - **Documentation**: Component-specific docs
 

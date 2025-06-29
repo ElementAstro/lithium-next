@@ -82,12 +82,12 @@ auto ModularINDIDome::initialize() -> bool {
 
 auto ModularINDIDome::destroy() -> bool {
     logInfo("Destroying modular dome");
-    
+
     try {
         if (isConnected()) {
             disconnect();
         }
-        
+
         cleanupComponents();
         logInfo("Modular dome destroyed successfully");
         return true;
@@ -110,22 +110,22 @@ auto ModularINDIDome::connect(const std::string& deviceName, int timeout, int ma
 
 auto ModularINDIDome::disconnect() -> bool {
     logInfo("Disconnecting from device");
-    
+
     if (!core_) {
         return true;
     }
-    
+
     return core_->disconnect();
 }
 
 auto ModularINDIDome::reconnect(int timeout, int maxRetry) -> bool {
     logInfo("Reconnecting to device");
-    
+
     if (!core_) {
         logError("Core not initialized");
         return false;
     }
-    
+
     return core_->reconnect(timeout, maxRetry);
 }
 
@@ -134,7 +134,7 @@ auto ModularINDIDome::scan() -> std::vector<std::string> {
         logError("Core not initialized");
         return {};
     }
-    
+
     return core_->scanForDevices();
 }
 

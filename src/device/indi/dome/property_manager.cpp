@@ -178,7 +178,7 @@ auto PropertyManager::setNumberValue(const std::string& propertyName, const std:
     }
 
     element->setValue(value);
-    
+
     auto core = getCore();
     if (!core) {
         logError("Core is null");
@@ -209,7 +209,7 @@ auto PropertyManager::setSwitchState(const std::string& propertyName, const std:
     }
 
     element->setState(state);
-    
+
     auto core = getCore();
     if (!core) {
         logError("Core is null");
@@ -239,7 +239,7 @@ auto PropertyManager::setTextValue(const std::string& propertyName, const std::s
     }
 
     element->setText(value.c_str());
-    
+
     auto core = getCore();
     if (!core) {
         logError("Core is null");
@@ -330,7 +330,7 @@ auto PropertyManager::isConnected() const -> bool {
 auto PropertyManager::isMoving() const -> bool {
     auto cw_state = getSwitchState("DOME_MOTION", "DOME_CW");
     auto ccw_state = getSwitchState("DOME_MOTION", "DOME_CCW");
-    
+
     return (cw_state && *cw_state == ISS_ON) || (ccw_state && *ccw_state == ISS_ON);
 }
 
@@ -377,21 +377,21 @@ auto PropertyManager::hasBacklash() const -> bool {
 auto PropertyManager::waitForProperty(const std::string& propertyName, int timeoutMs) const -> bool {
     auto start = std::chrono::steady_clock::now();
     auto timeout = std::chrono::milliseconds(timeoutMs);
-    
+
     while (std::chrono::steady_clock::now() - start < timeout) {
         if (getProperty(propertyName)) {
             return true;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    
+
     return false;
 }
 
 auto PropertyManager::waitForPropertyState(const std::string& propertyName, IPState state, int timeoutMs) const -> bool {
     auto start = std::chrono::steady_clock::now();
     auto timeout = std::chrono::milliseconds(timeoutMs);
-    
+
     while (std::chrono::steady_clock::now() - start < timeout) {
         auto prop = getProperty(propertyName);
         if (prop && prop->getState() == state) {
@@ -399,7 +399,7 @@ auto PropertyManager::waitForPropertyState(const std::string& propertyName, IPSt
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    
+
     return false;
 }
 
@@ -527,7 +527,7 @@ void PropertyManager::dumpProperty(const std::string& name) const {
         logWarning("Property not found: " + name);
         return;
     }
-    
+
     logInfo("Property: " + name);
     logInfo("  Type: " + std::to_string(prop->getType()));
     logInfo("  State: " + std::to_string(prop->getState()));
@@ -541,8 +541,8 @@ auto PropertyManager::getPropertyInfo(const std::string& name) const -> std::str
     if (!prop) {
         return "Property not found: " + name;
     }
-    
-    return "Property: " + name + " (Type: " + std::to_string(prop->getType()) + 
+
+    return "Property: " + name + " (Type: " + std::to_string(prop->getType()) +
            ", State: " + std::to_string(prop->getState()) + ")";
 }
 
@@ -557,12 +557,12 @@ auto PropertyManager::getDevice() const -> INDI::BaseDevice {
 
 auto PropertyManager::getProperty(const std::string& name) const -> std::optional<INDI::Property> {
     std::lock_guard<std::recursive_mutex> lock(properties_mutex_);
-    
+
     auto it = cached_properties_.find(name);
     if (it != cached_properties_.end()) {
         return it->second;
     }
-    
+
     // Try to get from device if not cached
     auto device = getDevice();
     if (device.isValid()) {
@@ -573,7 +573,7 @@ auto PropertyManager::getProperty(const std::string& name) const -> std::optiona
             return prop;
         }
     }
-    
+
     return std::nullopt;
 }
 
@@ -581,7 +581,7 @@ void PropertyManager::cacheProperty(const INDI::Property& property) {
     if (!property.isValid()) {
         return;
     }
-    
+
     std::lock_guard<std::recursive_mutex> lock(properties_mutex_);
     cached_properties_[property.getName()] = property;
 }
@@ -604,7 +604,7 @@ auto PropertyManager::validateNumberProperty(const INDI::PropertyNumber& prop, c
     if (!prop.isValid()) {
         return false;
     }
-    
+
     auto element = prop.findWidgetByName(elementName.c_str());
     return element != nullptr;
 }
@@ -613,7 +613,7 @@ auto PropertyManager::validateSwitchProperty(const INDI::PropertySwitch& prop, c
     if (!prop.isValid()) {
         return false;
     }
-    
+
     auto element = prop.findWidgetByName(elementName.c_str());
     return element != nullptr;
 }
@@ -622,7 +622,7 @@ auto PropertyManager::validateTextProperty(const INDI::PropertyText& prop, const
     if (!prop.isValid()) {
         return false;
     }
-    
+
     auto element = prop.findWidgetByName(elementName.c_str());
     return element != nullptr;
 }

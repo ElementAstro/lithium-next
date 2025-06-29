@@ -37,7 +37,7 @@ set(SWITCH_HEADERS
     switch_persistence.hpp
 )
 
-install(FILES ${SWITCH_HEADERS} 
+install(FILES ${SWITCH_HEADERS}
     DESTINATION include/lithium/device/indi/switch
     COMPONENT devel
 )

@@ -16,8 +16,16 @@ from typing import List, Dict, Optional, Set
 from loguru import logger
 
 from .core_types import (
-    CommandResult, PathLike, CompilationResult, CompilerFeatures, CompilerType, CppVersion,
-    CompileOptions, LinkOptions, CompilationError, CompilerNotFoundError
+    CommandResult,
+    PathLike,
+    CompilationResult,
+    CompilerFeatures,
+    CompilerType,
+    CppVersion,
+    CompileOptions,
+    LinkOptions,
+    CompilationError,
+    CompilerNotFoundError,
 )
 
 
@@ -26,6 +34,7 @@ class Compiler:
     """
     Class representing a compiler with its command and compilation capabilities.
     """
+
     name: str
     command: str
     compiler_type: CompilerType
@@ -46,13 +55,16 @@ class Compiler:
         # Validate compiler exists and is executable
         if not os.access(self.command, os.X_OK):
             raise CompilerNotFoundError(
-                f"Compiler {self.name} not found or not executable: {self.command}")
+                f"Compiler {self.name} not found or not executable: {self.command}"
+            )
 
-    def compile(self,
-                source_files: List[PathLike],
-                output_file: PathLike,
-                cpp_version: CppVersion,
-                options: Optional[CompileOptions] = None) -> CompilationResult:
+    def compile(
+        self,
+        source_files: List[PathLike],
+        output_file: PathLike,
+        cpp_version: CppVersion,
+        options: Optional[CompileOptions] = None,
+    ) -> CompilationResult:
         """
         Compile source files into an object file or executable.
         """
@@ -73,14 +85,14 @@ class Compiler:
             return CompilationResult(
                 success=False,
                 errors=[message],
-                duration_ms=(time.time() - start_time) * 1000
+                duration_ms=(time.time() - start_time) * 1000,
             )
 
         # Build command with all options
         cmd = [self.command, version_flag]
 
         # Add include paths
-        for path in options.get('include_paths', []):
+        for path in options.get("include_paths", []):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append(f"/I{path}")
             else:
@@ -88,7 +100,7 @@ class Compiler:
                 cmd.append(str(path))
 
         # Add preprocessor definitions
-        for name, value in options.get('defines', {}).items():
+        for name, value in options.get("defines", {}).items():
             if self.compiler_type == CompilerType.MSVC:
                 if value is None:
                     cmd.append(f"/D{name}")
@@ -101,25 +113,28 @@ class Compiler:
                     cmd.append(f"-D{name}={value}")
 
         # Add warning flags
-        cmd.extend(options.get('warnings', []))
+        cmd.extend(options.get("warnings", []))
 
         # Add optimization level
-        if 'optimization' in options:
-            cmd.append(options['optimization'])
+        if "optimization" in options:
+            cmd.append(options["optimization"])
 
         # Add debug flag if requested
-        if options.get('debug', False):
+        if options.get("debug", False):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append("/Zi")
             else:
                 cmd.append("-g")
 
         # Position independent code
-        if options.get('position_independent', False) and self.compiler_type != CompilerType.MSVC:
+        if (
+            options.get("position_independent", False)
+            and self.compiler_type != CompilerType.MSVC
+        ):
             cmd.append("-fPIC")
 
         # Add sanitizers
-        for sanitizer in options.get('sanitizers', []):
+        for sanitizer in options.get("sanitizers", []):
             if sanitizer in self.features.supported_sanitizers:
                 if self.compiler_type == CompilerType.MSVC:
                     if sanitizer == "address":
@@ -128,14 +143,14 @@ class Compiler:
                     cmd.append(f"-fsanitize={sanitizer}")
 
         # Add standard library specification
-        if 'standard_library' in options and self.compiler_type != CompilerType.MSVC:
+        if "standard_library" in options and self.compiler_type != CompilerType.MSVC:
             cmd.append(f"-stdlib={options['standard_library']}")
 
         # Add default compile flags for this compiler
         cmd.extend(self.additional_compile_flags)
 
         # Add extra flags
-        cmd.extend(options.get('extra_flags', []))
+        cmd.extend(options.get("extra_flags", []))
 
         # Add compile flag
         if self.compiler_type == CompilerType.MSVC:
@@ -167,7 +182,7 @@ class Compiler:
                 command_line=cmd,
                 duration_ms=elapsed_time,
                 errors=errors,
-                warnings=warnings
+                warnings=warnings,
             )
 
         # Check if output file was created
@@ -177,7 +192,8 @@ class Compiler:
                 command_line=cmd,
                 duration_ms=elapsed_time,
                 errors=[
-                    f"Compilation completed but output file was not created: {output_path}"]
+                    f"Compilation completed but output file was not created: {output_path}"
+                ],
             )
 
         # Parse warnings (even if successful)
@@ -188,13 +204,15 @@ class Compiler:
             output_file=output_path,
             command_line=cmd,
             duration_ms=elapsed_time,
-            warnings=warnings
+            warnings=warnings,
         )
 
-    def link(self,
-             object_files: List[PathLike],
-             output_file: PathLike,
-             options: Optional[LinkOptions] = None) -> CompilationResult:
+    def link(
+        self,
+        object_files: List[PathLike],
+        output_file: PathLike,
+        options: Optional[LinkOptions] = None,
+    ) -> CompilationResult:
         """
         Link object files into an executable or library.
         """
@@ -209,18 +227,18 @@ class Compiler:
         cmd = [self.command]
 
         # Handle shared library creation
-        if options.get('shared', False):
+        if options.get("shared", False):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append("/DLL")
             else:
                 cmd.append("-shared")
 
         # Handle static linking preference
-        if options.get('static', False) and self.compiler_type != CompilerType.MSVC:
+        if options.get("static", False) and self.compiler_type != CompilerType.MSVC:
             cmd.append("-static")
 
         # Add library paths
-        for path in options.get('library_paths', []):
+        for path in options.get("library_paths", []):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append(f"/LIBPATH:{path}")
             else:
@@ -228,29 +246,29 @@ class Compiler:
 
         # Add runtime library paths
         if self.compiler_type != CompilerType.MSVC:
-            for path in options.get('runtime_library_paths', []):
+            for path in options.get("runtime_library_paths", []):
                 if platform.system() == "Darwin":
                     cmd.append(f"-Wl,-rpath,{path}")
                 else:
                     cmd.append(f"-Wl,-rpath={path}")
 
         # Add libraries
-        for lib in options.get('libraries', []):
+        for lib in options.get("libraries", []):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append(f"{lib}.lib")
             else:
                 cmd.append(f"-l{lib}")
 
         # Strip debug symbols if requested
-        if options.get('strip', False):
+        if options.get("strip", False):
             if self.compiler_type == CompilerType.MSVC:
                 pass  # MSVC handles this differently
             else:
                 cmd.append("-s")
 
         # Add map file if requested
-        if 'map_file' in options and options['map_file'] is not None:
-            map_path = Path(options['map_file'])
+        if "map_file" in options and options["map_file"] is not None:
+            map_path = Path(options["map_file"])
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append(f"/MAP:{map_path}")
             else:
@@ -260,7 +278,7 @@ class Compiler:
         cmd.extend(self.additional_link_flags)
 
         # Add extra flags
-        cmd.extend(options.get('extra_flags', []))
+        cmd.extend(options.get("extra_flags", []))
 
         # Add object files
         cmd.extend([str(f) for f in object_files])
@@ -286,7 +304,7 @@ class Compiler:
                 command_line=cmd,
                 duration_ms=elapsed_time,
                 errors=errors,
-                warnings=warnings
+                warnings=warnings,
             )
 
         # Check if output file was created
@@ -296,7 +314,8 @@ class Compiler:
                 command_line=cmd,
                 duration_ms=elapsed_time,
                 errors=[
-                    f"Linking completed but output file was not created: {output_path}"]
+                    f"Linking completed but output file was not created: {output_path}"
+                ],
             )
 
         # Parse warnings (even if successful)
@@ -307,7 +326,7 @@ class Compiler:
             output_file=output_path,
             command_line=cmd,
             duration_ms=elapsed_time,
-            warnings=warnings
+            warnings=warnings,
         )
 
     def _run_command(self, cmd: List[str]) -> CommandResult:
@@ -318,7 +337,7 @@ class Compiler:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                universal_newlines=True
+                universal_newlines=True,
             )
             stdout, stderr = process.communicate()
             return process.returncode, stdout, stderr
@@ -332,11 +351,11 @@ class Compiler:
 
         # Different parsing based on compiler type
         if self.compiler_type == CompilerType.MSVC:
-            error_pattern = re.compile(r'.*?[Ee]rror\s+[A-Za-z0-9]+:.*')
-            warning_pattern = re.compile(r'.*?[Ww]arning\s+[A-Za-z0-9]+:.*')
+            error_pattern = re.compile(r".*?[Ee]rror\s+[A-Za-z0-9]+:.*")
+            warning_pattern = re.compile(r".*?[Ww]arning\s+[A-Za-z0-9]+:.*")
         else:
-            error_pattern = re.compile(r'.*?:[0-9]+:[0-9]+:\s+error:.*')
-            warning_pattern = re.compile(r'.*?:[0-9]+:[0-9]+:\s+warning:.*')
+            error_pattern = re.compile(r".*?:[0-9]+:[0-9]+:\s+error:.*")
+            warning_pattern = re.compile(r".*?:[0-9]+:[0-9]+:\s+warning:.*")
 
         for line in output.splitlines():
             if error_pattern.match(line):

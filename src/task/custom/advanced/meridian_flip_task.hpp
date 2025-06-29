@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Automated Meridian Flip Task
- * 
+ *
  * Performs automated meridian flip when telescope crosses the meridian,
  * including plate solving verification and autofocus after flip.
  * Inspired by NINA's meridian flip functionality.

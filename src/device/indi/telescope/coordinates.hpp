@@ -10,7 +10,7 @@
 
 /**
  * @brief Coordinate system component for INDI telescopes
- * 
+ *
  * Handles coordinate transformations, current position tracking, and coordinate systems
  */
 class TelescopeCoordinates {
@@ -131,7 +131,7 @@ public:
     /**
      * @brief Convert equatorial to horizontal coordinates
      */
-    auto equatorialToHorizontal(const EquatorialCoordinates& eq, 
+    auto equatorialToHorizontal(const EquatorialCoordinates& eq,
                                const GeographicLocation& location,
                                const std::chrono::system_clock::time_point& time) -> HorizontalCoordinates;
 
@@ -145,17 +145,17 @@ public:
 private:
     std::string name_;
     INDI::BaseDevice device_;
-    
+
     // Current coordinates
     EquatorialCoordinates currentRADECJ2000_;
     EquatorialCoordinates currentRADECJNow_;
     EquatorialCoordinates targetRADECJNow_;
     HorizontalCoordinates currentAZALT_;
-    
+
     // Location and time
     GeographicLocation location_;
     std::chrono::system_clock::time_point utcTime_;
-    
+
     // Helper methods
     auto watchCoordinateProperties() -> void;
     auto watchLocationProperties() -> void;

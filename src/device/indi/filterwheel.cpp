@@ -17,7 +17,7 @@
 #endif
 
 INDIFilterwheel::INDIFilterwheel(std::string name) : AtomFilterWheel(name) {
-    logger_ = spdlog::get("filterwheel_indi") 
+    logger_ = spdlog::get("filterwheel_indi")
                   ? spdlog::get("filterwheel_indi")
                   : spdlog::stdout_color_mt("filterwheel_indi");
 }
@@ -182,14 +182,14 @@ auto INDIFilterwheel::disconnect() -> bool {
 
     try {
         logger_->info("Disconnecting from {}...", deviceName_);
-        
+
         // Disconnect from the device
         disconnectDevice(deviceName_.c_str());
-        
+
         // Clear device state
         device_ = INDI::BaseDevice();
         isConnected_.store(false);
-        
+
         logger_->info("Successfully disconnected from {}", deviceName_);
         return true;
     } catch (const std::exception& e) {
@@ -240,12 +240,12 @@ auto INDIFilterwheel::setPosition(int position) -> bool {
         logger_->error("setPosition | ERROR : timeout ");
         return false;
     }
-    
+
     // Update statistics
     total_moves_++;
     last_move_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
-    
+
     return true;
 }
 
@@ -276,24 +276,24 @@ auto INDIFilterwheel::setSlotName(int slot, const std::string& name) -> bool {
         logger_->error("Invalid slot index: {}", slot);
         return false;
     }
-    
+
     INDI::PropertyText property = device_.getProperty("FILTER_NAME");
     if (!property.isValid()) {
         logger_->error("Unable to find FILTER_NAME property");
         return false;
     }
-    
+
     if (slot < static_cast<int>(property.size())) {
         property[slot].setText(name.c_str());
         sendNewProperty(property);
-        
+
         // Update local cache
         if (slot < static_cast<int>(slotNames_.size())) {
             slotNames_[slot] = name;
         }
         return true;
     }
-    
+
     logger_->error("Slot {} out of range for property", slot);
     return false;
 }
@@ -315,7 +315,7 @@ auto INDIFilterwheel::getFilterInfo(int slot) -> std::optional<FilterInfo> {
         logger_->error("Invalid slot index: {}", slot);
         return std::nullopt;
     }
-    
+
     // For now, return basic info based on slot name
     // This could be enhanced to store more detailed filter information
     FilterInfo info;
@@ -326,7 +326,7 @@ auto INDIFilterwheel::getFilterInfo(int slot) -> std::optional<FilterInfo> {
         info.bandwidth = 0.0;
         info.description = "Filter at slot " + std::to_string(slot);
     }
-    
+
     return info;
 }
 
@@ -335,18 +335,18 @@ auto INDIFilterwheel::setFilterInfo(int slot, const FilterInfo& info) -> bool {
         logger_->error("Invalid slot index: {}", slot);
         return false;
     }
-    
+
     // Store the filter info in the protected array
     if (slot < MAX_FILTERS) {
         filters_[slot] = info;
-        
+
         // Also update the slot name if it's different
         if (slot < static_cast<int>(slotNames_.size()) && slotNames_[slot] != info.name) {
             return setSlotName(slot, info.name);
         }
         return true;
     }
-    
+
     return false;
 }
 
@@ -404,10 +404,10 @@ auto INDIFilterwheel::abortMotion() -> bool {
         logger_->warn("FILTER_ABORT_MOTION property not available");
         return false;
     }
-    
+
     property[0].s = ISS_ON;
     sendNewProperty(property);
-    
+
     updateFilterWheelState(FilterWheelState::IDLE);
     logger_->info("Filter wheel motion aborted");
     return true;
@@ -419,10 +419,10 @@ auto INDIFilterwheel::homeFilterWheel() -> bool {
         logger_->warn("FILTER_HOME property not available");
         return false;
     }
-    
+
     property[0].s = ISS_ON;
     sendNewProperty(property);
-    
+
     updateFilterWheelState(FilterWheelState::MOVING);
     logger_->info("Homing filter wheel...");
     return true;
@@ -434,10 +434,10 @@ auto INDIFilterwheel::calibrateFilterWheel() -> bool {
         logger_->warn("FILTER_CALIBRATE property not available");
         return false;
     }
-    
+
     property[0].s = ISS_ON;
     sendNewProperty(property);
-    
+
     updateFilterWheelState(FilterWheelState::MOVING);
     logger_->info("Calibrating filter wheel...");
     return true;
@@ -448,7 +448,7 @@ auto INDIFilterwheel::getTemperature() -> std::optional<double> {
     if (!property.isValid()) {
         return std::nullopt;
     }
-    
+
     return property[0].getValue();
 }
 
@@ -504,12 +504,12 @@ auto INDIFilterwheel::getAvailableConfigurations() -> std::vector<std::string> {
 auto INDIFilterwheel::scan() -> std::vector<std::string> {
     logger_->info("Scanning for filter wheel devices...");
     std::vector<std::string> devices;
-    
+
     // This is a placeholder implementation - actual scanning would need to
     // interact with INDI server to discover available filter wheel devices
     // For now, return empty vector as scanning is typically handled by the client
     logger_->debug("Device scanning not implemented - use INDI client tools");
-    
+
     return devices;
 }
 
@@ -519,10 +519,10 @@ void INDIFilterwheel::newMessage(INDI::BaseDevice baseDevice, int messageID) {
 }
 
 ATOM_MODULE(filterwheel_indi, [](Component &component) {
-    auto logger = spdlog::get("filterwheel_indi") 
+    auto logger = spdlog::get("filterwheel_indi")
                       ? spdlog::get("filterwheel_indi")
                       : spdlog::stdout_color_mt("filterwheel_indi");
-    
+
     logger->info("Registering filterwheel_indi module...");
     component.def("connect", &INDIFilterwheel::connect, "device",
                   "Connect to a filterwheel device.");
@@ -544,13 +544,13 @@ ATOM_MODULE(filterwheel_indi, [](Component &component) {
                   "Get detailed filter position information.");
     component.def("set_position", &INDIFilterwheel::setPosition, "device",
                   "Set the current filter position.");
-    component.def("get_slot_name", 
-                  static_cast<std::optional<std::string>(INDIFilterwheel::*)(int)>(&INDIFilterwheel::getSlotName), 
+    component.def("get_slot_name",
+                  static_cast<std::optional<std::string>(INDIFilterwheel::*)(int)>(&INDIFilterwheel::getSlotName),
                   "device", "Get the current filter slot name.");
-    component.def("set_slot_name", 
-                  static_cast<bool(INDIFilterwheel::*)(int, const std::string&)>(&INDIFilterwheel::setSlotName), 
+    component.def("set_slot_name",
+                  static_cast<bool(INDIFilterwheel::*)(int, const std::string&)>(&INDIFilterwheel::setSlotName),
                   "device", "Set the current filter slot name.");
-    
+
     // Enhanced filter wheel methods
     component.def("is_moving", &INDIFilterwheel::isMoving, "device",
                   "Check if the filter wheel is moving.");

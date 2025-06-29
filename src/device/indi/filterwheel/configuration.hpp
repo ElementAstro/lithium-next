@@ -44,7 +44,7 @@ protected:
     std::filesystem::path getConfigurationFile(const std::string& name) const;
     auto serializeCurrentConfiguration() -> std::string;
     auto deserializeConfiguration(const std::string& configStr) -> bool;
-    
+
 private:
     std::filesystem::path configBasePath_;
 };

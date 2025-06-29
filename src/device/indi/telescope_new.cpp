@@ -274,7 +274,7 @@ auto INDITelescope::setAlignmentMode(AlignmentMode mode) -> bool {
     return manager_->setAlignmentMode(mode);
 }
 
-auto INDITelescope::addAlignmentPoint(const EquatorialCoordinates& measured, 
+auto INDITelescope::addAlignmentPoint(const EquatorialCoordinates& measured,
                                       const EquatorialCoordinates& target) -> bool {
     return manager_->addAlignmentPoint(measured, target);
 }
@@ -301,23 +301,23 @@ ATOM_MODULE(telescope_indi, [](Component &component) {
     component.def("create_telescope", [](const std::string& name) -> std::shared_ptr<INDITelescope> {
         return std::make_shared<INDITelescope>(name);
     });
-    
-    component.def("telescope_connect", [](std::shared_ptr<INDITelescope> telescope, 
+
+    component.def("telescope_connect", [](std::shared_ptr<INDITelescope> telescope,
                                          const std::string& deviceName) -> bool {
         return telescope->connect(deviceName);
     });
-    
+
     component.def("telescope_disconnect", [](std::shared_ptr<INDITelescope> telescope) -> bool {
         return telescope->disconnect();
     });
-    
+
     component.def("telescope_scan", [](std::shared_ptr<INDITelescope> telescope) -> std::vector<std::string> {
         return telescope->scan();
     });
-    
+
     component.def("telescope_is_connected", [](std::shared_ptr<INDITelescope> telescope) -> bool {
         return telescope->isConnected();
     });
-    
+
     spdlog::info("INDI telescope component registered successfully");
 });

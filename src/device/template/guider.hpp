@@ -90,29 +90,29 @@ struct GuideParameters {
     // Exposure settings
     double exposure_time{1.0};      // seconds
     int gain{0};                    // camera gain
-    
+
     // Guide algorithm settings
     double min_error{0.15};         // arcseconds
     double max_error{5.0};          // arcseconds
     double aggressivity{100.0};     // percentage
     double min_pulse{10.0};         // ms
     double max_pulse{5000.0};       // ms
-    
+
     // Calibration settings
     double calibration_step{1000.0}; // ms
     int calibration_steps{12};
     double calibration_distance{25.0}; // pixels
-    
+
     // Dithering settings
     double dither_amount{3.0};      // pixels
     int settle_time{10};            // seconds
     double settle_tolerance{1.5};   // pixels
-    
+
     // Star selection
     double min_star_hfd{1.5};       // pixels
     double max_star_hfd{10.0};      // pixels
     double min_star_snr{6.0};
-    
+
     bool enable_dec_guiding{true};
     bool reverse_dec{false};
     bool enable_backlash_compensation{false};
@@ -137,7 +137,7 @@ public:
         setType("Guider");
         guide_statistics_.session_start = std::chrono::system_clock::now();
     }
-    
+
     ~AtomGuider() override = default;
 
     // State management
@@ -242,34 +242,34 @@ protected:
     GuideParameters guide_parameters_;
     CalibrationData calibration_data_;
     GuideStatistics guide_statistics_;
-    
+
     // Current state
     std::optional<GuideStar> current_guide_star_;
     std::shared_ptr<AtomCameraFrame> last_guide_frame_;
     std::shared_ptr<AtomCameraFrame> dark_frame_;
     GuideError current_error_;
-    
+
     // Error history for statistics
     std::vector<GuideError> error_history_;
     static constexpr size_t MAX_ERROR_HISTORY = 1000;
-    
+
     // Device connections
     std::string guide_camera_name_;
     std::string guide_mount_name_;
-    
+
     // Settings
     bool subframing_enabled_{false};
     int subframe_x_{0}, subframe_y_{0}, subframe_width_{0}, subframe_height_{0};
     bool dark_subtraction_enabled_{false};
     double pixel_scale_{1.0}; // arcsec/pixel
-    
+
     // Callbacks
     GuideCallback guide_callback_;
     StateCallback state_callback_;
     StarCallback star_callback_;
     CalibrationCallback calibration_callback_;
     DitherCallback dither_callback_;
-    
+
     // Utility methods
     virtual void updateGuideState(GuideState state) { guide_state_ = state; }
     virtual void updateStatistics(const GuideError& error);

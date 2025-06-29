@@ -30,7 +30,8 @@ class Pybind11Integration:
         """
         if not Pybind11Integration.check_pybind11_available():
             raise ImportError(
-                "pybind11 is not installed. Install with 'pip install pybind11'")
+                "pybind11 is not installed. Install with 'pip install pybind11'"
+            )
 
         # The binding code generation method would remain identical to the original
         binding_code = """

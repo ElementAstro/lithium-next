@@ -22,7 +22,7 @@ Description: ASCOM Rotator Implementation
 
 #include <spdlog/spdlog.h>
 
-ASCOMRotator::ASCOMRotator(std::string name) 
+ASCOMRotator::ASCOMRotator(std::string name)
     : AtomRotator(std::move(name)) {
     spdlog::info("ASCOMRotator constructor called with name: {}", getName());
 }
@@ -30,7 +30,7 @@ ASCOMRotator::ASCOMRotator(std::string name)
 ASCOMRotator::~ASCOMRotator() {
     spdlog::info("ASCOMRotator destructor called");
     disconnect();
-    
+
 #ifdef _WIN32
     if (com_rotator_) {
         com_rotator_->Release();
@@ -41,7 +41,7 @@ ASCOMRotator::~ASCOMRotator() {
 
 auto ASCOMRotator::initialize() -> bool {
     spdlog::info("Initializing ASCOM Rotator");
-    
+
     // Initialize COM on Windows
 #ifdef _WIN32
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
@@ -50,28 +50,28 @@ auto ASCOMRotator::initialize() -> bool {
         return false;
     }
 #endif
-    
+
     return true;
 }
 
 auto ASCOMRotator::destroy() -> bool {
     spdlog::info("Destroying ASCOM Rotator");
-    
+
     stopMonitoring();
     disconnect();
-    
+
 #ifdef _WIN32
     CoUninitialize();
 #endif
-    
+
     return true;
 }
 
 auto ASCOMRotator::connect(const std::string &deviceName, int timeout, int maxRetry) -> bool {
     spdlog::info("Connecting to ASCOM rotator device: {}", deviceName);
-    
+
     device_name_ = deviceName;
-    
+
     // Determine connection type
     if (deviceName.find("://") != std::string::npos) {
         // Alpaca REST API - parse URL
@@ -79,7 +79,7 @@ auto ASCOMRotator::connect(const std::string &deviceName, int timeout, int maxRe
         // Parse host, port, device number from URL
         return connectToAlpacaDevice("localhost", 11111, 0);
     }
-    
+
 #ifdef _WIN32
     // Try as COM ProgID
     connection_type_ = ConnectionType::COM_DRIVER;
@@ -92,28 +92,28 @@ auto ASCOMRotator::connect(const std::string &deviceName, int timeout, int maxRe
 
 auto ASCOMRotator::disconnect() -> bool {
     spdlog::info("Disconnecting ASCOM Rotator");
-    
+
     stopMonitoring();
-    
+
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         disconnectFromAlpacaDevice();
     }
-    
+
 #ifdef _WIN32
     if (connection_type_ == ConnectionType::COM_DRIVER) {
         disconnectFromCOMDriver();
     }
 #endif
-    
+
     is_connected_.store(false);
     return true;
 }
 
 auto ASCOMRotator::scan() -> std::vector<std::string> {
     spdlog::info("Scanning for ASCOM rotator devices");
-    
+
     std::vector<std::string> devices;
-    
+
 #ifdef _WIN32
     // Scan Windows registry for ASCOM Rotator drivers
     // TODO: Implement registry scanning
@@ -122,7 +122,7 @@ auto ASCOMRotator::scan() -> std::vector<std::string> {
     // Scan for Alpaca devices
     auto alpacaDevices = discoverAlpacaDevices();
     devices.insert(devices.end(), alpacaDevices.begin(), alpacaDevices.end());
-    
+
     return devices;
 }
 
@@ -139,7 +139,7 @@ auto ASCOMRotator::getPosition() -> std::optional<double> {
     if (!isConnected()) {
         return std::nullopt;
     }
-    
+
     // Get position from ASCOM device
     auto response = sendAlpacaRequest("GET", "position");
     if (response) {
@@ -148,7 +148,7 @@ auto ASCOMRotator::getPosition() -> std::optional<double> {
         current_position_.store(position);
         return position;
     }
-    
+
     return current_position_.load();
 }
 
@@ -160,20 +160,20 @@ auto ASCOMRotator::moveToAngle(double angle) -> bool {
     if (!isConnected()) {
         return false;
     }
-    
+
     spdlog::info("Moving rotator to angle: {:.2f}°", angle);
-    
+
     // Normalize angle to 0-360 range
     while (angle < 0) angle += 360.0;
     while (angle >= 360.0) angle -= 360.0;
-    
+
     target_position_.store(angle);
     is_moving_.store(true);
-    
+
     // Send command to ASCOM device
     std::string params = "Position=" + std::to_string(angle);
     auto response = sendAlpacaRequest("PUT", "move", params);
-    
+
     return response.has_value();
 }
 
@@ -190,15 +190,15 @@ auto ASCOMRotator::abortMove() -> bool {
     if (!isConnected()) {
         return false;
     }
-    
+
     spdlog::info("Aborting rotator movement");
-    
+
     auto response = sendAlpacaRequest("PUT", "halt");
     if (response) {
         is_moving_.store(false);
         return true;
     }
-    
+
     return false;
 }
 
@@ -206,18 +206,18 @@ auto ASCOMRotator::syncPosition(double angle) -> bool {
     if (!isConnected()) {
         return false;
     }
-    
+
     spdlog::info("Syncing rotator position to: {:.2f}°", angle);
-    
+
     // Send sync command to ASCOM device
     std::string params = "Position=" + std::to_string(angle);
     auto response = sendAlpacaRequest("PUT", "sync", params);
-    
+
     if (response) {
         current_position_.store(angle);
         return true;
     }
-    
+
     return false;
 }
 
@@ -239,11 +239,11 @@ auto ASCOMRotator::isReversed() -> bool {
 
 auto ASCOMRotator::setReversed(bool reversed) -> bool {
     ascom_rotator_info_.is_reversed = reversed;
-    
+
     // Send command to ASCOM device if supported
     std::string params = "Reverse=" + std::string(reversed ? "true" : "false");
     auto response = sendAlpacaRequest("PUT", "reverse", params);
-    
+
     return response.has_value();
 }
 
@@ -383,7 +383,7 @@ auto ASCOMRotator::connectToAlpacaDevice(const std::string &host, int port, int 
     alpaca_host_ = host;
     alpaca_port_ = port;
     alpaca_device_number_ = deviceNumber;
-    
+
     // Test connection
     auto response = sendAlpacaRequest("GET", "connected");
     if (response) {
@@ -392,7 +392,7 @@ auto ASCOMRotator::connectToAlpacaDevice(const std::string &host, int port, int 
         startMonitoring();
         return true;
     }
-    
+
     return false;
 }
 
@@ -404,7 +404,7 @@ auto ASCOMRotator::disconnectFromAlpacaDevice() -> bool {
 #ifdef _WIN32
 auto ASCOMRotator::connectToCOMDriver(const std::string &progId) -> bool {
     com_prog_id_ = progId;
-    
+
     HRESULT hr = CoCreateInstance(
         CLSID_NULL, // Would need to resolve ProgID to CLSID
         nullptr,
@@ -412,14 +412,14 @@ auto ASCOMRotator::connectToCOMDriver(const std::string &progId) -> bool {
         IID_IDispatch,
         reinterpret_cast<void**>(&com_rotator_)
     );
-    
+
     if (SUCCEEDED(hr)) {
         is_connected_.store(true);
         updateRotatorInfo();
         startMonitoring();
         return true;
     }
-    
+
     return false;
 }
 
@@ -453,10 +453,10 @@ auto ASCOMRotator::updateRotatorInfo() -> bool {
     if (!isConnected()) {
         return false;
     }
-    
+
     // Get rotator information from device
     // TODO: Query device properties
-    
+
     return true;
 }
 
@@ -482,7 +482,7 @@ auto ASCOMRotator::monitoringLoop() -> void {
         if (isConnected()) {
             // Update position and moving status
             getPosition();
-            
+
             // Check if movement is complete
             auto response = sendAlpacaRequest("GET", "ismoving");
             if (response) {
@@ -491,13 +491,13 @@ auto ASCOMRotator::monitoringLoop() -> void {
                 is_moving_.store(false);
             }
         }
-        
+
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
 
 #ifdef _WIN32
-auto ASCOMRotator::invokeCOMMethod(const std::string &method, VARIANT* params, 
+auto ASCOMRotator::invokeCOMMethod(const std::string &method, VARIANT* params,
                                   int param_count) -> std::optional<VARIANT> {
     // TODO: Implement COM method invocation
     return std::nullopt;

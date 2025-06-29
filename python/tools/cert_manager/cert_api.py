@@ -35,7 +35,7 @@ class CertificateAPI:
         state: Optional[str] = None,
         organization: Optional[str] = None,
         organizational_unit: Optional[str] = None,
-        email: Optional[str] = None
+        email: Optional[str] = None,
     ) -> Dict[str, str]:
         """Create a self-signed certificate and return paths."""
         options = CertificateOptions(
@@ -49,7 +49,7 @@ class CertificateAPI:
             state=state,
             organization=organization,
             organizational_unit=organizational_unit,
-            email=email
+            email=email,
         )
 
         try:
@@ -57,7 +57,7 @@ class CertificateAPI:
             return {
                 "cert_path": str(result.cert_path),
                 "key_path": str(result.key_path),
-                "success": "true"  # Fixed: use string "true"
+                "success": "true",  # Fixed: use string "true"
             }
         except Exception as e:
             logger.exception(f"Error creating certificate: {str(e)}")
@@ -65,15 +65,12 @@ class CertificateAPI:
                 "cert_path": "",
                 "key_path": "",
                 "success": "false",  # Fixed: use string "false"
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
     def export_to_pkcs12(
-        cert_path: str,
-        key_path: str,
-        password: str,
-        export_path: Optional[str] = None
+        cert_path: str, key_path: str, password: str, export_path: Optional[str] = None
     ) -> Dict[str, str]:
         """Export certificate to PKCS#12 format."""
         try:
@@ -81,16 +78,16 @@ class CertificateAPI:
                 Path(cert_path),
                 Path(key_path),
                 password,
-                Path(export_path) if export_path else None
+                Path(export_path) if export_path else None,
             )
             return {
                 "pfx_path": str(result),
-                "success": "true"  # Fixed: use string "true"
+                "success": "true",  # Fixed: use string "true"
             }
         except Exception as e:
             logger.exception(f"Error exporting certificate: {str(e)}")
             return {
                 "pfx_path": "",
                 "success": "false",  # Fixed: use string "false"
-                "error": str(e)
+                "error": str(e),
             }

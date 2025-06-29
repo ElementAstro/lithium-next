@@ -56,7 +56,7 @@ public:
             filters_[i].type = "Unknown";
         }
     }
-    
+
     ~AtomFilterWheel() override = default;
 
     // Capabilities
@@ -120,31 +120,31 @@ public:
     virtual void setTemperatureCallback(TemperatureCallback callback) { temperature_callback_ = std::move(callback); }
 
     // Utility methods
-    virtual auto isValidSlot(int slot) -> bool { 
-        return slot >= 0 && slot < filterwheel_capabilities_.maxFilters; 
+    virtual auto isValidSlot(int slot) -> bool {
+        return slot >= 0 && slot < filterwheel_capabilities_.maxFilters;
     }
     virtual auto getMaxFilters() -> int { return filterwheel_capabilities_.maxFilters; }
 
 protected:
     static constexpr int MAX_FILTERS = 20;
-    
+
     FilterWheelState filterwheel_state_{FilterWheelState::IDLE};
     FilterWheelCapabilities filterwheel_capabilities_;
-    
+
     // Filter storage
     std::array<FilterInfo, MAX_FILTERS> filters_;
     int current_position_{0};
     int target_position_{0};
-    
+
     // Statistics
     uint64_t total_moves_{0};
     int last_move_time_{0};
-    
+
     // Callbacks
     PositionCallback position_callback_;
     MoveCompleteCallback move_complete_callback_;
     TemperatureCallback temperature_callback_;
-    
+
     // Utility methods
     virtual void updateFilterWheelState(FilterWheelState state) { filterwheel_state_ = state; }
     virtual void notifyPositionChange(int position, const std::string& filterName);

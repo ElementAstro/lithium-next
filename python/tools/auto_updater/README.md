@@ -43,7 +43,7 @@ updater = AutoUpdater(config)
 # Check and install updates if available
 if updater.check_for_updates():
     print("Update found!")
-    
+
     # Complete update process - download, verify, backup, and install
     if updater.update():
         print(f"Successfully updated to version {updater.update_info['version']}")
@@ -121,7 +121,7 @@ from auto_updater import AutoUpdater, UpdateStatus
 def progress_callback(status, progress, message):
     """
     Handle progress updates.
-    
+
     Args:
         status (UpdateStatus): Current update status
         progress (float): Progress value (0.0 to 1.0)
@@ -150,16 +150,16 @@ updater = AutoUpdater(config)
 if updater.check_for_updates():
     # Download the update package
     download_path = updater.download_update()
-    
+
     # Verify the downloaded package
     if updater.verify_update(download_path):
         # Backup current installation
         backup_dir = updater.backup_current_installation()
-        
+
         try:
             # Extract the update package
             extract_dir = updater.extract_update(download_path)
-            
+
             # Install the update
             if updater.install_update(extract_dir):
                 print("Update installed successfully!")
@@ -183,7 +183,7 @@ updater = AutoUpdaterSync(config)
 if updater.check_for_updates():
     # Get path to downloaded file as string
     download_path = updater.download_update()
-    
+
     # Use regular strings for paths
     extract_dir = updater.extract_update(download_path)
     updater.install_update(extract_dir)

@@ -21,8 +21,20 @@ This package is released under the MIT License.
 """
 
 from .converter import Converter
-from .options import ConversionOptions, ConversionMode, DataFormat, CommentStyle, CompressionType, ChecksumAlgo
-from .exceptions import ConversionError, FileFormatError, CompressionError, ChecksumError
+from .options import (
+    ConversionOptions,
+    ConversionMode,
+    DataFormat,
+    CommentStyle,
+    CompressionType,
+    ChecksumAlgo,
+)
+from .exceptions import (
+    ConversionError,
+    FileFormatError,
+    CompressionError,
+    ChecksumError,
+)
 from .utils import HeaderInfo
 from .converter import convert_to_header, convert_to_file, get_header_info
 
@@ -33,20 +45,23 @@ import sys
 # Remove default handler and add custom one
 logger.remove()
 logger.add(
-    sys.stderr, format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}", level="INFO")
+    sys.stderr,
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
+    level="INFO",
+)
 
 # Public API
 __all__ = [
-    'Converter',
-    'ConversionOptions',
-    'ConversionMode',
-    'HeaderInfo',
-    'ConversionError',
-    'FileFormatError',
-    'CompressionError',
-    'ChecksumError',
-    'convert_to_header',
-    'convert_to_file',
-    'get_header_info',
-    'logger'
+    "Converter",
+    "ConversionOptions",
+    "ConversionMode",
+    "HeaderInfo",
+    "ConversionError",
+    "FileFormatError",
+    "CompressionError",
+    "ChecksumError",
+    "convert_to_header",
+    "convert_to_file",
+    "get_header_info",
+    "logger",
 ]

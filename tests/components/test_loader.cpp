@@ -72,7 +72,7 @@ TEST_CASE("ModuleLoader Modernized", "[loader]") {
         REQUIRE(diagnostics->status == lithium::ModuleInfo::Status::LOADED);
         REQUIRE(diagnostics->path == "./libtest_mod_a" + LIB_EXT);
     }
-    
+
     SECTION("Circular Dependency Detection") {
         loader.registerModule("mod_c", "./libtest_mod_a.so", {"mod_d"});
         loader.registerModule("mod_d", "./libtest_mod_b.so", {"mod_c"});

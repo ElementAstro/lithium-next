@@ -34,7 +34,7 @@ class HardwareInterface;
 
 /**
  * @brief Parking Manager for INDI Telescope
- * 
+ *
  * Manages all telescope parking operations including custom park positions,
  * parking sequences, safety checks, and unparking procedures.
  */
@@ -177,34 +177,34 @@ private:
     void updateParkingStatus();
     void updateParkingProgress();
     void handlePropertyUpdate(const std::string& propertyName);
-    
+
     // Parking sequence management
     bool executeParkingSequence();
     bool executeUnparkingSequence();
     bool performSafetyChecks() const;
-    
+
     // Position management
     void loadSavedParkPositions();
     void saveParkPositionsToFile();
     ParkPosition createParkPositionFromCurrent() const;
-    
+
     // State conversion
     std::string stateToString(ParkState state) const;
     ParkState stringToState(const std::string& stateStr) const;
-    
+
     // Validation helpers
     bool isValidParkCoordinates(double ra, double dec) const;
     bool isValidAltAzCoordinates(double azimuth, double altitude) const;
-    
+
     // Hardware interaction
     void syncParkStateToHardware();
     void syncParkPositionToHardware();
-    
+
     // Utility methods
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);
     void logError(const std::string& message);
-    
+
     // Configuration constants
     static constexpr double MAX_PARK_TIME_SECONDS = 300.0;  // 5 minutes max park time
     static constexpr double PARK_POSITION_TOLERANCE = 0.1;  // degrees

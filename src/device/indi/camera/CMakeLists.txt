@@ -5,18 +5,18 @@ cmake_minimum_required(VERSION 3.16)
 set(INDI_CAMERA_SOURCES
     # Core component
     core/indi_camera_core.cpp
-    
+
     # Controller components
     exposure/exposure_controller.cpp
     video/video_controller.cpp
     temperature/temperature_controller.cpp
     hardware/hardware_controller.cpp
-    
+
     # Processing components
     image/image_processor.cpp
     sequence/sequence_manager.cpp
     properties/property_handler.cpp
-    
+
     # Main camera class
     indi_camera.cpp
 )
@@ -24,21 +24,21 @@ set(INDI_CAMERA_SOURCES
 # Component header files
 set(INDI_CAMERA_HEADERS
     component_base.hpp
-    
+
     # Core component
     core/indi_camera_core.hpp
-    
+
     # Controller components
     exposure/exposure_controller.hpp
     video/video_controller.hpp
     temperature/temperature_controller.hpp
     hardware/hardware_controller.hpp
-    
+
     # Processing components
     image/image_processor.hpp
     sequence/sequence_manager.hpp
     properties/property_handler.hpp
-    
+
     # Main camera class
     indi_camera.hpp
 )

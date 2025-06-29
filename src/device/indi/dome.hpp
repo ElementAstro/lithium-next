@@ -150,18 +150,18 @@ private:
     std::atomic<bool> is_connected_{false};
     std::atomic<bool> is_initialized_{false};
     std::atomic<bool> server_connected_{false};
-    
+
     // Device reference
     INDI::BaseDevice base_device_;
-    
+
     // Thread safety
     mutable std::recursive_mutex state_mutex_;
     mutable std::recursive_mutex device_mutex_;
-    
+
     // Monitoring thread for continuous updates
     std::thread monitoring_thread_;
     std::atomic<bool> monitoring_thread_running_{false};
-    
+
     // Current state caching
     std::atomic<double> current_azimuth_{0.0};
     std::atomic<double> target_azimuth_{0.0};
@@ -169,35 +169,35 @@ private:
     std::atomic<bool> is_moving_{false};
     std::atomic<bool> is_parked_{false};
     std::atomic<int> shutter_state_{static_cast<int>(ShutterState::UNKNOWN)};
-    
+
     // Weather safety
     std::atomic<bool> is_safe_to_operate_{true};
     std::string weather_status_{"Unknown"};
-    
+
     // Weather monitoring
     bool weather_monitoring_enabled_{false};
     bool weather_safe_{true};
     WeatherLimits weather_limits_;
     bool auto_close_on_unsafe_weather_{true};
-    
+
     // Home position
     double home_position_{-1.0}; // -1 means not set
-    
+
     // Telescope coordination
     double current_telescope_az_{0.0};
     double current_telescope_alt_{0.0};
-    
+
     // Backlash compensation
     double backlash_compensation_{0.0};
     bool backlash_enabled_{false};
-    
+
     // Dome parameters
     DomeParameters dome_parameters_;
-    
+
     // Statistics
     double total_rotation_{0.0};
     uint64_t shutter_operations_{0};
-    
+
     // Internal methods
     void monitoringThreadFunction();
     auto waitForConnection(int timeout) -> bool;
@@ -208,12 +208,12 @@ private:
     void updateShutterFromProperty(const INDI::PropertySwitch& property);
     void updateParkingFromProperty(const INDI::PropertySwitch& property);
     void updateSpeedFromProperty(const INDI::PropertyNumber& property);
-    
+
     // Helper methods
     void checkWeatherStatus();
     void updateDomeParameters();
     double normalizeAzimuth(double azimuth) override;
-    
+
     // Property helpers
     auto getDomeAzimuthProperty() -> INDI::PropertyNumber;
     auto getDomeSpeedProperty() -> INDI::PropertyNumber;
@@ -222,12 +222,12 @@ private:
     auto getDomeShutterProperty() -> INDI::PropertySwitch;
     auto getDomeAbortProperty() -> INDI::PropertySwitch;
     auto getConnectionProperty() -> INDI::PropertySwitch;
-    
+
     // Utility methods
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);
     void logError(const std::string& message);
-    
+
     // State conversion helpers
     auto convertShutterState(ISState state) -> ShutterState;
     auto convertToISState(bool value) -> ISState;

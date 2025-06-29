@@ -36,15 +36,15 @@ auto MotionController::initialize() -> bool {
         target_azimuth_.store(0.0);
         is_moving_.store(false);
         motion_direction_.store(static_cast<int>(DomeMotion::STOP));
-        
+
         // Reset statistics
         total_rotation_.store(0.0);
         motion_count_.store(0);
         average_speed_.store(0.0);
-        
+
         // Clear emergency stop
         emergency_stop_active_.store(false);
-        
+
         logInfo("Motion controller initialized");
         setInitialized(true);
         return true;
@@ -64,7 +64,7 @@ auto MotionController::cleanup() -> bool {
         if (is_moving_.load()) {
             stopRotation();
         }
-        
+
         setInitialized(false);
         logInfo("Motion controller cleaned up");
         return true;
@@ -80,7 +80,7 @@ void MotionController::handlePropertyUpdate(const INDI::Property& property) {
     }
 
     const std::string prop_name = property.getName();
-    
+
     if (prop_name == "ABS_DOME_POSITION") {
         handleAzimuthUpdate(property);
     } else if (prop_name == "DOME_MOTION") {
@@ -93,32 +93,32 @@ void MotionController::handlePropertyUpdate(const INDI::Property& property) {
 // Core motion commands
 auto MotionController::moveToAzimuth(double azimuth) -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     if (!validateAzimuth(azimuth) || !canStartMotion()) {
         return false;
     }
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     // Normalize target azimuth
     double normalized_azimuth = normalizeAzimuth(azimuth);
-    
+
     // Apply backlash compensation if enabled
     if (backlash_enabled_.load()) {
         normalized_azimuth = calculateBacklashCompensation(normalized_azimuth);
     }
-    
+
     // Update target
     updateTargetAzimuth(normalized_azimuth);
-    
+
     // Start motion
     last_motion_start_ = std::chrono::steady_clock::now();
     notifyMotionStart(normalized_azimuth);
-    
+
     bool success = prop_mgr->moveToAzimuth(normalized_azimuth);
     if (success) {
         updateMotionState(true);
@@ -127,27 +127,27 @@ auto MotionController::moveToAzimuth(double azimuth) -> bool {
     } else {
         logError("Failed to start motion to azimuth: " + std::to_string(azimuth));
     }
-    
+
     return success;
 }
 
 auto MotionController::rotateClockwise() -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     if (!canStartMotion()) {
         return false;
     }
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     last_motion_start_ = std::chrono::steady_clock::now();
     updateMotionDirection(DomeMotion::CLOCKWISE);
     updateMotionState(true);
-    
+
     bool success = prop_mgr->startRotation(true);
     if (success) {
         logInfo("Starting clockwise rotation");
@@ -155,27 +155,27 @@ auto MotionController::rotateClockwise() -> bool {
         logError("Failed to start clockwise rotation");
         updateMotionState(false);
     }
-    
+
     return success;
 }
 
 auto MotionController::rotateCounterClockwise() -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     if (!canStartMotion()) {
         return false;
     }
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     last_motion_start_ = std::chrono::steady_clock::now();
     updateMotionDirection(DomeMotion::COUNTER_CLOCKWISE);
     updateMotionState(true);
-    
+
     bool success = prop_mgr->startRotation(false);
     if (success) {
         logInfo("Starting counter-clockwise rotation");
@@ -183,82 +183,82 @@ auto MotionController::rotateCounterClockwise() -> bool {
         logError("Failed to start counter-clockwise rotation");
         updateMotionState(false);
     }
-    
+
     return success;
 }
 
 auto MotionController::stopRotation() -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     bool success = prop_mgr->stopRotation();
     if (success) {
         updateMotionState(false);
         updateMotionDirection(DomeMotion::STOP);
-        
+
         // Calculate motion duration
         auto now = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_motion_start_);
         last_motion_duration_ms_.store(duration.count());
-        
+
         notifyMotionComplete(true, "Motion stopped");
         logInfo("Rotation stopped");
     } else {
         logError("Failed to stop rotation");
     }
-    
+
     return success;
 }
 
 auto MotionController::abortMotion() -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     bool success = prop_mgr->abortMotion();
     if (success) {
         updateMotionState(false);
         updateMotionDirection(DomeMotion::STOP);
-        
+
         // Calculate motion duration
         auto now = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_motion_start_);
         last_motion_duration_ms_.store(duration.count());
-        
+
         notifyMotionComplete(false, "Motion aborted");
         logInfo("Motion aborted");
     } else {
         logError("Failed to abort motion");
     }
-    
+
     return success;
 }
 
 auto MotionController::syncAzimuth(double azimuth) -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     if (!validateAzimuth(azimuth)) {
         return false;
     }
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     double normalized_azimuth = normalizeAzimuth(azimuth);
     bool success = prop_mgr->syncAzimuth(normalized_azimuth);
-    
+
     if (success) {
         updateCurrentAzimuth(normalized_azimuth);
         updateTargetAzimuth(normalized_azimuth);
@@ -266,7 +266,7 @@ auto MotionController::syncAzimuth(double azimuth) -> bool {
     } else {
         logError("Failed to sync azimuth");
     }
-    
+
     return success;
 }
 
@@ -276,24 +276,24 @@ auto MotionController::getRotationSpeed() -> std::optional<double> {
     if (!prop_mgr) {
         return std::nullopt;
     }
-    
+
     return prop_mgr->getCurrentSpeed();
 }
 
 auto MotionController::setRotationSpeed(double speed) -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     if (!validateSpeed(speed)) {
         logError("Invalid speed: " + std::to_string(speed));
         return false;
     }
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     bool success = prop_mgr->setSpeed(speed);
     if (success) {
         updateSpeed(speed);
@@ -301,7 +301,7 @@ auto MotionController::setRotationSpeed(double speed) -> bool {
     } else {
         logError("Failed to set rotation speed");
     }
-    
+
     return success;
 }
 
@@ -318,11 +318,11 @@ auto MotionController::getRemainingDistance() const -> double {
 auto MotionController::getEstimatedTimeToTarget() const -> std::chrono::seconds {
     double remaining = getRemainingDistance();
     double speed = current_speed_.load();
-    
+
     if (speed <= 0.0) {
         return std::chrono::seconds(0);
     }
-    
+
     double time_seconds = remaining / speed;
     return std::chrono::seconds(static_cast<int64_t>(time_seconds));
 }
@@ -333,25 +333,25 @@ auto MotionController::getBacklash() -> double {
     if (!prop_mgr) {
         return backlash_value_.load();
     }
-    
+
     auto backlash = prop_mgr->getBacklash();
     if (backlash) {
         backlash_value_.store(*backlash);
         return *backlash;
     }
-    
+
     return backlash_value_.load();
 }
 
 auto MotionController::setBacklash(double backlash) -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     // Try to set via INDI property first
     if (prop_mgr->hasBacklash()) {
         bool success = prop_mgr->setNumberValue("DOME_BACKLASH", "DOME_BACKLASH_VALUE", backlash);
@@ -361,7 +361,7 @@ auto MotionController::setBacklash(double backlash) -> bool {
             return true;
         }
     }
-    
+
     // Fall back to local storage
     backlash_value_.store(backlash);
     logInfo("Set local backlash compensation to: " + std::to_string(backlash) + "°");
@@ -393,10 +393,10 @@ auto MotionController::getAzimuthalDistance(double from, double to) const -> dou
 auto MotionController::getShortestPath(double from, double to) const -> std::pair<double, DomeMotion> {
     double normalized_from = normalizeAzimuth(from);
     double normalized_to = normalizeAzimuth(to);
-    
+
     double clockwise = normalizeAzimuth(normalized_to - normalized_from);
     double counter_clockwise = 360.0 - clockwise;
-    
+
     if (clockwise <= counter_clockwise) {
         return {clockwise, DomeMotion::CLOCKWISE};
     } else {
@@ -410,7 +410,7 @@ auto MotionController::setSpeedLimits(double minSpeed, double maxSpeed) -> bool 
         logError("Invalid speed limits");
         return false;
     }
-    
+
     min_speed_ = minSpeed;
     max_speed_ = maxSpeed;
     logInfo("Set speed limits: [" + std::to_string(minSpeed) + ", " + std::to_string(maxSpeed) + "]");
@@ -422,7 +422,7 @@ auto MotionController::setAzimuthLimits(double minAz, double maxAz) -> bool {
         logError("Invalid azimuth limits");
         return false;
     }
-    
+
     min_azimuth_ = minAz;
     max_azimuth_ = maxAz;
     logInfo("Set azimuth limits: [" + std::to_string(minAz) + "°, " + std::to_string(maxAz) + "°]");
@@ -434,10 +434,10 @@ auto MotionController::setSafetyLimits(double maxAcceleration, double maxJerk) -
         logError("Invalid safety limits");
         return false;
     }
-    
+
     max_acceleration_ = maxAcceleration;
     max_jerk_ = maxJerk;
-    logInfo("Set safety limits - Accel: " + std::to_string(maxAcceleration) + 
+    logInfo("Set safety limits - Accel: " + std::to_string(maxAcceleration) +
             ", Jerk: " + std::to_string(maxJerk));
     return true;
 }
@@ -446,7 +446,7 @@ auto MotionController::isPositionSafe(double azimuth) const -> bool {
     if (!safety_limits_enabled_.load()) {
         return true;
     }
-    
+
     double normalized = normalizeAzimuth(azimuth);
     return normalized >= min_azimuth_ && normalized <= max_azimuth_;
 }
@@ -455,7 +455,7 @@ auto MotionController::isSpeedSafe(double speed) const -> bool {
     if (!safety_limits_enabled_.load()) {
         return true;
     }
-    
+
     return speed >= min_speed_ && speed <= max_speed_;
 }
 
@@ -471,16 +471,16 @@ auto MotionController::setAccelerationProfile(double acceleration, double decele
         logError("Invalid acceleration profile");
         return false;
     }
-    
+
     acceleration_rate_ = acceleration;
     deceleration_rate_ = deceleration;
-    logInfo("Set acceleration profile - Accel: " + std::to_string(acceleration) + 
+    logInfo("Set acceleration profile - Accel: " + std::to_string(acceleration) +
             ", Decel: " + std::to_string(deceleration));
     return true;
 }
 
 auto MotionController::getMotionProfile() const -> std::string {
-    return "Acceleration: " + std::to_string(acceleration_rate_) + 
+    return "Acceleration: " + std::to_string(acceleration_rate_) +
            "°/s², Deceleration: " + std::to_string(deceleration_rate_) + "°/s²";
 }
 
@@ -498,22 +498,22 @@ auto MotionController::getLastMotionDuration() const -> std::chrono::millisecond
 // Emergency functions
 auto MotionController::emergencyStop() -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     emergency_stop_active_.store(true);
     bool success = abortMotion();
-    
+
     if (success) {
         logWarning("Emergency stop activated");
     } else {
         logError("Failed to activate emergency stop");
     }
-    
+
     return success;
 }
 
 auto MotionController::clearEmergencyStop() -> bool {
     std::lock_guard<std::recursive_mutex> lock(motion_mutex_);
-    
+
     emergency_stop_active_.store(false);
     logInfo("Emergency stop cleared");
     return true;
@@ -522,11 +522,11 @@ auto MotionController::clearEmergencyStop() -> bool {
 // Private methods
 void MotionController::updateCurrentAzimuth(double azimuth) {
     double old_azimuth = current_azimuth_.exchange(azimuth);
-    
+
     // Update statistics
     double distance = getAzimuthalDistance(old_azimuth, azimuth);
     total_rotation_.fetch_add(distance);
-    
+
     notifyPositionUpdate();
 }
 
@@ -536,7 +536,7 @@ void MotionController::updateTargetAzimuth(double azimuth) {
 
 void MotionController::updateMotionState(bool moving) {
     is_moving_.store(moving);
-    
+
     if (!moving) {
         updateMotionDirection(DomeMotion::STOP);
     }
@@ -548,7 +548,7 @@ void MotionController::updateMotionDirection(DomeMotion direction) {
 
 void MotionController::updateSpeed(double speed) {
     current_speed_.store(speed);
-    
+
     // Update average speed
     uint64_t count = motion_count_.load();
     if (count > 0) {
@@ -564,16 +564,16 @@ auto MotionController::calculateBacklashCompensation(double targetAz) -> double 
     if (!backlash_enabled_.load()) {
         return targetAz;
     }
-    
+
     double backlash = backlash_value_.load();
     if (backlash == 0.0) {
         return targetAz;
     }
-    
+
     // Apply backlash based on direction
     double current = current_azimuth_.load();
     auto [distance, direction] = getShortestPath(current, targetAz);
-    
+
     if (direction == DomeMotion::CLOCKWISE) {
         return normalizeAzimuth(targetAz + backlash);
     } else {
@@ -585,17 +585,17 @@ auto MotionController::applyMotionProfile(double distance, double speed) -> std:
     if (!motion_profiling_enabled_.load()) {
         return {distance, speed};
     }
-    
+
     // Simple trapezoidal motion profile
     double accel_time = speed / acceleration_rate_;
     double accel_distance = 0.5 * acceleration_rate_ * accel_time * accel_time;
-    
+
     if (distance <= 2 * accel_distance) {
         // Triangle profile (not enough distance for full acceleration)
         double max_speed = std::sqrt(distance * acceleration_rate_);
         return {distance, std::min(max_speed, speed)};
     }
-    
+
     // Trapezoid profile
     return {distance, speed};
 }
@@ -604,7 +604,7 @@ void MotionController::notifyMotionStart(double targetAzimuth) {
     if (motion_start_callback_) {
         motion_start_callback_(targetAzimuth);
     }
-    
+
     auto core = getCore();
     if (core) {
         // Notify core about motion start
@@ -615,7 +615,7 @@ void MotionController::notifyMotionComplete(bool success, const std::string& mes
     if (motion_complete_callback_) {
         motion_complete_callback_(success, message);
     }
-    
+
     auto core = getCore();
     if (core) {
         core->notifyMoveComplete(success, message);
@@ -626,7 +626,7 @@ void MotionController::notifyPositionUpdate() {
     if (position_update_callback_) {
         position_update_callback_(current_azimuth_.load(), target_azimuth_.load());
     }
-    
+
     auto core = getCore();
     if (core) {
         core->notifyAzimuthChange(current_azimuth_.load());
@@ -637,11 +637,11 @@ auto MotionController::validateAzimuth(double azimuth) const -> bool {
     if (std::isnan(azimuth) || std::isinf(azimuth)) {
         return false;
     }
-    
+
     if (safety_limits_enabled_.load()) {
         return isPositionSafe(azimuth);
     }
-    
+
     return true;
 }
 
@@ -649,11 +649,11 @@ auto MotionController::validateSpeed(double speed) const -> bool {
     if (std::isnan(speed) || std::isinf(speed) || speed < 0.0) {
         return false;
     }
-    
+
     if (safety_limits_enabled_.load()) {
         return isSpeedSafe(speed);
     }
-    
+
     return true;
 }
 
@@ -662,13 +662,13 @@ auto MotionController::canStartMotion() const -> bool {
         logWarning("Cannot start motion: emergency stop active");
         return false;
     }
-    
+
     auto core = getCore();
     if (!core || !core->isConnected()) {
         logWarning("Cannot start motion: not connected");
         return false;
     }
-    
+
     return true;
 }
 
@@ -688,12 +688,12 @@ void MotionController::handleAzimuthUpdate(const INDI::Property& property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     auto number_prop = property.getNumber();
     if (!number_prop) {
         return;
     }
-    
+
     auto azimuth_widget = number_prop->findWidgetByName("DOME_ABSOLUTE_POSITION");
     if (azimuth_widget) {
         double azimuth = azimuth_widget->getValue();
@@ -705,18 +705,18 @@ void MotionController::handleMotionUpdate(const INDI::Property& property) {
     if (property.getType() != INDI_SWITCH) {
         return;
     }
-    
+
     auto switch_prop = property.getSwitch();
     if (!switch_prop) {
         return;
     }
-    
+
     bool moving = false;
     DomeMotion direction = DomeMotion::STOP;
-    
+
     auto cw_widget = switch_prop->findWidgetByName("DOME_CW");
     auto ccw_widget = switch_prop->findWidgetByName("DOME_CCW");
-    
+
     if (cw_widget && cw_widget->getState() == ISS_ON) {
         moving = true;
         direction = DomeMotion::CLOCKWISE;
@@ -724,10 +724,10 @@ void MotionController::handleMotionUpdate(const INDI::Property& property) {
         moving = true;
         direction = DomeMotion::COUNTER_CLOCKWISE;
     }
-    
+
     updateMotionState(moving);
     updateMotionDirection(direction);
-    
+
     if (!moving && is_moving_.load()) {
         // Motion just completed
         auto now = std::chrono::steady_clock::now();
@@ -741,12 +741,12 @@ void MotionController::handleSpeedUpdate(const INDI::Property& property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     auto number_prop = property.getNumber();
     if (!number_prop) {
         return;
     }
-    
+
     auto speed_widget = number_prop->findWidgetByName("DOME_SPEED_VALUE");
     if (speed_widget) {
         double speed = speed_widget->getValue();

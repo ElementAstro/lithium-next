@@ -334,7 +334,7 @@ public:
     [[nodiscard]] auto getTaskType() const -> const std::string&;
 
     void setResult(const json& result) { result_ = result; }
-    
+
     json getResult() const { return result_; }
 
 private:

@@ -34,7 +34,7 @@ namespace lithium::device::sbig::camera {
 
 /**
  * @brief SBIG Camera implementation using SBIG Universal Driver
- * 
+ *
  * Supports SBIG ST series cameras with dual-chip capability (main CCD + guide chip),
  * excellent cooling systems, and professional-grade features.
  */
@@ -207,16 +207,16 @@ private:
     std::string serial_number_;
     std::string firmware_version_;
     std::string camera_type_;
-    
+
     // Connection state
     std::atomic<bool> is_connected_;
     std::atomic<bool> is_initialized_;
-    
+
     // Dual-chip state
     bool has_guide_chip_;
     std::atomic<bool> is_guide_exposing_;
     std::shared_ptr<AtomCameraFrame> guide_frame_;
-    
+
     // Exposure state
     std::atomic<bool> is_exposing_;
     std::atomic<bool> exposure_abort_requested_;
@@ -224,7 +224,7 @@ private:
     double current_exposure_duration_;
     std::thread exposure_thread_;
     std::thread guide_exposure_thread_;
-    
+
     // Video state (limited on SBIG)
     std::atomic<bool> is_video_running_;
     std::atomic<bool> is_video_recording_;
@@ -232,19 +232,19 @@ private:
     std::string video_recording_file_;
     double video_exposure_;
     int video_gain_;
-    
+
     // Temperature control
     std::atomic<bool> cooler_enabled_;
     double target_temperature_;
     std::thread temperature_thread_;
-    
+
     // Filter wheel state
     bool has_filter_wheel_;
     int current_filter_;
     int filter_count_;
     std::vector<std::string> filter_names_;
     bool filter_wheel_homed_;
-    
+
     // Sequence control
     std::atomic<bool> sequence_running_;
     int sequence_current_frame_;
@@ -252,7 +252,7 @@ private:
     double sequence_exposure_;
     double sequence_interval_;
     std::thread sequence_thread_;
-    
+
     // Camera parameters
     int current_gain_;
     int current_offset_;
@@ -263,7 +263,7 @@ private:
     bool dark_subtraction_enabled_;
     double electrons_per_adu_;
     double full_well_capacity_;
-    
+
     // Frame parameters
     int roi_x_, roi_y_, roi_width_, roi_height_;
     int bin_x_, bin_y_;
@@ -274,12 +274,12 @@ private:
     BayerPattern bayer_pattern_;
     bool is_color_camera_;
     bool has_shutter_;
-    
+
     // Statistics
     uint64_t total_frames_;
     uint64_t dropped_frames_;
     std::chrono::system_clock::time_point last_frame_time_;
-    
+
     // Thread safety
     mutable std::mutex camera_mutex_;
     mutable std::mutex exposure_mutex_;
@@ -290,7 +290,7 @@ private:
     mutable std::mutex filter_mutex_;
     mutable std::condition_variable exposure_cv_;
     mutable std::condition_variable guide_cv_;
-    
+
     // Private helper methods
     auto initializeSBIGSDK() -> bool;
     auto shutdownSBIGSDK() -> bool;

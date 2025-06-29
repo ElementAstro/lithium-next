@@ -15,7 +15,7 @@ from .api import (
     list_installed_dotnets,
     download_file,
     install_software,
-    uninstall_dotnet
+    uninstall_dotnet,
 )
 
 __version__ = "2.0"
@@ -28,5 +28,5 @@ __all__ = [
     "list_installed_dotnets",
     "download_file",
     "install_software",
-    "uninstall_dotnet"
+    "uninstall_dotnet",
 ]

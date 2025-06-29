@@ -77,7 +77,7 @@ void PositionManager::stopMovement() {
 
     spdlog::info( "Stopping movement");
     is_moving_ = false;
-    
+
     // Note: Most filterwheel controllers don't support stopping mid-movement
     // The movement will complete to the nearest stable position
 }
@@ -88,7 +88,7 @@ bool PositionManager::waitForMovement(int timeout_ms) {
     }
 
     spdlog::info( "Waiting for movement to complete (timeout: {} ms)", timeout_ms);
-    
+
     auto start_time = std::chrono::steady_clock::now();
     auto timeout_duration = std::chrono::milliseconds(timeout_ms);
 
@@ -139,11 +139,11 @@ void PositionManager::setPositionAccuracy(double threshold) {
 std::vector<int> PositionManager::getAvailablePositions() const {
     std::vector<int> positions;
     int slot_count = getSlotCount();
-    
+
     for (int i = 0; i < slot_count; ++i) {
         positions.push_back(i);
     }
-    
+
     return positions;
 }
 
@@ -154,7 +154,7 @@ bool PositionManager::calibratePosition(int position) {
     }
 
     spdlog::info( "Calibrating position {}", position);
-    
+
     // Move to position and verify
     if (!moveToPosition(position)) {
         spdlog::error( "Failed to move to calibration position {}", position);
@@ -194,7 +194,7 @@ void PositionManager::monitorMovement() {
         if (hardware_) {
             current_position_ = hardware_->getCurrentPosition();
             bool movement_complete = !hardware_->isMoving();
-            
+
             if (movement_complete) {
                 is_moving_ = false;
                 spdlog::info( "Movement completed, current position: {}", current_position_);

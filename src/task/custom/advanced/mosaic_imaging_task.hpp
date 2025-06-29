@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Automated Mosaic Imaging Task
- * 
+ *
  * Creates large field-of-view mosaics by automatically capturing
  * multiple overlapping frames across a defined area of sky.
  */
@@ -30,9 +30,9 @@ private:
     void executeImpl(const json& params);
     std::vector<json> calculateMosaicTiles(const json& params);
     void captureMosaicTile(const json& tile, int tileNumber, int totalTiles);
-    json calculateTileCoordinates(double centerRA, double centerDec, 
-                                 double width, double height, 
-                                 int tilesX, int tilesY, 
+    json calculateTileCoordinates(double centerRA, double centerDec,
+                                 double width, double height,
+                                 int tilesX, int tilesY,
                                  double overlapPercent);
 };
 

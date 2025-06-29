@@ -25,15 +25,15 @@ if(ENABLE_SBIG_CAMERA)
     if(SBIG_INCLUDE_DIR AND SBIG_LIBRARY)
         set(SBIG_FOUND TRUE)
         message(STATUS "SBIG Universal Driver found: ${SBIG_LIBRARY}")
-        
+
         # Define macro for conditional compilation
         add_definitions(-DLITHIUM_SBIG_CAMERA_ENABLED)
-        
+
         # Create SBIG camera library
         add_library(lithium_sbig_camera SHARED
             sbig_camera.cpp
         )
-        
+
         target_include_directories(lithium_sbig_camera
             PUBLIC
                 ${CMAKE_CURRENT_SOURCE_DIR}
@@ -41,7 +41,7 @@ if(ENABLE_SBIG_CAMERA)
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )
-        
+
         target_link_libraries(lithium_sbig_camera
             PUBLIC
                 ${SBIG_LIBRARY}
@@ -50,7 +50,7 @@ if(ENABLE_SBIG_CAMERA)
             PRIVATE
                 Threads::Threads
         )
-        
+
         # Set properties
         set_target_properties(lithium_sbig_camera PROPERTIES
             CXX_STANDARD 20
@@ -58,18 +58,18 @@ if(ENABLE_SBIG_CAMERA)
             VERSION ${PROJECT_VERSION}
             SOVERSION ${PROJECT_VERSION_MAJOR}
         )
-        
+
         # Install library
         install(TARGETS lithium_sbig_camera
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         )
-        
+
         # Install headers
         install(FILES sbig_camera.hpp
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/sbig
         )
-        
+
     else()
         message(WARNING "SBIG Universal Driver not found. SBIG camera support will be disabled.")
         set(SBIG_FOUND FALSE)

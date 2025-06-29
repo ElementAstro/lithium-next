@@ -33,7 +33,7 @@ class NginxManagerCLI:
         """
         parser = argparse.ArgumentParser(
             description="Nginx Manager - A tool for managing Nginx web server",
-            formatter_class=argparse.RawDescriptionHelpFormatter
+            formatter_class=argparse.RawDescriptionHelpFormatter,
         )
 
         subparsers = parser.add_subparsers(dest="command", help="Commands")
@@ -50,40 +50,48 @@ class NginxManagerCLI:
 
         # Backup commands
         backup_parser = subparsers.add_parser(
-            "backup", help="Backup Nginx configuration")
-        backup_parser.add_argument(
-            "--name", help="Custom name for the backup file")
+            "backup", help="Backup Nginx configuration"
+        )
+        backup_parser.add_argument("--name", help="Custom name for the backup file")
 
         subparsers.add_parser(
-            "list-backups", help="List available configuration backups")
+            "list-backups", help="List available configuration backups"
+        )
 
         restore_parser = subparsers.add_parser(
-            "restore", help="Restore Nginx configuration")
+            "restore", help="Restore Nginx configuration"
+        )
         restore_parser.add_argument(
-            "--backup", help="Path to the backup file to restore")
+            "--backup", help="Path to the backup file to restore"
+        )
 
         # Virtual host commands
-        vhost_parser = subparsers.add_parser(
-            "vhost", help="Virtual host management")
+        vhost_parser = subparsers.add_parser("vhost", help="Virtual host management")
         vhost_subparsers = vhost_parser.add_subparsers(dest="vhost_command")
 
         create_vhost_parser = vhost_subparsers.add_parser(
-            "create", help="Create a virtual host")
+            "create", help="Create a virtual host"
+        )
         create_vhost_parser.add_argument("server_name", help="Server name")
         create_vhost_parser.add_argument(
-            "--port", type=int, default=80, help="Port number")
+            "--port", type=int, default=80, help="Port number"
+        )
+        create_vhost_parser.add_argument("--root", help="Document root directory")
         create_vhost_parser.add_argument(
-            "--root", help="Document root directory")
-        create_vhost_parser.add_argument("--template", default="basic",
-                                         choices=["basic", "php", "proxy"],
-                                         help="Template to use")
+            "--template",
+            default="basic",
+            choices=["basic", "php", "proxy"],
+            help="Template to use",
+        )
 
         enable_vhost_parser = vhost_subparsers.add_parser(
-            "enable", help="Enable a virtual host")
+            "enable", help="Enable a virtual host"
+        )
         enable_vhost_parser.add_argument("server_name", help="Server name")
 
         disable_vhost_parser = vhost_subparsers.add_parser(
-            "disable", help="Disable a virtual host")
+            "disable", help="Disable a virtual host"
+        )
         disable_vhost_parser.add_argument("server_name", help="Server name")
 
         vhost_subparsers.add_parser("list", help="List virtual hosts")
@@ -93,35 +101,44 @@ class NginxManagerCLI:
         ssl_subparsers = ssl_parser.add_subparsers(dest="ssl_command")
 
         generate_ssl_parser = ssl_subparsers.add_parser(
-            "generate", help="Generate SSL certificate")
+            "generate", help="Generate SSL certificate"
+        )
         generate_ssl_parser.add_argument("domain", help="Domain name")
         generate_ssl_parser.add_argument(
-            "--email", help="Email address for Let's Encrypt")
-        generate_ssl_parser.add_argument("--self-signed", action="store_true",
-                                         help="Generate self-signed certificate")
+            "--email", help="Email address for Let's Encrypt"
+        )
+        generate_ssl_parser.add_argument(
+            "--self-signed",
+            action="store_true",
+            help="Generate self-signed certificate",
+        )
 
         configure_ssl_parser = ssl_subparsers.add_parser(
-            "configure", help="Configure SSL for a domain")
+            "configure", help="Configure SSL for a domain"
+        )
         configure_ssl_parser.add_argument("domain", help="Domain name")
         configure_ssl_parser.add_argument(
-            "--cert", required=True, help="Path to certificate file")
+            "--cert", required=True, help="Path to certificate file"
+        )
         configure_ssl_parser.add_argument(
-            "--key", required=True, help="Path to key file")
+            "--key", required=True, help="Path to key file"
+        )
 
         # Log analysis
         logs_parser = subparsers.add_parser("logs", help="Log analysis")
         logs_parser.add_argument("--domain", help="Domain to analyze logs for")
-        logs_parser.add_argument("--lines", type=int, default=100,
-                                 help="Number of lines to analyze")
         logs_parser.add_argument(
-            "--filter", help="Filter pattern for log entries")
+            "--lines", type=int, default=100, help="Number of lines to analyze"
+        )
+        logs_parser.add_argument("--filter", help="Filter pattern for log entries")
 
         # Health check
         subparsers.add_parser("health", help="Perform a health check")
 
         # Add verbose option to all commands
-        parser.add_argument("--verbose", "-v", action="store_true",
-                            help="Enable verbose output")
+        parser.add_argument(
+            "--verbose", "-v", action="store_true", help="Enable verbose output"
+        )
 
         return parser
 
@@ -192,7 +209,7 @@ class NginxManagerCLI:
                                 server_name=args.server_name,
                                 port=args.port,
                                 root_dir=args.root,
-                                template=args.template
+                                template=args.template,
                             )
 
                         case "enable":
@@ -214,21 +231,19 @@ class NginxManagerCLI:
                             self.manager.generate_ssl_cert(
                                 domain=args.domain,
                                 email=args.email,
-                                use_letsencrypt=not args.self_signed
+                                use_letsencrypt=not args.self_signed,
                             )
 
                         case "configure":
                             self.manager.configure_ssl(
                                 domain=args.domain,
                                 cert_path=Path(args.cert),
-                                key_path=Path(args.key)
+                                key_path=Path(args.key),
                             )
 
                 case "logs":
                     self.manager.analyze_logs(
-                        domain=args.domain,
-                        lines=args.lines,
-                        filter_pattern=args.filter
+                        domain=args.domain, lines=args.lines, filter_pattern=args.filter
                     )
 
                 case "health":

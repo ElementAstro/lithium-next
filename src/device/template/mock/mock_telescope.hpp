@@ -35,7 +35,7 @@ public:
     auto getTelescopeInfo() -> std::optional<TelescopeParameters> override;
     auto setTelescopeInfo(double aperture, double focalLength,
                           double guiderAperture, double guiderFocalLength) -> bool override;
-    
+
     // Pier side
     auto getPierSide() -> std::optional<PierSide> override;
     auto setPierSide(PierSide side) -> bool override;
@@ -97,10 +97,10 @@ public:
 
     auto getTargetRADECJNow() -> std::optional<EquatorialCoordinates> override;
     auto setTargetRADECJNow(double raHours, double decDegrees) -> bool override;
-    
+
     auto slewToRADECJNow(double raHours, double decDegrees, bool enableTracking = true) -> bool override;
     auto syncToRADECJNow(double raHours, double decDegrees) -> bool override;
-    
+
     auto getAZALT() -> std::optional<HorizontalCoordinates> override;
     auto setAZALT(double azDegrees, double altDegrees) -> bool override;
     auto slewToAZALT(double azDegrees, double altDegrees) -> bool override;
@@ -115,7 +115,7 @@ public:
     // Alignment
     auto getAlignmentMode() -> AlignmentMode override;
     auto setAlignmentMode(AlignmentMode mode) -> bool override;
-    auto addAlignmentPoint(const EquatorialCoordinates& measured, 
+    auto addAlignmentPoint(const EquatorialCoordinates& measured,
                            const EquatorialCoordinates& target) -> bool override;
     auto clearAlignment() -> bool override;
 
@@ -129,33 +129,33 @@ private:
     static constexpr double MOCK_FOCAL_LENGTH = 1000.0;   // mm
     static constexpr double MOCK_LATITUDE = 40.0;         // degrees
     static constexpr double MOCK_LONGITUDE = -74.0;       // degrees
-    
+
     // Current state
     bool is_slewing_{false};
     bool is_moving_ns_{false};
     bool is_moving_ew_{false};
-    
+
     // Motion parameters
     MotionNS current_ns_motion_{MotionNS::NONE};
     MotionEW current_ew_motion_{MotionEW::NONE};
-    
+
     // Slew rates
     std::vector<double> slew_rates_{1.0, 2.0, 8.0, 32.0, 128.0}; // degrees/sec
     int current_slew_rate_index_{2};
-    
+
     // Park position
     EquatorialCoordinates park_position_{0.0, 90.0}; // NCP
-    
+
     // Home position
     EquatorialCoordinates home_position_{0.0, 90.0}; // NCP
-    
+
     // Current time offset for simulation
     std::chrono::system_clock::time_point utc_offset_;
-    
+
     // Random number generation for simulation
     mutable std::random_device rd_;
     mutable std::mt19937 gen_;
-    
+
     // Helper methods
     void simulateSlew(const EquatorialCoordinates& target, bool enableTracking);
     void simulateMotion(std::chrono::milliseconds duration);

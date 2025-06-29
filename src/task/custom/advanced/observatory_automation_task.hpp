@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Complete Observatory Automation Task
- * 
+ *
  * Manages complete observatory startup, operation, and shutdown sequences
  * including roof control, equipment initialization, and safety checks.
  */

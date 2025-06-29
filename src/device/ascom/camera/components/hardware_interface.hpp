@@ -106,10 +106,10 @@ public:
     struct ConnectionSettings {
         ConnectionType type = ConnectionType::ALPACA_REST;
         std::string deviceName;
-        
+
         // COM driver settings
         std::string progId;
-        
+
         // Alpaca settings
         std::string host = "localhost";
         int port = 11111;
@@ -405,22 +405,22 @@ private:
     std::atomic<bool> initialized_{false};
     std::atomic<bool> connected_{false};
     mutable std::mutex mutex_;
-    
+
     // Connection details
     ConnectionType connectionType_{ConnectionType::ALPACA_REST};
     ConnectionSettings currentSettings_;
-    
+
     // Camera information cache
     mutable std::optional<CameraInfo> cameraInfo_;
     mutable std::chrono::steady_clock::time_point lastInfoUpdate_;
-    
+
     // Error handling
     mutable std::string lastError_;
 
 #ifdef _WIN32
     // COM interface
     IDispatch* comCamera_ = nullptr;
-    
+
     // COM helper methods
     auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr, int paramCount = 0) -> std::optional<VARIANT>;
     auto getCOMProperty(const std::string& property) -> std::optional<VARIANT>;
@@ -431,20 +431,20 @@ private:
     auto sendAlpacaRequest(const std::string& method, const std::string& endpoint, const std::string& params = "") const -> std::optional<std::string>;
     auto parseAlpacaResponse(const std::string& response) -> std::optional<std::string>;
     auto buildAlpacaUrl(const std::string& endpoint) const -> std::string;
-    
+
     // Connection type specific methods
     auto connectCOM(const ConnectionSettings& settings) -> bool;
     auto connectAlpaca(const ConnectionSettings& settings) -> bool;
     auto disconnectCOM() -> bool;
     auto disconnectAlpaca() -> bool;
-    
+
     // Alpaca discovery
     auto discoverAlpacaDevices() -> std::vector<std::string>;
-    
+
     // Information caching
     auto updateCameraInfo() const -> bool;
     auto shouldUpdateInfo() const -> bool;
-    
+
     // Error handling helpers
     void setError(const std::string& error) const { lastError_ = error; }
 };

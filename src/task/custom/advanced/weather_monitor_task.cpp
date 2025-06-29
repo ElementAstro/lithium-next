@@ -16,7 +16,7 @@ auto WeatherMonitorTask::taskName() -> std::string { return "WeatherMonitor"; }
 void WeatherMonitorTask::execute(const json& params) { executeImpl(params); }
 
 void WeatherMonitorTask::executeImpl(const json& params) {
-    LOG_F(INFO, "Executing WeatherMonitor task '{}' with params: {}", 
+    LOG_F(INFO, "Executing WeatherMonitor task '{}' with params: {}",
           getName(), params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
@@ -46,11 +46,11 @@ void WeatherMonitorTask::executeImpl(const json& params) {
         LOG_F(INFO, "Starting weather monitoring for {:.1f} hours with {:.1f} minute intervals",
               monitorDuration, monitorInterval);
 
-        auto monitorEnd = std::chrono::steady_clock::now() + 
+        auto monitorEnd = std::chrono::steady_clock::now() +
                          std::chrono::hours(static_cast<int>(monitorDuration));
 
         bool lastWeatherState = true; // true = safe, false = unsafe
-        
+
         while (std::chrono::steady_clock::now() < monitorEnd) {
             json currentWeather = getCurrentWeatherData();
             bool weatherSafe = evaluateWeatherConditions(currentWeather, weatherLimits);
@@ -104,7 +104,7 @@ void WeatherMonitorTask::executeImpl(const json& params) {
 json WeatherMonitorTask::getCurrentWeatherData() {
     // In real implementation, this would connect to weather APIs or local weather station
     // For now, simulate weather data
-    
+
     json weather = {
         {"cloud_cover", 15.0 + (rand() % 40)},        // 15-55%
         {"wind_speed", 5.0 + (rand() % 20)},          // 5-25 km/h
@@ -137,7 +137,7 @@ bool WeatherMonitorTask::evaluateWeatherConditions(const json& weather, const js
 
     // Check temperature range
     double temp = weather["temperature"].get<double>();
-    if (temp < limits["temperature_min"].get<double>() || 
+    if (temp < limits["temperature_min"].get<double>() ||
         temp > limits["temperature_max"].get<double>()) {
         return false;
     }
@@ -158,14 +158,14 @@ bool WeatherMonitorTask::evaluateWeatherConditions(const json& weather, const js
 
 void WeatherMonitorTask::handleUnsafeWeather() {
     LOG_F(WARNING, "Implementing weather safety protocols");
-    
+
     // In real implementation, this would:
     // 1. Stop current imaging sequences
     // 2. Close observatory roof/dome
     // 3. Park telescope to safe position
     // 4. Cover equipment
     // 5. Shut down sensitive electronics
-    
+
     // Simulate safety actions
     std::this_thread::sleep_for(std::chrono::seconds(5));
     LOG_F(INFO, "Equipment secured due to unsafe weather");
@@ -173,13 +173,13 @@ void WeatherMonitorTask::handleUnsafeWeather() {
 
 void WeatherMonitorTask::handleSafeWeather() {
     LOG_F(INFO, "Weather conditions safe - resuming operations");
-    
+
     // In real implementation, this would:
     // 1. Open observatory roof/dome
     // 2. Unpark telescope
     // 3. Resume suspended sequences
     // 4. Restart equipment cooling
-    
+
     // Simulate resumption actions
     std::this_thread::sleep_for(std::chrono::seconds(3));
     LOG_F(INFO, "Operations resumed after weather improvement");
@@ -187,7 +187,7 @@ void WeatherMonitorTask::handleSafeWeather() {
 
 void WeatherMonitorTask::sendWeatherAlert(const std::string& message) {
     LOG_F(INFO, "Weather Alert: {}", message);
-    
+
     // In real implementation, this would send email/SMS notifications
     // For now, just log the alert
 }

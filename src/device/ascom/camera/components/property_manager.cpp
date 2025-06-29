@@ -57,76 +57,76 @@ PropertyManager::PropertyManager(std::shared_ptr<HardwareInterface> hardware)
 
 bool PropertyManager::initialize() {
     LOG_F(INFO, "Initializing property manager");
-    
+
     if (!hardware_ || !hardware_->isConnected()) {
         LOG_F(ERROR, "Cannot initialize: hardware not connected");
         return false;
     }
-    
+
     loadCameraProperties();
     return true;
 }
 
 bool PropertyManager::refreshProperties() {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     if (!hardware_ || !hardware_->isConnected()) {
         LOG_F(ERROR, "Cannot refresh properties: hardware not connected");
         return false;
     }
-    
+
     // Refresh properties from hardware
     LOG_F(INFO, "Properties refreshed successfully");
     return true;
 }
 
-std::optional<PropertyManager::PropertyInfo> 
+std::optional<PropertyManager::PropertyInfo>
 PropertyManager::getPropertyInfo(const std::string& name) const {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(name);
     if (it == properties_.end()) {
         return std::nullopt;
     }
-    
+
     return it->second;
 }
 
-std::optional<PropertyManager::PropertyValue> 
+std::optional<PropertyManager::PropertyValue>
 PropertyManager::getProperty(const std::string& name) const {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(name);
     if (it == properties_.end()) {
         return std::nullopt;
     }
-    
+
     return it->second.currentValue;
 }
 
 bool PropertyManager::setProperty(const std::string& name, const PropertyValue& value) {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     auto it = properties_.find(name);
     if (it == properties_.end()) {
         LOG_F(ERROR, "Property not found: {}", name);
         return false;
     }
-    
+
     auto& property = it->second;
-    
+
     // Check if property is writable
     if (property.isReadOnly) {
         LOG_F(ERROR, "Property is read-only: {}", name);
         return false;
     }
-    
+
     // Store old value for change notification
     PropertyValue oldValue = property.currentValue;
-    
+
     // Update property value
     property.currentValue = value;
-    
+
     // Apply to hardware
     if (!applyPropertyToCamera(name, value)) {
         LOG_F(ERROR, "Failed to apply property {} to hardware", name);
@@ -134,18 +134,18 @@ bool PropertyManager::setProperty(const std::string& name, const PropertyValue& 
         property.currentValue = oldValue;
         return false;
     }
-    
+
     LOG_F(INFO, "Property {} set successfully", name);
-    
+
     // Notify change callback
     if (notificationsEnabled_.load()) {
         notifyPropertyChange(name, oldValue, value);
     }
-    
+
     return true;
 }
 
-std::map<std::string, PropertyManager::PropertyInfo> 
+std::map<std::string, PropertyManager::PropertyInfo>
 PropertyManager::getAllProperties() const {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
     return properties_;
@@ -174,7 +174,7 @@ std::optional<int> PropertyManager::getGain() const {
 
 std::pair<int, int> PropertyManager::getGainRange() const {
     auto info = getPropertyInfo(PROPERTY_GAIN);
-    if (info && std::holds_alternative<int>(info->minValue) && 
+    if (info && std::holds_alternative<int>(info->minValue) &&
         std::holds_alternative<int>(info->maxValue)) {
         return {std::get<int>(info->minValue), std::get<int>(info->maxValue)};
     }
@@ -195,7 +195,7 @@ std::optional<int> PropertyManager::getOffset() const {
 
 std::pair<int, int> PropertyManager::getOffsetRange() const {
     auto info = getPropertyInfo(PROPERTY_OFFSET);
-    if (info && std::holds_alternative<int>(info->minValue) && 
+    if (info && std::holds_alternative<int>(info->minValue) &&
         std::holds_alternative<int>(info->maxValue)) {
         return {std::get<int>(info->minValue), std::get<int>(info->maxValue)};
     }
@@ -233,27 +233,27 @@ bool PropertyManager::setROI(const ROI& roi) {
 
 PropertyManager::ROI PropertyManager::getROI() const {
     ROI roi;
-    
+
     auto startX = getProperty(PROPERTY_STARTX);
     if (startX && std::holds_alternative<int>(*startX)) {
         roi.x = std::get<int>(*startX);
     }
-    
+
     auto startY = getProperty(PROPERTY_STARTY);
     if (startY && std::holds_alternative<int>(*startY)) {
         roi.y = std::get<int>(*startY);
     }
-    
+
     auto numX = getProperty(PROPERTY_NUMX);
     if (numX && std::holds_alternative<int>(*numX)) {
         roi.width = std::get<int>(*numX);
     }
-    
+
     auto numY = getProperty(PROPERTY_NUMY);
     if (numY && std::holds_alternative<int>(*numY)) {
         roi.height = std::get<int>(*numY);
     }
-    
+
     return roi;
 }
 
@@ -271,16 +271,16 @@ bool PropertyManager::setBinning(const AtomCameraFrame::Binning& binning) {
 std::optional<AtomCameraFrame::Binning> PropertyManager::getBinning() const {
     auto binX = getProperty(PROPERTY_BINX);
     auto binY = getProperty(PROPERTY_BINY);
-    
-    if (binX && binY && 
-        std::holds_alternative<int>(*binX) && 
+
+    if (binX && binY &&
+        std::holds_alternative<int>(*binX) &&
         std::holds_alternative<int>(*binY)) {
         AtomCameraFrame::Binning binning;
         binning.horizontal = std::get<int>(*binX);
         binning.vertical = std::get<int>(*binY);
         return binning;
     }
-    
+
     return std::nullopt;
 }
 
@@ -415,18 +415,18 @@ int PropertyManager::getFanSpeed() const {
 
 std::shared_ptr<AtomCameraFrame> PropertyManager::getFrameInfo() const {
     auto frame = std::make_shared<AtomCameraFrame>();
-    
+
     auto roi = getROI();
     auto binning = getBinning();
-    
+
     frame->resolution.width = roi.width;
     frame->resolution.height = roi.height;
     // Note: bitDepth is not a direct member of AtomCameraFrame
-    
+
     if (binning) {
         frame->binning = *binning;
     }
-    
+
     return frame;
 }
 
@@ -437,7 +437,7 @@ std::shared_ptr<AtomCameraFrame> PropertyManager::getFrameInfo() const {
 bool PropertyManager::validateProperty(const std::string& name, const PropertyValue& value) const {
     auto info = getPropertyInfo(name);
     if (!info) return false;
-    
+
     // Basic type validation
     return value.index() == info->currentValue.index();
 }
@@ -449,13 +449,13 @@ std::string PropertyManager::getPropertyConstraints(const std::string& name) con
 bool PropertyManager::resetProperty(const std::string& name) {
     auto info = getPropertyInfo(name);
     if (!info) return false;
-    
+
     return setProperty(name, info->defaultValue);
 }
 
 bool PropertyManager::resetAllProperties() {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     bool success = true;
     for (const auto& [name, info] : properties_) {
         if (!info.isReadOnly) {
@@ -464,7 +464,7 @@ bool PropertyManager::resetAllProperties() {
             }
         }
     }
-    
+
     return success;
 }
 
@@ -474,7 +474,7 @@ bool PropertyManager::resetAllProperties() {
 
 void PropertyManager::loadCameraProperties() {
     std::lock_guard<std::mutex> lock(propertiesMutex_);
-    
+
     // Initialize basic camera properties
     PropertyInfo gainInfo;
     gainInfo.name = PROPERTY_GAIN;
@@ -486,7 +486,7 @@ void PropertyManager::loadCameraProperties() {
     gainInfo.isReadOnly = false;
     // gainInfo.propertyType = PropertyType::INTEGER; // Remove propertyType references
     properties_[PROPERTY_GAIN] = gainInfo;
-    
+
     PropertyInfo offsetInfo;
     offsetInfo.name = PROPERTY_OFFSET;
     offsetInfo.description = "Camera offset";
@@ -497,7 +497,7 @@ void PropertyManager::loadCameraProperties() {
     offsetInfo.isReadOnly = false;
     // offsetInfo.propertyType = PropertyType::INTEGER; // Remove propertyType references
     properties_[PROPERTY_OFFSET] = offsetInfo;
-    
+
     // Add binning properties
     PropertyInfo binXInfo;
     binXInfo.name = PROPERTY_BINX;
@@ -509,11 +509,11 @@ void PropertyManager::loadCameraProperties() {
     binXInfo.isReadOnly = false;
     // binXInfo.propertyType = PropertyType::INTEGER; // Remove propertyType references
     properties_[PROPERTY_BINX] = binXInfo;
-    
+
     binXInfo.name = PROPERTY_BINY;
     binXInfo.description = "Vertical binning";
     properties_[PROPERTY_BINY] = binXInfo;
-    
+
     // Add ROI properties
     PropertyInfo roiInfo;
     roiInfo.name = PROPERTY_STARTX;
@@ -525,22 +525,22 @@ void PropertyManager::loadCameraProperties() {
     roiInfo.isReadOnly = false;
     // roiInfo.propertyType = PropertyType::INTEGER; // Remove propertyType references
     properties_[PROPERTY_STARTX] = roiInfo;
-    
+
     roiInfo.name = PROPERTY_STARTY;
     roiInfo.description = "ROI start Y";
     properties_[PROPERTY_STARTY] = roiInfo;
-    
+
     roiInfo.name = PROPERTY_NUMX;
     roiInfo.description = "ROI width";
     roiInfo.currentValue = 4096;
     roiInfo.defaultValue = 4096;
     roiInfo.minValue = 1;
     properties_[PROPERTY_NUMX] = roiInfo;
-    
+
     roiInfo.name = PROPERTY_NUMY;
     roiInfo.description = "ROI height";
     properties_[PROPERTY_NUMY] = roiInfo;
-    
+
     LOG_F(INFO, "Loaded {} camera properties", properties_.size());
 }
 
@@ -556,22 +556,22 @@ bool PropertyManager::applyPropertyToCamera(const std::string& name, const Prope
     if (!hardware_ || !hardware_->isConnected()) {
         return false;
     }
-    
+
     // Map property names to hardware operations
     if (name == PROPERTY_GAIN && std::holds_alternative<int>(value)) {
         return hardware_->setGain(std::get<int>(value));
     } else if (name == PROPERTY_OFFSET && std::holds_alternative<int>(value)) {
         return hardware_->setOffset(std::get<int>(value));
     }
-    
+
     return true; // Simplified - assume success for other properties
 }
 
-void PropertyManager::notifyPropertyChange(const std::string& name, 
-                                         const PropertyValue& oldValue, 
+void PropertyManager::notifyPropertyChange(const std::string& name,
+                                         const PropertyValue& oldValue,
                                          const PropertyValue& newValue) {
     std::lock_guard<std::mutex> lock(callbackMutex_);
-    
+
     if (propertyChangeCallback_) {
         propertyChangeCallback_(name, oldValue, newValue);
     }
@@ -591,13 +591,13 @@ bool PropertyManager::setTypedProperty(const std::string& name, const T& value) 
     return setProperty(name, PropertyValue{value});
 }
 
-bool PropertyManager::isValueInRange(const PropertyValue& value, 
-                                    const PropertyValue& min, 
+bool PropertyManager::isValueInRange(const PropertyValue& value,
+                                    const PropertyValue& min,
                                     const PropertyValue& max) const {
     return true; // Simplified implementation
 }
 
-bool PropertyManager::isValueInAllowedList(const PropertyValue& value, 
+bool PropertyManager::isValueInAllowedList(const PropertyValue& value,
                                          const std::vector<PropertyValue>& allowedValues) const {
     for (const auto& allowedValue : allowedValues) {
         if (value == allowedValue) {

@@ -11,7 +11,7 @@ namespace lithium::device::indi::filterwheel {
 
 /**
  * @brief Controls filter selection and movement for INDI FilterWheel
- * 
+ *
  * This component handles all filter wheel movement operations, including
  * position changes, validation, and movement state tracking.
  */

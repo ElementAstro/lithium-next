@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Timelapse task.
- * 
+ *
  * Performs timelapse imaging with specified intervals and automatic
  * exposure adjustments for different scenarios.
  */

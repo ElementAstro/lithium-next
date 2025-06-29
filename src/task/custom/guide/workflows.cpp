@@ -91,7 +91,7 @@ void CompleteGuideSetupTask::performCompleteSetup(const json& params) {
             break;
         } catch (const atom::error::Exception& e) {
             if (attempt == retry_count) {
-                THROW_RUNTIME_ERROR("Failed to connect after {} attempts: {}", 
+                THROW_RUNTIME_ERROR("Failed to connect after {} attempts: {}",
                                    retry_count, e.what());
             }
             std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -123,7 +123,7 @@ void CompleteGuideSetupTask::performCompleteSetup(const json& params) {
                 break;
             } catch (const atom::error::Exception& e) {
                 if (attempt == retry_count) {
-                    THROW_RUNTIME_ERROR("Failed to find guide star after {} attempts: {}", 
+                    THROW_RUNTIME_ERROR("Failed to find guide star after {} attempts: {}",
                                        retry_count, e.what());
                 }
                 std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -158,7 +158,7 @@ void CompleteGuideSetupTask::performCompleteSetup(const json& params) {
             break;
         } catch (const atom::error::Exception& e) {
             if (attempt == retry_count) {
-                THROW_RUNTIME_ERROR("Calibration failed after {} attempts: {}", 
+                THROW_RUNTIME_ERROR("Calibration failed after {} attempts: {}",
                                    retry_count, e.what());
             }
             std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -192,7 +192,7 @@ void CompleteGuideSetupTask::performCompleteSetup(const json& params) {
             break;
         } catch (const atom::error::Exception& e) {
             if (attempt == retry_count) {
-                THROW_RUNTIME_ERROR("Failed to start guiding after {} attempts: {}", 
+                THROW_RUNTIME_ERROR("Failed to start guiding after {} attempts: {}",
                                    retry_count, e.what());
             }
             std::this_thread::sleep_for(std::chrono::seconds(3));

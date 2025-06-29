@@ -4,7 +4,7 @@
 
 #include "factory.hpp"
 #include "base.hpp"
-#include "position.hpp" 
+#include "position.hpp"
 #include "autofocus.hpp"
 #include "temperature.hpp"
 #include "validation.hpp"

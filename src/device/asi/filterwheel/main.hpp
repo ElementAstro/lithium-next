@@ -157,10 +157,10 @@ public:
 
 private:
     std::unique_ptr<ASIFilterwheelController> controller_;
-    
+
     // Constants
     static constexpr int MAX_FILTERS = 20;
-    
+
     // Internal storage for filter information
     std::array<FilterInfo, MAX_FILTERS> filters_;
 };

@@ -121,7 +121,7 @@ auto ComponentManagerImpl::loadComponent(const json& params) -> bool {
         components_[name] = *instance;
         componentOptions_[name] = *options;
         updateComponentState(name, ComponentState::Created);
-        
+
         notifyListeners(name, ComponentEvent::PostLoad);
         LOG_F(INFO, "Component {} loaded successfully", name);
         return true;
@@ -138,7 +138,7 @@ auto ComponentManagerImpl::loadComponent(const json& params) -> bool {
 auto ComponentManagerImpl::unloadComponent(const json& params) -> bool {
     try {
         std::string name = params.at("name").get<std::string>();
-        
+
         std::lock_guard lock(mutex_);
         auto it = components_.find(name);
         if (it == components_.end()) {
@@ -151,19 +151,19 @@ auto ComponentManagerImpl::unloadComponent(const json& params) -> bool {
         if (!moduleLoader_->unloadModule(name)) {
             LOG_F(WARNING, "Failed to unload module for component: {}", name);
         }
-        
+
         // Remove from containers
         components_.erase(it);
         componentOptions_.erase(name);
         componentStates_.erase(name);
-        
+
         // Remove from dependency graph
         dependencyGraph_.removeNode(name);
-        
+
         notifyListeners(name, ComponentEvent::PostUnload);
         LOG_F(INFO, "Component {} unloaded successfully", name);
         return true;
-        
+
     } catch (const json::exception& e) {
         LOG_F(ERROR, "JSON error while unloading component: {}", e.what());
         return false;
@@ -178,7 +178,7 @@ auto ComponentManagerImpl::scanComponents(const std::string& path) -> std::vecto
         fileTracker_->scan();
         fileTracker_->compare();
         auto differences = fileTracker_->getDifferences();
-        
+
         std::vector<std::string> newFiles;
         for (auto& [path, info] : differences.items()) {
             if (info["status"] == "new") {
@@ -209,7 +209,7 @@ auto ComponentManagerImpl::getComponentInfo(const std::string& component_name)
         if (!components_.contains(component_name)) {
             return std::nullopt;
         }
-        
+
         json info;
         info["name"] = component_name;
         info["state"] = static_cast<int>(componentStates_[component_name]);
@@ -265,10 +265,10 @@ void ComponentManagerImpl::updateDependencyGraph(
     try {
         Version ver = Version::parse(version);
         dependencyGraph_.addNode(component_name, ver);
-        
+
         for (size_t i = 0; i < dependencies.size(); ++i) {
-            Version depVer = i < dependencies_version.size() 
-                           ? Version::parse(dependencies_version[i]) 
+            Version depVer = i < dependencies_version.size()
+                           ? Version::parse(dependencies_version[i])
                            : Version{1, 0, 0};
             dependencyGraph_.addDependency(component_name, dependencies[i], depVer);
         }
@@ -284,7 +284,7 @@ void ComponentManagerImpl::printDependencyTree() {
         LOG_F(INFO, "Dependency Tree:");
         for (const auto& component : components) {
             auto dependencies = dependencyGraph_.getDependencies(component);
-            LOG_F(INFO, "  {} -> [{}]", component, 
+            LOG_F(INFO, "  {} -> [{}]", component,
                   std::accumulate(dependencies.begin(), dependencies.end(), std::string{},
                       [](const std::string& a, const std::string& b) {
                           return a.empty() ? b : a + ", " + b;
@@ -300,7 +300,7 @@ auto ComponentManagerImpl::initializeComponent(const std::string& name) -> bool 
         if (!validateComponentOperation(name)) {
             return false;
         }
-        
+
         auto comp = getComponent(name);
         if (comp) {
             auto component = comp->lock();

@@ -2,16 +2,16 @@
 
 namespace lithium::device::indi::filterwheel {
 
-INDIFilterWheelCore::INDIFilterWheelCore(std::string name) 
+INDIFilterWheelCore::INDIFilterWheelCore(std::string name)
     : name_(std::move(name)) {
     // Initialize logger
     logger_ = spdlog::get("filterwheel");
     if (!logger_) {
         logger_ = spdlog::default_logger();
     }
-    
+
     logger_->info("Creating INDI FilterWheel core: {}", name_);
-    
+
     // Initialize default slot names
     slotNames_.resize(maxSlot_);
     for (int i = 0; i < maxSlot_; ++i) {

@@ -11,7 +11,7 @@ namespace lithium::device::indi::camera {
 
 /**
  * @brief Temperature control component for INDI cameras
- * 
+ *
  * This component handles camera cooling operations, temperature
  * monitoring, and thermal management. Uses the global TemperatureInfo
  * struct from the camera template for consistency.
@@ -43,15 +43,15 @@ private:
     std::atomic<double> currentTemperature_{0.0};
     std::atomic<double> targetTemperature_{0.0};
     std::atomic<double> coolingPower_{0.0};
-    
+
     // Temperature info structure
     TemperatureInfo temperatureInfo_;
-    
+
     // Property handlers
     void handleTemperatureProperty(INDI::Property property);
     void handleCoolerProperty(INDI::Property property);
     void handleCoolerPowerProperty(INDI::Property property);
-    
+
     // Helper methods
     void updateTemperatureInfo();
 };

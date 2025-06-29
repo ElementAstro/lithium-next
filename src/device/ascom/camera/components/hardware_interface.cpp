@@ -50,7 +50,7 @@ HardwareInterface::~HardwareInterface() {
 
 auto HardwareInterface::initialize() -> bool {
     std::lock_guard<std::mutex> lock(mutex_);
-    
+
     if (initialized_) {
         return true;
     }
@@ -78,7 +78,7 @@ auto HardwareInterface::initialize() -> bool {
 
 auto HardwareInterface::shutdown() -> bool {
     std::lock_guard<std::mutex> lock(mutex_);
-    
+
     if (!initialized_) {
         return true;
     }
@@ -120,16 +120,16 @@ auto HardwareInterface::enumerateDevices() -> std::vector<std::string> {
 
 auto HardwareInterface::discoverAlpacaDevices() -> std::vector<std::string> {
     std::vector<std::string> devices;
-    
+
     spdlog::info("Discovering Alpaca camera devices");
-    
+
     // TODO: Implement Alpaca discovery protocol
     // This involves sending UDP broadcasts on port 32227
     // and parsing the JSON responses
-    
+
     // For now, return some common defaults
     devices.push_back("http://localhost:11111/api/v1/camera/0");
-    
+
     spdlog::debug("Found {} Alpaca devices", devices.size());
     return devices;
 }
@@ -194,7 +194,7 @@ auto HardwareInterface::disconnect() -> bool {
 
 auto HardwareInterface::getCameraInfo() -> std::optional<CameraInfo> {
     std::lock_guard<std::mutex> lock(infoMutex_);
-    
+
     if (!connected_) {
         return std::nullopt;
     }
@@ -625,7 +625,7 @@ auto HardwareInterface::setFrame(int startX, int startY, int width, int height) 
 
     if (connectionType_ == ConnectionType::ALPACA_REST) {
         std::ostringstream params;
-        params << "StartX=" << startX << "&StartY=" << startY 
+        params << "StartX=" << startX << "&StartY=" << startY
                << "&NumX=" << width << "&NumY=" << height;
         auto response = sendAlpacaRequest("PUT", "frame", params.str());
         return response.has_value();
@@ -637,19 +637,19 @@ auto HardwareInterface::setFrame(int startX, int startY, int width, int height) 
         VARIANT value;
         VariantInit(&value);
         value.vt = VT_I4;
-        
+
         value.intVal = startX;
         if (!setCOMProperty("StartX", value)) return false;
-        
+
         value.intVal = startY;
         if (!setCOMProperty("StartY", value)) return false;
-        
+
         value.intVal = width;
         if (!setCOMProperty("NumX", value)) return false;
-        
+
         value.intVal = height;
         if (!setCOMProperty("NumY", value)) return false;
-        
+
         return true;
     }
 #endif
@@ -675,13 +675,13 @@ auto HardwareInterface::setBinning(int binX, int binY) -> bool {
         VARIANT value;
         VariantInit(&value);
         value.vt = VT_I4;
-        
+
         value.intVal = binX;
         if (!setCOMProperty("BinX", value)) return false;
-        
+
         value.intVal = binY;
         if (!setCOMProperty("BinY", value)) return false;
-        
+
         return true;
     }
 #endif
@@ -725,7 +725,7 @@ auto HardwareInterface::shutdownCOM() -> void {
         comCamera_->Release();
         comCamera_ = nullptr;
     }
-    
+
     if (comInitialized_) {
         CoUninitialize();
         comInitialized_ = false;
@@ -875,7 +875,7 @@ auto HardwareInterface::setCOMProperty(const std::string& property,
 
 auto HardwareInterface::connectToAlpacaDevice(const std::string& host, int port,
                                             int deviceNumber) -> bool {
-    spdlog::info("Connecting to Alpaca camera device at {}:{} device {}", 
+    spdlog::info("Connecting to Alpaca camera device at {}:{} device {}",
                 host, port, deviceNumber);
 
     // Test connection by getting device info
@@ -920,7 +920,7 @@ auto HardwareInterface::updateCameraInfo() -> bool {
     }
 
     std::lock_guard<std::mutex> lock(infoMutex_);
-    
+
     CameraInfo info;
     info.name = deviceName_;
 
@@ -941,13 +941,13 @@ auto HardwareInterface::updateCameraInfo() -> bool {
             info.cameraXSize = widthResult->intVal;
             info.cameraYSize = heightResult->intVal;
         }
-        
+
         // Get other camera properties...
         auto canAbortResult = getCOMProperty("CanAbortExposure");
         if (canAbortResult) {
             info.canAbortExposure = canAbortResult->boolVal == VARIANT_TRUE;
         }
-        
+
         // ... get more properties as needed
     }
 #endif

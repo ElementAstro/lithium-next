@@ -43,29 +43,29 @@ SequenceManager::~SequenceManager() {
 
 bool SequenceManager::startSequence(const SequenceSettings& settings) {
     spdlog::info( "Starting sequence: %s", settings.name.c_str());
-    
+
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     if (state_ != SequenceState::IDLE && state_ != SequenceState::COMPLETE) {
         spdlog::error( "Cannot start sequence, current state: %s", getStateString().c_str());
         return false;
     }
-    
+
     if (!validateSequence(settings)) {
         spdlog::error( "Sequence validation failed");
         return false;
     }
-    
+
     currentSettings_ = settings;
     updateState(SequenceState::PREPARING);
-    
+
     // Start sequence in background thread
     if (sequenceThread_.joinable()) {
         sequenceThread_.join();
     }
-    
+
     sequenceThread_ = std::thread(&SequenceManager::sequenceWorker, this);
-    
+
     spdlog::info( "Sequence started successfully");
     return true;
 }
@@ -74,7 +74,7 @@ bool SequenceManager::pauseSequence() {
     if (state_ != SequenceState::RUNNING) {
         return false;
     }
-    
+
     spdlog::info( "Pausing sequence");
     pauseRequested_ = true;
     updateState(SequenceState::PAUSED);
@@ -85,7 +85,7 @@ bool SequenceManager::resumeSequence() {
     if (state_ != SequenceState::PAUSED) {
         return false;
     }
-    
+
     spdlog::info( "Resuming sequence");
     pauseRequested_ = false;
     updateState(SequenceState::RUNNING);
@@ -97,13 +97,13 @@ bool SequenceManager::stopSequence() {
     if (state_ == SequenceState::IDLE || state_ == SequenceState::COMPLETE) {
         return true;
     }
-    
+
     spdlog::info( "Stopping sequence");
     stopRequested_ = true;
     pauseRequested_ = false;
     updateState(SequenceState::STOPPING);
     stateCondition_.notify_all();
-    
+
     return true;
 }
 
@@ -111,14 +111,14 @@ bool SequenceManager::abortSequence() {
     if (state_ == SequenceState::IDLE || state_ == SequenceState::COMPLETE) {
         return true;
     }
-    
+
     spdlog::info( "Aborting sequence");
     abortRequested_ = true;
     stopRequested_ = true;
     pauseRequested_ = false;
     updateState(SequenceState::ABORTED);
     stateCondition_.notify_all();
-    
+
     return true;
 }
 
@@ -177,55 +177,55 @@ void SequenceManager::clearResults() {
 // Sequence Templates
 // =========================================================================
 
-auto SequenceManager::createSimpleSequence(double exposure, int count, 
+auto SequenceManager::createSimpleSequence(double exposure, int count,
                                           std::chrono::seconds interval) -> SequenceSettings {
     SequenceSettings settings;
     settings.type = SequenceType::SIMPLE;
     settings.name = "Simple Sequence";
     settings.intervalDelay = interval;
-    
+
     for (int i = 0; i < count; ++i) {
         ExposureStep step;
         step.duration = exposure;
         step.filename = "exposure_{step:03d}";
         settings.steps.push_back(step);
     }
-    
+
     return settings;
 }
 
-auto SequenceManager::createBracketingSequence(double baseExposure, 
+auto SequenceManager::createBracketingSequence(double baseExposure,
                                               const std::vector<double>& exposureMultipliers,
                                               int repeatCount) -> SequenceSettings {
     SequenceSettings settings;
     settings.type = SequenceType::BRACKETING;
     settings.name = "Bracketing Sequence";
     settings.repeatCount = repeatCount;
-    
+
     for (double multiplier : exposureMultipliers) {
         ExposureStep step;
         step.duration = baseExposure * multiplier;
         step.filename = "bracket_{step:03d}_{duration:.2f}s";
         settings.steps.push_back(step);
     }
-    
+
     return settings;
 }
 
-auto SequenceManager::createTimeLapseSequence(double exposure, int count, 
+auto SequenceManager::createTimeLapseSequence(double exposure, int count,
                                              std::chrono::seconds interval) -> SequenceSettings {
     SequenceSettings settings;
     settings.type = SequenceType::TIME_LAPSE;
     settings.name = "Time Lapse";
     settings.intervalDelay = interval;
-    
+
     for (int i = 0; i < count; ++i) {
         ExposureStep step;
         step.duration = exposure;
         step.filename = "timelapse_{step:03d}_{timestamp}";
         settings.steps.push_back(step);
     }
-    
+
     return settings;
 }
 
@@ -234,7 +234,7 @@ auto SequenceManager::createCalibrationSequence(const std::string& frameType,
     SequenceSettings settings;
     settings.type = SequenceType::CALIBRATION;
     settings.name = frameType + " Calibration";
-    
+
     for (int i = 0; i < count; ++i) {
         ExposureStep step;
         step.duration = exposure;
@@ -242,7 +242,7 @@ auto SequenceManager::createCalibrationSequence(const std::string& frameType,
         step.filename = frameType + "_{step:03d}";
         settings.steps.push_back(step);
     }
-    
+
     return settings;
 }
 
@@ -255,32 +255,32 @@ bool SequenceManager::validateSequence(const SequenceSettings& settings) const {
         spdlog::error( "Sequence has no steps");
         return false;
     }
-    
+
     if (settings.repeatCount <= 0) {
         spdlog::error( "Invalid repeat count: %d", settings.repeatCount);
         return false;
     }
-    
+
     for (const auto& step : settings.steps) {
         if (!validateExposureStep(step)) {
             return false;
         }
     }
-    
+
     return true;
 }
 
 std::chrono::seconds SequenceManager::estimateSequenceDuration(const SequenceSettings& settings) const {
     std::chrono::seconds total{0};
-    
+
     for (const auto& step : settings.steps) {
         total += std::chrono::seconds(static_cast<int>(step.duration));
         total += settings.intervalDelay;
     }
-    
+
     total *= settings.repeatCount;
     total += settings.sequenceDelay * (settings.repeatCount - 1);
-    
+
     return total;
 }
 
@@ -379,15 +379,15 @@ bool SequenceManager::deleteSequencePreset(const std::string& name) {
 
 void SequenceManager::sequenceWorker() {
     spdlog::info( "Sequence worker started");
-    
+
     SequenceResult result;
     result.sequenceName = currentSettings_.name;
     result.startTime = std::chrono::steady_clock::now();
-    
+
     try {
         updateState(SequenceState::RUNNING);
         result.success = executeSequence(currentSettings_, result);
-        
+
         if (result.success && !stopRequested_ && !abortRequested_) {
             updateState(SequenceState::COMPLETE);
         } else if (abortRequested_) {
@@ -395,42 +395,42 @@ void SequenceManager::sequenceWorker() {
         } else {
             updateState(SequenceState::ERROR);
         }
-        
+
     } catch (const std::exception& e) {
         result.success = false;
         result.errorMessage = e.what();
         updateState(SequenceState::ERROR);
         spdlog::error( "Sequence worker exception: %s", e.what());
     }
-    
+
     result.endTime = std::chrono::steady_clock::now();
     result.totalDuration = std::chrono::duration_cast<std::chrono::seconds>(
         result.endTime - result.startTime);
-    
+
     // Store result
     {
         std::lock_guard<std::mutex> lock(resultsMutex_);
         results_.push_back(result);
     }
-    
+
     notifyCompletion(result);
-    
+
     // Reset flags
     stopRequested_ = false;
     abortRequested_ = false;
     pauseRequested_ = false;
-    
+
     spdlog::info( "Sequence worker finished");
 }
 
 bool SequenceManager::executeSequence(const SequenceSettings& settings, SequenceResult& result) {
     // Placeholder implementation
     spdlog::info( "Executing sequence: %s", settings.name.c_str());
-    
+
     // TODO: Implement actual sequence execution
     // For now, just simulate some work
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
+
     return true;
 }
 

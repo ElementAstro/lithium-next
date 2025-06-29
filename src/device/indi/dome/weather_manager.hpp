@@ -15,7 +15,7 @@ class WeatherManager : public DomeComponentBase {
 public:
     explicit WeatherManager(std::shared_ptr<INDIDomeCore> core)
         : DomeComponentBase(std::move(core), "WeatherManager") {}
-    
+
     auto initialize() -> bool override { return true; }
     auto cleanup() -> bool override { return true; }
     void handlePropertyUpdate(const INDI::Property& property) override {}

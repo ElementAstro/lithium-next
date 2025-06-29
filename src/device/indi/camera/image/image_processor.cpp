@@ -8,7 +8,7 @@
 
 namespace lithium::device::indi::camera {
 
-ImageProcessor::ImageProcessor(std::shared_ptr<INDICameraCore> core) 
+ImageProcessor::ImageProcessor(std::shared_ptr<INDICameraCore> core)
     : ComponentBase(core) {
     spdlog::debug("Creating image processor");
     setupImageFormats();
@@ -16,17 +16,17 @@ ImageProcessor::ImageProcessor(std::shared_ptr<INDICameraCore> core)
 
 auto ImageProcessor::initialize() -> bool {
     spdlog::debug("Initializing image processor");
-    
+
     // Reset image processing state
     currentImageFormat_ = "FITS";
     imageCompressionEnabled_.store(false);
-    
+
     // Reset image quality metrics
     lastImageMean_.store(0.0);
     lastImageStdDev_.store(0.0);
     lastImageMin_.store(0);
     lastImageMax_.store(0);
-    
+
     setupImageFormats();
     return true;
 }
@@ -44,15 +44,15 @@ auto ImageProcessor::handleProperty(INDI::Property property) -> bool {
     if (!property.isValid()) {
         return false;
     }
-    
+
     std::string propertyName = property.getName();
-    
+
     if (propertyName == "CCD1" && property.getType() == INDI_BLOB) {
         INDI::PropertyBlob blobProperty = property;
         processReceivedImage(blobProperty);
         return true;
     }
-    
+
     return false;
 }
 
@@ -63,7 +63,7 @@ auto ImageProcessor::setImageFormat(const std::string& format) -> bool {
         spdlog::error("Unsupported image format: {}", format);
         return false;
     }
-    
+
     currentImageFormat_ = format;
     spdlog::info("Image format set to: {}", format);
     return true;
@@ -104,7 +104,7 @@ auto ImageProcessor::getFrameStatistics() const -> std::map<std::string, double>
     stats["min_value"] = static_cast<double>(lastImageMin_.load());
     stats["max_value"] = static_cast<double>(lastImageMax_.load());
     stats["dynamic_range"] = static_cast<double>(lastImageMax_.load() - lastImageMin_.load());
-    
+
     // Calculate signal-to-noise ratio (simplified)
     double mean = lastImageMean_.load();
     double stddev = lastImageStdDev_.load();
@@ -113,14 +113,14 @@ auto ImageProcessor::getFrameStatistics() const -> std::map<std::string, double>
     } else {
         stats["signal_to_noise_ratio"] = 0.0;
     }
-    
+
     return stats;
 }
 
 auto ImageProcessor::getImageFormat(const std::string& extension) -> std::string {
     std::string ext = extension;
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-    
+
     if (ext == ".fits" || ext == ".fit") {
         return "FITS";
     } else if (ext == ".jpg" || ext == ".jpeg") {
@@ -141,9 +141,9 @@ auto ImageProcessor::validateImageData(const void* data, size_t size) -> bool {
         spdlog::error("Invalid image data: null pointer or zero size");
         return false;
     }
-    
+
     const auto* bytes = static_cast<const uint8_t*>(data);
-    
+
     // Check for common image format headers
     if (size >= 4) {
         // FITS format check
@@ -151,19 +151,19 @@ auto ImageProcessor::validateImageData(const void* data, size_t size) -> bool {
             spdlog::debug("Detected FITS image format");
             return true;
         }
-        
+
         // JPEG format check
         if (bytes[0] == 0xFF && bytes[1] == 0xD8) {
             spdlog::debug("Detected JPEG image format");
             return true;
         }
-        
+
         // PNG format check
         if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
             spdlog::debug("Detected PNG image format");
             return true;
         }
-        
+
         // TIFF format check
         if ((bytes[0] == 0x49 && bytes[1] == 0x49 && bytes[2] == 0x2A && bytes[3] == 0x00) ||
             (bytes[0] == 0x4D && bytes[1] == 0x4D && bytes[2] == 0x00 && bytes[3] == 0x2A)) {
@@ -171,7 +171,7 @@ auto ImageProcessor::validateImageData(const void* data, size_t size) -> bool {
             return true;
         }
     }
-    
+
     // If no specific format detected, assume it's valid raw data
     spdlog::debug("Image format not specifically detected, assuming raw data");
     return true;
@@ -182,25 +182,25 @@ auto ImageProcessor::processReceivedImage(const INDI::PropertyBlob& property) ->
         spdlog::error("Invalid blob property or empty image data");
         return;
     }
-    
+
     size_t imageSize = property[0].getBlobLen();
     const void* imageData = property[0].getBlob();
     const char* format = property[0].getFormat();
-    
+
     spdlog::info("Processing image: size={}, format={}", imageSize, format ? format : "unknown");
-    
+
     // Validate image data
     if (!validateImageData(imageData, imageSize)) {
         spdlog::error("Invalid image data received");
         return;
     }
-    
+
     // Create frame structure
     auto frame = std::make_shared<AtomCameraFrame>();
     frame->data = const_cast<void*>(imageData);
     frame->size = imageSize;
     frame->format = detectImageFormat(imageData, imageSize);
-    
+
     // Analyze image quality if it's raw data
     if (frame->format == "RAW" || frame->format == "FITS") {
         // Assume 16-bit data for analysis
@@ -208,13 +208,13 @@ auto ImageProcessor::processReceivedImage(const INDI::PropertyBlob& property) ->
         size_t pixelCount = frame->size / sizeof(uint16_t);
         analyzeImageQuality(pixelData, pixelCount);
     }
-    
+
     // Update frame statistics
     updateImageStatistics(frame);
-    
+
     // Store the frame in core
     getCore()->setCurrentFrame(frame);
-    
+
     spdlog::info("Image processed: {} bytes, format: {}", frame->size, frame->format);
 }
 
@@ -231,16 +231,16 @@ void ImageProcessor::analyzeImageQuality(const uint16_t* data, size_t pixelCount
     if (!data || pixelCount == 0) {
         return;
     }
-    
+
     // Find min and max values
     auto minMaxPair = std::minmax_element(data, data + pixelCount);
     int minVal = *minMaxPair.first;
     int maxVal = *minMaxPair.second;
-    
+
     // Calculate mean
     uint64_t sum = std::accumulate(data, data + pixelCount, uint64_t(0));
     double mean = static_cast<double>(sum) / pixelCount;
-    
+
     // Calculate standard deviation
     double variance = 0.0;
     for (size_t i = 0; i < pixelCount; ++i) {
@@ -249,14 +249,14 @@ void ImageProcessor::analyzeImageQuality(const uint16_t* data, size_t pixelCount
     }
     variance /= pixelCount;
     double stddev = std::sqrt(variance);
-    
+
     // Update atomic values
     lastImageMean_.store(mean);
     lastImageStdDev_.store(stddev);
     lastImageMin_.store(minVal);
     lastImageMax_.store(maxVal);
-    
-    spdlog::debug("Image quality analysis: mean={:.2f}, stddev={:.2f}, min={}, max={}", 
+
+    spdlog::debug("Image quality analysis: mean={:.2f}, stddev={:.2f}, min={}, max={}",
                   mean, stddev, minVal, maxVal);
 }
 
@@ -264,11 +264,11 @@ void ImageProcessor::updateImageStatistics(std::shared_ptr<AtomCameraFrame> fram
     if (!frame) {
         return;
     }
-    
+
     // Quality information is stored in member variables and can be retrieved via getLastImageQuality()
     // The AtomCameraFrame struct doesn't have quality fields, so we keep quality data separate
-    spdlog::debug("Image quality analysis complete - mean: {}, stddev: {}, min: {}, max: {}", 
-                  lastImageMean_.load(), lastImageStdDev_.load(), 
+    spdlog::debug("Image quality analysis complete - mean: {}, stddev: {}, min: {}, max: {}",
+                  lastImageMean_.load(), lastImageStdDev_.load(),
                   lastImageMin_.load(), lastImageMax_.load());
 }
 
@@ -276,30 +276,30 @@ auto ImageProcessor::detectImageFormat(const void* data, size_t size) -> std::st
     if (!data || size < 4) {
         return "UNKNOWN";
     }
-    
+
     const auto* bytes = static_cast<const uint8_t*>(data);
-    
+
     // FITS format
     if (std::memcmp(bytes, "SIMP", 4) == 0) {
         return "FITS";
     }
-    
+
     // JPEG format
     if (bytes[0] == 0xFF && bytes[1] == 0xD8) {
         return "JPEG";
     }
-    
+
     // PNG format
     if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
         return "PNG";
     }
-    
+
     // TIFF format
     if ((bytes[0] == 0x49 && bytes[1] == 0x49 && bytes[2] == 0x2A && bytes[3] == 0x00) ||
         (bytes[0] == 0x4D && bytes[1] == 0x4D && bytes[2] == 0x00 && bytes[3] == 0x2A)) {
         return "TIFF";
     }
-    
+
     // Default to RAW for unrecognized formats
     return "RAW";
 }

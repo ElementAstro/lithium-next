@@ -33,7 +33,7 @@ class HardwareInterface;
 
 /**
  * @brief Tracking Manager for INDI Telescope
- * 
+ *
  * Manages all telescope tracking operations including track modes,
  * custom track rates, tracking state control, and tracking performance monitoring.
  */
@@ -161,28 +161,28 @@ private:
     void calculateTrackingError();
     void updateTrackingStatistics();
     void handlePropertyUpdate(const std::string& propertyName);
-    
+
     // Rate calculations
     MotionRates calculateSiderealRates() const;
     MotionRates calculateSolarRates() const;
     MotionRates calculateLunarRates() const;
-    
+
     // Validation methods
     bool validateTrackRates(double raRate, double decRate) const;
     bool isValidTrackMode(TrackMode mode) const;
-    
+
     // Property helpers
     void syncTrackingStateToHardware();
     void syncTrackRatesToHardware();
-    
+
     // Utility methods
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);
     void logError(const std::string& message);
-    
+
     // Constants for default rates
     static constexpr double SIDEREAL_RATE = 15.041067; // arcsec/sec
-    static constexpr double SOLAR_RATE = 15.0;         // arcsec/sec  
+    static constexpr double SOLAR_RATE = 15.0;         // arcsec/sec
     static constexpr double LUNAR_RATE = 14.515;       // arcsec/sec
 };
 

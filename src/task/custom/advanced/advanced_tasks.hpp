@@ -4,7 +4,7 @@
 /**
  * @file advanced_tasks.hpp
  * @brief Advanced astrophotography task components
- * 
+ *
  * This header includes all advanced task implementations for automated
  * astrophotography operations including smart exposure, deep sky sequences,
  * planetary imaging, and timelapse functionality.
@@ -22,7 +22,7 @@ namespace lithium::task::advanced {
 
 /**
  * @brief Register all advanced tasks with the task factory
- * 
+ *
  * This function should be called during application initialization
  * to make all advanced tasks available for execution.
  */

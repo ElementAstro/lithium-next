@@ -57,8 +57,7 @@ class BuildConfig:
                 logger.debug(f"Loading INI configuration from {file_path}")
                 return BuildConfig.load_from_ini(content)
             case _:
-                raise ValueError(
-                    f"Unsupported configuration file format: {suffix}")
+                raise ValueError(f"Unsupported configuration file format: {suffix}")
 
     @staticmethod
     def load_from_json(json_str: str) -> BuildOptions:
@@ -104,7 +103,8 @@ class BuildConfig:
         except ImportError:
             logger.error("PyYAML is not installed")
             raise ValueError(
-                "PyYAML is not installed. Install it with: pip install pyyaml")
+                "PyYAML is not installed. Install it with: pip install pyyaml"
+            )
         except Exception as e:
             logger.error(f"Invalid YAML configuration: {e}")
             raise ValueError(f"Invalid YAML configuration: {e}")
@@ -117,8 +117,7 @@ class BuildConfig:
             parser.read_string(ini_str)
 
             if "build" not in parser:
-                raise ValueError(
-                    "Configuration must contain a [build] section")
+                raise ValueError("Configuration must contain a [build] section")
 
             config = dict(parser["build"])
 

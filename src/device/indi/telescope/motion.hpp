@@ -10,7 +10,7 @@
 
 /**
  * @brief Motion control component for INDI telescopes
- * 
+ *
  * Handles telescope movement, slewing, tracking, and guiding
  */
 class TelescopeMotion {
@@ -152,16 +152,16 @@ public:
 private:
     std::string name_;
     INDI::BaseDevice device_;
-    
+
     // Motion state
     std::atomic_bool isMoving_{false};
     MotionEW motionEW_{MotionEW::NONE};
     MotionNS motionNS_{MotionNS::NONE};
-    
+
     // Slew rates
     std::vector<double> slewRates_;
     int currentSlewRateIndex_{0};
-    
+
     // Helper methods
     auto watchMotionProperties() -> void;
     auto watchSlewRateProperties() -> void;

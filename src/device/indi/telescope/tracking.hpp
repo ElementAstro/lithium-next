@@ -10,7 +10,7 @@
 
 /**
  * @brief Tracking control component for INDI telescopes
- * 
+ *
  * Handles telescope tracking modes, rates, and state management
  */
 class TelescopeTracking {
@@ -82,18 +82,18 @@ public:
 private:
     std::string name_;
     INDI::BaseDevice device_;
-    
+
     // Tracking state
     std::atomic_bool isTrackingEnabled_{false};
     std::atomic_bool isTracking_{false};
     TrackMode trackMode_{TrackMode::SIDEREAL};
     PierSide pierSide_{PierSide::UNKNOWN};
-    
+
     // Tracking rates
     MotionRates trackRates_{};
     std::atomic<double> trackRateRA_{15.041067}; // sidereal rate arcsec/sec
     std::atomic<double> trackRateDEC_{0.0};
-    
+
     // Helper methods
     auto watchTrackingProperties() -> void;
     auto watchPierSideProperties() -> void;

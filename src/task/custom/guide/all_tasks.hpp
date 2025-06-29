@@ -4,7 +4,7 @@
 /**
  * @file all_tasks.hpp
  * @brief Consolidated header for all guide-related tasks
- * 
+ *
  * This header includes all the individual guide task headers for convenience.
  * Include this file to access all guide task functionality.
  */
@@ -39,7 +39,7 @@ namespace lithium::task::guide {
 
 /**
  * @brief Register all guide tasks with the task factory
- * 
+ *
  * This function should be called during application initialization
  * to register all guide-related tasks with the task factory system.
  */

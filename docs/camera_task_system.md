@@ -158,7 +158,7 @@ Each task includes comprehensive JSON schemas for parameter validation:
       "description": "Exposure time in seconds"
     },
     "gain": {
-      "type": "integer", 
+      "type": "integer",
       "minimum": 0,
       "maximum": 1000,
       "description": "Camera gain value"

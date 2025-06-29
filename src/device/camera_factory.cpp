@@ -124,7 +124,7 @@ std::shared_ptr<AtomCamera> CameraFactory::createCamera(const std::string& name)
         tryOrder = {CameraDriverType::SIMULATOR};
     } else {
         // Default order: try INDI first (most universal), then others
-        tryOrder = {CameraDriverType::INDI, CameraDriverType::QHY, CameraDriverType::ASI, 
+        tryOrder = {CameraDriverType::INDI, CameraDriverType::QHY, CameraDriverType::ASI,
                    CameraDriverType::ATIK, CameraDriverType::SBIG, CameraDriverType::FLI,
                    CameraDriverType::PLAYERONE, CameraDriverType::ASCOM, CameraDriverType::SIMULATOR};
     }
@@ -146,18 +146,18 @@ std::shared_ptr<AtomCamera> CameraFactory::createCamera(const std::string& name)
 
 std::vector<CameraInfo> CameraFactory::scanForCameras() {
     auto now = std::chrono::steady_clock::now();
-    
+
     // Return cached results if still valid
-    if (!cached_cameras_.empty() && 
+    if (!cached_cameras_.empty() &&
         (now - last_scan_time_) < CACHE_DURATION) {
         LOG_F(DEBUG, "Returning cached camera scan results");
         return cached_cameras_;
     }
 
     LOG_F(INFO, "Scanning for cameras across all drivers");
-    
+
     std::vector<CameraInfo> allCameras;
-    
+
     // Scan each supported driver type
     for (auto type : getSupportedDriverTypes()) {
         try {
@@ -169,11 +169,11 @@ std::vector<CameraInfo> CameraFactory::scanForCameras() {
     }
 
     // Remove duplicates (same camera detected by multiple drivers)
-    std::sort(allCameras.begin(), allCameras.end(), 
+    std::sort(allCameras.begin(), allCameras.end(),
               [](const CameraInfo& a, const CameraInfo& b) {
                   return a.name < b.name;
               });
-    
+
     auto it = std::unique(allCameras.begin(), allCameras.end(),
                          [](const CameraInfo& a, const CameraInfo& b) {
                              return a.name == b.name && a.manufacturer == b.manufacturer;
@@ -190,7 +190,7 @@ std::vector<CameraInfo> CameraFactory::scanForCameras() {
 
 std::vector<CameraInfo> CameraFactory::scanForCameras(CameraDriverType type) {
     LOG_F(DEBUG, "Scanning for {} cameras", driverTypeToString(type));
-    
+
     switch (type) {
         case CameraDriverType::INDI:
             return scanINDICameras();
@@ -247,7 +247,7 @@ std::string CameraFactory::driverTypeToString(CameraDriverType type) {
 CameraDriverType CameraFactory::stringToDriverType(const std::string& typeStr) {
     std::string lower = typeStr;
     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-    
+
     if (lower == "indi") return CameraDriverType::INDI;
     if (lower == "qhy") return CameraDriverType::QHY;
     if (lower == "asi" || lower == "zwo") return CameraDriverType::ASI;
@@ -257,19 +257,19 @@ CameraDriverType CameraFactory::stringToDriverType(const std::string& typeStr) {
     if (lower == "playerone" || lower == "poa") return CameraDriverType::PLAYERONE;
     if (lower == "ascom") return CameraDriverType::ASCOM;
     if (lower == "simulator" || lower == "sim") return CameraDriverType::SIMULATOR;
-    
+
     return CameraDriverType::AUTO_DETECT;
 }
 
 CameraInfo CameraFactory::getCameraInfo(const std::string& name, CameraDriverType type) {
-    auto cameras = (type == CameraDriverType::AUTO_DETECT) ? 
+    auto cameras = (type == CameraDriverType::AUTO_DETECT) ?
                    scanForCameras() : scanForCameras(type);
-    
+
     auto it = std::find_if(cameras.begin(), cameras.end(),
                           [&name](const CameraInfo& info) {
                               return info.name == name;
                           });
-    
+
     return (it != cameras.end()) ? *it : CameraInfo{};
 }
 
@@ -277,7 +277,7 @@ void CameraFactory::initializeDefaultDrivers() {
     LOG_F(INFO, "Initializing default camera drivers");
 
     // INDI Camera Driver (always available)
-    registerCameraDriver(CameraDriverType::INDI, 
+    registerCameraDriver(CameraDriverType::INDI,
         [](const std::string& name) -> std::shared_ptr<AtomCamera> {
             return std::make_shared<lithium::device::indi::camera::INDICamera>(name);
         });
@@ -360,13 +360,13 @@ void CameraFactory::initializeDefaultDrivers() {
 // Scanner implementations
 std::vector<CameraInfo> CameraFactory::scanINDICameras() {
     std::vector<CameraInfo> cameras;
-    
+
     try {
         // Create temporary INDI camera instance to scan for devices
         auto indiCamera = std::make_shared<lithium::device::indi::camera::INDICamera>("temp");
         if (indiCamera->initialize()) {
             auto deviceNames = indiCamera->scan();
-            
+
             for (const auto& deviceName : deviceNames) {
                 CameraInfo info;
                 info.name = deviceName;
@@ -378,26 +378,26 @@ std::vector<CameraInfo> CameraFactory::scanINDICameras() {
                 info.description = "INDI Camera Device: " + deviceName;
                 cameras.push_back(info);
             }
-            
+
             indiCamera->destroy();
         }
     } catch (const std::exception& e) {
         LOG_F(WARNING, "Error scanning INDI cameras: {}", e.what());
     }
-    
+
     return cameras;
 }
 
 std::vector<CameraInfo> CameraFactory::scanQHYCameras() {
     std::vector<CameraInfo> cameras;
-    
+
 #ifdef LITHIUM_QHY_CAMERA_ENABLED
     try {
         // Create temporary QHY camera instance to scan for devices
         auto qhyCamera = std::make_shared<lithium::device::qhy::camera::QHYCamera>("temp");
         if (qhyCamera->initialize()) {
             auto deviceNames = qhyCamera->scan();
-            
+
             for (const auto& deviceName : deviceNames) {
                 CameraInfo info;
                 info.name = deviceName;
@@ -409,27 +409,27 @@ std::vector<CameraInfo> CameraFactory::scanQHYCameras() {
                 info.description = "QHY Camera: " + deviceName;
                 cameras.push_back(info);
             }
-            
+
             qhyCamera->destroy();
         }
     } catch (const std::exception& e) {
         LOG_F(WARNING, "Error scanning QHY cameras: {}", e.what());
     }
 #endif
-    
+
     return cameras;
 }
 
 std::vector<CameraInfo> CameraFactory::scanASICameras() {
     std::vector<CameraInfo> cameras;
-    
+
 #ifdef LITHIUM_ASI_CAMERA_ENABLED
     try {
         // Create temporary ASI camera instance to scan for devices
         auto asiCamera = std::make_shared<lithium::device::asi::camera::ASICamera>("temp");
         if (asiCamera->initialize()) {
             auto deviceNames = asiCamera->scan();
-            
+
             for (const auto& deviceName : deviceNames) {
                 CameraInfo info;
                 info.name = deviceName;
@@ -441,27 +441,27 @@ std::vector<CameraInfo> CameraFactory::scanASICameras() {
                 info.description = "ZWO ASI Camera ID: " + deviceName;
                 cameras.push_back(info);
             }
-            
+
             asiCamera->destroy();
         }
     } catch (const std::exception& e) {
         LOG_F(WARNING, "Error scanning ASI cameras: {}", e.what());
     }
 #endif
-    
+
     return cameras;
 }
 
 std::vector<CameraInfo> CameraFactory::scanAtikCameras() {
     std::vector<CameraInfo> cameras;
-    
+
 #ifdef LITHIUM_ATIK_CAMERA_ENABLED
     try {
         // Create temporary Atik camera instance to scan for devices
         auto atikCamera = std::make_shared<lithium::device::atik::camera::AtikCamera>("temp");
         if (atikCamera->initialize()) {
             auto deviceNames = atikCamera->scan();
-            
+
             for (const auto& deviceName : deviceNames) {
                 CameraInfo info;
                 info.name = deviceName;
@@ -473,27 +473,27 @@ std::vector<CameraInfo> CameraFactory::scanAtikCameras() {
                 info.description = "Atik Camera: " + deviceName;
                 cameras.push_back(info);
             }
-            
+
             atikCamera->destroy();
         }
     } catch (const std::exception& e) {
         LOG_F(WARNING, "Error scanning Atik cameras: {}", e.what());
     }
 #endif
-    
+
     return cameras;
 }
 
 std::vector<CameraInfo> CameraFactory::scanSBIGCameras() {
     std::vector<CameraInfo> cameras;
-    
+
 #ifdef LITHIUM_SBIG_CAMERA_ENABLED
     try {
         // Create temporary SBIG camera instance to scan for devices
         auto sbigCamera = std::make_shared<lithium::device::sbig::camera::SBIGCamera>("temp");
         if (sbigCamera->initialize()) {
             auto deviceNames = sbigCamera->scan();
-            
+
             for (const auto& deviceName : deviceNames) {
                 CameraInfo info;
                 info.name = deviceName;
@@ -505,27 +505,27 @@ std::vector<CameraInfo> CameraFactory::scanSBIGCameras() {
                 info.description = "SBIG Camera: " + deviceName;
                 cameras.push_back(info);
             }
-            
+
             sbigCamera->destroy();
         }
     } catch (const std::exception& e) {
         LOG_F(WARNING, "Error scanning SBIG cameras: {}", e.what());
     }
 #endif
-    
+
     return cameras;
 }
 
 std::vector<CameraInfo> CameraFactory::scanFLICameras() {
     std::vector<CameraInfo> cameras;
-    
+
 #ifdef LITHIUM_FLI_CAMERA_ENABLED
     try {
         // Create temporary FLI camera instance to scan for devices
         auto fliCamera = std::make_shared<lithium::device::fli::camera::FLICamera>("temp");
         if (fliCamera->initialize()) {
             auto deviceNames = fliCamera->scan();
-            
+
             for (const auto& deviceName : deviceNames) {
                 CameraInfo info;
                 info.name = deviceName;
@@ -537,27 +537,27 @@ std::vector<CameraInfo> CameraFactory::scanFLICameras() {
                 info.description = "FLI Camera: " + deviceName;
                 cameras.push_back(info);
             }
-            
+
             fliCamera->destroy();
         }
     } catch (const std::exception& e) {
         LOG_F(WARNING, "Error scanning FLI cameras: {}", e.what());
     }
 #endif
-    
+
     return cameras;
 }
 
 std::vector<CameraInfo> CameraFactory::scanPlayerOneCameras() {
     std::vector<CameraInfo> cameras;
-    
+
 #ifdef LITHIUM_PLAYERONE_CAMERA_ENABLED
     try {
         // Create temporary PlayerOne camera instance to scan for devices
         auto poaCamera = std::make_shared<lithium::device::playerone::camera::PlayerOneCamera>("temp");
         if (poaCamera->initialize()) {
             auto deviceNames = poaCamera->scan();
-            
+
             for (const auto& deviceName : deviceNames) {
                 CameraInfo info;
                 info.name = deviceName;
@@ -569,27 +569,27 @@ std::vector<CameraInfo> CameraFactory::scanPlayerOneCameras() {
                 info.description = "PlayerOne Camera: " + deviceName;
                 cameras.push_back(info);
             }
-            
+
             poaCamera->destroy();
         }
     } catch (const std::exception& e) {
         LOG_F(WARNING, "Error scanning PlayerOne cameras: {}", e.what());
     }
 #endif
-    
+
     return cameras;
 }
 
 std::vector<CameraInfo> CameraFactory::scanSimulatorCameras() {
     std::vector<CameraInfo> cameras;
-    
+
     // Always provide simulator cameras
     std::vector<std::string> simCameras = {
         "CCD Simulator",
-        "Guide Camera Simulator", 
+        "Guide Camera Simulator",
         "Planetary Camera Simulator"
     };
-    
+
     for (const auto& simName : simCameras) {
         CameraInfo info;
         info.name = simName;
@@ -601,7 +601,7 @@ std::vector<CameraInfo> CameraFactory::scanSimulatorCameras() {
         info.description = "Simulated camera for testing: " + simName;
         cameras.push_back(info);
     }
-    
+
     return cameras;
 }
 

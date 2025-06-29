@@ -17,9 +17,9 @@ struct FilterSlotConfig {
     double focus_offset;        // Focus offset for this filter
     double exposure_multiplier; // Exposure multiplier for this filter
     bool enabled;
-    
-    FilterSlotConfig(int id = 0, const std::string& filter_name = "", 
-                    const std::string& desc = "", double offset = 0.0, 
+
+    FilterSlotConfig(int id = 0, const std::string& filter_name = "",
+                    const std::string& desc = "", double offset = 0.0,
                     double multiplier = 1.0, bool is_enabled = true)
         : slot_id(id), name(filter_name), description(desc)
         , focus_offset(offset), exposure_multiplier(multiplier), enabled(is_enabled) {}
@@ -33,14 +33,14 @@ struct FilterProfile {
     std::string description;
     std::vector<FilterSlotConfig> slots;
     std::unordered_map<std::string, std::string> metadata;
-    
-    FilterProfile(const std::string& profile_name = "Default", 
+
+    FilterProfile(const std::string& profile_name = "Default",
                  const std::string& desc = "Default filter profile")
         : name(profile_name), description(desc) {}
 };
 
 /**
- * @brief Manages filterwheel configuration including filter profiles, 
+ * @brief Manages filterwheel configuration including filter profiles,
  *        slot configurations, and operational settings
  */
 class ConfigurationManager {
@@ -98,15 +98,15 @@ public:
 private:
     std::unordered_map<std::string, FilterProfile> profiles_;
     std::string current_profile_;
-    
+
     // Operational settings
     int move_timeout_ms_;
     bool auto_focus_correction_;
     bool auto_exposure_correction_;
-    
+
     // Default configuration path
     mutable std::string config_path_;
-    
+
     // Helper methods
     FilterProfile* getCurrentProfile();
     const FilterProfile* getCurrentProfile() const;

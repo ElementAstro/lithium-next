@@ -15,7 +15,7 @@ class ParkingController : public DomeComponentBase {
 public:
     explicit ParkingController(std::shared_ptr<INDIDomeCore> core)
         : DomeComponentBase(std::move(core), "ParkingController") {}
-    
+
     auto initialize() -> bool override { return true; }
     auto cleanup() -> bool override { return true; }
     void handlePropertyUpdate(const INDI::Property& property) override {}

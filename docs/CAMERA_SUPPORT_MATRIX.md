@@ -56,7 +56,7 @@ This document provides a comprehensive overview of all supported camera brands a
 
 ### QHY Cameras
 - **Models Supported**: QHY5III, QHY16803, QHY42Pro, QHY268M/C, etc.
-- **Special Features**: 
+- **Special Features**:
   - Advanced USB traffic control
   - Multiple readout modes
   - Anti-amp glow technology
@@ -119,7 +119,7 @@ This document provides a comprehensive overview of all supported camera brands a
 The camera factory uses intelligent auto-detection based on camera names:
 
 1. **QHY Pattern**: "qhy", "quantum" → QHY driver
-2. **ASI Pattern**: "asi", "zwo" → ASI driver  
+2. **ASI Pattern**: "asi", "zwo" → ASI driver
 3. **Atik Pattern**: "atik", "titan", "infinity" → Atik driver
 4. **SBIG Pattern**: "sbig", "st-" → SBIG driver
 5. **FLI Pattern**: "fli", "microline", "proline" → FLI driver
@@ -138,7 +138,7 @@ sudo apt install indi-full
 # QHY SDK
 # Download from QHY website and install
 
-# ASI SDK  
+# ASI SDK
 # Download from ZWO website and install
 
 # Other SDKs
@@ -186,7 +186,7 @@ brew install indi
 
 ### Planned Additions
 - **Moravian Instruments** cameras
-- **Altair Astro** cameras  
+- **Altair Astro** cameras
 - **ToupTek** cameras
 - **Canon/Nikon DSLR** support via gPhoto2
 - **Raspberry Pi HQ Camera** support

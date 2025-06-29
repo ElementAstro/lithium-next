@@ -38,7 +38,7 @@ namespace lithium::device::ascom::camera {
 
 /**
  * @brief Main ASCOM Camera Integration Class
- * 
+ *
  * This class provides the primary integration interface for the modular
  * ASCOM camera system. It encapsulates the controller and provides
  * simplified access to camera functionality.
@@ -54,7 +54,7 @@ public:
         int deviceNumber = 0;                                 // Alpaca device number
         std::string clientId = "Lithium-Next";               // Client ID
         int connectionType = 0;                               // 0=COM, 1=ALPACA_REST
-        
+
         // Optional callbacks
         std::function<void(const std::string&)> logCallback;
         std::function<void(std::shared_ptr<AtomCameraFrame>)> frameCallback;
@@ -419,7 +419,7 @@ struct CameraCapabilities {
  * @param deviceName Device name or ProgID
  * @return Camera capabilities structure
  */
-std::optional<CameraCapabilities> 
+std::optional<CameraCapabilities>
 getASCOMCameraCapabilities(const std::string& deviceName);
 
 } // namespace lithium::device::ascom::camera

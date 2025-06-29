@@ -72,17 +72,17 @@ struct SafetyConfiguration {
     std::chrono::seconds check_interval{10};
     std::chrono::seconds warning_delay{30};
     std::chrono::seconds unsafe_delay{60};
-    
+
     // Auto-recovery settings
     bool auto_recovery_enabled{true};
     std::chrono::seconds recovery_delay{300};
     int max_recovery_attempts{3};
-    
+
     // Notification settings
     bool email_notifications{false};
     bool sound_alerts{true};
     bool log_events{true};
-    
+
     // Emergency settings
     bool emergency_stop_enabled{true};
     bool auto_park_mount{true};
@@ -95,7 +95,7 @@ public:
     explicit AtomSafetyMonitor(std::string name) : AtomDriver(std::move(name)) {
         setType("SafetyMonitor");
     }
-    
+
     ~AtomSafetyMonitor() override = default;
 
     // Configuration
@@ -201,33 +201,33 @@ public:
 protected:
     SafetyState safety_state_{SafetyState::UNKNOWN};
     SafetyConfiguration safety_configuration_;
-    
+
     // Parameters and events
     std::vector<SafetyParameter> safety_parameters_;
     std::vector<SafetyEvent> event_history_;
     std::vector<std::string> monitored_devices_;
-    
+
     // State tracking
     bool monitoring_active_{false};
     bool recovery_in_progress_{false};
     std::chrono::system_clock::time_point monitoring_start_time_;
     std::chrono::system_clock::time_point last_unsafe_time_;
     std::chrono::seconds total_unsafe_time_{0};
-    
+
     // Statistics
     uint64_t total_events_{0};
     std::chrono::seconds total_recovery_time_{0};
     int recovery_attempts_{0};
-    
+
     // Connected devices
     std::string weather_station_name_;
-    
+
     // Callbacks
     SafetyCallback safety_callback_;
     EventCallback event_callback_;
     ParameterCallback parameter_callback_;
     EmergencyCallback emergency_callback_;
-    
+
     // Utility methods
     virtual void updateSafetyState(SafetyState state) { safety_state_ = state; }
     virtual void addEvent(const SafetyEvent& event);

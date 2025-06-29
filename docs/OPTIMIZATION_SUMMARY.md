@@ -8,7 +8,7 @@ The existing camera task group has been successfully optimized with a comprehens
 
 ### **Before Optimization:**
 - Limited basic exposure tasks
-- Minimal camera control functionality  
+- Minimal camera control functionality
 - Missing video streaming capabilities
 - No temperature management
 - Basic frame configuration only
@@ -27,7 +27,7 @@ The existing camera task group has been successfully optimized with a comprehens
 ### 1. **Video Control Tasks** (5 tasks) 🎥
 ```cpp
 StartVideoTask         // Initialize video streaming
-StopVideoTask          // Terminate video streaming  
+StopVideoTask          // Terminate video streaming
 GetVideoFrameTask      // Retrieve video frames
 RecordVideoTask        // Record video sessions
 VideoStreamMonitorTask // Monitor stream performance

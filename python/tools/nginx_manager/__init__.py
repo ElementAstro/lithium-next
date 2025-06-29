@@ -18,7 +18,7 @@ from .core import (
     ConfigError,
     InstallationError,
     OperationError,
-    NginxPaths
+    NginxPaths,
 )
 from .manager import NginxManager
 from .bindings import NginxManagerBindings
@@ -28,13 +28,13 @@ from .logging_config import setup_logging
 setup_logging()
 
 __all__ = [
-    'NginxManager',
-    'NginxManagerBindings',
-    'NginxError',
-    'ConfigError',
-    'InstallationError',
-    'OperationError',
-    'OperatingSystem',
-    'NginxPaths',
-    'setup_logging'
+    "NginxManager",
+    "NginxManagerBindings",
+    "NginxError",
+    "ConfigError",
+    "InstallationError",
+    "OperationError",
+    "OperatingSystem",
+    "NginxPaths",
+    "setup_logging",
 ]

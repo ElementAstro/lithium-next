@@ -42,8 +42,8 @@ public:
     // Filter management
     bool setFilterName(int slot, const ::std::string& name) { return true; }
     ::std::string getFilterName(int slot) const { return "Filter " + ::std::to_string(slot); }
-    ::std::vector<::std::string> getFilterNames() const { 
-        return {"Filter 1", "Filter 2", "Filter 3", "Filter 4", "Filter 5", "Filter 6", "Filter 7"}; 
+    ::std::vector<::std::string> getFilterNames() const {
+        return {"Filter 1", "Filter 2", "Filter 3", "Filter 4", "Filter 5", "Filter 6", "Filter 7"};
     }
     bool setFocusOffset(int slot, double offset) { return true; }
     double getFocusOffset(int slot) const { return 0.0; }
@@ -66,7 +66,7 @@ public:
     // Callbacks
     using PositionCallback = ::std::function<void(int, int)>;
     using SequenceCallback = ::std::function<void(const ::std::string&, int, int)>;
-    
+
     void setPositionCallback(PositionCallback callback) {}
     void setSequenceCallback(SequenceCallback callback) {}
 

@@ -122,7 +122,7 @@ static std::shared_ptr<MockCamera> mockCamera = std::make_shared<MockCamera>();
 
 auto AutoFocusTask::taskName() -> std::string { return "AutoFocus"; }
 
-void AutoFocusTask::execute(const json& params) { 
+void AutoFocusTask::execute(const json& params) {
     addHistoryEntry("AutoFocus task started");
     setErrorType(TaskErrorType::None);
     executeImpl(params);
@@ -133,7 +133,7 @@ void AutoFocusTask::initializeTask() {
     setTimeout(std::chrono::seconds(600));  // 10 minute timeout
     setLogLevel(2);
     setTaskType(taskName());
-    
+
     // Set up exception callback
     setExceptionCallback([this](const std::exception& e) {
         setErrorType(TaskErrorType::SystemError);
@@ -163,7 +163,7 @@ void AutoFocusTask::executeImpl(const json& params) {
         // Validate parameters first
         if (!validateParams(params)) {
             setErrorType(TaskErrorType::InvalidParameter);
-            THROW_INVALID_ARGUMENT("Parameter validation failed: " + 
+            THROW_INVALID_ARGUMENT("Parameter validation failed: " +
                 getParamErrors().front());
         }
 
@@ -194,7 +194,7 @@ void AutoFocusTask::executeImpl(const json& params) {
         double bestHFR = 999.0;
 
         addHistoryEntry("Starting coarse focus sweep");
-        
+
         // Coarse focus sweep
         std::vector<std::pair<int, double>> measurements;
 
@@ -222,7 +222,7 @@ void AutoFocusTask::executeImpl(const json& params) {
                 bestHFR = hfr;
                 bestPosition = position;
             }
-            
+
             // Track progress and update history
             trackPerformanceMetrics();
         }
@@ -262,7 +262,7 @@ void AutoFocusTask::executeImpl(const json& params) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        
+
         addHistoryEntry("AutoFocus completed successfully");
         spdlog::info(
             "AutoFocus completed in {} ms. Best position: {}, HFR: {:.2f}",
@@ -272,13 +272,13 @@ void AutoFocusTask::executeImpl(const json& params) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        
+
         addHistoryEntry("AutoFocus failed: " + std::string(e.what()));
-        
+
         if (getErrorType() == TaskErrorType::None) {
             setErrorType(TaskErrorType::SystemError);
         }
-        
+
         spdlog::error("AutoFocus task failed after {} ms: {}", duration.count(),
                       e.what());
         throw;
@@ -344,7 +344,7 @@ void AutoFocusTask::validateAutoFocusParameters(const json& params) {
 
 auto FocusSeriesTask::taskName() -> std::string { return "FocusSeries"; }
 
-void FocusSeriesTask::execute(const json& params) { 
+void FocusSeriesTask::execute(const json& params) {
     addHistoryEntry("FocusSeries task started");
     setErrorType(TaskErrorType::None);
     executeImpl(params);
@@ -360,7 +360,7 @@ void FocusSeriesTask::executeImpl(const json& params) {
         // Validate parameters using the new Task features
         if (!validateParams(params)) {
             setErrorType(TaskErrorType::InvalidParameter);
-            THROW_INVALID_ARGUMENT("Parameter validation failed: " + 
+            THROW_INVALID_ARGUMENT("Parameter validation failed: " +
                 getParamErrors().front());
         }
 
@@ -415,7 +415,7 @@ void FocusSeriesTask::executeImpl(const json& params) {
 
             frameCount++;
             currentPos += (direction * stepSize);
-            
+
             // Track progress
             addHistoryEntry("Frame " + std::to_string(frameCount) + " completed");
         }
@@ -439,7 +439,7 @@ void FocusSeriesTask::executeImpl(const json& params) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        
+
         addHistoryEntry("FocusSeries completed successfully");
         spdlog::info("FocusSeries completed {} frames in {} ms", frameCount,
                      duration.count());
@@ -448,13 +448,13 @@ void FocusSeriesTask::executeImpl(const json& params) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        
+
         addHistoryEntry("FocusSeries failed: " + std::string(e.what()));
-        
+
         if (getErrorType() == TaskErrorType::None) {
             setErrorType(TaskErrorType::SystemError);
         }
-        
+
         spdlog::error("FocusSeries task failed after {} ms: {}",
                       duration.count(), e.what());
         throw;
@@ -532,7 +532,7 @@ auto TemperatureFocusTask::taskName() -> std::string {
     return "TemperatureFocus";
 }
 
-void TemperatureFocusTask::execute(const json& params) { 
+void TemperatureFocusTask::execute(const json& params) {
     addHistoryEntry("TemperatureFocus task started");
     setErrorType(TaskErrorType::None);
     executeImpl(params);
@@ -689,7 +689,7 @@ void FocusValidationTask::execute(const json& params) { executeImpl(params); }
 
 void FocusValidationTask::executeImpl(const json& params) {
     spdlog::info("Executing FocusValidation task with params: {}", params.dump(4));
-    
+
     auto startTime = std::chrono::steady_clock::now();
     addHistoryEntry("Starting focus validation");
 
@@ -702,21 +702,21 @@ void FocusValidationTask::executeImpl(const json& params) {
 
 #ifdef MOCK_CAMERA
         auto currentCamera = mockCamera;
-        
+
         // Simulate taking validation exposure
         currentCamera->startExposure(exposureTime);
         while (currentCamera->getExposureStatus()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        
+
         // Simulate star detection and analysis
         double currentHFR = currentCamera->calculateHFR();
         int starCount = 8; // Simulated star count
-        
+
         bool isValid = (currentHFR <= maxHFR && starCount >= minStars);
-        
+
         addHistoryEntry("Validation result: " + std::string(isValid ? "PASS" : "FAIL"));
-        spdlog::info("Focus validation: HFR={:.2f}, Stars={}, Valid={}", 
+        spdlog::info("Focus validation: HFR={:.2f}, Stars={}, Valid={}",
                      currentHFR, starCount, isValid);
 #else
         throw std::runtime_error("Real device support not implemented");
@@ -771,7 +771,7 @@ void FocusValidationTask::validateFocusValidationParameters(const json& params) 
             THROW_INVALID_ARGUMENT("Exposure time must be between 0 and 60 seconds");
         }
     }
-    
+
     if (params.contains("min_stars")) {
         int minStars = params["min_stars"].get<int>();
         if (minStars < 1 || minStars > 100) {
@@ -790,7 +790,7 @@ void BacklashCompensationTask::execute(const json& params) { executeImpl(params)
 
 void BacklashCompensationTask::executeImpl(const json& params) {
     spdlog::info("Executing BacklashCompensation task with params: {}", params.dump(4));
-    
+
     auto startTime = std::chrono::steady_clock::now();
     addHistoryEntry("Starting backlash compensation");
 
@@ -802,24 +802,24 @@ void BacklashCompensationTask::executeImpl(const json& params) {
 
 #ifdef MOCK_CAMERA
         auto currentFocuser = mockFocuser;
-        
+
         int currentPos = currentFocuser->getPosition();
-        
+
         // Move past target to eliminate backlash
         int overshoot = direction ? backlashSteps : -backlashSteps;
         currentFocuser->setPosition(currentPos + overshoot);
-        
+
         while (currentFocuser->isMoving()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
-        
+
         // Move back to original position
         currentFocuser->setPosition(currentPos);
-        
+
         while (currentFocuser->isMoving()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
-        
+
         addHistoryEntry("Backlash compensation completed");
         spdlog::info("Backlash compensation: moved {} steps and returned", backlashSteps);
 #else

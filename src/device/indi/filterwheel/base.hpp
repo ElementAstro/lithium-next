@@ -57,7 +57,7 @@ protected:
     std::string driverExec_;
     std::string driverVersion_;
     std::string driverInterface_;
-    
+
     std::atomic<bool> deviceAutoSearch_{false};
     std::atomic<bool> devicePortScan_{false};
     std::atomic<double> currentPollingPeriod_{1000.0};

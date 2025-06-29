@@ -13,7 +13,7 @@ SequenceManager::SequenceManager(std::shared_ptr<PositionManager> position_mgr)
     , is_running_(false)
     , is_paused_(false)
     , stop_requested_(false) {
-    
+
     initializeTemplates();
     createDefaultSequences();
     spdlog::info("SequenceManager initialized");
@@ -72,7 +72,7 @@ bool SequenceManager::addStep(const std::string& sequence_name, const SequenceSt
     }
 
     it->second.steps.push_back(step);
-    spdlog::info("Added step to sequence '{}': position {}, dwell {} ms", 
+    spdlog::info("Added step to sequence '{}': position {}, dwell {} ms",
           sequence_name, step.target_position, step.dwell_time_ms);
     return true;
 }
@@ -127,7 +127,7 @@ bool SequenceManager::setSequenceRepeat(const std::string& name, bool repeat, in
 
     it->second.repeat = repeat;
     it->second.repeat_count = std::max(1, count);
-    spdlog::info("Set sequence '{}' repeat: {} (count: {})", 
+    spdlog::info("Set sequence '{}' repeat: {} (count: {})",
           name, repeat ? "enabled" : "disabled", it->second.repeat_count);
     return true;
 }
@@ -164,7 +164,7 @@ bool SequenceManager::createLinearSequence(const std::string& name, int start_po
             deleteSequence(name);
             return false;
         }
-        
+
         SequenceStep seq_step(pos, dwell_time_ms, "Position " + std::to_string(pos));
         addStep(name, seq_step);
     }
@@ -185,7 +185,7 @@ bool SequenceManager::createCustomSequence(const std::string& name, const std::v
             deleteSequence(name);
             return false;
         }
-        
+
         SequenceStep seq_step(pos, dwell_time_ms, "Step " + std::to_string(i + 1) + " - Position " + std::to_string(pos));
         addStep(name, seq_step);
     }
@@ -291,7 +291,7 @@ bool SequenceManager::stopSequence() {
 
     spdlog::info("Stopped sequence '{}'", current_sequence_);
     notifySequenceEvent("sequence_stopped", current_step_, -1);
-    
+
     resetExecutionState();
     return true;
 }
@@ -363,7 +363,7 @@ std::chrono::milliseconds SequenceManager::getEstimatedRemainingTime() const {
     }
 
     const FilterSequence& seq = it->second;
-    
+
     // Calculate remaining time in current repeat
     std::chrono::milliseconds remaining_current_repeat{0};
     for (size_t i = current_step_; i < seq.steps.size(); ++i) {
@@ -397,7 +397,7 @@ bool SequenceManager::validateSequence(const std::string& name) const {
     }
 
     const FilterSequence& seq = it->second;
-    
+
     // Check if sequence has steps
     if (seq.steps.empty()) {
         return false;
@@ -415,7 +415,7 @@ bool SequenceManager::validateSequence(const std::string& name) const {
 
 std::vector<std::string> SequenceManager::getSequenceValidationErrors(const std::string& name) const {
     std::vector<std::string> errors;
-    
+
     auto it = sequences_.find(name);
     if (it == sequences_.end()) {
         errors.push_back("Sequence not found");
@@ -423,7 +423,7 @@ std::vector<std::string> SequenceManager::getSequenceValidationErrors(const std:
     }
 
     const FilterSequence& seq = it->second;
-    
+
     if (seq.steps.empty()) {
         errors.push_back("Sequence has no steps");
     }
@@ -446,7 +446,7 @@ void SequenceManager::createDefaultSequences() {
     createSequence("test", "Simple test sequence");
     addStep("test", SequenceStep(0, 1000, "Test position 0"));
     addStep("test", SequenceStep(1, 1000, "Test position 1"));
-    
+
     // Create a full scan sequence if position manager is available
     if (position_manager_) {
         createCalibrationSequence("full_scan");
@@ -465,7 +465,7 @@ void SequenceManager::executeSequenceAsync() {
 
     try {
         for (current_repeat_ = 0; current_repeat_ < repeat_count && !stop_requested_; ++current_repeat_) {
-            spdlog::info("Starting repeat {}/{} of sequence '{}'", 
+            spdlog::info("Starting repeat {}/{} of sequence '{}'",
                   current_repeat_ + 1, repeat_count, current_sequence_);
 
             for (current_step_ = 0; current_step_ < static_cast<int>(sequence.steps.size()) && !stop_requested_; ++current_step_) {
@@ -481,7 +481,7 @@ void SequenceManager::executeSequenceAsync() {
                 const SequenceStep& step = sequence.steps[current_step_];
                 step_start_time_ = std::chrono::steady_clock::now();
 
-                spdlog::info("Executing step {}/{}: position {}, dwell {} ms", 
+                spdlog::info("Executing step {}/{}: position {}, dwell {} ms",
                       current_step_ + 1, sequence.steps.size(), step.target_position, step.dwell_time_ms);
 
                 notifySequenceEvent("step_started", current_step_, step.target_position);
@@ -560,11 +560,11 @@ bool SequenceManager::isValidPosition(int position) const {
 
 std::chrono::milliseconds SequenceManager::calculateSequenceTime(const FilterSequence& sequence) const {
     std::chrono::milliseconds total_time{0};
-    
+
     for (const auto& step : sequence.steps) {
         total_time += std::chrono::milliseconds(step.dwell_time_ms + 1000); // +1s for movement
     }
-    
+
     return total_time;
 }
 

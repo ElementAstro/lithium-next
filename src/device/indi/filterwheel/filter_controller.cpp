@@ -45,7 +45,7 @@ bool FilterController::setPosition(int position) {
 
     core->getLogger()->info("Setting filter position to: {}", position);
     recordMoveStart();
-    
+
     bool success = sendFilterChangeCommand(position);
     if (!success) {
         core->getLogger()->error("Failed to send filter change command");
@@ -80,7 +80,7 @@ bool FilterController::abortMove() {
     }
 
     core->getLogger()->info("Aborting filter wheel movement");
-    
+
     // Try to send abort command if available
     auto& device = core->getDevice();
     INDI::PropertySwitch abortProp = device.getProperty("FILTER_ABORT");
@@ -88,13 +88,13 @@ bool FilterController::abortMove() {
         core->getLogger()->warn("No abort command available for this filter wheel");
         return false;
     }
-    
+
     if (abortProp.count() > 0) {
         abortProp[0].setState(ISS_ON);
         core->getClient()->sendNewProperty(abortProp);
         return true;
     }
-    
+
     core->getLogger()->warn("No abort command available for this filter wheel");
     return false;
 }
@@ -164,14 +164,14 @@ bool FilterController::setFilterName(int position, const std::string& name) {
         if (std::string(nameProp[i].getName()) == widgetName) {
             nameProp[i].setText(name.c_str());
             core->getClient()->sendNewProperty(nameProp);
-            
+
             // Update local state
             auto names = core->getSlotNames();
             if (position > 0 && position <= static_cast<int>(names.size())) {
                 names[position - 1] = name;
                 core->setSlotNames(names);
             }
-            
+
             core->getLogger()->info("Filter {} name set to: {}", position, name);
             return true;
         }
@@ -211,7 +211,7 @@ bool FilterController::sendFilterChangeCommand(int position) {
         slotProp[0].setValue(position);
         core->getClient()->sendNewProperty(slotProp);
         core->setMoving(true);
-        
+
         core->getLogger()->debug("Sent filter change command: position {}", position);
         return true;
     }

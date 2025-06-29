@@ -28,7 +28,7 @@ class BuilderFactory:
         builder_type: str,
         source_dir: Union[Path, str],
         build_dir: Union[Path, str],
-        **kwargs: Any
+        **kwargs: Any,
     ) -> BuildHelperBase:
         """
         Create a builder instance for the specified build system.
@@ -48,15 +48,18 @@ class BuilderFactory:
         match builder_type.lower():
             case "cmake":
                 logger.info(
-                    f"Creating CMake builder for source directory: {source_dir}")
+                    f"Creating CMake builder for source directory: {source_dir}"
+                )
                 return CMakeBuilder(source_dir, build_dir, **kwargs)
             case "meson":
                 logger.info(
-                    f"Creating Meson builder for source directory: {source_dir}")
+                    f"Creating Meson builder for source directory: {source_dir}"
+                )
                 return MesonBuilder(source_dir, build_dir, **kwargs)
             case "bazel":
                 logger.info(
-                    f"Creating Bazel builder for source directory: {source_dir}")
+                    f"Creating Bazel builder for source directory: {source_dir}"
+                )
                 return BazelBuilder(source_dir, build_dir, **kwargs)
             case _:
                 logger.error(f"Unsupported builder type: {builder_type}")

@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Smart exposure task for automatic exposure optimization.
- * 
+ *
  * This task automatically optimizes exposure time to achieve a target
  * signal-to-noise ratio (SNR) through iterative test exposures.
  */

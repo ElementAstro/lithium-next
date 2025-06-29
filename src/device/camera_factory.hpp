@@ -56,7 +56,7 @@ struct CameraInfo {
 
 /**
  * @brief Factory class for creating camera instances
- * 
+ *
  * This factory supports multiple camera driver types including INDI, QHY, ASI,
  * and ASCOM, providing a unified interface for camera creation and management.
  */
@@ -142,7 +142,7 @@ public:
 private:
     CameraFactory() = default;
     ~CameraFactory() = default;
-    
+
     // Disable copy and move
     CameraFactory(const CameraFactory&) = delete;
     CameraFactory& operator=(const CameraFactory&) = delete;
@@ -165,12 +165,12 @@ private:
 
     // Driver registry
     std::unordered_map<CameraDriverType, CreateCameraFunction> drivers_;
-    
+
     // Cached camera information
     mutable std::vector<CameraInfo> cached_cameras_;
     mutable std::chrono::steady_clock::time_point last_scan_time_;
     static constexpr auto CACHE_DURATION = std::chrono::seconds(30);
-    
+
     // Initialization flag
     bool initialized_ = false;
 };

@@ -31,7 +31,7 @@ The astrophotography camera task system has been **MASSIVELY EXPANDED** from a b
 ### **📸 1. Basic Exposure Control (4 tasks)**
 ```
 ✓ TakeExposureTask              - Single exposure with full control
-✓ TakeManyExposureTask          - Multiple exposure sequences  
+✓ TakeManyExposureTask          - Multiple exposure sequences
 ✓ SubFrameExposureTask          - Region of interest exposures
 ✓ AbortExposureTask             - Emergency exposure termination
 ```
@@ -156,7 +156,7 @@ The astrophotography camera task system has been **MASSIVELY EXPANDED** from a b
 - getExposureStatus() / getExposureTimeLeft()
 - setExposureTime() / getExposureTime()
 
-// ALL video streaming methods implemented  
+// ALL video streaming methods implemented
 - startVideo() / stopVideo() / getVideoFrame()
 - setVideoFormat() / setVideoResolution()
 

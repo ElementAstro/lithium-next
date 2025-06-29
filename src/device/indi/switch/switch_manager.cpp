@@ -18,7 +18,7 @@ Description: INDI Switch Manager - Core Switch Control Implementation
 #include <spdlog/spdlog.h>
 #include <algorithm>
 
-SwitchManager::SwitchManager(INDISwitchClient* client) 
+SwitchManager::SwitchManager(INDISwitchClient* client)
     : client_(client) {
     setupPropertyMappings();
 }
@@ -126,7 +126,7 @@ auto SwitchManager::setSwitchState(uint32_t index, SwitchState state) -> bool {
         stats->updateStatistics(index, state == SwitchState::ON);
     }
     notifySwitchStateChange(index, state);
-    spdlog::info("[SwitchManager] Switch {} state changed to {}", 
+    spdlog::info("[SwitchManager] Switch {} state changed to {}",
                 switchInfo.name, (state == SwitchState::ON ? "ON" : "OFF"));
     return true;
 }
@@ -164,7 +164,7 @@ auto SwitchManager::setAllSwitches(SwitchState state) -> bool {
             success = false;
         }
     }
-    spdlog::info("[SwitchManager] Set all switches to {}", 
+    spdlog::info("[SwitchManager] Set all switches to {}",
                 (state == SwitchState::ON ? "ON" : "OFF"));
     return success;
 }
@@ -415,12 +415,12 @@ auto SwitchManager::isValidSwitchIndex(uint32_t index) const noexcept -> bool {
 }
 
 void SwitchManager::notifySwitchStateChange(uint32_t index, SwitchState state) {
-    spdlog::debug("[SwitchManager] Switch {} state changed to {}", 
+    spdlog::debug("[SwitchManager] Switch {} state changed to {}",
                  index, (state == SwitchState::ON ? "ON" : "OFF"));
 }
 
 void SwitchManager::notifyGroupStateChange(const std::string& groupName, uint32_t switchIndex, SwitchState state) {
-    spdlog::debug("[SwitchManager] Group {} switch {} state changed to {}", 
+    spdlog::debug("[SwitchManager] Group {} switch {} state changed to {}",
                  groupName, switchIndex, (state == SwitchState::ON ? "ON" : "OFF"));
 }
 

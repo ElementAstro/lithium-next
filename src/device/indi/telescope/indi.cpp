@@ -7,16 +7,16 @@ TelescopeINDI::TelescopeINDI(const std::string& name) : name_(name) {
 auto TelescopeINDI::initialize(INDI::BaseDevice device) -> bool {
     device_ = device;
     spdlog::info("Initializing telescope INDI component");
-    
+
     // Set default capabilities
-    SetTelescopeCapability(TELESCOPE_CAN_GOTO | 
-                          TELESCOPE_CAN_SYNC | 
-                          TELESCOPE_CAN_PARK | 
+    SetTelescopeCapability(TELESCOPE_CAN_GOTO |
+                          TELESCOPE_CAN_SYNC |
+                          TELESCOPE_CAN_PARK |
                           TELESCOPE_CAN_ABORT |
                           TELESCOPE_HAS_TRACK_MODE |
                           TELESCOPE_HAS_TRACK_RATE |
                           TELESCOPE_HAS_PIER_SIDE, 4);
-    
+
     indiInitialized_.store(true);
     return true;
 }
@@ -34,7 +34,7 @@ auto TelescopeINDI::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand cmd) -> bool 
         spdlog::error("Unable to find TELESCOPE_MOTION_NS property");
         return false;
     }
-    
+
     if (cmd == MOTION_START) {
         if (dir == DIRECTION_NORTH) {
             property[0].setState(ISS_ON);
@@ -47,9 +47,9 @@ auto TelescopeINDI::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand cmd) -> bool 
         property[0].setState(ISS_OFF);
         property[1].setState(ISS_OFF);
     }
-    
+
     device_.getBaseClient()->sendNewProperty(property);
-    spdlog::debug("Move NS: dir={}, cmd={}", 
+    spdlog::debug("Move NS: dir={}, cmd={}",
                  dir == DIRECTION_NORTH ? "NORTH" : "SOUTH",
                  cmd == MOTION_START ? "START" : "STOP");
     return true;
@@ -61,7 +61,7 @@ auto TelescopeINDI::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand cmd) -> bool 
         spdlog::error("Unable to find TELESCOPE_MOTION_WE property");
         return false;
     }
-    
+
     if (cmd == MOTION_START) {
         if (dir == DIRECTION_WEST) {
             property[0].setState(ISS_ON);
@@ -74,9 +74,9 @@ auto TelescopeINDI::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand cmd) -> bool 
         property[0].setState(ISS_OFF);
         property[1].setState(ISS_OFF);
     }
-    
+
     device_.getBaseClient()->sendNewProperty(property);
-    spdlog::debug("Move WE: dir={}, cmd={}", 
+    spdlog::debug("Move WE: dir={}, cmd={}",
                  dir == DIRECTION_WEST ? "WEST" : "EAST",
                  cmd == MOTION_START ? "START" : "STOP");
     return true;
@@ -88,7 +88,7 @@ auto TelescopeINDI::Abort() -> bool {
         spdlog::error("Unable to find TELESCOPE_ABORT_MOTION property");
         return false;
     }
-    
+
     property[0].setState(ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
     spdlog::info("Aborting telescope motion via INDI");
@@ -101,7 +101,7 @@ auto TelescopeINDI::Park() -> bool {
         spdlog::error("Unable to find TELESCOPE_PARK property");
         return false;
     }
-    
+
     property[0].setState(ISS_ON);
     property[1].setState(ISS_OFF);
     device_.getBaseClient()->sendNewProperty(property);
@@ -115,7 +115,7 @@ auto TelescopeINDI::UnPark() -> bool {
         spdlog::error("Unable to find TELESCOPE_PARK property");
         return false;
     }
-    
+
     property[0].setState(ISS_OFF);
     property[1].setState(ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
@@ -129,11 +129,11 @@ auto TelescopeINDI::SetTrackMode(uint8_t mode) -> bool {
         spdlog::error("Unable to find TELESCOPE_TRACK_MODE property");
         return false;
     }
-    
+
     for (int i = 0; i < property.count(); ++i) {
         property[i].setState(i == mode ? ISS_ON : ISS_OFF);
     }
-    
+
     device_.getBaseClient()->sendNewProperty(property);
     spdlog::info("Set track mode to: {}", mode);
     return true;
@@ -145,11 +145,11 @@ auto TelescopeINDI::SetTrackEnabled(bool enabled) -> bool {
         spdlog::error("Unable to find TELESCOPE_TRACK_STATE property");
         return false;
     }
-    
+
     property[0].setState(enabled ? ISS_ON : ISS_OFF);
     property[1].setState(enabled ? ISS_OFF : ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Tracking {}", enabled ? "enabled" : "disabled");
     return true;
 }
@@ -160,13 +160,13 @@ auto TelescopeINDI::SetTrackRate(double raRate, double deRate) -> bool {
         spdlog::error("Unable to find TELESCOPE_TRACK_RATE property");
         return false;
     }
-    
+
     if (property.count() >= 2) {
         property[0].setValue(raRate);
         property[1].setValue(deRate);
         device_.getBaseClient()->sendNewProperty(property);
     }
-    
+
     spdlog::info("Set track rates: RA={:.6f}, DEC={:.6f}", raRate, deRate);
     return true;
 }
@@ -180,18 +180,18 @@ auto TelescopeINDI::Goto(double ra, double dec) -> bool {
         actionProperty[2].setState(ISS_OFF); // SYNC
         device_.getBaseClient()->sendNewProperty(actionProperty);
     }
-    
+
     // Set coordinates
     INDI::PropertyNumber property = device_.getProperty("EQUATORIAL_EOD_COORD");
     if (!property.isValid()) {
         spdlog::error("Unable to find EQUATORIAL_EOD_COORD property");
         return false;
     }
-    
+
     property[0].setValue(ra);
     property[1].setValue(dec);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Goto: RA={:.6f}h, DEC={:.6f}°", ra, dec);
     return true;
 }
@@ -205,18 +205,18 @@ auto TelescopeINDI::Sync(double ra, double dec) -> bool {
         actionProperty[2].setState(ISS_ON);  // SYNC
         device_.getBaseClient()->sendNewProperty(actionProperty);
     }
-    
+
     // Set coordinates
     INDI::PropertyNumber property = device_.getProperty("EQUATORIAL_EOD_COORD");
     if (!property.isValid()) {
         spdlog::error("Unable to find EQUATORIAL_EOD_COORD property");
         return false;
     }
-    
+
     property[0].setValue(ra);
     property[1].setValue(dec);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Sync: RA={:.6f}h, DEC={:.6f}°", ra, dec);
     return true;
 }
@@ -227,15 +227,15 @@ auto TelescopeINDI::UpdateLocation(double latitude, double longitude, double ele
         spdlog::warn("GEOGRAPHIC_COORD property not available");
         return false;
     }
-    
+
     if (property.count() >= 3) {
         property[0].setValue(latitude);
         property[1].setValue(longitude);
         property[2].setValue(elevation);
         device_.getBaseClient()->sendNewProperty(property);
     }
-    
-    spdlog::info("Updated location: lat={:.6f}°, lon={:.6f}°, elev={:.1f}m", 
+
+    spdlog::info("Updated location: lat={:.6f}°, lon={:.6f}°, elev={:.1f}m",
                 latitude, longitude, elevation);
     return true;
 }
@@ -246,23 +246,23 @@ auto TelescopeINDI::UpdateTime(ln_date* utc, double utc_offset) -> bool {
         spdlog::warn("TIME_UTC property not available");
         return false;
     }
-    
+
     // Convert ln_date to ISO 8601 string
     char timeStr[64];
     snprintf(timeStr, sizeof(timeStr), "%04d-%02d-%02dT%02d:%02d:%06.3f",
             utc->years, utc->months, utc->days,
             utc->hours, utc->minutes, utc->seconds);
-    
+
     timeProperty[0].setText(timeStr);
     device_.getBaseClient()->sendNewProperty(timeProperty);
-    
+
     // Set UTC offset if available
     INDI::PropertyNumber offsetProperty = device_.getProperty("TIME_LST");
     if (offsetProperty.isValid()) {
         offsetProperty[0].setValue(utc_offset);
         device_.getBaseClient()->sendNewProperty(offsetProperty);
     }
-    
+
     spdlog::info("Updated time: {} (UTC offset: {:.2f}h)", timeStr, utc_offset);
     return true;
 }
@@ -273,18 +273,18 @@ auto TelescopeINDI::ReadScopeParameters() -> bool {
         spdlog::error("Unable to find TELESCOPE_INFO property");
         return false;
     }
-    
+
     if (property.count() >= 4) {
         double primaryAperture = property[0].getValue();
         double primaryFocalLength = property[1].getValue();
         double guiderAperture = property[2].getValue();
         double guiderFocalLength = property[3].getValue();
-        
+
         spdlog::info("Telescope parameters - Primary: {:.1f}mm f/{:.1f}, Guider: {:.1f}mm f/{:.1f}",
                     primaryAperture, primaryFocalLength,
                     guiderAperture, guiderFocalLength);
     }
-    
+
     return true;
 }
 
@@ -294,14 +294,14 @@ auto TelescopeINDI::SetCurrentPark() -> bool {
         spdlog::error("Unable to find TELESCOPE_PARK_OPTION property");
         return false;
     }
-    
+
     // Set to "CURRENT" option
     property[0].setState(ISS_ON);
     property[1].setState(ISS_OFF);
     property[2].setState(ISS_OFF);
     property[3].setState(ISS_OFF);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Set current position as park position");
     return true;
 }
@@ -312,14 +312,14 @@ auto TelescopeINDI::SetDefaultPark() -> bool {
         spdlog::error("Unable to find TELESCOPE_PARK_OPTION property");
         return false;
     }
-    
+
     // Set to "DEFAULT" option
     property[0].setState(ISS_OFF);
     property[1].setState(ISS_ON);
     property[2].setState(ISS_OFF);
     property[3].setState(ISS_OFF);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Set default park position");
     return true;
 }

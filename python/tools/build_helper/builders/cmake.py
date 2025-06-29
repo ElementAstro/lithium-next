@@ -43,7 +43,7 @@ class CMakeBuilder(BuildHelperBase):
             cmake_options,
             env_vars,
             verbose,
-            parallel
+            parallel,
         )
         self.generator = generator
         self.build_type = build_type
@@ -52,18 +52,16 @@ class CMakeBuilder(BuildHelperBase):
         self._cmake_version = self._get_cmake_version()
 
         logger.debug(
-            f"CMakeBuilder initialized with generator={generator}, build_type={build_type}")
+            f"CMakeBuilder initialized with generator={generator}, build_type={build_type}"
+        )
 
     def _get_cmake_version(self) -> str:
         """Get the CMake version string."""
         try:
             result = subprocess.run(
-                ["cmake", "--version"],
-                capture_output=True,
-                text=True,
-                check=True
+                ["cmake", "--version"], capture_output=True, text=True, check=True
             )
-            version_line = result.stdout.strip().split('\n')[0]
+            version_line = result.stdout.strip().split("\n")[0]
             logger.debug(f"Detected CMake: {version_line}")
             return version_line
         except (subprocess.SubprocessError, IndexError):
@@ -96,8 +94,7 @@ class CMakeBuilder(BuildHelperBase):
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"CMake configuration failed: {result.error}")
-            raise ConfigurationError(
-                f"CMake configuration failed: {result.error}")
+            raise ConfigurationError(f"CMake configuration failed: {result.error}")
 
         return result
 
@@ -105,7 +102,8 @@ class CMakeBuilder(BuildHelperBase):
         """Build the project using CMake."""
         self.status = BuildStatus.BUILDING
         logger.info(
-            f"Building {'target ' + target if target else 'project'} using CMake")
+            f"Building {'target ' + target if target else 'project'} using CMake"
+        )
 
         # Construct build command
         build_cmd = [
@@ -113,7 +111,7 @@ class CMakeBuilder(BuildHelperBase):
             "--build",
             str(self.build_dir),
             "--parallel",
-            str(self.parallel)
+            str(self.parallel),
         ]
 
         # Add target if specified
@@ -130,7 +128,8 @@ class CMakeBuilder(BuildHelperBase):
         if result.success:
             self.status = BuildStatus.COMPLETED
             logger.success(
-                f"Build of {'target ' + target if target else 'project'} successful")
+                f"Build of {'target ' + target if target else 'project'} successful"
+            )
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Build failed: {result.error}")
@@ -148,13 +147,11 @@ class CMakeBuilder(BuildHelperBase):
 
         if result.success:
             self.status = BuildStatus.COMPLETED
-            logger.success(
-                f"Project installed successfully to {self.install_prefix}")
+            logger.success(f"Project installed successfully to {self.install_prefix}")
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Installation failed: {result.error}")
-            raise InstallationError(
-                f"CMake installation failed: {result.error}")
+            raise InstallationError(f"CMake installation failed: {result.error}")
 
         return result
 
@@ -170,7 +167,7 @@ class CMakeBuilder(BuildHelperBase):
             "-C",
             self.build_type,
             "-j",
-            str(self.parallel)
+            str(self.parallel),
         ]
 
         if self.verbose:
@@ -202,7 +199,8 @@ class CMakeBuilder(BuildHelperBase):
             result = self.build(doc_target)
             if result.success:
                 logger.success(
-                    f"Documentation generated successfully with target '{doc_target}'")
+                    f"Documentation generated successfully with target '{doc_target}'"
+                )
             return result
         except BuildError as e:
             logger.error(f"Documentation generation failed: {str(e)}")

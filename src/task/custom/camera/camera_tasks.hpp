@@ -4,10 +4,10 @@
 /**
  * @file camera_tasks.hpp
  * @brief Comprehensive camera task system for astrophotography
- * 
+ *
  * This header aggregates all camera-related tasks providing complete functionality
  * for professional astrophotography control including:
- * 
+ *
  * - Basic exposure control and calibration
  * - Video streaming and recording
  * - Temperature management and cooling
@@ -18,7 +18,7 @@
  * - Advanced filter and focus control
  * - Intelligent sequences and analysis
  * - Environmental monitoring and safety
- * 
+ *
  * @date 2024-12-26
  * @author Max Qian <lightapt.com>
  * @copyright Copyright (C) 2023-2024 Max Qian
@@ -71,7 +71,7 @@ struct CameraTaskSystemInfo {
     static constexpr const char* VERSION = "2.0.0";
     static constexpr const char* BUILD_DATE = __DATE__;
     static constexpr int TOTAL_TASKS = 48;  // Updated total count
-    
+
     struct Categories {
         static constexpr int EXPOSURE = 4;       // Basic exposure tasks
         static constexpr int CALIBRATION = 4;    // Calibration tasks
@@ -88,28 +88,28 @@ struct CameraTaskSystemInfo {
 
 /**
  * @brief Namespace documentation for camera tasks
- * 
+ *
  * This namespace contains all camera-related task implementations that provide
  * comprehensive control over camera functionality including:
- * 
+ *
  * CORE FUNCTIONALITY:
  * - Basic exposures (single, multiple, subframe)
- * - Video streaming and recording 
+ * - Video streaming and recording
  * - Temperature control and monitoring
  * - Frame configuration and management
  * - Parameter control (gain, offset, ISO)
  * - Calibration frame acquisition
- * 
+ *
  * ADVANCED INTEGRATION:
  * - Telescope slewing and tracking
- * - Device scanning and coordination  
+ * - Device scanning and coordination
  * - Filter wheel automation
  * - Intelligent autofocus
  * - Multi-target sequences
  * - Image quality analysis
  * - Environmental monitoring
  * - Safety systems
- * 
+ *
  * All tasks follow modern C++ design principles with proper error handling,
  * parameter validation, comprehensive logging, and professional documentation.
  * The system provides complete coverage of the AtomCamera interface and beyond

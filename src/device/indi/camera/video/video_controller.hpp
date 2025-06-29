@@ -13,7 +13,7 @@ namespace lithium::device::indi::camera {
 
 /**
  * @brief Video streaming and recording controller for INDI cameras
- * 
+ *
  * This component handles video streaming, recording, and related
  * video-specific camera operations.
  */
@@ -58,22 +58,22 @@ private:
     std::atomic_bool isVideoRecording_{false};
     std::atomic<double> videoExposure_{0.033}; // 30 FPS default
     std::atomic<int> videoGain_{0};
-    
+
     // Video formats
     std::vector<std::string> videoFormats_;
     std::string currentVideoFormat_;
     std::string videoRecordingFile_;
-    
+
     // Video statistics
     std::atomic<uint64_t> totalFramesReceived_{0};
     std::atomic<uint64_t> droppedFrames_{0};
     std::atomic<double> averageFrameRate_{0.0};
     std::chrono::system_clock::time_point lastFrameTime_;
-    
+
     // Property handlers
     void handleVideoStreamProperty(INDI::Property property);
     void handleVideoFormatProperty(INDI::Property property);
-    
+
     // Helper methods
     void setupVideoFormats();
     void updateFrameRate();

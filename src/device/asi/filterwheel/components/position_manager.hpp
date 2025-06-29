@@ -27,7 +27,7 @@ namespace lithium::device::asi::filterwheel::components {
 
 /**
  * @brief Position manager for filter wheel operations
- * 
+ *
  * Handles filter positioning with validation, movement tracking,
  * and callback notifications.
  */
@@ -85,21 +85,21 @@ public:
 private:
     std::shared_ptr<HardwareInterface> hwInterface_;
     mutable std::mutex posMutex_;
-    
+
     bool initialized_;
     int currentPosition_;
     std::atomic<bool> isMoving_;
     uint32_t movementCount_;
     std::string lastError_;
-    
+
     // Movement monitoring
     bool monitoringEnabled_;
     std::thread monitoringThread_;
     std::atomic<bool> shouldStopMonitoring_;
-    
+
     // Callback
     PositionCallback positionCallback_;
-    
+
     // Helper methods
     void setError(const std::string& error);
     void notifyPositionChange(int position, bool moving);

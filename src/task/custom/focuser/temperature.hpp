@@ -13,7 +13,7 @@ namespace lithium::task::custom::focuser {
 
 /**
  * @brief Task for temperature-based focus compensation
- * 
+ *
  * This task monitors temperature changes and adjusts focus position
  * to compensate for thermal expansion/contraction effects on the
  * optical system.
@@ -108,21 +108,21 @@ private:
     TaskResult performTemperatureCheck();
     TaskResult calculateRequiredCompensation(double temperature_change, int& required_steps);
     TaskResult applyCompensation(int steps, const std::string& reason);
-    
+
     // Temperature analysis
     void addTemperatureReading(double temperature, int position);
     double calculateAverageTemperature() const;
     double calculateTemperatureTrend() const;
     bool shouldTriggerCompensation(double current_temp, double& compensation_steps);
-    
+
     // Predictive compensation
     std::vector<double> calculateTemperatureForecast(std::chrono::seconds ahead) const;
     double calculatePredictiveCompensation() const;
-    
+
     // Calibration helpers
     TaskResult performCalibrationSequence();
     double calculateOptimalCoefficient(const std::vector<std::pair<double, int>>& temp_focus_pairs);
-    
+
     // Validation
     bool isTemperatureReadingValid(double temperature) const;
     bool isCompensationReasonable(int steps) const;
@@ -135,29 +135,29 @@ private:
 private:
     std::shared_ptr<device::TemperatureSensor> temperature_sensor_;
     Config config_;
-    
+
     // Temperature data
     std::deque<TemperatureReading> temperature_history_;
     std::deque<CompensationEvent> compensation_history_;
     double last_compensation_temperature_ = 0.0;
     std::chrono::steady_clock::time_point last_compensation_time_;
-    
+
     // Monitoring state
     bool monitoring_active_ = false;
     std::chrono::steady_clock::time_point monitoring_start_time_;
-    
+
     // Calibration state
     bool calibration_in_progress_ = false;
     std::vector<std::pair<double, int>> calibration_data_;
-    
+
     // Statistics
     mutable Statistics cached_statistics_;
     mutable std::chrono::steady_clock::time_point statistics_cache_time_;
-    
+
     // Thread safety
     mutable std::mutex temperature_mutex_;
     mutable std::mutex compensation_mutex_;
-    
+
     // Constants
     static constexpr double MIN_TEMPERATURE = -50.0; // Celsius
     static constexpr double MAX_TEMPERATURE = 80.0;  // Celsius
@@ -194,7 +194,7 @@ protected:
 public:
     void setConfig(const Config& config);
     Config getConfig() const;
-    
+
     double getCurrentTemperature() const;
     std::vector<std::pair<std::chrono::steady_clock::time_point, double>> getTemperatureLog() const;
 

@@ -118,7 +118,7 @@ public:
     auto setTargetRADECJNow(double raHours, double decDegrees) -> bool override;
     auto slewToRADECJNow(double raHours, double decDegrees, bool enableTracking = true) -> bool override;
     auto syncToRADECJNow(double raHours, double decDegrees) -> bool override;
-    
+
     auto getAZALT() -> std::optional<HorizontalCoordinates> override;
     auto setAZALT(double azDegrees, double altDegrees) -> bool override;
     auto slewToAZALT(double azDegrees, double altDegrees) -> bool override;
@@ -133,7 +133,7 @@ public:
     // Alignment
     auto getAlignmentMode() -> AlignmentMode override;
     auto setAlignmentMode(AlignmentMode mode) -> bool override;
-    auto addAlignmentPoint(const EquatorialCoordinates& measured, 
+    auto addAlignmentPoint(const EquatorialCoordinates& measured,
                            const EquatorialCoordinates& target) -> bool override;
     auto clearAlignment() -> bool override;
 
@@ -247,7 +247,7 @@ private:
 
     // Forward declaration
     class INDITelescopeManager;
-    
+
     // Unique pointer to the manager
     std::unique_ptr<INDITelescopeManager> manager_;
 };

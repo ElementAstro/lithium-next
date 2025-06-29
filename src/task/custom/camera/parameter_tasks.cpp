@@ -75,7 +75,7 @@ public:
 
     auto optimizeParameters(const std::string& target) -> json {
         json results;
-        
+
         if (target == "snr" || target == "sensitivity") {
             // Optimize for signal-to-noise ratio
             parameters_.gain = 300;
@@ -95,7 +95,7 @@ public:
             parameters_.iso = 400;
             results["optimized_for"] = "Quality/Precision";
         }
-        
+
         results["parameters"] = getParameterStatus();
         return results;
     }
@@ -164,21 +164,21 @@ auto GainControlTask::taskName() -> std::string {
 void GainControlTask::execute(const json& params) {
     try {
         validateGainParameters(params);
-        
+
         int gain = params["gain"];
         std::string mode = params.value("mode", "manual");
-        
+
         spdlog::info("Setting gain: {} (mode: {})", gain, mode);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockParameterController::getInstance();
         if (!controller.setGain(gain)) {
             throw atom::error::RuntimeError("Failed to set gain - value out of range");
         }
 #endif
-        
+
         LOG_F(INFO, "Gain control completed successfully");
-        
+
     } catch (const std::exception& e) {
         handleParameterError(*this, e);
         throw;
@@ -186,12 +186,12 @@ void GainControlTask::execute(const json& params) {
 }
 
 auto GainControlTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<GainControlTask>("GainControl", 
+    auto task = std::make_unique<GainControlTask>("GainControl",
         [](const json& params) {
             GainControlTask taskInstance("GainControl", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -204,7 +204,7 @@ void GainControlTask::defineParameters(Task& task) {
         .defaultValue = 100,
         .description = "Camera gain value (0-1000)"
     });
-    
+
     task.addParameter({
         .name = "mode",
         .type = "string",
@@ -218,12 +218,12 @@ void GainControlTask::validateGainParameters(const json& params) {
     if (!params.contains("gain")) {
         throw atom::error::InvalidArgument("Missing required parameter: gain");
     }
-    
+
     int gain = params["gain"];
     if (gain < 0 || gain > 1000) {
         throw atom::error::InvalidArgument("Gain must be between 0 and 1000");
     }
-    
+
     if (params.contains("mode")) {
         std::string mode = params["mode"];
         if (mode != "manual" && mode != "auto") {
@@ -246,19 +246,19 @@ auto OffsetControlTask::taskName() -> std::string {
 void OffsetControlTask::execute(const json& params) {
     try {
         validateOffsetParameters(params);
-        
+
         int offset = params["offset"];
         spdlog::info("Setting offset: {}", offset);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockParameterController::getInstance();
         if (!controller.setOffset(offset)) {
             throw atom::error::RuntimeError("Failed to set offset - value out of range");
         }
 #endif
-        
+
         LOG_F(INFO, "Offset control completed successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("OffsetControlTask failed: {}", e.what());
         throw;
@@ -266,12 +266,12 @@ void OffsetControlTask::execute(const json& params) {
 }
 
 auto OffsetControlTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<OffsetControlTask>("OffsetControl", 
+    auto task = std::make_unique<OffsetControlTask>("OffsetControl",
         [](const json& params) {
             OffsetControlTask taskInstance("OffsetControl", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -290,7 +290,7 @@ void OffsetControlTask::validateOffsetParameters(const json& params) {
     if (!params.contains("offset")) {
         throw atom::error::InvalidArgument("Missing required parameter: offset");
     }
-    
+
     int offset = params["offset"];
     if (offset < 0 || offset > 255) {
         throw atom::error::InvalidArgument("Offset must be between 0 and 255");
@@ -306,19 +306,19 @@ auto ISOControlTask::taskName() -> std::string {
 void ISOControlTask::execute(const json& params) {
     try {
         validateISOParameters(params);
-        
+
         int iso = params["iso"];
         spdlog::info("Setting ISO: {}", iso);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockParameterController::getInstance();
         if (!controller.setISO(iso)) {
             throw atom::error::RuntimeError("Failed to set ISO - invalid value");
         }
 #endif
-        
+
         LOG_F(INFO, "ISO control completed successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("ISOControlTask failed: {}", e.what());
         throw;
@@ -326,12 +326,12 @@ void ISOControlTask::execute(const json& params) {
 }
 
 auto ISOControlTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<ISOControlTask>("ISOControl", 
+    auto task = std::make_unique<ISOControlTask>("ISOControl",
         [](const json& params) {
             ISOControlTask taskInstance("ISOControl", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -350,7 +350,7 @@ void ISOControlTask::validateISOParameters(const json& params) {
     if (!params.contains("iso")) {
         throw atom::error::InvalidArgument("Missing required parameter: iso");
     }
-    
+
     int iso = params["iso"];
     std::vector<int> validISO = {100, 200, 400, 800, 1600, 3200, 6400, 12800};
     if (std::find(validISO.begin(), validISO.end(), iso) == validISO.end()) {
@@ -367,19 +367,19 @@ auto AutoParameterTask::taskName() -> std::string {
 void AutoParameterTask::execute(const json& params) {
     try {
         validateAutoParameters(params);
-        
+
         std::string target = params.value("target", "snr");
         spdlog::info("Auto-optimizing parameters for: {}", target);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockParameterController::getInstance();
         auto results = controller.optimizeParameters(target);
-        
+
         spdlog::info("Optimization results: {}", results.dump(2));
 #endif
-        
+
         LOG_F(INFO, "Auto parameter optimization completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("AutoParameterTask failed: {}", e.what());
         throw;
@@ -387,12 +387,12 @@ void AutoParameterTask::execute(const json& params) {
 }
 
 auto AutoParameterTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<AutoParameterTask>("AutoParameter", 
+    auto task = std::make_unique<AutoParameterTask>("AutoParameter",
         [](const json& params) {
             AutoParameterTask taskInstance("AutoParameter", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -405,7 +405,7 @@ void AutoParameterTask::defineParameters(Task& task) {
         .defaultValue = "snr",
         .description = "Optimization target (snr, speed, quality)"
     });
-    
+
     task.addParameter({
         .name = "iterations",
         .type = "integer",
@@ -423,7 +423,7 @@ void AutoParameterTask::validateAutoParameters(const json& params) {
             throw atom::error::InvalidArgument("Invalid target. Valid targets: snr, sensitivity, speed, readout, quality, precision");
         }
     }
-    
+
     if (params.contains("iterations")) {
         int iterations = params["iterations"];
         if (iterations < 1 || iterations > 20) {
@@ -441,34 +441,34 @@ auto ParameterProfileTask::taskName() -> std::string {
 void ParameterProfileTask::execute(const json& params) {
     try {
         validateProfileParameters(params);
-        
+
         std::string action = params["action"];
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockParameterController::getInstance();
-        
+
         if (action == "save") {
             std::string name = params["name"];
             if (!controller.saveProfile(name)) {
                 throw atom::error::RuntimeError("Failed to save profile");
             }
             spdlog::info("Profile '{}' saved successfully", name);
-            
+
         } else if (action == "load") {
             std::string name = params["name"];
             if (!controller.loadProfile(name)) {
                 throw atom::error::RuntimeError("Failed to load profile - not found");
             }
             spdlog::info("Profile '{}' loaded successfully", name);
-            
+
         } else if (action == "list") {
             auto profiles = controller.getProfileList();
             spdlog::info("Available profiles: {}", json(profiles).dump());
         }
 #endif
-        
+
         LOG_F(INFO, "Parameter profile operation completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("ParameterProfileTask failed: {}", e.what());
         throw;
@@ -476,12 +476,12 @@ void ParameterProfileTask::execute(const json& params) {
 }
 
 auto ParameterProfileTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<ParameterProfileTask>("ParameterProfile", 
+    auto task = std::make_unique<ParameterProfileTask>("ParameterProfile",
         [](const json& params) {
             ParameterProfileTask taskInstance("ParameterProfile", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -494,7 +494,7 @@ void ParameterProfileTask::defineParameters(Task& task) {
         .defaultValue = "list",
         .description = "Profile action (save, load, list)"
     });
-    
+
     task.addParameter({
         .name = "name",
         .type = "string",
@@ -508,13 +508,13 @@ void ParameterProfileTask::validateProfileParameters(const json& params) {
     if (!params.contains("action")) {
         throw atom::error::InvalidArgument("Missing required parameter: action");
     }
-    
+
     std::string action = params["action"];
     std::vector<std::string> validActions = {"save", "load", "list"};
     if (std::find(validActions.begin(), validActions.end(), action) == validActions.end()) {
         throw atom::error::InvalidArgument("Invalid action. Valid actions: save, load, list");
     }
-    
+
     if ((action == "save" || action == "load") && !params.contains("name")) {
         throw atom::error::InvalidArgument("Profile name is required for save/load actions");
     }
@@ -529,16 +529,16 @@ auto ParameterStatusTask::taskName() -> std::string {
 void ParameterStatusTask::execute(const json& params) {
     try {
         spdlog::info("Retrieving parameter status");
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockParameterController::getInstance();
         auto status = controller.getParameterStatus();
-        
+
         spdlog::info("Current parameter status: {}", status.dump(2));
 #endif
-        
+
         LOG_F(INFO, "Parameter status retrieved successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("ParameterStatusTask failed: {}", e.what());
         throw;
@@ -546,12 +546,12 @@ void ParameterStatusTask::execute(const json& params) {
 }
 
 auto ParameterStatusTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<ParameterStatusTask>("ParameterStatus", 
+    auto task = std::make_unique<ParameterStatusTask>("ParameterStatus",
         [](const json& params) {
             ParameterStatusTask taskInstance("ParameterStatus", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }

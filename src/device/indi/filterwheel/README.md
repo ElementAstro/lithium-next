@@ -119,7 +119,7 @@ The module automatically registers all components and methods with the Atom comp
 // Connection management
 connect, disconnect, scan, is_connected
 
-// Movement control  
+// Movement control
 get_position, set_position, is_moving, abort_motion
 home_filter_wheel, calibrate_filter_wheel
 

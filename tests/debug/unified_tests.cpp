@@ -39,14 +39,14 @@ void UnifiedDebugManagerTestSuite::TestShutdown() {
 void UnifiedDebugManagerTestSuite::TestReset() {
     // Initialize and add some components
     ASSERT_TRUE(manager_->initialize().has_value());
-    
+
     EXPECT_CALL(*mockComponent_, getName())
         .WillRepeatedly(::testing::Return("MockComponent"));
     EXPECT_CALL(*mockComponent_, initialize())
         .WillOnce(::testing::Return(Result<void>{}));
     EXPECT_CALL(*mockComponent_, shutdown())
         .WillOnce(::testing::Return(Result<void>{}));
-    
+
     auto regResult = manager_->registerComponent(mockComponent_);
     ASSERT_TRUE(regResult.has_value());
 
@@ -54,7 +54,7 @@ void UnifiedDebugManagerTestSuite::TestReset() {
     auto resetResult = manager_->reset();
     EXPECT_TRUE(resetResult.has_value()) << "Manager reset should succeed";
     EXPECT_TRUE(manager_->isActive()) << "Manager should be active after reset";
-    
+
     // Verify components are cleared
     auto components = manager_->getAllComponents();
     EXPECT_TRUE(components.empty()) << "All components should be cleared after reset";
@@ -62,7 +62,7 @@ void UnifiedDebugManagerTestSuite::TestReset() {
 
 void UnifiedDebugManagerTestSuite::TestRegisterComponent() {
     ASSERT_TRUE(manager_->initialize().has_value());
-    
+
     EXPECT_CALL(*mockComponent_, getName())
         .WillRepeatedly(::testing::Return("TestComponent"));
     EXPECT_CALL(*mockComponent_, initialize())
@@ -85,7 +85,7 @@ void UnifiedDebugManagerTestSuite::TestRegisterComponent() {
 
 void UnifiedDebugManagerTestSuite::TestUnregisterComponent() {
     ASSERT_TRUE(manager_->initialize().has_value());
-    
+
     EXPECT_CALL(*mockComponent_, getName())
         .WillRepeatedly(::testing::Return("TestComponent"));
     EXPECT_CALL(*mockComponent_, initialize())
@@ -121,7 +121,7 @@ void UnifiedDebugManagerTestSuite::TestErrorReporting() {
     };
 
     manager_->setErrorReporter(mockReporter_);
-    
+
     EXPECT_CALL(*mockReporter_, reportError(::testing::_))
         .Times(1);
 
@@ -129,7 +129,7 @@ void UnifiedDebugManagerTestSuite::TestErrorReporting() {
 
     // Test exception reporting
     DebugException testException{testError};
-    
+
     EXPECT_CALL(*mockReporter_, reportException(::testing::_))
         .Times(1);
 
@@ -165,7 +165,7 @@ void UnifiedDebugManagerTestSuite::TestConcurrentAccess() {
                 if (j == 0 && result.has_value()) {
                     successCount.fetch_add(1, std::memory_order_relaxed);
                 }
-                
+
                 // Small delay to increase contention
                 std::this_thread::sleep_for(std::chrono::microseconds(1));
             }
@@ -188,7 +188,7 @@ void OptimizedTerminalTestSuite::TestInitialization() {
     // Verify default commands are registered
     auto commands = terminal_->getRegisteredCommands();
     EXPECT_FALSE(commands.empty()) << "Default commands should be registered";
-    
+
     auto helpIt = std::find(commands.begin(), commands.end(), "help");
     EXPECT_NE(helpIt, commands.end()) << "Help command should be registered";
 }
@@ -197,7 +197,7 @@ void OptimizedTerminalTestSuite::TestCommandRegistration() {
     ASSERT_TRUE(terminal_->initialize().has_value());
 
     // Test registering a simple command
-    auto result = terminal_->registerCommand("test", 
+    auto result = terminal_->registerCommand("test",
         [](std::span<const std::any> args) -> Result<std::string> {
             return "Test command executed";
         });
@@ -214,7 +214,7 @@ void OptimizedTerminalTestSuite::TestCommandRegistration() {
         [](std::span<const std::any> args) -> Result<std::string> {
             return "Duplicate command";
         });
-    
+
     EXPECT_FALSE(duplicateResult.has_value()) << "Duplicate command registration should fail";
 }
 
@@ -255,7 +255,7 @@ void OptimizedTerminalTestSuite::TestAsyncCommandExecution() {
     // Execute the async command
     auto task = terminal_->executeCommandAsync("async_hello");
     auto result = task.get(); // Synchronously wait for result
-    
+
     EXPECT_TRUE(result.has_value()) << "Async command execution should succeed";
     EXPECT_EQ(result.value(), expectedOutput) << "Async command should return expected output";
 }
@@ -296,7 +296,7 @@ void OptimizedTerminalTestSuite::TestStatistics() {
     terminal_->executeCommand("help");
 
     stats = terminal_->getStatistics();
-    EXPECT_GT(stats.commandsExecuted.load(), initialCommands) 
+    EXPECT_GT(stats.commandsExecuted.load(), initialCommands)
         << "Command count should increase after execution";
 
     // Execute a failing command
@@ -324,7 +324,7 @@ void OptimizedCheckerTestSuite::TestRuleRegistration() {
     // Create a simple test rule
     struct TestRule {
         using result_type = OptimizedCommandChecker::CheckError;
-        
+
         result_type check(std::string_view command, size_t line, size_t column) const {
             if (command.find("test") != std::string_view::npos) {
                 return CheckError{
@@ -335,7 +335,7 @@ void OptimizedCheckerTestSuite::TestRuleRegistration() {
             }
             return CheckError{}; // No error
         }
-        
+
         std::string_view getName() const { return "test_rule"; }
         ErrorSeverity getSeverity() const { return ErrorSeverity::WARNING; }
         bool isEnabled() const { return true; }
@@ -447,7 +447,7 @@ void ErrorHandlingTestSuite::TestDebugException() {
     };
 
     DebugException exception{error};
-    
+
     EXPECT_EQ(exception.getError().code, ErrorCode::RUNTIME_ERROR);
     EXPECT_EQ(exception.getError().message, "Test exception");
     EXPECT_STREQ(exception.what(), "Test exception");
@@ -455,7 +455,7 @@ void ErrorHandlingTestSuite::TestDebugException() {
 
 void ErrorHandlingTestSuite::TestRecoveryStrategies() {
     auto recoveryManager = std::make_shared<ErrorRecoveryManager>();
-    
+
     // Test registering recovery strategy
     bool strategyCalled = false;
     auto strategy = [&strategyCalled](const DebugError& error) -> RecoveryAction {
@@ -468,7 +468,7 @@ void ErrorHandlingTestSuite::TestRecoveryStrategies() {
     // Test recovery attempt
     DebugError error{ErrorCode::RUNTIME_ERROR, "Test", ErrorCategory::GENERAL, ErrorSeverity::ERROR};
     auto action = recoveryManager->attemptRecovery(error);
-    
+
     EXPECT_TRUE(strategyCalled) << "Recovery strategy should be called";
     EXPECT_EQ(action, RecoveryAction::RETRY) << "Should return expected recovery action";
 }
@@ -532,7 +532,7 @@ void IntegrationTestSuite::TestFullWorkflow() {
             try {
                 std::string command = std::any_cast<std::string>(args[0]);
                 auto checkResult = checker_->checkCommand(command);
-                
+
                 if (!checkResult.has_value()) {
                     return unexpected(checkResult.error());
                 }
@@ -553,7 +553,7 @@ void IntegrationTestSuite::TestFullWorkflow() {
     // Execute the integrated command
     std::vector<std::any> args = {std::string{"rm -rf /"}};
     auto result = terminal_->executeCommand("check", args);
-    
+
     EXPECT_TRUE(result.has_value()) << "Integrated command should execute successfully";
     EXPECT_FALSE(result->empty()) << "Should return a report";
 }
@@ -571,7 +571,7 @@ void IntegrationTestSuite::TestComponentInteraction() {
     // Test getting components by name
     auto terminalComponent = manager_->getComponent("OptimizedConsoleTerminal");
     auto checkerComponent = manager_->getComponent("OptimizedCommandChecker");
-    
+
     EXPECT_TRUE(terminalComponent.has_value()) << "Terminal should be retrievable from manager";
     EXPECT_TRUE(checkerComponent.has_value()) << "Checker should be retrievable from manager";
 }
@@ -656,7 +656,7 @@ void PerformanceBenchmarks::BenchmarkComponentRegistration() {
             .WillRepeatedly(::testing::Return(std::format("BenchComponent{}", i)));
         EXPECT_CALL(*component, initialize())
             .WillOnce(::testing::Return(Result<void>{}));
-        
+
         components.push_back(component);
         auto result = manager_->registerComponent(component);
         ASSERT_TRUE(result.has_value()) << std::format("Component {} registration failed", i);
@@ -664,13 +664,13 @@ void PerformanceBenchmarks::BenchmarkComponentRegistration() {
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    
+
     std::cout << std::format("Registered {} components in {}μs (avg: {:.2f}μs per component)\n",
-                            numComponents, duration.count(), 
+                            numComponents, duration.count(),
                             static_cast<double>(duration.count()) / numComponents);
-    
+
     // Performance expectation: should be faster than 100μs per component
-    EXPECT_LT(duration.count() / numComponents, 100) 
+    EXPECT_LT(duration.count() / numComponents, 100)
         << "Component registration should be fast";
 }
 
@@ -694,11 +694,11 @@ void PerformanceBenchmarks::BenchmarkCommandExecution() {
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    
+
     std::cout << std::format("Executed {} commands in {}μs (avg: {:.2f}μs per command)\n",
                             numExecutions, duration.count(),
                             static_cast<double>(duration.count()) / numExecutions);
-    
+
     // Performance expectation: should be faster than 50μs per command
     EXPECT_LT(duration.count() / numExecutions, 50)
         << "Command execution should be fast";
@@ -728,11 +728,11 @@ void PerformanceBenchmarks::BenchmarkCommandChecking() {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     auto totalChecks = numIterations * testCommands.size();
-    
+
     std::cout << std::format("Performed {} checks in {}μs (avg: {:.2f}μs per check)\n",
                             totalChecks, duration.count(),
                             static_cast<double>(duration.count()) / totalChecks);
-    
+
     // Performance expectation: should be faster than 100μs per check
     EXPECT_LT(duration.count() / totalChecks, 100)
         << "Command checking should be fast";
@@ -741,29 +741,29 @@ void PerformanceBenchmarks::BenchmarkCommandChecking() {
 void PerformanceBenchmarks::BenchmarkMemoryUsage() {
     // This is a placeholder for memory usage benchmarking
     // In a real implementation, you would use tools like valgrind or custom memory tracking
-    
+
     ASSERT_TRUE(manager_->initialize().has_value());
     ASSERT_TRUE(terminal_->initialize().has_value());
     ASSERT_TRUE(checker_->initialize().has_value());
 
     // Perform operations that might cause memory issues
     const int numOperations = 1000;
-    
+
     for (int i = 0; i < numOperations; ++i) {
         // Register and unregister commands
         auto regResult = terminal_->registerCommand(std::format("temp_cmd_{}", i),
             [](std::span<const std::any> args) -> Result<std::string> {
                 return "Temporary command";
             });
-        
+
         if (regResult.has_value()) {
             terminal_->unregisterCommand(std::format("temp_cmd_{}", i));
         }
-        
+
         // Check some commands
         checker_->checkCommand(std::format("echo test_{}", i));
     }
-    
+
     // In a real test, we would verify memory usage didn't grow excessively
     SUCCEED() << "Memory usage test completed";
 }

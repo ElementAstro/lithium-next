@@ -36,7 +36,7 @@ class HardwareInterface;
 
 /**
  * @brief Video Manager for ASCOM Camera
- * 
+ *
  * Manages video streaming, live view, and recording operations
  * with frame buffering and statistics tracking.
  */
@@ -128,9 +128,9 @@ public:
      * @brief Check if video is streaming
      * @return true if streaming active
      */
-    bool isVideoActive() const { 
+    bool isVideoActive() const {
         auto state = state_.load();
-        return state == VideoState::STREAMING || state == VideoState::RECORDING; 
+        return state == VideoState::STREAMING || state == VideoState::RECORDING;
     }
 
     /**

@@ -21,7 +21,7 @@ class ComponentBase;
 
 /**
  * @brief Core INDI camera functionality
- * 
+ *
  * This class provides the foundational INDI camera operations including
  * device connection, property management, and basic INDI BaseClient functionality.
  * It serves as the central hub for all camera components.
@@ -63,7 +63,7 @@ public:
     void setPropertyNumber(std::string_view propertyName, double value);
 
     // Device watching
-    void watchDevice(const char* deviceName, 
+    void watchDevice(const char* deviceName,
                      const std::function<void(INDI::BaseDevice)>& callback);
     void connectDevice(const char* deviceName);
     void disconnectDevice(const char* deviceName);
@@ -84,26 +84,26 @@ private:
     // Device information
     std::string deviceName_;
     std::string name_;
-    
+
     // Connection state
     std::atomic_bool isConnected_{false};
     std::atomic_bool serverConnected_{false};
     CameraState currentState_{CameraState::IDLE};
-    
+
     // INDI device management
     INDI::BaseDevice device_;
     std::map<std::string, std::function<void(INDI::BaseDevice)>> deviceCallbacks_;
     mutable std::mutex devicesMutex_;
     std::vector<INDI::BaseDevice> devices_;
-    
+
     // Component management
     std::vector<std::shared_ptr<ComponentBase>> components_;
     mutable std::mutex componentsMutex_;
-    
+
     // Current frame
     std::shared_ptr<AtomCameraFrame> currentFrame_;
     mutable std::mutex frameMutex_;
-    
+
     // Helper methods
     auto findDevice(const std::string& name) -> INDI::BaseDevice;
     void notifyComponents(INDI::Property property);
