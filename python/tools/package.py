@@ -6,7 +6,7 @@
 
 @details      This module provides comprehensive functionality for Python package management,
               supporting both command-line usage and programmatic API access via pybind11.
-              
+
               The module handles package installation, upgrades, uninstallation, dependency
               analysis, security checks, and virtual environment management.
 
@@ -24,10 +24,10 @@
                 python package_manager.py --batch-install <requirements_file>
                 python package_manager.py --compare <package1> <package2>
                 python package_manager.py --info <package_name>
-              
+
               Python API usage:
                 from package_manager import PackageManager
-                
+
                 pm = PackageManager()
                 pm.install_package("requests")
                 pm.check_security("flask")
@@ -37,7 +37,7 @@
               - `requests` Python library
               - `packaging` Python library
               - Optional dependencies installed as needed
-              
+
 @version      2.0
 @date         2025-06-09
 """
@@ -65,27 +65,30 @@ import urllib.parse
 
 # Third-party dependencies - handled with dynamic imports to make them optional
 OPTIONAL_DEPENDENCIES = {
-    'requests': 'HTTP requests for PyPI',
-    'packaging': 'Version parsing and comparison',
-    'rich': 'Enhanced terminal output',
-    'safety': 'Security vulnerability checking',
-    'pipdeptree': 'Dependency tree analysis',
-    'virtualenv': 'Virtual environment management',
+    "requests": "HTTP requests for PyPI",
+    "packaging": "Version parsing and comparison",
+    "rich": "Enhanced terminal output",
+    "safety": "Security vulnerability checking",
+    "pipdeptree": "Dependency tree analysis",
+    "virtualenv": "Virtual environment management",
 }
 
 
 class DependencyError(Exception):
     """Exception raised when a required dependency is missing."""
+
     pass
 
 
 class PackageOperationError(Exception):
     """Exception raised when a package operation fails."""
+
     pass
 
 
 class VersionError(Exception):
     """Exception raised when there's an issue with package versions."""
+
     pass
 
 
@@ -100,6 +103,7 @@ class PackageManager:
 
     class OutputFormat(Enum):
         """Output format options for package information."""
+
         TEXT = auto()
         JSON = auto()
         TABLE = auto()
@@ -108,6 +112,7 @@ class PackageManager:
     @dataclass
     class PackageInfo:
         """Data class for storing package information."""
+
         name: str
         version: Optional[str] = None
         latest_version: Optional[str] = None
@@ -127,8 +132,14 @@ class PackageManager:
             if self.required_by is None:
                 self.required_by = []
 
-    def __init__(self, *, verbose: bool = False, pip_path: Optional[str] = None,
-                 cache_dir: Optional[str] = None, timeout: int = 30):
+    def __init__(
+        self,
+        *,
+        verbose: bool = False,
+        pip_path: Optional[str] = None,
+        cache_dir: Optional[str] = None,
+        timeout: int = 30,
+    ):
         """
         Initialize the PackageManager with configurable options.
 
@@ -139,13 +150,13 @@ class PackageManager:
             timeout (int): Timeout in seconds for network operations
         """
         # Setup logging
-        self.logger = logging.getLogger('package_manager')
+        self.logger = logging.getLogger("package_manager")
         log_level = logging.DEBUG if verbose else logging.INFO
         self.logger.setLevel(log_level)
 
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(levelname)s: %(message)s')
+            formatter = logging.Formatter("%(levelname)s: %(message)s")
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
@@ -192,8 +203,9 @@ class PackageManager:
                         f"Purpose: {OPTIONAL_DEPENDENCIES.get(dep, 'Unknown')}"
                     )
 
-    def _run_command(self, command: List[str], check: bool = True,
-                     capture_output: bool = True) -> Tuple[int, str, str]:
+    def _run_command(
+        self, command: List[str], check: bool = True, capture_output: bool = True
+    ) -> Tuple[int, str, str]:
         """
         Run a system command and return the result.
 
@@ -212,35 +224,55 @@ class PackageManager:
 
         try:
             kwargs: Dict[str, Union[bool, int, Any]] = {
-                'text': True,
-                'check': False,
+                "text": True,
+                "check": False,
             }
 
             if capture_output:
-                kwargs['stdout'] = subprocess.PIPE
-                kwargs['stderr'] = subprocess.PIPE
+                kwargs["stdout"] = subprocess.PIPE
+                kwargs["stderr"] = subprocess.PIPE
 
             # Remove any keys from kwargs that are not valid for subprocess.run
             # (e.g., if they are accidentally set to bool)
             valid_keys = {
-                'args', 'stdin', 'input', 'stdout', 'stderr', 'capture_output', 'shell',
-                'cwd', 'timeout', 'check', 'encoding', 'errors', 'text', 'env', 'universal_newlines'
+                "args",
+                "stdin",
+                "input",
+                "stdout",
+                "stderr",
+                "capture_output",
+                "shell",
+                "cwd",
+                "timeout",
+                "check",
+                "encoding",
+                "errors",
+                "text",
+                "env",
+                "universal_newlines",
             }
             kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
 
-            result = subprocess.run(command, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
+            result = subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
 
             if check and result.returncode != 0:
                 error_msg = f"Command failed with code {result.returncode}"
-                if hasattr(result, 'stderr') and result.stderr:
+                if hasattr(result, "stderr") and result.stderr:
                     error_msg += f": {result.stderr.strip()}"
                 raise PackageOperationError(error_msg)
 
-            stdout = result.stdout.strip() if hasattr(
-                result, 'stdout') and result.stdout else ""
-            stderr = result.stderr.strip() if hasattr(
-                result, 'stderr') and result.stderr else ""
+            stdout = (
+                result.stdout.strip()
+                if hasattr(result, "stdout") and result.stdout
+                else ""
+            )
+            stderr = (
+                result.stderr.strip()
+                if hasattr(result, "stderr") and result.stderr
+                else ""
+            )
 
             return result.returncode, stdout, stderr
 
@@ -281,7 +313,7 @@ class PackageManager:
             return None
 
     @lru_cache(maxsize=100)
-    def get_package_info(self, package_name: str) -> 'PackageInfo':
+    def get_package_info(self, package_name: str) -> "PackageInfo":
         """
         Get comprehensive information about a package.
 
@@ -294,7 +326,7 @@ class PackageManager:
         Raises:
             PackageOperationError: If the package info cannot be retrieved
         """
-        self._ensure_dependencies('requests')
+        self._ensure_dependencies("requests")
         import requests
 
         # First check if the package is installed locally
@@ -307,68 +339,73 @@ class PackageManager:
         if installed_version:
             try:
                 metadata = importlib_metadata.metadata(package_name)
-                info.summary = metadata.get('Summary')
-                info.homepage = metadata.get('Home-page')
-                info.author = metadata.get('Author')
-                info.author_email = metadata.get('Author-email')
-                info.license = metadata.get('License')
+                info.summary = metadata.get("Summary")
+                info.homepage = metadata.get("Home-page")
+                info.author = metadata.get("Author")
+                info.author_email = metadata.get("Author-email")
+                info.license = metadata.get("License")
 
                 # Get package location
                 dist = importlib_metadata.distribution(package_name)
-                info.location = str(dist.locate_file(''))
+                info.location = str(dist.locate_file(""))
 
                 # Get package dependencies
                 if dist.requires:
-                    info.requires = [str(req).split(';')[0].strip()
-                                     for req in dist.requires]
+                    info.requires = [
+                        str(req).split(";")[0].strip() for req in dist.requires
+                    ]
             except Exception as e:
                 self.logger.warning(
-                    f"Error getting local metadata for {package_name}: {e}")
+                    f"Error getting local metadata for {package_name}: {e}"
+                )
 
         # Get PyPI info
         try:
             response = requests.get(
-                f"https://pypi.org/pypi/{package_name}/json",
-                timeout=self._timeout
+                f"https://pypi.org/pypi/{package_name}/json", timeout=self._timeout
             )
             response.raise_for_status()
             pypi_data = response.json()
 
             # Update with PyPI info
             if not info.summary:
-                info.summary = pypi_data['info'].get('summary')
+                info.summary = pypi_data["info"].get("summary")
             if not info.homepage:
-                info.homepage = pypi_data['info'].get(
-                    'home_page') or pypi_data['info'].get('project_url')
+                info.homepage = pypi_data["info"].get("home_page") or pypi_data[
+                    "info"
+                ].get("project_url")
             if not info.author:
-                info.author = pypi_data['info'].get('author')
+                info.author = pypi_data["info"].get("author")
             if not info.author_email:
-                info.author_email = pypi_data['info'].get('author_email')
+                info.author_email = pypi_data["info"].get("author_email")
             if not info.license:
-                info.license = pypi_data['info'].get('license')
+                info.license = pypi_data["info"].get("license")
 
             # Get latest version from PyPI
-            all_versions = list(pypi_data['releases'].keys())
+            all_versions = list(pypi_data["releases"].keys())
             if all_versions:
-                self._ensure_dependencies('packaging')
+                self._ensure_dependencies("packaging")
                 from packaging import version as pkg_version
+
                 latest = max(all_versions, key=pkg_version.parse)
                 info.latest_version = latest
 
             # Get package dependencies from PyPI if not already found
-            if not info.requires and 'requires_dist' in pypi_data['info'] and pypi_data['info']['requires_dist']:
+            if (
+                not info.requires
+                and "requires_dist" in pypi_data["info"]
+                and pypi_data["info"]["requires_dist"]
+            ):
                 info.requires = [
-                    req.split(';')[0].strip()
-                    for req in pypi_data['info']['requires_dist']
-                    if ';' not in req or 'extra ==' not in req
+                    req.split(";")[0].strip()
+                    for req in pypi_data["info"]["requires_dist"]
+                    if ";" not in req or "extra ==" not in req
                 ]
 
         except requests.RequestException as e:
-            self.logger.warning(
-                f"Error fetching PyPI data for {package_name}: {e}")
+            self.logger.warning(f"Error fetching PyPI data for {package_name}: {e}")
         except Exception as e:
-            self.logger.warning(
-                f"Error processing PyPI data for {package_name}: {e}")
+            self.logger.warning(f"Error processing PyPI data for {package_name}: {e}")
 
         # Find which packages require this package
         try:
@@ -380,17 +417,15 @@ class PackageManager:
             required_by_section = False
             required_by = []
 
-            for line in output.split('\n'):
-                if line.startswith('Required-by:'):
+            for line in output.split("\n"):
+                if line.startswith("Required-by:"):
                     required_by_section = True
-                    value = line[len('Required-by:'):].strip()
-                    if value and value != 'none':
-                        required_by.extend([r.strip()
-                                           for r in value.split(',')])
-                elif required_by_section and line.startswith(' '):
+                    value = line[len("Required-by:") :].strip()
+                    if value and value != "none":
+                        required_by.extend([r.strip() for r in value.split(",")])
+                elif required_by_section and line.startswith(" "):
                     # Continuation of the Required-by field
-                    required_by.extend([r.strip()
-                                       for r in line.strip().split(',')])
+                    required_by.extend([r.strip() for r in line.strip().split(",")])
                 elif required_by_section:
                     # No longer in the Required-by section
                     break
@@ -398,7 +433,8 @@ class PackageManager:
             info.required_by = [r for r in required_by if r]
         except Exception as e:
             self.logger.warning(
-                f"Error getting packages that depend on {package_name}: {e}")
+                f"Error getting packages that depend on {package_name}: {e}"
+            )
 
         return info
 
@@ -415,7 +451,7 @@ class PackageManager:
         Raises:
             PackageOperationError: If versions cannot be retrieved
         """
-        self._ensure_dependencies('requests', 'packaging')
+        self._ensure_dependencies("requests", "packaging")
         import requests
         from packaging import version as pkg_version
 
@@ -425,16 +461,13 @@ class PackageManager:
 
         try:
             response = requests.get(
-                f"https://pypi.org/pypi/{package_name}/json",
-                timeout=self._timeout
+                f"https://pypi.org/pypi/{package_name}/json", timeout=self._timeout
             )
             response.raise_for_status()
             data = response.json()
 
             versions = sorted(
-                data['releases'].keys(),
-                key=pkg_version.parse,
-                reverse=True
+                data["releases"].keys(), key=pkg_version.parse, reverse=True
             )
 
             # Cache the results
@@ -443,10 +476,12 @@ class PackageManager:
             return versions
         except requests.RequestException as e:
             raise PackageOperationError(
-                f"Error fetching versions for {package_name}: {e}")
+                f"Error fetching versions for {package_name}: {e}"
+            )
         except Exception as e:
             raise PackageOperationError(
-                f"Error processing versions for {package_name}: {e}")
+                f"Error processing versions for {package_name}: {e}"
+            )
 
     def compare_versions(self, package_name: str, version1: str, version2: str) -> int:
         """
@@ -463,7 +498,7 @@ class PackageManager:
         Raises:
             VersionError: If versions cannot be compared
         """
-        self._ensure_dependencies('packaging')
+        self._ensure_dependencies("packaging")
         from packaging import version as pkg_version
 
         try:
@@ -478,7 +513,8 @@ class PackageManager:
                 return 0
         except Exception as e:
             raise VersionError(
-                f"Error comparing versions {version1} and {version2}: {e}")
+                f"Error comparing versions {version1} and {version2}: {e}"
+            )
 
     def install_package(
         self,
@@ -487,7 +523,7 @@ class PackageManager:
         upgrade: bool = False,
         force_reinstall: bool = False,
         deps: bool = True,
-        silent: bool = False
+        silent: bool = False,
     ) -> bool:
         """
         Install a Python package using pip.
@@ -593,8 +629,7 @@ class PackageManager:
             raise
 
     def list_installed_packages(
-        self,
-        output_format: OutputFormat = OutputFormat.TEXT
+        self, output_format: OutputFormat = OutputFormat.TEXT
     ) -> Union[str, List[Dict[str, str]]]:
         """
         List all installed packages with their versions.
@@ -614,7 +649,7 @@ class PackageManager:
             case self.OutputFormat.JSON:
                 return packages
             case self.OutputFormat.TABLE:
-                self._ensure_dependencies('rich')
+                self._ensure_dependencies("rich")
                 from rich.console import Console
                 from rich.table import Table
 
@@ -625,18 +660,19 @@ class PackageManager:
                 table.add_column("Status", style="blue")
 
                 # Use ThreadPoolExecutor to parallelize version checking
-                with ThreadPoolExecutor(max_workers=min(10, os.cpu_count() or 2)) as executor:
+                with ThreadPoolExecutor(
+                    max_workers=min(10, os.cpu_count() or 2)
+                ) as executor:
                     # Create a mapping of each package to its future for checking the latest version
                     futures = {
-                        pkg['name']: executor.submit(
-                            self.get_package_info, pkg['name'])
+                        pkg["name"]: executor.submit(self.get_package_info, pkg["name"])
                         # Limit to avoid too many requests
                         for pkg in packages[:30]
                     }
 
                     for pkg in packages:
-                        name = pkg['name']
-                        version = pkg['version']
+                        name = pkg["name"]
+                        version = pkg["version"]
 
                         # Get the latest version if available
                         latest = "Unknown"
@@ -667,13 +703,13 @@ class PackageManager:
                 lines = ["| Package | Version |", "|---------|---------|"]
                 for pkg in packages:
                     lines.append(f"| {pkg['name']} | {pkg['version']} |")
-                return '\n'.join(lines)
+                return "\n".join(lines)
             # Default case (TEXT)
             case _:
                 lines = []
                 for pkg in packages:
                     lines.append(f"{pkg['name']} {pkg['version']}")
-                return '\n'.join(lines)
+                return "\n".join(lines)
 
     def search_packages(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
         """
@@ -686,7 +722,7 @@ class PackageManager:
         Returns:
             List[Dict[str, Any]]: List of matching packages with their info
         """
-        self._ensure_dependencies('requests')
+        self._ensure_dependencies("requests")
         import requests
 
         query = query.strip()
@@ -703,12 +739,12 @@ class PackageManager:
             data = response.json()
 
             results = []
-            for item in data.get('results', [])[:limit]:
+            for item in data.get("results", [])[:limit]:
                 package_info = {
-                    'name': item.get('name', ''),
-                    'version': item.get('version', ''),
-                    'description': item.get('description', ''),
-                    'project_url': item.get('project_url', '')
+                    "name": item.get("name", ""),
+                    "version": item.get("version", ""),
+                    "description": item.get("description", ""),
+                    "project_url": item.get("project_url", ""),
                 }
                 results.append(package_info)
 
@@ -717,10 +753,12 @@ class PackageManager:
             self.logger.error(f"Error searching for packages: {e}")
             return []
 
-    def generate_requirements(self,
-                              output_file: Optional[str] = "requirements.txt",
-                              include_version: bool = True,
-                              include_hashes: bool = False) -> str:
+    def generate_requirements(
+        self,
+        output_file: Optional[str] = "requirements.txt",
+        include_version: bool = True,
+        include_hashes: bool = False,
+    ) -> str:
         """
         Generate a requirements.txt file for the current environment.
 
@@ -739,23 +777,30 @@ class PackageManager:
             # Strip version info
             lines = []
             for line in output.splitlines():
-                if '==' in line:
-                    package = line.split('==')[0]
+                if "==" in line:
+                    package = line.split("==")[0]
                     lines.append(package)
                 else:
                     lines.append(line)
-            output = '\n'.join(lines)
+            output = "\n".join(lines)
 
         if include_hashes:
             # Generate requirements with hashes
-            with tempfile.NamedTemporaryFile(delete=False, mode='w+') as temp_file:
+            with tempfile.NamedTemporaryFile(delete=False, mode="w+") as temp_file:
                 temp_file.write(output)
                 temp_file_path = temp_file.name
 
             try:
                 cmd = [
-                    self._pip_path, "-m", "pip", "install",
-                    "--dry-run", "--report", "-", "-r", temp_file_path
+                    self._pip_path,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--dry-run",
+                    "--report",
+                    "-",
+                    "-r",
+                    temp_file_path,
                 ]
                 _, hash_output, _ = self._run_command(cmd)
 
@@ -765,16 +810,14 @@ class PackageManager:
 
                     # Generate requirements with hashes
                     lines = []
-                    for install in report.get('install', []):
-                        pkg_name = install.get('metadata', {}).get('name', '')
-                        pkg_version = install.get(
-                            'metadata', {}).get('version', '')
+                    for install in report.get("install", []):
+                        pkg_name = install.get("metadata", {}).get("name", "")
+                        pkg_version = install.get("metadata", {}).get("version", "")
                         hashes = []
 
-                        for download_info in install.get('download_info', []):
-                            if 'sha256' in download_info:
-                                hashes.append(
-                                    f"sha256:{download_info['sha256']}")
+                        for download_info in install.get("download_info", []):
+                            if "sha256" in download_info:
+                                hashes.append(f"sha256:{download_info['sha256']}")
 
                         if pkg_name and pkg_version:
                             line = f"{pkg_name}=={pkg_version}"
@@ -783,10 +826,11 @@ class PackageManager:
                                     line += f" \\\n    --hash={h}"
                             lines.append(line)
 
-                    output = '\n'.join(lines)
+                    output = "\n".join(lines)
                 except Exception as e:
                     self.logger.warning(
-                        f"Failed to generate requirements with hashes: {e}")
+                        f"Failed to generate requirements with hashes: {e}"
+                    )
                     # Fall back to regular freeze output
             finally:
                 # Clean up temp file
@@ -802,7 +846,9 @@ class PackageManager:
 
         return output
 
-    def check_security(self, package_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    def check_security(
+        self, package_name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Check for security vulnerabilities in packages.
 
@@ -812,12 +858,13 @@ class PackageManager:
         Returns:
             List[Dict[str, Any]]: List of vulnerabilities found
         """
-        self._ensure_dependencies('safety')
+        self._ensure_dependencies("safety")
 
-        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_file:
             if package_name:
                 temp_file.write(
-                    f"{package_name}=={self.get_installed_version(package_name)}")
+                    f"{package_name}=={self.get_installed_version(package_name)}"
+                )
             else:
                 # Get all installed packages
                 cmd = [self._pip_path, "-m", "pip", "freeze"]
@@ -832,7 +879,7 @@ class PackageManager:
             try:
                 _, output, _ = self._run_command(cmd)
                 vulns = json.loads(output)
-                return vulns.get('vulnerabilities', [])
+                return vulns.get("vulnerabilities", [])
             except Exception as e:
                 self.logger.error(f"Error checking security: {e}")
                 return []
@@ -843,7 +890,9 @@ class PackageManager:
             except:
                 pass
 
-    def analyze_dependencies(self, package_name: str, as_json: bool = False) -> Union[str, Dict]:
+    def analyze_dependencies(
+        self, package_name: str, as_json: bool = False
+    ) -> Union[str, Dict]:
         """
         Analyze dependencies of a package and create a dependency tree.
 
@@ -854,11 +903,10 @@ class PackageManager:
         Returns:
             Union[str, Dict]: Dependency tree as string or JSON object
         """
-        self._ensure_dependencies('pipdeptree')
+        self._ensure_dependencies("pipdeptree")
 
         if as_json:
-            cmd = [self._pip_path, "-m", "pipdeptree",
-                   "-p", package_name, "--json"]
+            cmd = [self._pip_path, "-m", "pipdeptree", "-p", package_name, "--json"]
         else:
             cmd = [self._pip_path, "-m", "pipdeptree", "-p", package_name]
 
@@ -868,11 +916,13 @@ class PackageManager:
             return json.loads(output)
         return output
 
-    def create_virtual_env(self,
-                           venv_path: str,
-                           python_version: Optional[str] = None,
-                           system_site_packages: bool = False,
-                           with_pip: bool = True) -> bool:
+    def create_virtual_env(
+        self,
+        venv_path: str,
+        python_version: Optional[str] = None,
+        system_site_packages: bool = False,
+        with_pip: bool = True,
+    ) -> bool:
         """
         Create a new virtual environment.
 
@@ -888,7 +938,7 @@ class PackageManager:
         Raises:
             PackageOperationError: If creation fails
         """
-        self._ensure_dependencies('virtualenv')
+        self._ensure_dependencies("virtualenv")
 
         cmd = ["virtualenv"]
 
@@ -905,8 +955,7 @@ class PackageManager:
 
         try:
             self._run_command(cmd)
-            self.logger.info(
-                f"Successfully created virtual environment at {venv_path}")
+            self.logger.info(f"Successfully created virtual environment at {venv_path}")
             return True
         except PackageOperationError as e:
             self.logger.error(f"Failed to create virtual environment: {e}")
@@ -930,11 +979,13 @@ class PackageManager:
         try:
             self._run_command(cmd)
             self.logger.info(
-                f"Successfully installed packages from {requirements_file}")
+                f"Successfully installed packages from {requirements_file}"
+            )
             return True
         except PackageOperationError as e:
             self.logger.error(
-                f"Failed to install packages from {requirements_file}: {e}")
+                f"Failed to install packages from {requirements_file}: {e}"
+            )
             raise
 
     def compare_packages(self, package1: str, package2: str) -> Dict[str, Any]:
@@ -952,44 +1003,53 @@ class PackageManager:
         info2 = self.get_package_info(package2)
 
         # Find common dependencies
-        common_deps = set(info1.requires) & set(info2.requires) if (
-            info1.requires and info2.requires) else set()
+        common_deps = (
+            set(info1.requires) & set(info2.requires)
+            if (info1.requires and info2.requires)
+            else set()
+        )
 
         # Find unique dependencies
-        unique_deps1 = set(info1.requires) - set(info2.requires) if (
-            info1.requires and info2.requires) else set(info1.requires or [])
-        unique_deps2 = set(info2.requires) - set(info1.requires) if (
-            info1.requires and info2.requires) else set(info2.requires or [])
+        unique_deps1 = (
+            set(info1.requires) - set(info2.requires)
+            if (info1.requires and info2.requires)
+            else set(info1.requires or [])
+        )
+        unique_deps2 = (
+            set(info2.requires) - set(info1.requires)
+            if (info1.requires and info2.requires)
+            else set(info2.requires or [])
+        )
 
         comparison = {
-            'package1': {
-                'name': info1.name,
-                'version': info1.version,
-                'latest_version': info1.latest_version,
-                'unique_dependencies': list(unique_deps1),
-                'license': info1.license,
-                'author': info1.author,
-                'summary': info1.summary
+            "package1": {
+                "name": info1.name,
+                "version": info1.version,
+                "latest_version": info1.latest_version,
+                "unique_dependencies": list(unique_deps1),
+                "license": info1.license,
+                "author": info1.author,
+                "summary": info1.summary,
             },
-            'package2': {
-                'name': info2.name,
-                'version': info2.version,
-                'latest_version': info2.latest_version,
-                'unique_dependencies': list(unique_deps2),
-                'license': info2.license,
-                'author': info2.author,
-                'summary': info2.summary
+            "package2": {
+                "name": info2.name,
+                "version": info2.version,
+                "latest_version": info2.latest_version,
+                "unique_dependencies": list(unique_deps2),
+                "license": info2.license,
+                "author": info2.author,
+                "summary": info2.summary,
             },
-            'common': {
-                'dependencies': list(common_deps),
-            }
+            "common": {
+                "dependencies": list(common_deps),
+            },
         }
 
         return comparison
 
-    def validate_package(self, package_name: str,
-                         check_security: bool = True,
-                         check_license: bool = True) -> Dict[str, Any]:
+    def validate_package(
+        self, package_name: str, check_security: bool = True, check_license: bool = True
+    ) -> Dict[str, Any]:
         """
         Validate a package for security issues, license, and other metrics.
 
@@ -1002,59 +1062,72 @@ class PackageManager:
             Dict[str, Any]: Validation results
         """
         validation = {
-            'name': package_name,
-            'is_installed': self.is_package_installed(package_name),
-            'version': self.get_installed_version(package_name),
-            'validation_time': datetime.datetime.now().isoformat(),
-            'issues': []
+            "name": package_name,
+            "is_installed": self.is_package_installed(package_name),
+            "version": self.get_installed_version(package_name),
+            "validation_time": datetime.datetime.now().isoformat(),
+            "issues": [],
         }
 
         # Get package info
         try:
             info = self.get_package_info(package_name)
-            validation['info'] = {
-                'summary': info.summary,
-                'author': info.author,
-                'license': info.license,
-                'homepage': info.homepage,
-                'dependencies_count': len(info.requires) if info.requires else 0
+            validation["info"] = {
+                "summary": info.summary,
+                "author": info.author,
+                "license": info.license,
+                "homepage": info.homepage,
+                "dependencies_count": len(info.requires) if info.requires else 0,
             }
         except Exception as e:
-            validation['issues'].append(f"Error fetching package info: {e}")
+            validation["issues"].append(f"Error fetching package info: {e}")
 
         # Security check
         if check_security:
             try:
                 vulnerabilities = self.check_security(package_name)
-                validation['security'] = {
-                    'vulnerabilities': vulnerabilities,
-                    'vulnerability_count': len(vulnerabilities)
+                validation["security"] = {
+                    "vulnerabilities": vulnerabilities,
+                    "vulnerability_count": len(vulnerabilities),
                 }
                 if vulnerabilities:
-                    validation['issues'].append(
-                        f"Found {len(vulnerabilities)} security vulnerabilities")
+                    validation["issues"].append(
+                        f"Found {len(vulnerabilities)} security vulnerabilities"
+                    )
             except Exception as e:
-                validation['issues'].append(f"Security check failed: {e}")
+                validation["issues"].append(f"Security check failed: {e}")
 
         # License check
-        if check_license and 'info' in validation and validation['info'].get('license'):
-            license_name = validation['info']['license']
+        if check_license and "info" in validation and validation["info"].get("license"):
+            license_name = validation["info"]["license"]
 
             # List of approved licenses (example)
             approved_licenses = [
-                'MIT', 'BSD', 'Apache', 'Apache 2.0', 'Apache-2.0',
-                'ISC', 'Python', 'Python Software Foundation',
-                'MPL', 'MPL-2.0', 'GPL', 'GPL-3.0'
+                "MIT",
+                "BSD",
+                "Apache",
+                "Apache 2.0",
+                "Apache-2.0",
+                "ISC",
+                "Python",
+                "Python Software Foundation",
+                "MPL",
+                "MPL-2.0",
+                "GPL",
+                "GPL-3.0",
             ]
 
-            validation['license_check'] = {
-                'license': license_name,
-                'is_approved': any(al.lower() in license_name.lower() for al in approved_licenses)
+            validation["license_check"] = {
+                "license": license_name,
+                "is_approved": any(
+                    al.lower() in license_name.lower() for al in approved_licenses
+                ),
             }
 
-            if not validation['license_check']['is_approved']:
-                validation['issues'].append(
-                    f"License '{license_name}' may require review")
+            if not validation["license_check"]["is_approved"]:
+                validation["issues"].append(
+                    f"License '{license_name}' may require review"
+                )
 
         return validation
 
@@ -1077,72 +1150,121 @@ Examples:
   python package_manager.py --security-check
   python package_manager.py --batch-install requirements.txt
   python package_manager.py --compare requests flask
-        """
+        """,
     )
 
     # Basic package operations
-    parser.add_argument("--check", metavar="PACKAGE",
-                        help="Check if a specific package is installed")
-    parser.add_argument("--install", metavar="PACKAGE",
-                        help="Install a specific package")
-    parser.add_argument("--version", metavar="VERSION",
-                        help="Specify the version of the package to install")
-    parser.add_argument("--upgrade", metavar="PACKAGE",
-                        help="Upgrade a specific package to the latest version")
-    parser.add_argument("--uninstall", metavar="PACKAGE",
-                        help="Uninstall a specific package")
+    parser.add_argument(
+        "--check", metavar="PACKAGE", help="Check if a specific package is installed"
+    )
+    parser.add_argument(
+        "--install", metavar="PACKAGE", help="Install a specific package"
+    )
+    parser.add_argument(
+        "--version",
+        metavar="VERSION",
+        help="Specify the version of the package to install",
+    )
+    parser.add_argument(
+        "--upgrade",
+        metavar="PACKAGE",
+        help="Upgrade a specific package to the latest version",
+    )
+    parser.add_argument(
+        "--uninstall", metavar="PACKAGE", help="Uninstall a specific package"
+    )
 
     # Package listing and requirements
-    parser.add_argument("--list-installed", action="store_true",
-                        help="List all installed packages")
-    parser.add_argument("--freeze", metavar="FILE", nargs="?",
-                        const="requirements.txt", help="Generate a requirements.txt file")
-    parser.add_argument("--with-hashes", action="store_true",
-                        help="Include hashes in requirements.txt (use with --freeze)")
+    parser.add_argument(
+        "--list-installed", action="store_true", help="List all installed packages"
+    )
+    parser.add_argument(
+        "--freeze",
+        metavar="FILE",
+        nargs="?",
+        const="requirements.txt",
+        help="Generate a requirements.txt file",
+    )
+    parser.add_argument(
+        "--with-hashes",
+        action="store_true",
+        help="Include hashes in requirements.txt (use with --freeze)",
+    )
 
     # Advanced features
-    parser.add_argument("--search", metavar="TERM",
-                        help="Search for packages on PyPI")
-    parser.add_argument("--deps", metavar="PACKAGE",
-                        help="Show dependencies of a package")
-    parser.add_argument("--create-venv", metavar="PATH",
-                        help="Create a new virtual environment")
-    parser.add_argument("--python-version", metavar="VERSION",
-                        help="Python version for virtual environment (use with --create-venv)")
-    parser.add_argument("--security-check", metavar="PACKAGE", nargs="?", const="all",
-                        help="Check for security vulnerabilities")
-    parser.add_argument("--batch-install", metavar="FILE",
-                        help="Install packages from a requirements file")
-    parser.add_argument("--compare", nargs=2, metavar=("PACKAGE1", "PACKAGE2"),
-                        help="Compare two packages")
-    parser.add_argument("--info", metavar="PACKAGE",
-                        help="Show detailed information about a package")
-    parser.add_argument("--validate", metavar="PACKAGE",
-                        help="Validate a package (security, license, etc.)")
+    parser.add_argument("--search", metavar="TERM", help="Search for packages on PyPI")
+    parser.add_argument(
+        "--deps", metavar="PACKAGE", help="Show dependencies of a package"
+    )
+    parser.add_argument(
+        "--create-venv", metavar="PATH", help="Create a new virtual environment"
+    )
+    parser.add_argument(
+        "--python-version",
+        metavar="VERSION",
+        help="Python version for virtual environment (use with --create-venv)",
+    )
+    parser.add_argument(
+        "--security-check",
+        metavar="PACKAGE",
+        nargs="?",
+        const="all",
+        help="Check for security vulnerabilities",
+    )
+    parser.add_argument(
+        "--batch-install",
+        metavar="FILE",
+        help="Install packages from a requirements file",
+    )
+    parser.add_argument(
+        "--compare",
+        nargs=2,
+        metavar=("PACKAGE1", "PACKAGE2"),
+        help="Compare two packages",
+    )
+    parser.add_argument(
+        "--info", metavar="PACKAGE", help="Show detailed information about a package"
+    )
+    parser.add_argument(
+        "--validate",
+        metavar="PACKAGE",
+        help="Validate a package (security, license, etc.)",
+    )
 
     # Output format options
-    parser.add_argument("--json", action="store_true",
-                        help="Output in JSON format when applicable")
-    parser.add_argument("--markdown", action="store_true",
-                        help="Output in Markdown format when applicable")
-    parser.add_argument("--table", action="store_true",
-                        help="Output as a rich text table when applicable")
+    parser.add_argument(
+        "--json", action="store_true", help="Output in JSON format when applicable"
+    )
+    parser.add_argument(
+        "--markdown",
+        action="store_true",
+        help="Output in Markdown format when applicable",
+    )
+    parser.add_argument(
+        "--table",
+        action="store_true",
+        help="Output as a rich text table when applicable",
+    )
 
     # Configuration options
-    parser.add_argument("--verbose", action="store_true",
-                        help="Enable verbose output")
-    parser.add_argument("--timeout", type=int, default=30,
-                        help="Timeout in seconds for network operations")
-    parser.add_argument("--cache-dir", metavar="DIR",
-                        help="Directory to use for caching package information")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=30,
+        help="Timeout in seconds for network operations",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        metavar="DIR",
+        help="Directory to use for caching package information",
+    )
 
     args = parser.parse_args()
 
     # Initialize PackageManager
     pm = PackageManager(
-        verbose=args.verbose,
-        timeout=args.timeout,
-        cache_dir=args.cache_dir
+        verbose=args.verbose, timeout=args.timeout, cache_dir=args.cache_dir
     )
 
     # Determine output format
@@ -1158,8 +1280,10 @@ Examples:
     try:
         if args.check:
             if pm.is_package_installed(args.check):
-                print(f"Package '{args.check}' is installed, version: {
-                      pm.get_installed_version(args.check)}")
+                print(
+                    f"Package '{args.check}' is installed, version: {
+                      pm.get_installed_version(args.check)}"
+                )
             else:
                 print(f"Package '{args.check}' is not installed.")
 
@@ -1184,8 +1308,7 @@ Examples:
 
         elif args.freeze is not None:
             content = pm.generate_requirements(
-                args.freeze,
-                include_hashes=args.with_hashes
+                args.freeze, include_hashes=args.with_hashes
             )
             if args.freeze == "-":
                 print(content)
@@ -1198,11 +1321,10 @@ Examples:
                 if not results:
                     print(f"No packages found matching '{args.search}'")
                 else:
-                    print(
-                        f"Found {len(results)} packages matching '{args.search}':")
+                    print(f"Found {len(results)} packages matching '{args.search}':")
                     for pkg in results:
                         print(f"{pkg['name']} ({pkg['version']})")
-                        if pkg['description']:
+                        if pkg["description"]:
                             print(f"  {pkg['description']}")
                         print()
 
@@ -1215,8 +1337,7 @@ Examples:
 
         elif args.create_venv:
             success = pm.create_virtual_env(
-                args.create_venv,
-                python_version=args.python_version
+                args.create_venv, python_version=args.python_version
             )
             if success:
                 print(f"Virtual environment created at {args.create_venv}")
@@ -1233,7 +1354,8 @@ Examples:
                     print(f"Found {len(vulns)} vulnerabilities:")
                     for vuln in vulns:
                         print(
-                            f"- {vuln['package_name']} {vuln['vulnerable_version']}: {vuln['advisory']}")
+                            f"- {vuln['package_name']} {vuln['vulnerable_version']}: {vuln['advisory']}"
+                        )
 
         elif args.batch_install:
             pm.batch_install(args.batch_install)
@@ -1248,28 +1370,26 @@ Examples:
                 print(f"Comparison between {pkg1} and {pkg2}:")
                 print(f"\n{pkg1}:")
                 print(f"  Version: {comparison['package1']['version']}")
-                print(
-                    f"  Latest version: {comparison['package1']['latest_version']}")
+                print(f"  Latest version: {comparison['package1']['latest_version']}")
                 print(f"  License: {comparison['package1']['license']}")
                 print(f"  Summary: {comparison['package1']['summary']}")
 
                 print(f"\n{pkg2}:")
                 print(f"  Version: {comparison['package2']['version']}")
-                print(
-                    f"  Latest version: {comparison['package2']['latest_version']}")
+                print(f"  Latest version: {comparison['package2']['latest_version']}")
                 print(f"  License: {comparison['package2']['license']}")
                 print(f"  Summary: {comparison['package2']['summary']}")
 
                 print("\nCommon dependencies:")
-                for dep in comparison['common']['dependencies']:
+                for dep in comparison["common"]["dependencies"]:
                     print(f"  - {dep}")
 
                 print(f"\nUnique dependencies in {pkg1}:")
-                for dep in comparison['package1']['unique_dependencies']:
+                for dep in comparison["package1"]["unique_dependencies"]:
                     print(f"  - {dep}")
 
                 print(f"\nUnique dependencies in {pkg2}:")
-                for dep in comparison['package2']['unique_dependencies']:
+                for dep in comparison["package2"]["unique_dependencies"]:
                     print(f"  - {dep}")
 
         elif args.info:
@@ -1277,17 +1397,17 @@ Examples:
             if args.json:
                 # Convert dataclass to dict for JSON serialization
                 info_dict = {
-                    'name': info.name,
-                    'version': info.version,
-                    'latest_version': info.latest_version,
-                    'summary': info.summary,
-                    'homepage': info.homepage,
-                    'author': info.author,
-                    'author_email': info.author_email,
-                    'license': info.license,
-                    'requires': info.requires,
-                    'required_by': info.required_by,
-                    'location': info.location
+                    "name": info.name,
+                    "version": info.version,
+                    "latest_version": info.latest_version,
+                    "summary": info.summary,
+                    "homepage": info.homepage,
+                    "author": info.author,
+                    "author_email": info.author_email,
+                    "license": info.license,
+                    "requires": info.requires,
+                    "required_by": info.required_by,
+                    "location": info.location,
                 }
                 print(json.dumps(info_dict, indent=2))
             else:
@@ -1321,21 +1441,21 @@ Examples:
             else:
                 print(f"Validation results for {validation['name']}:")
                 print(f"  Installed: {validation['is_installed']}")
-                if validation['is_installed']:
+                if validation["is_installed"]:
                     print(f"  Version: {validation['version']}")
 
-                if 'info' in validation:
+                if "info" in validation:
                     print(f"  License: {validation['info']['license']}")
-                    print(
-                        f"  Dependencies: {validation['info']['dependencies_count']}")
+                    print(f"  Dependencies: {validation['info']['dependencies_count']}")
 
-                if 'security' in validation:
+                if "security" in validation:
                     print(
-                        f"  Security vulnerabilities: {validation['security']['vulnerability_count']}")
+                        f"  Security vulnerabilities: {validation['security']['vulnerability_count']}"
+                    )
 
-                if validation['issues']:
+                if validation["issues"]:
                     print("\nIssues found:")
-                    for issue in validation['issues']:
+                    for issue in validation["issues"]:
                         print(f"  - {issue}")
                 else:
                     print("\nNo issues found! Package looks good.")
@@ -1348,6 +1468,7 @@ Examples:
         print(f"Error: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 
@@ -1362,13 +1483,14 @@ def export_package_manager():
     """
     try:
         import pybind11
+
         # When the C++ code includes this module, the export will be available
         return {
-            'PackageManager': PackageManager,
-            'OutputFormat': PackageManager.OutputFormat,
-            'DependencyError': DependencyError,
-            'PackageOperationError': PackageOperationError,
-            'VersionError': VersionError
+            "PackageManager": PackageManager,
+            "OutputFormat": PackageManager.OutputFormat,
+            "DependencyError": DependencyError,
+            "PackageOperationError": PackageOperationError,
+            "VersionError": VersionError,
         }
     except ImportError:
         # pybind11 not available, just continue without exporting

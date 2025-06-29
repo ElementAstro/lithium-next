@@ -3,7 +3,6 @@
 #include <spdlog/spdlog.h>
 #include <format>
 
-
 #include "atom/error/exception.hpp"
 
 namespace lithium {
@@ -32,6 +31,10 @@ auto Version::parse(std::string_view versionStr) -> Version {
         THROW_INVALID_ARGUMENT("Invalid version format");
     }
 
+    int patch = 0;           // Initialize patch to 0
+    std::string prerelease;  // Initialize prerelease
+    std::string build;       // Initialize build
+
     int minor = parseInt(versionStr.substr(pos, secondDot - pos));
     pos = secondDot + 1;
 
@@ -39,10 +42,9 @@ auto Version::parse(std::string_view versionStr) -> Version {
     auto plusPos = versionStr.find('+', pos);
     size_t endPos = std::min(dashPos, plusPos);
 
-    int patch = parseInt(versionStr.substr(pos, endPos - pos));
-
-    std::string prerelease;
-    std::string build;
+    if (pos < versionStr.length()) {  // Check if there's a patch version
+        patch = parseInt(versionStr.substr(pos, endPos - pos));
+    }
 
     if (dashPos != std::string_view::npos) {
         size_t prereleaseEnd =
@@ -162,16 +164,28 @@ auto checkVersion(const Version& actualVersion,
         return true;
     }
 
-    size_t opLength = 1;
-    if (requiredVersionStr.size() > 1 &&
-        (requiredVersionStr[1] == '=' || requiredVersionStr[1] == '>')) {
-        opLength = 2;
-    }
+    // Determine the operator and version part
+    std::string_view op;
+    std::string_view versionPart;
 
-    std::string_view operation =
-        std::string_view(requiredVersionStr).substr(0, opLength);
-    std::string_view versionPart =
-        std::string_view(requiredVersionStr).substr(opLength);
+    if (requiredVersionStr.length() >= 2 &&
+        (requiredVersionStr[0] == '>' || requiredVersionStr[0] == '<' ||
+         requiredVersionStr[0] == '=' || requiredVersionStr[0] == '^' ||
+         requiredVersionStr[0] == '~') &&
+        requiredVersionStr[1] == '=') {
+        op = requiredVersionStr.substr(0, 2);
+        versionPart = requiredVersionStr.substr(2);
+    } else if (requiredVersionStr.length() >= 1 &&
+               (requiredVersionStr[0] == '>' || requiredVersionStr[0] == '<' ||
+                requiredVersionStr[0] == '=' || requiredVersionStr[0] == '^' ||
+                requiredVersionStr[0] == '~')) {
+        op = requiredVersionStr.substr(0, 1);
+        versionPart = requiredVersionStr.substr(1);
+    } else {
+        // Default to equality if no operator is specified
+        op = "=";
+        versionPart = requiredVersionStr;
+    }
 
     Version requiredVersion;
     try {
@@ -196,26 +210,27 @@ auto checkVersion(const Version& actualVersion,
     }
 
     bool result = false;
-    if (operation == "^") {
+    if (op == "^") {
         result = actual.major == required.major && actual >= required;
-    } else if (operation == "~") {
+    } else if (op == "~") {
         result = actual.major == required.major &&
                  actual.minor == required.minor && actual >= required;
-    } else if (operation == ">") {
+    } else if (op == ">") {
         result = actual > required;
-    } else if (operation == "<") {
+    } else if (op == "<") {
         result = actual < required;
-    } else if (operation == ">=") {
+    } else if (op == ">=") {
         result = actual >= required;
-    } else if (operation == "<=") {
+    } else if (op == "<=") {
         result = actual <= required;
-    } else if (operation == "=") {
+    } else if (op == "=") {
         result = actual == required;
     } else {
-        result = actual == required;
+        spdlog::error("Invalid comparison operator: {}", op);
+        THROW_INVALID_ARGUMENT("Invalid comparison operator");
     }
 
-    spdlog::debug("Version check: {} {} {} = {}", actual.toString(), operation,
+    spdlog::debug("Version check: {} {} {} = {}", actual.toString(), op,
                   required.toString(), result);
     return result;
 }
@@ -227,15 +242,26 @@ auto checkDateVersion(const DateVersion& actualVersion,
         return true;
     }
 
-    size_t opLength = 1;
-    if (requiredVersionStr.size() > 1 && requiredVersionStr[1] == '=') {
-        opLength = 2;
-    }
+    // Determine the operator and version part
+    std::string_view op;
+    std::string_view versionPart;
 
-    std::string_view operation =
-        std::string_view(requiredVersionStr).substr(0, opLength);
-    std::string_view versionPart =
-        std::string_view(requiredVersionStr).substr(opLength);
+    if (requiredVersionStr.length() >= 2 &&
+        (requiredVersionStr[0] == '>' || requiredVersionStr[0] == '<' ||
+         requiredVersionStr[0] == '=') &&
+        requiredVersionStr[1] == '=') {
+        op = requiredVersionStr.substr(0, 2);
+        versionPart = requiredVersionStr.substr(2);
+    } else if (requiredVersionStr.length() >= 1 &&
+               (requiredVersionStr[0] == '>' || requiredVersionStr[0] == '<' ||
+                requiredVersionStr[0] == '=')) {
+        op = requiredVersionStr.substr(0, 1);
+        versionPart = requiredVersionStr.substr(1);
+    } else {
+        // Default to equality if no operator is specified
+        op = "=";
+        versionPart = requiredVersionStr;
+    }
 
     DateVersion requiredVersion;
     try {
@@ -247,24 +273,24 @@ auto checkDateVersion(const DateVersion& actualVersion,
     }
 
     bool result = false;
-    if (operation == ">") {
+    if (op == ">") {
         result = actualVersion > requiredVersion;
-    } else if (operation == "<") {
+    } else if (op == "<") {
         result = actualVersion < requiredVersion;
-    } else if (operation == ">=") {
+    } else if (op == ">=") {
         result = actualVersion >= requiredVersion;
-    } else if (operation == "<=") {
+    } else if (op == "<=") {
         result = actualVersion <= requiredVersion;
-    } else if (operation == "=") {
+    } else if (op == "=") {
         result = actualVersion == requiredVersion;
     } else {
-        spdlog::error("Invalid comparison operator: {}", operation);
+        spdlog::error("Invalid comparison operator: {}", op);
         THROW_INVALID_ARGUMENT("Invalid comparison operator");
     }
 
     spdlog::debug(
         "Date version check: {}-{:02d}-{:02d} {} {}-{:02d}-{:02d} = {}",
-        actualVersion.year, actualVersion.month, actualVersion.day, operation,
+        actualVersion.year, actualVersion.month, actualVersion.day, op,
         requiredVersion.year, requiredVersion.month, requiredVersion.day,
         result);
     return result;

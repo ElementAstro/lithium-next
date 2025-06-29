@@ -9,22 +9,22 @@
 #include <regex>
 #include <unordered_map>
 
+#include <spdlog/spdlog.h>
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
 
 namespace lithium {
 
 class ElfParser::Impl {
 public:
     explicit Impl(std::string_view file) : filePath_(file) {
-        LOG_F(INFO, "ElfParser::Impl created for file: {}", file);
+        spdlog::info("ElfParser::Impl created for file: {}", file);
     }
 
     auto parse() -> bool {
-        LOG_F(INFO, "Parsing ELF file: {}", filePath_);
+        spdlog::info("Parsing ELF file: {}", filePath_);
         std::ifstream file(filePath_, std::ios::binary);
         if (!file) {
-            LOG_F(ERROR, "Failed to open file: {}", filePath_);
+            spdlog::error("Failed to open file: {}", filePath_);
             return false;
         }
 
@@ -39,38 +39,38 @@ public:
                       parseSectionHeaders() && parseSymbolTable() &&
                       parseDynamicEntries() && parseRelocationEntries();
         if (result) {
-            LOG_F(INFO, "Successfully parsed ELF file: {}", filePath_);
+            spdlog::info("Successfully parsed ELF file: {}", filePath_);
         } else {
-            LOG_F(ERROR, "Failed to parse ELF file: {}", filePath_);
+            spdlog::error("Failed to parse ELF file: {}", filePath_);
         }
         return result;
     }
 
     [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader> {
-        LOG_F(INFO, "Getting ELF header");
+        spdlog::info("Getting ELF header");
         return elfHeader_;
     }
 
     [[nodiscard]] auto getProgramHeaders() const
         -> std::span<const ProgramHeader> {
-        LOG_F(INFO, "Getting program headers");
+        spdlog::info("Getting program headers");
         return programHeaders_;
     }
 
     [[nodiscard]] auto getSectionHeaders() const
         -> std::span<const SectionHeader> {
-        LOG_F(INFO, "Getting section headers");
+        spdlog::info("Getting section headers");
         return sectionHeaders_;
     }
 
     [[nodiscard]] auto getSymbolTable() const -> std::span<const Symbol> {
-        LOG_F(INFO, "Getting symbol table");
+        spdlog::info("Getting symbol table");
         return symbolTable_;
     }
 
     [[nodiscard]] auto findSymbolByName(std::string_view name) const
         -> std::optional<Symbol> {
-        LOG_F(INFO, "Finding symbol by name: {}", name);
+        spdlog::info("Finding symbol by name: {}", name);
         auto cachedSymbol = findSymbolInCache(name);
         if (cachedSymbol) {
             return cachedSymbol;
@@ -79,17 +79,17 @@ public:
             symbolTable_,
             [name](const auto& symbol) { return symbol.name == name; });
         if (it != symbolTable_.end()) {
-            LOG_F(INFO, "Found symbol: {}", name);
+            spdlog::info("Found symbol: {}", name);
             symbolCache_[std::string(name)] = *it;
             return *it;
         }
-        LOG_F(WARNING, "Symbol not found: {}", name);
+        spdlog::warn("Symbol not found: {}", name);
         return std::nullopt;
     }
 
     [[nodiscard]] auto findSymbolByAddress(uint64_t address) const
         -> std::optional<Symbol> {
-        LOG_F(INFO, "Finding symbol by address: {}", address);
+        spdlog::info("Finding symbol by address: {}", address);
         auto cachedSymbol = findSymbolByAddressInCache(address);
         if (cachedSymbol) {
             return cachedSymbol;
@@ -98,33 +98,33 @@ public:
             symbolTable_,
             [address](const auto& symbol) { return symbol.value == address; });
         if (it != symbolTable_.end()) {
-            LOG_F(INFO, "Found symbol at address: {}", address);
+            spdlog::info("Found symbol at address: {}", address);
             addressCache_[address] = *it;
             return *it;
         }
-        LOG_F(WARNING, "Symbol not found at address: {}", address);
+        spdlog::warn("Symbol not found at address: {}", address);
         return std::nullopt;
     }
 
     [[nodiscard]] auto findSection(std::string_view name) const
         -> std::optional<SectionHeader> {
-        LOG_F(INFO, "Finding section by name: {}", name);
+        spdlog::info("Finding section by name: {}", name);
         auto it = std::ranges::find_if(
             sectionHeaders_,
             [name](const auto& section) { return section.name == name; });
         if (it != sectionHeaders_.end()) {
-            LOG_F(INFO, "Found section: {}", name);
+            spdlog::info("Found section: {}", name);
             return *it;
         }
-        LOG_F(WARNING, "Section not found: {}", name);
+        spdlog::warn("Section not found: {}", name);
         return std::nullopt;
     }
 
     [[nodiscard]] auto getSectionData(const SectionHeader& section) const
         -> std::vector<uint8_t> {
-        LOG_F(INFO, "Getting data for section: {}", section.name);
+        spdlog::info("Getting data for section: {}", section.name);
         if (section.offset + section.size > fileSize_) {
-            LOG_F(ERROR, "Section data out of bounds: {}", section.name);
+            spdlog::error("Section data out of bounds: {}", section.name);
             THROW_OUT_OF_RANGE("Section data out of bounds");
         }
         return {fileContent_.begin() + section.offset,
@@ -133,7 +133,7 @@ public:
 
     [[nodiscard]] auto getSymbolsInRange(uint64_t start, uint64_t end) const
         -> std::vector<Symbol> {
-        LOG_F(INFO, "Getting symbols in range: [{:x}, {:x}]", start, end);
+        spdlog::info("Getting symbols in range: [{:x}, {:x}]", start, end);
         std::vector<Symbol> result;
         for (const auto& symbol : symbolTable_) {
             if (symbol.value >= start && symbol.value < end) {
@@ -145,7 +145,7 @@ public:
 
     [[nodiscard]] auto getExecutableSegments() const
         -> std::vector<ProgramHeader> {
-        LOG_F(INFO, "Getting executable segments");
+        spdlog::info("Getting executable segments");
         std::vector<ProgramHeader> result;
         for (const auto& ph : programHeaders_) {
             if (ph.flags & PF_X) {
@@ -160,27 +160,27 @@ public:
             return true;
         }
 
-        LOG_F(INFO, "Verifying ELF file integrity");
+        spdlog::info("Verifying ELF file integrity");
 
         // 验证文件头魔数
         const auto* ident =
             reinterpret_cast<const unsigned char*>(fileContent_.data());
         if (ident[EI_MAG0] != ELFMAG0 || ident[EI_MAG1] != ELFMAG1 ||
             ident[EI_MAG2] != ELFMAG2 || ident[EI_MAG3] != ELFMAG3) {
-            LOG_F(ERROR, "Invalid ELF magic number");
+            spdlog::error("Invalid ELF magic number");
             return false;
         }
 
         // 验证段表和节表的完整性
         if (!elfHeader_) {
-            LOG_F(ERROR, "Missing ELF header");
+            spdlog::error("Missing ELF header");
             return false;
         }
 
         const auto totalSize =
             elfHeader_->shoff + (elfHeader_->shnum * elfHeader_->shentsize);
         if (totalSize > fileSize_) {
-            LOG_F(ERROR, "File size too small for section headers");
+            spdlog::error("File size too small for section headers");
             return false;
         }
 
@@ -189,7 +189,7 @@ public:
     }
 
     void clearCache() {
-        LOG_F(INFO, "Clearing parser cache");
+        spdlog::info("Clearing parser cache");
         symbolCache_.clear();
         addressCache_.clear();
         relocationEntries_.clear();
@@ -211,11 +211,16 @@ public:
     mutable std::unordered_map<std::string, Symbol> symbolCache_;
     mutable std::unordered_map<uint64_t, Symbol> addressCache_;
     mutable bool verified_{false};
+    mutable std::unordered_map<uint32_t, std::vector<SectionHeader>>
+        sectionTypeCache_;
+    bool useParallelProcessing_ = false;
+    size_t maxCacheSize_ = 1000;
+    mutable std::unordered_map<std::string, std::string> demangledNameCache_;
 
     auto parseElfHeader() -> bool {
-        LOG_F(INFO, "Parsing ELF header");
+        spdlog::info("Parsing ELF header");
         if (fileSize_ < sizeof(Elf64_Ehdr)) {
-            LOG_F(ERROR, "File size too small for ELF header");
+            spdlog::error("File size too small for ELF header");
             return false;
         }
 
@@ -235,14 +240,14 @@ public:
                                .shnum = ehdr->e_shnum,
                                .shstrndx = ehdr->e_shstrndx};
 
-        LOG_F(INFO, "Parsed ELF header successfully");
+        spdlog::info("Parsed ELF header successfully");
         return true;
     }
 
     auto parseProgramHeaders() -> bool {
-        LOG_F(INFO, "Parsing program headers");
+        spdlog::info("Parsing program headers");
         if (!elfHeader_) {
-            LOG_F(ERROR, "ELF header not parsed");
+            spdlog::error("ELF header not parsed");
             return false;
         }
 
@@ -259,14 +264,14 @@ public:
                                                     .align = phdr[i].p_align});
         }
 
-        LOG_F(INFO, "Parsed program headers successfully");
+        spdlog::info("Parsed program headers successfully");
         return true;
     }
 
     auto parseSectionHeaders() -> bool {
-        LOG_F(INFO, "Parsing section headers");
+        spdlog::info("Parsing section headers");
         if (!elfHeader_) {
-            LOG_F(ERROR, "ELF header not parsed");
+            spdlog::error("ELF header not parsed");
             return false;
         }
 
@@ -289,18 +294,18 @@ public:
                               .entsize = shdr[i].sh_entsize});
         }
 
-        LOG_F(INFO, "Parsed section headers successfully");
+        spdlog::info("Parsed section headers successfully");
         return true;
     }
 
     auto parseSymbolTable() -> bool {
-        LOG_F(INFO, "Parsing symbol table");
+        spdlog::info("Parsing symbol table");
         auto symtabSection = std::ranges::find_if(
             sectionHeaders_,
             [](const auto& section) { return section.type == SHT_SYMTAB; });
 
         if (symtabSection == sectionHeaders_.end()) {
-            LOG_F(WARNING, "No symbol table found");
+            spdlog::warn("No symbol table found");
             return true;  // No symbol table, but not an error
         }
 
@@ -323,18 +328,18 @@ public:
                        .shndx = symtab[i].st_shndx});
         }
 
-        LOG_F(INFO, "Parsed symbol table successfully");
+        spdlog::info("Parsed symbol table successfully");
         return true;
     }
 
     auto parseDynamicEntries() -> bool {
-        LOG_F(INFO, "Parsing dynamic entries");
+        spdlog::info("Parsing dynamic entries");
         auto dynamicSection = std::ranges::find_if(
             sectionHeaders_,
             [](const auto& section) { return section.type == SHT_DYNAMIC; });
 
         if (dynamicSection == sectionHeaders_.end()) {
-            LOG_F(INFO, "No dynamic section found");
+            spdlog::info("No dynamic section found");
             return true;  // Not an error, just no dynamic entries
         }
 
@@ -348,12 +353,12 @@ public:
                              .d_un = {.val = dyn[i].d_un.d_val}});
         }
 
-        LOG_F(INFO, "Parsed {} dynamic entries", dynamicEntries_.size());
+        spdlog::info("Parsed {} dynamic entries", dynamicEntries_.size());
         return true;
     }
 
     auto parseRelocationEntries() -> bool {
-        LOG_F(INFO, "Parsing relocation entries");
+        spdlog::info("Parsing relocation entries");
         std::vector<SectionHeader> relaSections;
 
         // 收集所有重定位节
@@ -376,7 +381,7 @@ public:
             }
         }
 
-        LOG_F(INFO, "Parsed {} relocation entries", relocationEntries_.size());
+        spdlog::info("Parsed {} relocation entries", relocationEntries_.size());
         return true;
     }
 
@@ -402,80 +407,80 @@ public:
 // ElfParser method implementations
 ElfParser::ElfParser(std::string_view file)
     : pImpl_(std::make_unique<Impl>(file)) {
-    LOG_F(INFO, "ElfParser created for file: {}", file);
+    spdlog::info("ElfParser created for file: {}", file);
 }
 
 ElfParser::~ElfParser() = default;
 
 auto ElfParser::parse() -> bool {
-    LOG_F(INFO, "ElfParser::parse called");
+    spdlog::info("ElfParser::parse called");
     return pImpl_->parse();
 }
 
 auto ElfParser::getElfHeader() const -> std::optional<ElfHeader> {
-    LOG_F(INFO, "ElfParser::getElfHeader called");
+    spdlog::info("ElfParser::getElfHeader called");
     return pImpl_->getElfHeader();
 }
 
 auto ElfParser::getProgramHeaders() const -> std::span<const ProgramHeader> {
-    LOG_F(INFO, "ElfParser::getProgramHeaders called");
+    spdlog::info("ElfParser::getProgramHeaders called");
     return pImpl_->getProgramHeaders();
 }
 
 auto ElfParser::getSectionHeaders() const -> std::span<const SectionHeader> {
-    LOG_F(INFO, "ElfParser::getSectionHeaders called");
+    spdlog::info("ElfParser::getSectionHeaders called");
     return pImpl_->getSectionHeaders();
 }
 
 auto ElfParser::getSymbolTable() const -> std::span<const Symbol> {
-    LOG_F(INFO, "ElfParser::getSymbolTable called");
+    spdlog::info("ElfParser::getSymbolTable called");
     return pImpl_->getSymbolTable();
 }
 
 auto ElfParser::findSymbolByName(std::string_view name) const
     -> std::optional<Symbol> {
-    LOG_F(INFO, "ElfParser::findSymbolByName called with name: {}", name);
+    spdlog::info("ElfParser::findSymbolByName called with name: {}", name);
     return pImpl_->findSymbolByName(name);
 }
 
 auto ElfParser::findSymbolByAddress(uint64_t address) const
     -> std::optional<Symbol> {
-    LOG_F(INFO, "ElfParser::findSymbolByAddress called with address: {}",
-          address);
+    spdlog::info("ElfParser::findSymbolByAddress called with address: {}",
+                 address);
     return pImpl_->findSymbolByAddress(address);
 }
 
 auto ElfParser::findSection(std::string_view name) const
     -> std::optional<SectionHeader> {
-    LOG_F(INFO, "ElfParser::findSection called with name: {}", name);
+    spdlog::info("ElfParser::findSection called with name: {}", name);
     return pImpl_->findSection(name);
 }
 
 auto ElfParser::getSectionData(const SectionHeader& section) const
     -> std::vector<uint8_t> {
-    LOG_F(INFO, "ElfParser::getSectionData called for section: {}",
-          section.name);
+    spdlog::info("ElfParser::getSectionData called for section: {}",
+                 section.name);
     return pImpl_->getSectionData(section);
 }
 
-auto ElfParser::getSymbolsInRange(uint64_t start,
-                                  uint64_t end) const -> std::vector<Symbol> {
-    LOG_F(INFO, "ElfParser::getSymbolsInRange called");
+auto ElfParser::getSymbolsInRange(uint64_t start, uint64_t end) const
+    -> std::vector<Symbol> {
+    spdlog::info("ElfParser::getSymbolsInRange called");
     return pImpl_->getSymbolsInRange(start, end);
 }
 
 auto ElfParser::getExecutableSegments() const -> std::vector<ProgramHeader> {
-    LOG_F(INFO, "ElfParser::getExecutableSegments called");
+    spdlog::info("ElfParser::getExecutableSegments called");
     return pImpl_->getExecutableSegments();
 }
 
 auto ElfParser::verifyIntegrity() const -> bool {
-    LOG_F(INFO, "ElfParser::verifyIntegrity called");
+    spdlog::info("ElfParser::verifyIntegrity called");
     return pImpl_->verifyIntegrity();
 }
 
 void ElfParser::clearCache() {
-    LOG_F(INFO, "ElfParser::clearCache called");
+    spdlog::info("ElfParser::clearCache called");
     pImpl_->clearCache();
 }
 
@@ -495,11 +500,83 @@ auto ElfParser::demangleSymbolName(const std::string& name) const
 
 auto ElfParser::getSymbolVersion(const Symbol& symbol) const
     -> std::optional<std::string> {
-    auto section = findSection(".gnu.version");
-    if (!section) {
+    auto verdefSection = pImpl_->findSection(".gnu.version_d");
+    auto vernumSection = pImpl_->findSection(".gnu.version");
+    auto dynsymSection = pImpl_->findSection(".dynsym");
+
+    if (!verdefSection || !vernumSection || !dynsymSection) {
+        spdlog::warn(
+            "Missing .gnu.version_d, .gnu.version, or .dynsym section for "
+            "symbol versioning.");
         return std::nullopt;
     }
-    // 实现符号版本查找逻辑
+
+    // Get the symbol's index in the dynamic symbol table
+    // This is a simplification; a proper implementation would map the symbol to
+    // its dynamic symbol table entry. For now, we'll assume the symbol passed
+    // is from the dynamic symbol table or can be found there.
+    size_t symbolIndex = 0;  // Placeholder
+    bool found = false;
+    const auto& dynSyms =
+        pImpl_->symbolTable_;  // Assuming symbolTable_ contains dynamic symbols
+    for (size_t i = 0; i < dynSyms.size(); ++i) {
+        if (dynSyms[i].name == symbol.name) {
+            symbolIndex = i;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        spdlog::warn("Symbol {} not found in dynamic symbol table.",
+                     symbol.name);
+        return std::nullopt;
+    }
+
+    // Read the .gnu.version section
+    const Elf64_Half* vernum = reinterpret_cast<const Elf64_Half*>(
+        pImpl_->fileContent_.data() + vernumSection->offset);
+
+    if (symbolIndex >= vernumSection->size / sizeof(Elf64_Half)) {
+        spdlog::warn("Symbol index {} out of bounds for .gnu.version section.",
+                     symbolIndex);
+        return std::nullopt;
+    }
+
+    Elf64_Half versionIndex = vernum[symbolIndex];
+
+    if (versionIndex == VER_NDX_LOCAL || versionIndex == VER_NDX_GLOBAL) {
+        return std::nullopt;  // Local or global, no specific version
+    }
+
+    // Read the .gnu.version_d section (version definition table)
+    const Elf64_Verdef* verdef = reinterpret_cast<const Elf64_Verdef*>(
+        pImpl_->fileContent_.data() + verdefSection->offset);
+
+    uint64_t currentOffset = 0;
+    while (currentOffset < verdefSection->size) {
+        const Elf64_Verdef* currentVerdef =
+            reinterpret_cast<const Elf64_Verdef*>(
+                reinterpret_cast<const char*>(verdef) + currentOffset);
+
+        if (currentVerdef->vd_ndx == versionIndex) {
+            const Elf64_Verdaux* verdaux =
+                reinterpret_cast<const Elf64_Verdaux*>(
+                    reinterpret_cast<const char*>(currentVerdef) +
+                    currentVerdef->vd_aux);
+
+            const char* dynstr = reinterpret_cast<const char*>(
+                pImpl_->fileContent_.data() +
+                pImpl_->findSection(".dynstr")->offset);
+
+            return std::string(dynstr + verdaux->vda_name);
+        }
+        if (currentVerdef->vd_next == 0) {
+            break;
+        }
+        currentOffset += currentVerdef->vd_next;
+    }
+
     return std::nullopt;
 }
 
@@ -602,15 +679,25 @@ auto ElfParser::isStripped() const -> bool {
 
 auto ElfParser::getDependencies() const -> std::vector<std::string> {
     std::vector<std::string> deps;
-    auto dynstr = findSection(".dynstr");
-    auto dynamic = findSection(".dynamic");
-    if (!dynstr || !dynamic) {
+    auto dynstrSection = pImpl_->findSection(".dynstr");
+    auto dynamicSection = pImpl_->findSection(".dynamic");
+
+    if (!dynstrSection || !dynamicSection) {
+        spdlog::warn("Missing .dynstr or .dynamic section for dependencies.");
         return deps;
     }
-    // 解析动态链接依赖
-    auto dynstrData = getSectionData(*dynstr);
-    auto dynamicData = getSectionData(*dynamic);
-    // TODO: 实现具体的依赖解析逻辑
+
+    const char* dynstr = reinterpret_cast<const char*>(
+        pImpl_->fileContent_.data() + dynstrSection->offset);
+
+    const Elf64_Dyn* dyn = reinterpret_cast<const Elf64_Dyn*>(
+        pImpl_->fileContent_.data() + dynamicSection->offset);
+
+    for (size_t i = 0; dyn[i].d_tag != DT_NULL; ++i) {
+        if (dyn[i].d_tag == DT_NEEDED) {
+            deps.push_back(std::string(dynstr + dyn[i].d_un.d_val));
+        }
+    }
     return deps;
 }
 
@@ -641,12 +728,12 @@ void ElfParser::preloadSymbols() {
 
 auto ElfParser::getRelocationEntries() const
     -> std::span<const RelocationEntry> {
-    LOG_F(INFO, "ElfParser::getRelocationEntries called");
+    spdlog::info("ElfParser::getRelocationEntries called");
     return pImpl_->relocationEntries_;
 }
 
 auto ElfParser::getDynamicEntries() const -> std::span<const DynamicEntry> {
-    LOG_F(INFO, "ElfParser::getDynamicEntries called");
+    spdlog::info("ElfParser::getDynamicEntries called");
     return pImpl_->dynamicEntries_;
 }
 

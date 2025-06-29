@@ -61,14 +61,15 @@ def validate_repository(func: Callable) -> Callable:
     Raises:
         GitRepositoryNotFound: If the repository directory doesn't exist or isn't a Git repository.
     """
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         # For static methods or functions that take repo_dir as first argument
-        if hasattr(self, 'repo_dir'):
+        if hasattr(self, "repo_dir"):
             repo_dir = self.repo_dir
         else:
             # For standalone functions
-            repo_dir = args[0] if args else kwargs.get('repo_dir')
+            repo_dir = args[0] if args else kwargs.get("repo_dir")
 
         if repo_dir is None:
             raise ValueError("Repository directory not specified")
@@ -76,12 +77,13 @@ def validate_repository(func: Callable) -> Callable:
         repo_path = ensure_path(repo_dir)
 
         if not repo_path.exists():
-            raise GitRepositoryNotFound(
-                f"Directory {repo_path} does not exist.")
+            raise GitRepositoryNotFound(f"Directory {repo_path} does not exist.")
 
         if not (repo_path / ".git").exists() and func.__name__ != "clone_repository":
             raise GitRepositoryNotFound(
-                f"Directory {repo_path} is not a Git repository.")
+                f"Directory {repo_path} is not a Git repository."
+            )
 
         return func(self, *args, **kwargs)
+
     return wrapper

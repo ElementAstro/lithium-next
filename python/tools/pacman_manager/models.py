@@ -10,6 +10,7 @@ from typing import List, Dict, Optional, TypedDict
 
 class PackageStatus(Enum):
     """Enum representing the status of a package"""
+
     INSTALLED = auto()
     NOT_INSTALLED = auto()
     OUTDATED = auto()
@@ -19,6 +20,7 @@ class PackageStatus(Enum):
 @dataclass
 class PackageInfo:
     """Data class to store package information"""
+
     name: str
     version: str
     description: str = ""
@@ -40,6 +42,7 @@ class PackageInfo:
 
 class CommandResult(TypedDict):
     """Type definition for command execution results"""
+
     success: bool
     stdout: str
     stderr: str

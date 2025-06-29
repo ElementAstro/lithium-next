@@ -73,7 +73,7 @@ DependencyManager manager;  // 自动映射到 lithium::system::DependencyManage
 
 所有源文件都应该被包含在编译过程中：
 - dependency_types.cpp
-- dependency_manager.cpp  
+- dependency_manager.cpp
 - platform_detector.cpp
 - package_manager.cpp
 - system_dependency.cpp (向后兼容包装)

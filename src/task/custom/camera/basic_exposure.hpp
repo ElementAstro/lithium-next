@@ -2,18 +2,8 @@
 #define LITHIUM_TASK_CAMERA_BASIC_EXPOSURE_HPP
 
 #include "../../task.hpp"
-#include "custom/factory.hpp"
 
-enum ExposureType { LIGHT, DARK, BIAS, FLAT, SNAPSHOT };
-
-NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType, {
-                                               {LIGHT, "light"},
-                                               {DARK, "dark"},
-                                               {BIAS, "bias"},
-                                               {FLAT, "flat"},
-                                               {SNAPSHOT, "snapshot"},
-                                           })
-namespace lithium::task::task {
+namespace lithium::task::camera {
 
 /**
  * @brief Derived class for creating TakeExposure tasks.
@@ -104,6 +94,6 @@ public:
     static void validatePreviewParameters(const json& params);
 };
 
-}  // namespace lithium::task::task
+}  // namespace lithium::task::camera
 
 #endif  // LITHIUM_TASK_CAMERA_BASIC_EXPOSURE_HPP

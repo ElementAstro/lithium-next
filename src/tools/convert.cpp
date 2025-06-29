@@ -1,5 +1,4 @@
 #include "convert.hpp"
-#include "constant.hpp"
 
 #include <spdlog/spdlog.h>
 #include <algorithm>

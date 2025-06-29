@@ -15,7 +15,13 @@ from typing import Dict, List, Optional, Set
 
 from loguru import logger
 
-from .core_types import CompilationResult, CompileOptions, LinkOptions, CppVersion, PathLike
+from .core_types import (
+    CompilationResult,
+    CompileOptions,
+    LinkOptions,
+    CppVersion,
+    PathLike,
+)
 from .compiler_manager import CompilerManager
 from .compiler import Compiler
 
@@ -31,11 +37,13 @@ class BuildManager:
     - Multiple compiler support
     """
 
-    def __init__(self,
-                 compiler_manager: Optional[CompilerManager] = None,
-                 build_dir: Optional[PathLike] = None,
-                 parallel: bool = True,
-                 max_workers: Optional[int] = None):
+    def __init__(
+        self,
+        compiler_manager: Optional[CompilerManager] = None,
+        build_dir: Optional[PathLike] = None,
+        parallel: bool = True,
+        max_workers: Optional[int] = None,
+    ):
         """Initialize the build manager."""
         self.compiler_manager = compiler_manager or CompilerManager()
         self.build_dir = Path(build_dir) if build_dir else Path("build")
@@ -51,15 +59,17 @@ class BuildManager:
         # Load cache if available
         self._load_cache()
 
-    def build(self,
-              source_files: List[PathLike],
-              output_file: PathLike,
-              compiler_name: Optional[str] = None,
-              cpp_version: CppVersion = CppVersion.CPP17,
-              compile_options: Optional[CompileOptions] = None,
-              link_options: Optional[LinkOptions] = None,
-              incremental: bool = True,
-              force_rebuild: bool = False) -> CompilationResult:
+    def build(
+        self,
+        source_files: List[PathLike],
+        output_file: PathLike,
+        compiler_name: Optional[str] = None,
+        cpp_version: CppVersion = CppVersion.CPP17,
+        compile_options: Optional[CompileOptions] = None,
+        link_options: Optional[LinkOptions] = None,
+        incremental: bool = True,
+        force_rebuild: bool = False,
+    ) -> CompilationResult:
         """
         Build source files into an executable or library.
         """
@@ -84,8 +94,7 @@ class BuildManager:
 
         if incremental and not force_rebuild:
             # Analyze dependencies and determine what files need rebuilding
-            to_compile = self._get_files_to_rebuild(
-                source_paths, compiler, cpp_version)
+            to_compile = self._get_files_to_rebuild(source_paths, compiler, cpp_version)
         else:
             # Rebuild everything
             to_compile = source_paths
@@ -99,12 +108,17 @@ class BuildManager:
         compile_results = []
 
         if to_compile:
-            logger.info(
-                f"Compiling {len(to_compile)} of {len(source_paths)} files")
+            logger.info(f"Compiling {len(to_compile)} of {len(source_paths)} files")
 
             # Use parallel compilation if enabled and supported
-            if self.parallel and compiler.features.supports_parallel and len(to_compile) > 1:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            if (
+                self.parallel
+                and compiler.features.supports_parallel
+                and len(to_compile) > 1
+            ):
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=self.max_workers
+                ) as executor:
                     future_to_file = {}
                     for source_file in to_compile:
                         idx = source_paths.index(source_file)
@@ -114,7 +128,7 @@ class BuildManager:
                             [source_file],
                             obj_file,
                             cpp_version,
-                            compile_options
+                            compile_options,
                         )
                         future_to_file[future] = source_file
 
@@ -127,17 +141,18 @@ class BuildManager:
                                 return CompilationResult(
                                     success=False,
                                     errors=[
-                                        f"Failed to compile {source_file}: {result.errors}"],
+                                        f"Failed to compile {source_file}: {result.errors}"
+                                    ],
                                     warnings=result.warnings,
-                                    duration_ms=(
-                                        time.time() - start_time) * 1000
+                                    duration_ms=(time.time() - start_time) * 1000,
                                 )
                         except Exception as e:
                             return CompilationResult(
                                 success=False,
                                 errors=[
-                                    f"Exception while compiling {source_file}: {str(e)}"],
-                                duration_ms=(time.time() - start_time) * 1000
+                                    f"Exception while compiling {source_file}: {str(e)}"
+                                ],
+                                duration_ms=(time.time() - start_time) * 1000,
                             )
             else:
                 # Sequential compilation
@@ -145,15 +160,17 @@ class BuildManager:
                     idx = source_paths.index(source_file)
                     obj_file = object_files[idx]
                     result = compiler.compile(
-                        [source_file], obj_file, cpp_version, compile_options)
+                        [source_file], obj_file, cpp_version, compile_options
+                    )
                     compile_results.append(result)
                     if not result.success:
                         return CompilationResult(
                             success=False,
                             errors=[
-                                f"Failed to compile {source_file}: {result.errors}"],
+                                f"Failed to compile {source_file}: {result.errors}"
+                            ],
                             warnings=result.warnings,
-                            duration_ms=(time.time() - start_time) * 1000
+                            duration_ms=(time.time() - start_time) * 1000,
                         )
 
             # Update cache with new file hashes
@@ -161,13 +178,14 @@ class BuildManager:
 
         # Link object files
         link_result = compiler.link(
-            [str(obj) for obj in object_files], output_file, link_options)
+            [str(obj) for obj in object_files], output_file, link_options
+        )
         if not link_result.success:
             return CompilationResult(
                 success=False,
                 errors=[f"Failed to link: {link_result.errors}"],
                 warnings=link_result.warnings,
-                duration_ms=(time.time() - start_time) * 1000
+                duration_ms=(time.time() - start_time) * 1000,
             )
 
         # Save cache
@@ -183,13 +201,12 @@ class BuildManager:
             success=True,
             output_file=output_path,
             duration_ms=(time.time() - start_time) * 1000,
-            warnings=all_warnings
+            warnings=all_warnings,
         )
 
-    def _get_files_to_rebuild(self,
-                              source_files: List[Path],
-                              compiler: Compiler,
-                              cpp_version: CppVersion) -> List[Path]:
+    def _get_files_to_rebuild(
+        self, source_files: List[Path], compiler: Compiler, cpp_version: CppVersion
+    ) -> List[Path]:
         """Determine which files need to be rebuilt based on changes."""
         to_rebuild = []
 
@@ -202,7 +219,9 @@ class BuildManager:
             self._scan_dependencies(file)
 
             # Check if this file or any of its dependencies changed
-            if self._has_file_changed(file) or any(self._has_file_changed(dep) for dep in self.dependency_graph[file]):
+            if self._has_file_changed(file) or any(
+                self._has_file_changed(dep) for dep in self.dependency_graph[file]
+            ):
                 to_rebuild.append(file)
 
         return to_rebuild
@@ -213,17 +232,15 @@ class BuildManager:
         self.dependency_graph[file_path].clear()
 
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 for line in f:
                     # Look for #include statements
-                    if line.strip().startswith('#include'):
-                        include_match = re.search(
-                            r'#include\s+["<](.*?)[">]', line)
+                    if line.strip().startswith("#include"):
+                        include_match = re.search(r'#include\s+["<](.*?)[">]', line)
                         if include_match:
                             include_file = include_match.group(1)
                             # For now, we only track that there is a dependency
-                            self.dependency_graph[file_path].add(
-                                Path(include_file))
+                            self.dependency_graph[file_path].add(Path(include_file))
         except Exception as e:
             logger.warning(f"Failed to scan dependencies for {file_path}: {e}")
 
@@ -255,26 +272,23 @@ class BuildManager:
         for file_path in files:
             if file_path.exists():
                 str_path = str(file_path.resolve())
-                self.file_hashes[str_path] = self._calculate_file_hash(
-                    file_path)
+                self.file_hashes[str_path] = self._calculate_file_hash(file_path)
 
     def _load_cache(self):
         """Load build cache from disk."""
         if self.cache_file.exists():
             try:
-                with open(self.cache_file, 'r') as f:
+                with open(self.cache_file, "r") as f:
                     data = json.load(f)
-                    self.file_hashes = data.get('file_hashes', {})
+                    self.file_hashes = data.get("file_hashes", {})
             except Exception as e:
                 logger.warning(f"Failed to load build cache: {e}")
 
     def _save_cache(self):
         """Save build cache to disk."""
         try:
-            cache_data = {
-                'file_hashes': self.file_hashes
-            }
-            with open(self.cache_file, 'w') as f:
+            cache_data = {"file_hashes": self.file_hashes}
+            with open(self.cache_file, "w") as f:
                 json.dump(cache_data, f, indent=2)
         except Exception as e:
             logger.warning(f"Failed to save build cache: {e}")

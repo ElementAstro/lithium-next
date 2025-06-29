@@ -39,4 +39,7 @@ struct AtomCameraFrame {
 
     // Recent Image
     std::string recentImagePath;
+    // 图像数据指针和长度
+    void* data{nullptr};
+    size_t size{0};
 } ATOM_ALIGNAS(128);

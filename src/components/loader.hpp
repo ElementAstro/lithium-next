@@ -20,8 +20,10 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <thread>
+#include <queue>
+#include <condition_variable>
 
-#include "atom/async/pool.hpp"
 #include "atom/function/ffi.hpp"
 #include "atom/type/json_fwd.hpp"
 #include "dependency.hpp"
@@ -60,6 +62,14 @@ concept ModuleFunction =
 template <typename T>
 using ModuleResult = std::expected<T, std::string>;
 
+struct ModuleDiagnostics {
+    ModuleInfo::Status status;
+    std::vector<std::string> dependencies;
+    std::vector<std::string> dependents;
+    std::string path;
+    std::size_t hash;
+};
+
 /**
  * @brief Class for managing and loading modules.
  */
@@ -95,6 +105,21 @@ public:
      */
     static auto createShared(std::string_view dirName)
         -> std::shared_ptr<ModuleLoader>;
+
+    /**
+     * @brief Registers a module and its dependencies for loading.
+     * @param name The name of the module.
+     * @param path The path to the module file.
+     * @param dependencies A list of module names this module depends on.
+     * @return Result indicating success or an error message.
+     */
+    auto registerModule(std::string_view name, std::string_view path, const std::vector<std::string>& dependencies) -> ModuleResult<void>;
+
+    /**
+     * @brief Loads all registered modules asynchronously, respecting dependencies.
+     * @return A future that completes when all modules are loaded, containing a result indicating success or an error message.
+     */
+    auto loadRegisteredModules() -> std::future<ModuleResult<void>>;
 
     /**
      * @brief Loads a module from a specified path.
@@ -257,12 +282,6 @@ public:
         -> ModuleResult<bool>;
 
     /**
-     * @brief Loads modules in the order of their dependencies.
-     * @return Result indicating success or error message.
-     */
-    auto loadModulesInOrder() -> ModuleResult<bool>;
-
-    /**
      * @brief Gets the dependencies of a module.
      * @param name The name of the module.
      * @return A vector of strings containing the names of the dependencies.
@@ -279,23 +298,6 @@ public:
         -> bool;
 
     /**
-     * @brief Sets the size of the thread pool.
-     * @param size The size of the thread pool.
-     * @throws std::invalid_argument if size is 0
-     */
-    void setThreadPoolSize(size_t size);
-
-    /**
-     * @brief Asynchronously loads multiple modules.
-     * @param modules A view of pairs containing the paths and names of the
-     * modules.
-     * @return A vector of futures representing the loading results.
-     */
-    auto loadModulesAsync(
-        std::span<const std::pair<std::string, std::string>> modules)
-        -> std::vector<std::future<ModuleResult<bool>>>;
-
-    /**
      * @brief Gets a module by its hash.
      * @param hash The hash of the module.
      * @return A shared pointer to the ModuleInfo of the module, or nullptr if
@@ -303,6 +305,13 @@ public:
      */
     [[nodiscard]] auto getModuleByHash(std::size_t hash) const
         -> std::shared_ptr<ModuleInfo>;
+
+    /**
+     * @brief Gets diagnostic information for a module.
+     * @param name The name of the module.
+     * @return An optional containing the diagnostics, or std::nullopt if not found.
+     */
+    [[nodiscard]] auto getModuleDiagnostics(std::string_view name) const -> std::optional<ModuleDiagnostics>;
 
     /**
      * @brief Batch process modules with a specified operation
@@ -315,19 +324,22 @@ public:
     auto batchProcessModules(Func&& func) -> size_t;
 
 private:
-    std::unordered_map<std::string, std::shared_ptr<ModuleInfo>>
-        modules_;  ///< Map of module names to ModuleInfo objects.
-    mutable std::shared_mutex
-        sharedMutex_;  ///< Mutex for thread-safe access to modules.
-    std::shared_ptr<atom::async::ThreadPool<>> threadPool_;
-    DependencyGraph dependencyGraph_;   // Dependency graph member
-    std::filesystem::path modulesDir_;  // Store the path to modules directory
+    using Task = std::function<void()>;
 
-    auto loadModuleFunctions(std::string_view name)
-        -> std::vector<std::unique_ptr<FunctionInfo>>;
-    [[nodiscard]] auto getHandle(std::string_view name) const
-        -> std::shared_ptr<atom::meta::DynamicLibrary>;
-    [[nodiscard]] auto checkModuleExists(std::string_view name) const -> bool;
+    struct RegisteredModule {
+        std::string path;
+        std::vector<std::string> dependencies;
+    };
+
+    std::unordered_map<std::string, std::shared_ptr<ModuleInfo>> modules_;
+    std::unordered_map<std::string, RegisteredModule> registeredModules_;
+    mutable std::shared_mutex sharedMutex_;
+    DependencyGraph dependencyGraph_;
+    std::filesystem::path modulesDir_;
+    std::queue<Task> taskQueue_;
+    std::mutex queueMutex_;
+    std::condition_variable_any condition_;
+    std::vector<std::jthread> workers_;
 
     auto buildDependencyGraph() -> void;
     [[nodiscard]] auto topologicalSort() const -> std::vector<std::string>;
@@ -342,21 +354,13 @@ private:
         -> std::size_t;
 
     /**
-     * @brief Asynchronously loads a module.
-     * @param path The path to the module.
-     * @param name The name of the module.
-     * @return A future representing the loading result.
-     */
-    auto loadModuleAsync(std::string_view path, std::string_view name)
-        -> std::future<ModuleResult<bool>>;
-
-    /**
-     * @brief Verifies module integrity
-     * @param path Path to the module file
-     * @return True if module is valid, false otherwise
+     * @brief Verifies module integrity and architecture.
+     * @param path Path to the module file.
+     * @param checkArch Whether to check for architecture compatibility.
+     * @return True if module is valid, false otherwise.
      */
     [[nodiscard]] auto verifyModuleIntegrity(
-        const std::filesystem::path& path) const -> bool;
+        const std::filesystem::path& path, bool checkArch) const -> bool;
 
     /**
      * @brief Convert string_view to string safely

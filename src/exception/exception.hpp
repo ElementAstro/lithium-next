@@ -86,7 +86,7 @@ struct ErrorContext {
             {"timestamp", std::chrono::duration_cast<std::chrono::milliseconds>(
                               timestamp.time_since_epoch())
                               .count()},
-            {"threadId", std::format("{}", threadId)}};
+            {"threadId", std::to_string(std::hash<std::thread::id>{}(threadId))}};
     }
 };
 
@@ -124,32 +124,14 @@ public:
         }
     }
 
-    // Copy constructor - made public
-    EnhancedException(const EnhancedException& other) noexcept
-        : Exception(other),
-          severity_(other.severity_),
-          category_(other.category_),
-          errorCode_(other.errorCode_),
-          context_(other.context_),
-          stackTrace_(other.stackTrace_),
-          tags_(other.tags_),
-          innerException_(other.innerException_) {}
-
-    // Move constructor - made public
-    EnhancedException(EnhancedException&& other) noexcept
-        : Exception(std::move(other)),
-          severity_(other.severity_),
-          category_(other.category_),
-          errorCode_(other.errorCode_),
-          context_(std::move(other.context_)),
-          stackTrace_(std::move(other.stackTrace_)),
-          tags_(std::move(other.tags_)),
-          innerException_(std::move(other.innerException_)) {}
+    // 禁止拷贝和移动
+    EnhancedException(const EnhancedException&) = delete;
+    EnhancedException(EnhancedException&&) = delete;
 
 private:
     template <typename... FmtArgs>
     static std::string format_message(std::string_view msg,
-                                      FmtArgs&&... fmt_args) {
+                                      [[maybe_unused]] FmtArgs&&... fmt_args) {
         if constexpr (sizeof...(FmtArgs) == 0) {
             return std::string(msg);
         } else {
@@ -235,7 +217,7 @@ public:
         // Add stack trace
         json stackTraceJson = json::array();
         for (const auto& frame : stackTrace_) {
-            stackTraceJson.push_back(std::format("{}", frame));
+            stackTraceJson.push_back(frame.description()); // Use description() instead of format
         }
         result["stackTrace"] = stackTraceJson;
 
