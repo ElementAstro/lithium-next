@@ -7,7 +7,7 @@
 #include "../../task.hpp"
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include "../../../utils/logging/spdlog_config.hpp"
 #include "atom/type/json.hpp"
 
 #define MOCK_TELESCOPE

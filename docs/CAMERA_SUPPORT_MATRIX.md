@@ -4,59 +4,60 @@ This document provides a comprehensive overview of all supported camera brands a
 
 ## Supported Camera Brands
 
-| Brand | Driver Type | SDK Required | Cooling | Video | Filter Wheel | Guide Chip | Status |
-|-------|-------------|--------------|---------|-------|--------------|------------|--------|
-| **INDI** | Universal | INDI Server | ✅ | ✅ | ✅ | ✅ | ✅ Stable |
-| **QHY** | Native SDK | QHY SDK | ✅ | ✅ | ❌ | ❌ | ✅ Stable |
-| **ZWO ASI** | Native SDK | ASI SDK | ✅ | ✅ | ❌ | ❌ | ✅ Stable |
-| **Atik** | Native SDK | Atik SDK | ✅ | ✅ | ✅ | ❌ | 🚧 Beta |
-| **SBIG** | Native SDK | SBIG Universal | ✅ | ⚠️ | ✅ | ✅ | 🚧 Beta |
-| **FLI** | Native SDK | FLI SDK | ✅ | ✅ | ✅ | ❌ | 🚧 Beta |
-| **PlayerOne** | Native SDK | PlayerOne SDK | ✅ | ✅ | ❌ | ❌ | 🚧 Beta |
-| **ASCOM** | Windows Only | ASCOM Platform | ✅ | ❌ | ✅ | ❌ | ⚠️ Limited |
-| **Simulator** | Built-in | None | ✅ | ✅ | ✅ | ✅ | ✅ Stable |
+| Brand         | Driver Type  | SDK Required   | Cooling | Video | Filter Wheel | Guide Chip | Status    |
+| ------------- | ------------ | -------------- | ------- | ----- | ------------ | ---------- | --------- |
+| **INDI**      | Universal    | INDI Server    | ✅       | ✅     | ✅            | ✅          | ✅ Stable  |
+| **QHY**       | Native SDK   | QHY SDK        | ✅       | ✅     | ❌            | ❌          | ✅ Stable  |
+| **ZWO ASI**   | Native SDK   | ASI SDK        | ✅       | ✅     | ❌            | ❌          | ✅ Stable  |
+| **Atik**      | Native SDK   | Atik SDK       | ✅       | ✅     | ✅            | ❌          | 🚧 Beta    |
+| **SBIG**      | Native SDK   | SBIG Universal | ✅       | ⚠️     | ✅            | ✅          | 🚧 Beta    |
+| **FLI**       | Native SDK   | FLI SDK        | ✅       | ✅     | ✅            | ❌          | 🚧 Beta    |
+| **PlayerOne** | Native SDK   | PlayerOne SDK  | ✅       | ✅     | ❌            | ❌          | 🚧 Beta    |
+| **ASCOM**     | Windows Only | ASCOM Platform | ✅       | ❌     | ✅            | ❌          | ⚠️ Limited |
+| **Simulator** | Built-in     | None           | ✅       | ✅     | ✅            | ✅          | ✅ Stable  |
 
 ## Feature Comparison
 
 ### Core Features
 
-| Feature | INDI | QHY | ASI | Atik | SBIG | FLI | PlayerOne | ASCOM | Simulator |
-|---------|------|-----|-----|------|------|-----|-----------|-------|-----------|
-| **Exposure Control** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Abort Exposure** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Progress Monitoring** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Subframe/ROI** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Binning** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Multiple Formats** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| Feature                 | INDI | QHY | ASI | Atik | SBIG | FLI | PlayerOne | ASCOM | Simulator |
+| ----------------------- | ---- | --- | --- | ---- | ---- | --- | --------- | ----- | --------- |
+| **Exposure Control**    | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ✅     | ✅         |
+| **Abort Exposure**      | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ✅     | ✅         |
+| **Progress Monitoring** | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ✅     | ✅         |
+| **Subframe/ROI**        | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ✅     | ✅         |
+| **Binning**             | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ✅     | ✅         |
+| **Multiple Formats**    | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ⚠️     | ✅         |
 
 ### Advanced Features
 
-| Feature | INDI | QHY | ASI | Atik | SBIG | FLI | PlayerOne | ASCOM | Simulator |
-|---------|------|-----|-----|------|------|-----|-----------|-------|-----------|
-| **Temperature Control** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Gain Control** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **Offset Control** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **Video Streaming** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
-| **Sequence Capture** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **Auto Exposure** | ⚠️ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ |
-| **Auto Gain** | ⚠️ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
+| Feature                 | INDI | QHY | ASI | Atik | SBIG | FLI | PlayerOne | ASCOM | Simulator |
+| ----------------------- | ---- | --- | --- | ---- | ---- | --- | --------- | ----- | --------- |
+| **Temperature Control** | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ✅     | ✅         |
+| **Gain Control**        | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ⚠️     | ✅         |
+| **Offset Control**      | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ⚠️     | ✅         |
+| **Video Streaming**     | ✅    | ✅   | ✅   | ✅    | ⚠️    | ✅   | ✅         | ❌     | ✅         |
+| **Sequence Capture**    | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ⚠️     | ✅         |
+| **Auto Exposure**       | ⚠️    | ✅   | ✅   | ✅    | ❌    | ❌   | ✅         | ❌     | ✅         |
+| **Auto Gain**           | ⚠️    | ❌   | ✅   | ❌    | ❌    | ❌   | ✅         | ❌     | ✅         |
 
 ### Hardware-Specific Features
 
-| Feature | INDI | QHY | ASI | Atik | SBIG | FLI | PlayerOne | ASCOM | Simulator |
-|---------|------|-----|-----|------|------|-----|-----------|-------|-----------|
-| **Mechanical Shutter** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| **Guide Chip** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ⚠️ | ✅ |
-| **Integrated Filter Wheel** | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| **Fan Control** | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ⚠️ | ✅ |
-| **USB Traffic Control** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **Hardware Binning** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Feature                     | INDI | QHY | ASI | Atik | SBIG | FLI | PlayerOne | ASCOM | Simulator |
+| --------------------------- | ---- | --- | --- | ---- | ---- | --- | --------- | ----- | --------- |
+| **Mechanical Shutter**      | ✅    | ✅   | ❌   | ✅    | ✅    | ✅   | ❌         | ✅     | ✅         |
+| **Guide Chip**              | ✅    | ❌   | ❌   | ❌    | ✅    | ❌   | ❌         | ⚠️     | ✅         |
+| **Integrated Filter Wheel** | ✅    | ❌   | ❌   | ✅    | ✅    | ✅   | ❌         | ✅     | ✅         |
+| **Fan Control**             | ✅    | ❌   | ❌   | ✅    | ❌    | ✅   | ❌         | ⚠️     | ✅         |
+| **USB Traffic Control**     | ❌    | ✅   | ✅   | ❌    | ❌    | ❌   | ✅         | ❌     | ❌         |
+| **Hardware Binning**        | ✅    | ✅   | ✅   | ✅    | ✅    | ✅   | ✅         | ✅     | ✅         |
 
 ## Camera-Specific Implementations
 
 ### QHY Cameras
+
 - **Models Supported**: QHY5III, QHY16803, QHY42Pro, QHY268M/C, etc.
-- **Special Features**: 
+- **Special Features**:
   - Advanced USB traffic control
   - Multiple readout modes
   - Anti-amp glow technology
@@ -65,6 +66,7 @@ This document provides a comprehensive overview of all supported camera brands a
 - **Platforms**: Linux, Windows, macOS
 
 ### ZWO ASI Cameras
+
 - **Models Supported**: ASI120, ASI183, ASI294, ASI2600, etc.
 - **Special Features**:
   - High-speed USB 3.0 interface
@@ -75,6 +77,7 @@ This document provides a comprehensive overview of all supported camera brands a
 - **Platforms**: Linux, Windows, macOS, ARM
 
 ### Atik Cameras
+
 - **Models Supported**: One series, Titan, Infinity, Horizon
 - **Special Features**:
   - Excellent cooling performance
@@ -85,6 +88,7 @@ This document provides a comprehensive overview of all supported camera brands a
 - **Platforms**: Linux, Windows
 
 ### SBIG Cameras
+
 - **Models Supported**: ST series, STF series, STX series
 - **Special Features**:
   - Dual-chip design (main + guide)
@@ -95,6 +99,7 @@ This document provides a comprehensive overview of all supported camera brands a
 - **Platforms**: Linux, Windows
 
 ### FLI Cameras
+
 - **Models Supported**: MicroLine, ProLine, MaxCam
 - **Special Features**:
   - Precision temperature control
@@ -105,6 +110,7 @@ This document provides a comprehensive overview of all supported camera brands a
 - **Platforms**: Linux, Windows
 
 ### PlayerOne Cameras
+
 - **Models Supported**: Apollo, Uranus, Neptune series
 - **Special Features**:
   - Advanced sensor technology
@@ -131,6 +137,7 @@ The camera factory uses intelligent auto-detection based on camera names:
 ## Installation Requirements
 
 ### Linux
+
 ```bash
 # INDI (universal)
 sudo apt install indi-full
@@ -146,6 +153,7 @@ sudo apt install indi-full
 ```
 
 ### Windows
+
 ```powershell
 # ASCOM Platform
 # Download and install ASCOM Platform
@@ -155,6 +163,7 @@ sudo apt install indi-full
 ```
 
 ### macOS
+
 ```bash
 # INDI
 brew install indi
@@ -164,14 +173,14 @@ brew install indi
 
 ## Performance Characteristics
 
-| Camera Type | Typical Readout | Max Frame Rate | Cooling Range | Power Draw |
-|-------------|----------------|----------------|---------------|------------|
-| **QHY** | 1-10 FPS | 30 FPS | -40°C | 5-12W |
-| **ASI** | 10-100 FPS | 200+ FPS | -35°C | 3-8W |
-| **Atik** | 1-5 FPS | 20 FPS | -45°C | 8-15W |
-| **SBIG** | 0.5-2 FPS | 5 FPS | -50°C | 10-20W |
-| **FLI** | 1-3 FPS | 10 FPS | -50°C | 12-25W |
-| **PlayerOne** | 5-50 FPS | 100+ FPS | -35°C | 4-10W |
+| Camera Type   | Typical Readout | Max Frame Rate | Cooling Range | Power Draw |
+| ------------- | --------------- | -------------- | ------------- | ---------- |
+| **QHY**       | 1-10 FPS        | 30 FPS         | -40°C         | 5-12W      |
+| **ASI**       | 10-100 FPS      | 200+ FPS       | -35°C         | 3-8W       |
+| **Atik**      | 1-5 FPS         | 20 FPS         | -45°C         | 8-15W      |
+| **SBIG**      | 0.5-2 FPS       | 5 FPS          | -50°C         | 10-20W     |
+| **FLI**       | 1-3 FPS         | 10 FPS         | -50°C         | 12-25W     |
+| **PlayerOne** | 5-50 FPS        | 100+ FPS       | -35°C         | 4-10W      |
 
 ## Compatibility Notes
 
@@ -185,6 +194,7 @@ brew install indi
 ## Future Roadmap
 
 ### Planned Additions
+
 - **Moravian Instruments** cameras
 - **Altair Astro** cameras  
 - **ToupTek** cameras
@@ -192,6 +202,7 @@ brew install indi
 - **Raspberry Pi HQ Camera** support
 
 ### Enhancements
+
 - GPU-accelerated image processing
 - Machine learning-based auto-focusing
 - Advanced calibration frameworks

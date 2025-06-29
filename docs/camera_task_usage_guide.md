@@ -3,6 +3,7 @@
 ## 🚀 Quick Start Guide
 
 ### Basic Single Exposure
+
 ```cpp
 #include "camera_tasks.hpp"
 using namespace lithium::task::task;
@@ -18,6 +19,7 @@ task->execute(params);
 ```
 
 ### Multi-Exposure Sequence
+
 ```cpp
 auto task = std::make_unique<TakeManyExposureTask>("TakeManyExposure", nullptr);
 json params = {
@@ -33,6 +35,7 @@ task->execute(params);
 ## 🔬 Advanced Workflows
 
 ### Complete Calibration Session
+
 ```cpp
 // Dark frames
 auto darkTask = std::make_unique<DarkFrameTask>("DarkFrame", nullptr);
@@ -64,6 +67,7 @@ flatTask->execute(flatParams);
 ```
 
 ### Professional Filter Sequence
+
 ```cpp
 auto filterTask = std::make_unique<AutoFilterSequenceTask>("AutoFilterSequence", nullptr);
 json filterParams = {
@@ -85,6 +89,7 @@ filterTask->execute(filterParams);
 ## 🔭 Observatory Automation
 
 ### Complete Observatory Session
+
 ```cpp
 // 1. Connect all devices
 auto scanTask = std::make_unique<DeviceScanConnectTask>("DeviceScanConnect", nullptr);
@@ -139,6 +144,7 @@ shutdownTask->execute(shutdownParams);
 ## 🌡️ Temperature Management
 
 ### Cooling Control
+
 ```cpp
 auto coolingTask = std::make_unique<CoolingControlTask>("CoolingControl", nullptr);
 json coolingParams = {
@@ -163,6 +169,7 @@ monitorTask->execute(monitorParams);
 ## 🎥 Video Streaming
 
 ### Live Streaming Setup
+
 ```cpp
 auto videoTask = std::make_unique<StartVideoTask>("StartVideo", nullptr);
 json videoParams = {
@@ -188,6 +195,7 @@ recordTask->execute(recordParams);
 ## 🔍 Image Analysis
 
 ### Quality Analysis
+
 ```cpp
 auto analysisTask = std::make_unique<ImageQualityAnalysisTask>("ImageQualityAnalysis", nullptr);
 json analysisParams = {
@@ -203,6 +211,7 @@ analysisTask->execute(analysisParams);
 ```
 
 ### Adaptive Parameter Optimization
+
 ```cpp
 auto optimizeTask = std::make_unique<AdaptiveExposureOptimizationTask>("AdaptiveExposureOptimization", nullptr);
 json optimizeParams = {
@@ -216,6 +225,7 @@ optimizeTask->execute(optimizeParams);
 ## 🛡️ Safety and Monitoring
 
 ### Environment Monitoring
+
 ```cpp
 auto envTask = std::make_unique<EnvironmentMonitorTask>("EnvironmentMonitor", nullptr);
 json envParams = {
@@ -228,6 +238,7 @@ envTask->execute(envParams);
 ```
 
 ### Device Health Monitoring
+
 ```cpp
 auto healthTask = std::make_unique<DeviceHealthMonitorTask>("DeviceHealthMonitor", nullptr);
 json healthParams = {
@@ -241,6 +252,7 @@ healthTask->execute(healthParams);
 ## ⚙️ Parameter Control
 
 ### Comprehensive Parameter Setup
+
 ```cpp
 // Gain control
 auto gainTask = std::make_unique<GainControlTask>("GainControl", nullptr);

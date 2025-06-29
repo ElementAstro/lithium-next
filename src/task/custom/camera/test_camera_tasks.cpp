@@ -1,23 +1,28 @@
 #include <iostream>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include "camera_tasks.hpp"
 
 using namespace lithium::task::task;
 
 int main() {
-    std::cout << "=== Camera Task System Build Test ===" << std::endl;
-    std::cout << "Version: " << CameraTaskSystemInfo::VERSION << std::endl;
-    std::cout << "Build Date: " << CameraTaskSystemInfo::BUILD_DATE << std::endl;
-    std::cout << "Total Tasks: " << CameraTaskSystemInfo::TOTAL_TASKS << std::endl;
+    // Initialize high-performance spdlog
+    spdlog::set_level(spdlog::level::info);
+    spdlog::set_pattern("[%H:%M:%S.%e] [%^%l%$] %v");
     
-    std::cout << "\n=== Testing Task Creation ===" << std::endl;
+    spdlog::info("=== Camera Task System Build Test ===");
+    spdlog::info("Version: {}", CameraTaskSystemInfo::VERSION);
+    spdlog::info("Build Date: {}", CameraTaskSystemInfo::BUILD_DATE);
+    spdlog::info("Total Tasks: {}", CameraTaskSystemInfo::TOTAL_TASKS);
+    
+    spdlog::info("\n=== Testing Task Creation ===");
     
     try {
         // Test basic exposure tasks
         auto takeExposure = std::make_unique<TakeExposureTask>("TakeExposure", nullptr);
         auto takeManyExposure = std::make_unique<TakeManyExposureTask>("TakeManyExposure", nullptr);
         auto subFrameExposure = std::make_unique<SubFrameExposureTask>("SubFrameExposure", nullptr);
-        std::cout << "✓ Basic exposure tasks created successfully" << std::endl;
+        spdlog::info("✓ Basic exposure tasks created successfully");
         
         // Test calibration tasks
         auto darkFrame = std::make_unique<DarkFrameTask>("DarkFrame", nullptr);

@@ -1,0 +1,4 @@
+/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir
+/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir
+/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/edit_cache.dir
+/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/rebuild_cache.dir

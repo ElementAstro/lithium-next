@@ -3,7 +3,7 @@
 
 #include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 #include "atom/system/env.hpp"
 
 #include <sstream>

@@ -7,6 +7,7 @@ The Lithium camera system features a **professional modular component architectu
 ## 🏗️ Architecture Design
 
 ### Component-Based Architecture
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                  Camera Core                            │
@@ -27,6 +28,7 @@ The Lithium camera system features a **professional modular component architectu
 ```
 
 ### Design Principles
+
 - **Single Responsibility**: Each component handles exactly one feature area
 - **Dependency Injection**: Components receive core instances through constructors
 - **Event-Driven**: State changes propagate through observer pattern
@@ -83,7 +85,9 @@ src/device/
 ## 🔧 Component Modules
 
 ### 1. Core Module
+
 **Purpose**: Central coordination, SDK management, component lifecycle
+
 - Device connection/disconnection with retry logic
 - Parameter management with thread-safe storage
 - Component registration and lifecycle coordination
@@ -91,6 +95,7 @@ src/device/
 - Hardware capability detection
 
 **Key Features**:
+
 ```cpp
 // Component registration
 auto registerComponent(std::shared_ptr<ComponentBase> component) -> void;
@@ -105,7 +110,9 @@ auto getParameter(const std::string& name) -> double;
 ```
 
 ### 2. Exposure Module
+
 **Purpose**: Complete exposure control and monitoring
+
 - Threaded exposure management with real-time progress
 - Auto-exposure with configurable target brightness
 - Exposure statistics and frame counting
@@ -113,6 +120,7 @@ auto getParameter(const std::string& name) -> double;
 - Robust abort handling with cleanup
 
 **Advanced Features**:
+
 ```cpp
 // Real-time exposure monitoring
 auto getExposureProgress() const -> double;
@@ -128,7 +136,9 @@ auto getLastExposureDuration() const -> double;
 ```
 
 ### 3. Temperature Module
+
 **Purpose**: Precision thermal management and monitoring
+
 - Cooling control with target temperature setting
 - Fan management with variable speed control
 - Anti-dew heater with power percentage control
@@ -136,6 +146,7 @@ auto getLastExposureDuration() const -> double;
 - Statistical analysis (min/max/average/stability)
 
 **Professional Features**:
+
 ```cpp
 // Precision cooling
 auto startCooling(double targetTemp) -> bool;
@@ -153,13 +164,16 @@ auto getTemperatureStability() const -> double;
 ```
 
 ### 4. Hardware Module (ASI)
+
 **Purpose**: ASI accessory integration (EAF/EFW)
+
 - **EAF Focuser**: Position control, temperature monitoring, backlash compensation
 - **EFW Filter Wheel**: Multi-position support, unidirectional mode, custom naming
 - **Coordination**: Synchronized operations, sequence automation
 - **Monitoring**: Real-time movement tracking with callbacks
 
 **EAF Features**:
+
 ```cpp
 // Position control
 auto setEAFFocuserPosition(int position) -> bool;
@@ -177,6 +191,7 @@ auto setEAFFocuserBacklashSteps(int steps) -> bool;
 ```
 
 **EFW Features**:
+
 ```cpp
 // Filter control
 auto setEFWFilterPosition(int position) -> bool;
@@ -190,13 +205,16 @@ auto calibrateEFWFilterWheel() -> bool;
 ```
 
 ### 5. Filter Wheel Module (QHY)
+
 **Purpose**: Dedicated QHY CFW controller
+
 - **Direct Integration**: Camera-filter wheel communication
 - **Multi-Position**: Support for 5, 7, and 9-position wheels
 - **Advanced Features**: Movement monitoring, offset compensation
 - **Automation**: Filter sequences with progress tracking
 
 **QHY CFW Features**:
+
 ```cpp
 // Position control with monitoring
 auto setQHYFilterPosition(int position) -> bool;
@@ -211,6 +229,7 @@ auto saveFilterConfiguration(const std::string& filename) -> bool;
 ## 🚀 Usage Examples
 
 ### Basic Camera Operation
+
 ```cpp
 #include "asi/camera/asi_camera.hpp"
 
@@ -236,6 +255,7 @@ auto frame = camera->getExposureResult();
 ```
 
 ### Advanced Component Access
+
 ```cpp
 // Get direct component access for advanced control
 auto core = camera->getCore();
@@ -260,6 +280,7 @@ exposureCtrl->startExposure(300.0);      // 5-minute exposure
 ```
 
 ### Temperature Monitoring
+
 ```cpp
 auto tempCtrl = camera->getTemperatureController();
 
@@ -281,6 +302,7 @@ while (tempCtrl->isCoolerOn()) {
 ```
 
 ### Hardware Sequence Automation
+
 ```cpp
 auto hwCtrl = camera->getHardwareController();
 
@@ -313,13 +335,16 @@ hwCtrl->performFilterSequence(filterPositions,
 ## 🔨 Build System
 
 ### CMake Configuration
+
 The modular architecture uses sophisticated CMake configuration with:
+
 - **Automatic SDK Detection**: Finds and links vendor SDKs when available
 - **Graceful Degradation**: Builds successfully with stub implementations
 - **Component Modules**: Each module has independent build configuration
 - **Position-Independent Code**: All libraries built with PIC for flexibility
 
 ### SDK Integration
+
 ```cmake
 # Automatic ASI SDK detection
 find_library(ASI_LIBRARY NAMES ASICamera2 libasicamera)
@@ -332,6 +357,7 @@ endif()
 ```
 
 ### Building
+
 ```bash
 # Configure with automatic SDK detection
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
@@ -346,18 +372,21 @@ cmake --install build --prefix=/usr/local
 ## 🎯 Benefits
 
 ### For Developers
+
 - **Clean Architecture**: Well-defined component boundaries
 - **Easy Testing**: Components can be unit tested in isolation
 - **Extensibility**: New features add as separate modules
 - **SDK Independence**: Builds and runs with or without vendor SDKs
 
 ### For Users
+
 - **Professional Features**: Enterprise-level hardware control
 - **Reliability**: Comprehensive error handling and recovery
 - **Performance**: Optimized for minimal overhead
 - **Flexibility**: Modular design allows custom configurations
 
 ### For Astrophotographers
+
 - **Complete Hardware Support**: Full integration with camera accessories
 - **Automated Workflows**: Coordinated hardware sequences
 - **Precision Control**: Sub-arcsecond positioning accuracy
@@ -366,6 +395,7 @@ cmake --install build --prefix=/usr/local
 ## 🔄 Extension Points
 
 ### Adding New Components
+
 ```cpp
 // Create new component
 class MyCustomComponent : public ComponentBase {
@@ -383,6 +413,7 @@ core->registerComponent(customComponent);
 ```
 
 ### Adding New Camera Types
+
 1. Create new directory: `src/device/vendor/camera/`
 2. Implement `ComponentBase` interface for vendor
 3. Create core module with vendor SDK integration

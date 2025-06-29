@@ -1,289 +1,410 @@
-#ifndef LITHIUM_ADDON_ELF_HPP
-#define LITHIUM_ADDON_ELF_HPP
+#ifndef LITHIUM_DEBUG_ELF_HPP
+#define LITHIUM_DEBUG_ELF_HPP
 
-#ifdef __linux__
-
+#include <algorithm>
+#include <atomic>
 #include <concepts>
+#include <cstdint>
+#include <future>
 #include <memory>
+#include <memory_resource>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
-#include "atom/macro.hpp"
+// Platform-specific headers
+#ifdef _WIN32
+// Windows-specific headers will be included in implementation
+#define LITHIUM_OPTIMIZED_ELF_WINDOWS
+#elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)
+#include <execution>
+#define LITHIUM_OPTIMIZED_ELF_UNIX
+#ifdef __linux__
+#define LITHIUM_OPTIMIZED_ELF_LINUX
+#endif
+#endif
+
+#include "atom/utils/stopwatcher.hpp"
 
 namespace lithium {
 
-/**
- * @brief Represents the ELF header structure.
- */
+// Common ELF data structures
 struct ElfHeader {
-    uint16_t type;       ///< Object file type
-    uint16_t machine;    ///< Architecture
-    uint32_t version;    ///< Object file version
-    uint64_t entry;      ///< Entry point virtual address
-    uint64_t phoff;      ///< Program header table file offset
-    uint64_t shoff;      ///< Section header table file offset
-    uint32_t flags;      ///< Processor-specific flags
-    uint16_t ehsize;     ///< ELF header size in bytes
-    uint16_t phentsize;  ///< Program header table entry size
-    uint16_t phnum;      ///< Program header table entry count
-    uint16_t shentsize;  ///< Section header table entry size
-    uint16_t shnum;      ///< Section header table entry count
-    uint16_t shstrndx;   ///< Section header string table index
-} ATOM_ALIGNAS(64);
+    uint16_t type;
+    uint16_t machine;
+    uint32_t version;
+    uint64_t entry;
+    uint64_t phoff;
+    uint64_t shoff;
+    uint32_t flags;
+    uint16_t ehsize;
+    uint16_t phentsize;
+    uint16_t phnum;
+    uint16_t shentsize;
+    uint16_t shnum;
+    uint16_t shstrndx;
+};
 
-/**
- * @brief Represents the program header structure.
- */
 struct ProgramHeader {
-    uint32_t type;    ///< Segment type
-    uint64_t offset;  ///< Segment file offset
-    uint64_t vaddr;   ///< Segment virtual address
-    uint64_t paddr;   ///< Segment physical address
-    uint64_t filesz;  ///< Segment size in file
-    uint64_t memsz;   ///< Segment size in memory
-    uint32_t flags;   ///< Segment flags
-    uint64_t align;   ///< Segment alignment
-} ATOM_ALIGNAS(64);
+    uint32_t type;
+    uint32_t flags;
+    uint64_t offset;
+    uint64_t vaddr;
+    uint64_t paddr;
+    uint64_t filesz;
+    uint64_t memsz;
+    uint64_t align;
+};
 
-/**
- * @brief Represents the section header structure.
- */
 struct SectionHeader {
-    std::string name;    ///< Section name
-    uint32_t type;       ///< Section type
-    uint64_t flags;      ///< Section flags
-    uint64_t addr;       ///< Section virtual address
-    uint64_t offset;     ///< Section file offset
-    uint64_t size;       ///< Section size in bytes
-    uint32_t link;       ///< Link to another section
-    uint32_t info;       ///< Additional section information
-    uint64_t addralign;  ///< Section alignment
-    uint64_t entsize;    ///< Entry size if section holds a table
-} ATOM_ALIGNAS(128);
+    std::string name;
+    uint32_t type;
+    uint64_t flags;
+    uint64_t addr;
+    uint64_t offset;
+    uint64_t size;
+    uint32_t link;
+    uint32_t info;
+    uint64_t addralign;
+    uint64_t entsize;
+};
 
-/**
- * @brief Represents a symbol in the ELF file.
- */
 struct Symbol {
-    std::string name;    ///< Symbol name
-    uint64_t value;      ///< Symbol value
-    uint64_t size;       ///< Symbol size
-    unsigned char bind;  ///< Symbol binding
-    unsigned char type;  ///< Symbol type
-    uint16_t shndx;      ///< Section index
-    std::string demangledName;  // 新增：解除名称修饰后的符号名
-    uint16_t version;           // 新增：符号版本
-    bool isWeak;               // 新增：是否为弱符号
-    bool isHidden;             // 新增：是否为隐藏符号
-} ATOM_ALIGNAS(64);
+    std::string name;
+    uint64_t value;
+    uint64_t size;
+    unsigned char bind;
+    unsigned char type;
+    uint16_t shndx;
+};
 
-/**
- * @brief Represents a dynamic entry in the ELF file.
- */
-struct DynamicEntry {
-    uint64_t tag;  ///< Dynamic entry tag
-    union {
-        uint64_t val;  ///< Integer value
-        uint64_t ptr;  ///< Pointer value
-    } d_un;            ///< Union for dynamic entry value
-} ATOM_ALIGNAS(16);
-
-/**
- * @brief Represents a relocation entry in the ELF file.
- */
 struct RelocationEntry {
-    uint64_t offset;  ///< Relocation offset
-    uint64_t info;    ///< Relocation type and symbol index
-    int64_t addend;   ///< Addend
-} ATOM_ALIGNAS(32);
+    uint64_t offset;
+    uint64_t info;
+    int64_t addend;
+};
 
-/**
- * @brief Parses and provides access to ELF file structures.
- */
+struct DynamicEntry {
+    uint64_t tag;
+    union {
+        uint64_t val;
+        uint64_t ptr;
+    } d_un;
+};
+
+namespace optimized {
+class OptimizedElfParser;
+}
+
 class ElfParser {
 public:
-    /**
-     * @brief Constructs an ElfParser with the given file.
-     * @param file The path to the ELF file.
-     */
     explicit ElfParser(std::string_view file);
-
-    /**
-     * @brief Destructor for ElfParser.
-     */
     ~ElfParser();
-
-    // Delete copy constructor and copy assignment operator
+    ElfParser(ElfParser&&) noexcept = default;
+    ElfParser& operator=(ElfParser&&) noexcept = default;
     ElfParser(const ElfParser&) = delete;
     ElfParser& operator=(const ElfParser&) = delete;
 
-    // Default move constructor and move assignment operator
-    ElfParser(ElfParser&&) = default;
-    ElfParser& operator=(ElfParser&&) = default;
-
-    /**
-     * @brief Parses the ELF file.
-     * @return True if parsing was successful, false otherwise.
-     */
-    [[nodiscard]] auto parse() -> bool;
-
-    /**
-     * @brief Gets the ELF header.
-     * @return An optional containing the ELF header if available.
-     */
+    auto parse() -> bool;
     [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader>;
-
-    /**
-     * @brief Gets the program headers.
-     * @return A span of program headers.
-     */
-    [[nodiscard]] auto getProgramHeaders() const
+    [[nodiscard]] auto getProgramHeaders() const noexcept
         -> std::span<const ProgramHeader>;
-
-    /**
-     * @brief Gets the section headers.
-     * @return A span of section headers.
-     */
-    [[nodiscard]] auto getSectionHeaders() const
+    [[nodiscard]] auto getSectionHeaders() const noexcept
         -> std::span<const SectionHeader>;
-
-    /**
-     * @brief Gets the symbol table.
-     * @return A span of symbols.
-     */
-    [[nodiscard]] auto getSymbolTable() const -> std::span<const Symbol>;
-
-    /**
-     * @brief Gets the dynamic entries.
-     * @return A span of dynamic entries.
-     */
-    [[nodiscard]] auto getDynamicEntries() const
-        -> std::span<const DynamicEntry>;
-
-    /**
-     * @brief Gets the relocation entries.
-     * @return A span of relocation entries.
-     */
-    [[nodiscard]] auto getRelocationEntries() const
-        -> std::span<const RelocationEntry>;
-
-    /**
-     * @brief Finds a symbol using a predicate.
-     * @tparam Predicate The type of the predicate.
-     * @param pred The predicate to use for finding the symbol.
-     * @return An optional containing the symbol if found.
-     */
-    template <std::invocable<const Symbol&> Predicate>
-    [[nodiscard]] auto findSymbol(Predicate&& pred) const
-        -> std::optional<Symbol>;
-
-    /**
-     * @brief Finds a symbol by name.
-     * @param name The name of the symbol.
-     * @return An optional containing the symbol if found.
-     */
+    [[nodiscard]] auto getSymbolTable() const noexcept
+        -> std::span<const Symbol>;
     [[nodiscard]] auto findSymbolByName(std::string_view name) const
         -> std::optional<Symbol>;
-
-    /**
-     * @brief Finds a symbol by address.
-     * @param address The address of the symbol.
-     * @return An optional containing the symbol if found.
-     */
     [[nodiscard]] auto findSymbolByAddress(uint64_t address) const
         -> std::optional<Symbol>;
-
-    /**
-     * @brief Finds a section by name.
-     * @param name The name of the section.
-     * @return An optional containing the section header if found.
-     */
     [[nodiscard]] auto findSection(std::string_view name) const
         -> std::optional<SectionHeader>;
-
-    /**
-     * @brief Gets the data of a section.
-     * @param section The section header.
-     * @return A vector containing the section data.
-     */
     [[nodiscard]] auto getSectionData(const SectionHeader& section) const
         -> std::vector<uint8_t>;
-
-    /**
-     * @brief 获取指定地址范围内的所有符号
-     * @param start 起始地址
-     * @param end 结束地址
-     * @return 符号列表
-     */
     [[nodiscard]] auto getSymbolsInRange(uint64_t start, uint64_t end) const
         -> std::vector<Symbol>;
-
-    /**
-     * @brief 获取可执行段列表
-     * @return 可执行段的程序头列表
-     */
     [[nodiscard]] auto getExecutableSegments() const
         -> std::vector<ProgramHeader>;
-
-    /**
-     * @brief 验证ELF文件的完整性
-     * @return 验证结果
-     */
     [[nodiscard]] auto verifyIntegrity() const -> bool;
-
-    /**
-     * @brief 清除解析缓存
-     */
     void clearCache();
-
-    // 新增方法
-    [[nodiscard]] auto demangleSymbolName(const std::string& name) const -> std::string;
-    [[nodiscard]] auto getSymbolVersion(const Symbol& symbol) const -> std::optional<std::string>;
+    [[nodiscard]] auto demangleSymbolName(const std::string& name) const
+        -> std::string;
+    [[nodiscard]] auto getSymbolVersion(const Symbol& symbol) const
+        -> std::optional<std::string>;
     [[nodiscard]] auto getWeakSymbols() const -> std::vector<Symbol>;
-    [[nodiscard]] auto getSymbolsByType(unsigned char type) const -> std::vector<Symbol>;
+    [[nodiscard]] auto getSymbolsByType(unsigned char type) const
+        -> std::vector<Symbol>;
     [[nodiscard]] auto getExportedSymbols() const -> std::vector<Symbol>;
     [[nodiscard]] auto getImportedSymbols() const -> std::vector<Symbol>;
-    [[nodiscard]] auto findSymbolsByPattern(const std::string& pattern) const -> std::vector<Symbol>;
-    [[nodiscard]] auto getSectionsByType(uint32_t type) const -> std::vector<SectionHeader>;
-    [[nodiscard]] auto getSegmentPermissions(const ProgramHeader& header) const -> std::string;
+    [[nodiscard]] auto findSymbolsByPattern(const std::string& pattern) const
+        -> std::vector<Symbol>;
+    [[nodiscard]] auto getSectionsByType(uint32_t type) const
+        -> std::vector<SectionHeader>;
+    [[nodiscard]] auto getSegmentPermissions(const ProgramHeader& header) const
+        -> std::string;
     [[nodiscard]] auto calculateChecksum() const -> uint64_t;
     [[nodiscard]] auto isStripped() const -> bool;
     [[nodiscard]] auto getDependencies() const -> std::vector<std::string>;
-
-    // 性能优化相关
-    void enableCache(bool enable = true);
-    void setParallelProcessing(bool enable = true);
+    void enableCache(bool enable);
+    void setParallelProcessing(bool enable);
     void setCacheSize(size_t size);
     void preloadSymbols();
+    [[nodiscard]] auto getRelocationEntries() const
+        -> std::span<const RelocationEntry>;
+    [[nodiscard]] auto getDynamicEntries() const
+        -> std::span<const DynamicEntry>;
 
 private:
     class Impl;
-    std::unique_ptr<Impl> pImpl_;  ///< Pointer to the implementation.
-    mutable std::unordered_map<std::string, Symbol> symbolCache_;
-    mutable std::unordered_map<uint64_t, Symbol> addressCache_;
-    mutable bool verified_{false};
-    bool useParallelProcessing_{false};
-    size_t maxCacheSize_{1024 * 1024};  // 默认1MB缓存
-    mutable std::unordered_map<uint32_t, std::vector<SectionHeader>> sectionTypeCache_;
-    mutable std::unordered_map<std::string, std::string> demangledNameCache_;
+    std::unique_ptr<Impl> pImpl_;
 };
 
-template <std::invocable<const Symbol&> Predicate>
-auto ElfParser::findSymbol(Predicate&& pred) const -> std::optional<Symbol> {
-    auto symbols = getSymbolTable();
-    if (auto iter =
-            std::ranges::find_if(symbols, std::forward<Predicate>(pred));
-        iter != symbols.end()) {
-        return *iter;
+namespace optimized {
+
+class OptimizedElfParser {
+public:
+    using SymbolCache = std::pmr::unordered_map<std::string, Symbol>;
+    using AddressCache = std::pmr::unordered_map<uint64_t, Symbol>;
+    using SectionCache =
+        std::pmr::unordered_map<uint32_t, std::vector<SectionHeader>>;
+    using MemoryPool = std::pmr::monotonic_buffer_resource;
+
+    struct OptimizationConfig {
+        bool enableParallelProcessing{true};
+        bool enableMemoryMapping{true};
+        bool enableSymbolCaching{true};
+        bool enablePrefetching{true};
+        size_t cacheSize{1024 * 1024};  // 1MB default
+        size_t threadPoolSize{4};       // Default to 4 threads
+        size_t chunkSize{4096};
+    };
+
+    struct PerformanceMetrics {
+        std::atomic<uint64_t> parseTime{0};
+        std::atomic<uint64_t> cacheHits{0};
+        std::atomic<uint64_t> cacheMisses{0};
+        std::atomic<uint64_t> memoryAllocations{0};
+        std::atomic<size_t> peakMemoryUsage{0};
+        std::atomic<uint32_t> threadsUsed{0};
+
+        PerformanceMetrics(const PerformanceMetrics& other)
+            : parseTime(other.parseTime.load()),
+              cacheHits(other.cacheHits.load()),
+              cacheMisses(other.cacheMisses.load()),
+              memoryAllocations(other.memoryAllocations.load()),
+              peakMemoryUsage(other.peakMemoryUsage.load()),
+              threadsUsed(other.threadsUsed.load()) {}
+
+        PerformanceMetrics() = default;
+
+        PerformanceMetrics& operator=(const PerformanceMetrics& other) {
+            if (this != &other) {
+                parseTime.store(other.parseTime.load());
+                cacheHits.store(other.cacheHits.load());
+                cacheMisses.store(other.cacheMisses.load());
+                memoryAllocations.store(other.memoryAllocations.load());
+                peakMemoryUsage.store(other.peakMemoryUsage.load());
+                threadsUsed.store(other.threadsUsed.load());
+            }
+            return *this;
+        }
+    };
+
+    explicit OptimizedElfParser(std::string_view file,
+                                const OptimizationConfig& config);
+    explicit OptimizedElfParser(std::string_view file);
+    ~OptimizedElfParser();
+
+    OptimizedElfParser(const OptimizedElfParser&) = delete;
+    OptimizedElfParser& operator=(const OptimizedElfParser&) = delete;
+    OptimizedElfParser(OptimizedElfParser&&) noexcept;
+    OptimizedElfParser& operator=(OptimizedElfParser&&) noexcept;
+
+    [[nodiscard]] auto parse() -> bool;
+    [[nodiscard]] auto parseAsync() -> std::future<bool>;
+    [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader>;
+    [[nodiscard]] auto getProgramHeaders() const noexcept
+        -> std::span<const ProgramHeader>;
+    [[nodiscard]] auto getSectionHeaders() const noexcept
+        -> std::span<const SectionHeader>;
+    [[nodiscard]] auto getSymbolTable() const noexcept
+        -> std::span<const Symbol>;
+    [[nodiscard]] auto findSymbolByName(std::string_view name) const
+        -> std::optional<Symbol>;
+    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const
+        -> std::optional<Symbol>;
+
+    template <std::predicate<const Symbol&> Predicate>
+    [[nodiscard]] auto findSymbolsIf(Predicate&& pred) const
+        -> std::vector<Symbol>;
+
+    [[nodiscard]] auto getSymbolsInRange(uint64_t start, uint64_t end) const
+        -> std::vector<Symbol>;
+    [[nodiscard]] auto getSectionsByType(uint32_t type) const
+        -> std::vector<SectionHeader>;
+    [[nodiscard]] auto batchFindSymbols(const std::vector<std::string>& names)
+        const -> std::vector<std::optional<Symbol>>;
+    void prefetchData(const std::vector<uint64_t>& addresses) const;
+    [[nodiscard]] auto getMetrics() const -> PerformanceMetrics;
+    void resetMetrics();
+    void optimizeMemoryLayout();
+    void updateConfig(const OptimizationConfig& config);
+    [[nodiscard]] auto validateIntegrity() const -> bool;
+    [[nodiscard]] auto getMemoryUsage() const -> size_t;
+    [[nodiscard]] auto exportSymbols(std::string_view format) const
+        -> std::string;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> pImpl_;
+
+    mutable PerformanceMetrics metrics_;
+    OptimizationConfig config_;
+
+    std::unique_ptr<MemoryPool> memoryPool_;
+    std::unique_ptr<atom::utils::StopWatcher> performanceTimer_;
+
+    std::unique_ptr<std::pmr::monotonic_buffer_resource> bufferResource_;
+    mutable std::unique_ptr<SymbolCache> symbolCache_;
+    mutable std::unique_ptr<AddressCache> addressCache_;
+    mutable std::unique_ptr<SectionCache> sectionCache_;
+
+    void initializeOptimizations();
+    void setupMemoryPools();
+    void warmupCaches();
+
+    template <typename Container, typename Func>
+    auto parallelTransform(const Container& input, Func&& func) const;
+
+    template <typename Range>
+    auto optimizedSearch(const Range& range, auto&& predicate) const;
+};
+
+template <std::predicate<const Symbol&> Predicate>
+auto OptimizedElfParser::findSymbolsIf(Predicate&& pred) const
+    -> std::vector<Symbol> {
+    const auto symbols = getSymbolTable();
+    std::vector<Symbol> result;
+
+    if (config_.enableParallelProcessing && symbols.size() > 1000) {
+        std::ranges::copy_if(symbols, std::back_inserter(result),
+                             std::forward<Predicate>(pred));
+    } else {
+        std::ranges::copy_if(symbols, std::back_inserter(result),
+                             std::forward<Predicate>(pred));
     }
-    return std::nullopt;
+
+    return result;
 }
+
+template <typename Container, typename Func>
+auto OptimizedElfParser::parallelTransform(const Container& input,
+                                           Func&& func) const {
+    if constexpr (requires { std::execution::par_unseq; }) {
+        if (config_.enableParallelProcessing &&
+            input.size() > config_.chunkSize) {
+            std::vector<
+                std::invoke_result_t<Func, typename Container::value_type>>
+                result;
+            result.resize(input.size());
+
+            std::transform(std::execution::par_unseq, input.begin(),
+                           input.end(), result.begin(),
+                           std::forward<Func>(func));
+            return result;
+        }
+    }
+
+    std::vector<std::invoke_result_t<Func, typename Container::value_type>>
+        result;
+    std::ranges::transform(input, std::back_inserter(result),
+                           std::forward<Func>(func));
+    return result;
+}
+
+template <typename Range>
+auto OptimizedElfParser::optimizedSearch(const Range& range,
+                                         auto&& predicate) const {
+    if constexpr (std::ranges::random_access_range<Range>) {
+        if (std::ranges::is_sorted(range)) {
+            return std::ranges::lower_bound(range, predicate);
+        }
+    }
+
+    if (config_.enableParallelProcessing &&
+        std::ranges::size(range) > config_.chunkSize) {
+        return std::find_if(std::execution::par_unseq,
+                            std::ranges::begin(range), std::ranges::end(range),
+                            predicate);
+    }
+
+    return std::ranges::find_if(range, predicate);
+}
+
+template <typename Derived>
+class ElfParserRAII {
+public:
+    ElfParserRAII() = default;
+    virtual ~ElfParserRAII() = default;
+
+    auto parse() -> bool { return static_cast<Derived*>(this)->parseImpl(); }
+
+    auto getMetrics() const {
+        return static_cast<const Derived*>(this)->getMetricsImpl();
+    }
+};
+
+class ConstexprSymbolFinder {
+public:
+    template <size_t N>
+    constexpr static auto findSymbolIndex(const std::array<Symbol, N>& symbols,
+                                          std::string_view name)
+        -> std::optional<size_t> {
+        for (size_t i = 0; i < N; ++i) {
+            if (symbols[i].name == name) {
+                return i;
+            }
+        }
+        return std::nullopt;
+    }
+
+    template <typename T>
+    constexpr static auto isValidElfType(T type) -> bool {
+        return type >= 0 && type <= 0xFFFF;
+    }
+};
+
+}  // namespace optimized
+
+#ifdef __linux__
+class EnhancedElfParser {
+public:
+    explicit EnhancedElfParser(std::string_view file, bool useOptimized = true);
+
+    auto parse() -> bool;
+    auto getElfHeader() const -> std::optional<ElfHeader>;
+    auto findSymbolByName(std::string_view name) const -> std::optional<Symbol>;
+    auto getSymbolTable() const -> std::span<const Symbol>;
+    auto comparePerformance() -> void;
+
+private:
+    std::string filePath_;
+    bool useOptimized_;
+    std::unique_ptr<optimized::OptimizedElfParser> optimizedParser_;
+    std::unique_ptr<ElfParser> standardParser_;
+};
+
+auto createElfParser(std::string_view file, bool preferOptimized = true)
+    -> std::unique_ptr<EnhancedElfParser>;
+auto migrateToEnhancedParser(const ElfParser& oldParser,
+                             std::string_view filePath)
+    -> std::unique_ptr<EnhancedElfParser>;
+#endif
 
 }  // namespace lithium
 
-#endif  // __linux__
-
-#endif  // LITHIUM_ADDON_ELF_HPP
+#endif  // LITHIUM_DEBUG_ELF_HPP

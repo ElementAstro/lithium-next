@@ -42,6 +42,12 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 
+# Find spdlog for high-performance logging
+find_package(spdlog REQUIRED)
+
+# Find additional packages for C++23 optimizations
+find_package(Threads REQUIRED)
+
 add_executable(lithium-next ${lithium_src_dir}/app.cpp)
 
 target_link_libraries(lithium-next PRIVATE
@@ -58,7 +64,8 @@ target_link_libraries(lithium-next PRIVATE
     lithium_task
     lithium_tools
     atom
-    loguru
+    spdlog::spdlog
+    Threads::Threads
     ${Readline_LIBRARIES}
     ${CURSES_LIBRARIES}
 )

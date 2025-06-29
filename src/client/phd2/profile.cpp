@@ -600,9 +600,9 @@ void PHD2ProfileSettingHandler::printProfileDetails(
                 config = pImpl->loadJsonFile(profileFile);
             }
 
-            std::cout << "Profile: " << profileName << std::endl;
-            std::cout << "Details:" << std::endl;
-            std::cout << config.dump(4) << std::endl;
+            spdlog::info("Profile: {}", profileName);
+            spdlog::info("Details:");
+            spdlog::info("{}", config.dump(4));
             spdlog::info("Profile details printed successfully.");
         } catch (const std::exception& e) {
             spdlog::error("Failed to print profile details: {}", e.what());
@@ -611,8 +611,7 @@ void PHD2ProfileSettingHandler::printProfileDetails(
         }
     } else {
         spdlog::warn("Profile {} does not exist.", profileName);
-        std::cout << "Profile " << profileName << " does not exist."
-                  << std::endl;
+        spdlog::warn("Profile {} does not exist.", profileName);
     }
 }
 

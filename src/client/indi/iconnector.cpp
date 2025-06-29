@@ -17,7 +17,7 @@ Description: INDI Device Manager
 
 #include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 #include "atom/system/command.hpp"
 #include "atom/system/software.hpp"
 

@@ -12,7 +12,7 @@
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 #include "atom/system/command.hpp"
 
 #include "tools/croods.hpp"

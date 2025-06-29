@@ -3,7 +3,7 @@
 #include "statistic.hpp"
 #include "stellarsolver.hpp"
 
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 
 using namespace lithium::client;
 

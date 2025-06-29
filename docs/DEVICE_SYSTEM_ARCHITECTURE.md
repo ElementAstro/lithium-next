@@ -9,6 +9,7 @@ The Lithium Device System is a comprehensive, INDI-compatible device control fra
 ### 1. Device Templates (`template/`)
 
 #### Base Device (`device.hpp`)
+
 - **Enhanced INDI-style architecture** with property management
 - **State management** and device capabilities system
 - **Configuration management** and device information structures
@@ -76,6 +77,7 @@ The Lithium Device System is a comprehensive, INDI-compatible device control fra
 ### 2. Mock Device Implementations (`template/mock/`)
 
 All mock devices provide realistic simulation with:
+
 - **Threaded movement simulation** with progress updates
 - **Random noise injection** for realistic behavior
 - **Proper timing simulation** based on device characteristics
@@ -83,6 +85,7 @@ All mock devices provide realistic simulation with:
 - **Statistics tracking** and configuration persistence
 
 #### Available Mock Devices
+
 - `MockCamera`: Complete camera simulation with exposure and cooling
 - `MockTelescope`: Full mount simulation with tracking and slewing
 - `MockFocuser`: Focuser with temperature compensation
@@ -111,7 +114,9 @@ All mock devices provide realistic simulation with:
 ### 5. Integration and Testing
 
 #### Device Integration Test (`device_integration_test.cpp`)
+
 Comprehensive test demonstrating:
+
 - Individual device operations
 - Coordinated multi-device sequences
 - Automated imaging workflows
@@ -119,6 +124,7 @@ Comprehensive test demonstrating:
 - Performance monitoring
 
 #### Build System (`CMakeLists.txt`)
+
 - **Modular library structure**
 - **Optional INDI integration**
 - **Testing framework integration**
@@ -128,6 +134,7 @@ Comprehensive test demonstrating:
 ## Device Capabilities
 
 ### Camera Features
+
 - ✅ Exposure control with sub-second precision
 - ✅ Temperature control and cooling
 - ✅ Gain/Offset/ISO adjustment
@@ -138,6 +145,7 @@ Comprehensive test demonstrating:
 - ✅ Event-driven callbacks
 
 ### Telescope Features
+
 - ✅ Multiple coordinate systems
 - ✅ Precise tracking control
 - ✅ Parking and home positions
@@ -147,6 +155,7 @@ Comprehensive test demonstrating:
 - ✅ Safety limits
 
 ### Focuser Features
+
 - ✅ Absolute/relative positioning
 - ✅ Temperature compensation
 - ✅ Backlash compensation
@@ -155,6 +164,7 @@ Comprehensive test demonstrating:
 - ✅ Move optimization
 
 ### Filter Wheel Features
+
 - ✅ Smart filter management
 - ✅ Metadata support
 - ✅ Search and selection
@@ -162,12 +172,14 @@ Comprehensive test demonstrating:
 - ✅ Move optimization
 
 ### Rotator Features
+
 - ✅ Precise angle control
 - ✅ Shortest path calculation
 - ✅ Backlash compensation
 - ✅ Preset positions
 
 ### Dome Features
+
 - ✅ Telescope coordination
 - ✅ Shutter control
 - ✅ Weather integration
@@ -176,6 +188,7 @@ Comprehensive test demonstrating:
 ## Usage Examples
 
 ### Basic Device Creation
+
 ```cpp
 auto factory = DeviceFactory::getInstance();
 auto camera = factory.createCamera("MainCamera", DeviceBackend::MOCK);
@@ -184,6 +197,7 @@ camera->connect();
 ```
 
 ### Coordinated Operations
+
 ```cpp
 // Point telescope and follow with dome
 telescope->slewToRADECJNow(20.0, 30.0);
@@ -200,6 +214,7 @@ camera->startExposure(5.0);
 ```
 
 ### Configuration Management
+
 ```cpp
 auto& config = DeviceConfigManager::getInstance();
 config.loadProfile("DeepSky");
@@ -209,6 +224,7 @@ auto devices = config.createAllDevicesFromActiveProfile();
 ## Integration with INDI
 
 The system is designed for seamless INDI integration:
+
 - **Property-based architecture** matching INDI design
 - **Device state management** following INDI patterns
 - **Event-driven callbacks** for property updates

@@ -6,17 +6,17 @@ This document provides a comprehensive overview of the expanded astrophotography
 
 ### **Total Camera Brand Support: 9 Manufacturers**
 
-| Brand | Driver Status | Key Features | SDK Requirement |
-|-------|---------------|--------------|-----------------|
-| **INDI** | ✅ Production | Universal cross-platform support | INDI Server |
-| **QHY** | ✅ Production | GPS sync, USB traffic control | QHY SDK v6.0.2+ |
-| **ZWO ASI** | ✅ Production | High-speed USB3, auto modes | ASI SDK v1.21+ |
-| **Atik** | 🚧 Complete Implementation | Excellent cooling, filter wheels | Atik SDK v2.1+ |
-| **SBIG** | 🚧 Complete Implementation | Dual-chip, professional grade | SBIG Universal v4.99+ |
-| **FLI** | 🚧 Complete Implementation | Precision control, focusers | FLI SDK v1.104+ |
-| **PlayerOne** | 🚧 Complete Implementation | Modern sensors, hardware binning | PlayerOne SDK v3.1+ |
-| **ASCOM** | ⚠️ Windows Only | Broad Windows compatibility | ASCOM Platform |
-| **Simulator** | ✅ Production | Full-featured testing | Built-in |
+| Brand         | Driver Status             | Key Features                     | SDK Requirement       |
+| ------------- | ------------------------- | -------------------------------- | --------------------- |
+| **INDI**      | ✅ Production              | Universal cross-platform support | INDI Server           |
+| **QHY**       | ✅ Production              | GPS sync, USB traffic control    | QHY SDK v6.0.2+       |
+| **ZWO ASI**   | ✅ Production              | High-speed USB3, auto modes      | ASI SDK v1.21+        |
+| **Atik**      | 🚧 Complete Implementation | Excellent cooling, filter wheels | Atik SDK v2.1+        |
+| **SBIG**      | 🚧 Complete Implementation | Dual-chip, professional grade    | SBIG Universal v4.99+ |
+| **FLI**       | 🚧 Complete Implementation | Precision control, focusers      | FLI SDK v1.104+       |
+| **PlayerOne** | 🚧 Complete Implementation | Modern sensors, hardware binning | PlayerOne SDK v3.1+   |
+| **ASCOM**     | ⚠️ Windows Only            | Broad Windows compatibility      | ASCOM Platform        |
+| **Simulator** | ✅ Production              | Full-featured testing            | Built-in              |
 
 ## 📁 File Structure Created
 
@@ -61,12 +61,14 @@ src/device/
 ## 🔧 Key Implementation Features
 
 ### **1. Smart Camera Factory**
+
 - **Auto-detection** based on camera name patterns
 - **Fallback system**: INDI → Native SDK → Simulator
 - **Intelligent scanning** across all available drivers
 - **Type-safe driver registration** with RAII management
 
 ### **2. Comprehensive Interface**
+
 ```cpp
 class AtomCamera {
     // Core exposure control
@@ -93,18 +95,21 @@ class AtomCamera {
 ### **3. Advanced Features Implemented**
 
 #### **Multi-Camera Coordination**
+
 - Synchronized exposures across multiple cameras
 - Independent configuration per camera role (main/guide/planetary)
 - Coordinated temperature management
 - Real-time progress monitoring
 
 #### **Professional Workflows**
+
 - **Sequence Capture**: Automated multi-frame sequences with intervals
 - **Video Streaming**: Real-time video with recording capabilities
 - **Temperature Control**: Precision cooling management
 - **Image Quality Analysis**: SNR, noise analysis, star detection
 
 #### **Hardware-Specific Features**
+
 - **SBIG**: Dual-chip support (main CCD + guide chip)
 - **Atik**: Integrated filter wheel control
 - **FLI**: Integrated focuser support
@@ -113,6 +118,7 @@ class AtomCamera {
 - **PlayerOne**: Hardware pixel binning
 
 ### **4. Build System**
+
 - **Modular CMake**: Each camera type builds independently
 - **Optional compilation**: Only builds if SDK found
 - **Graceful degradation**: Falls back to other drivers
@@ -121,6 +127,7 @@ class AtomCamera {
 ## 🎮 Usage Examples
 
 ### **Basic Single Camera Usage**
+
 ```cpp
 auto factory = CameraFactory::getInstance();
 auto camera = factory->createCamera(CameraDriverType::AUTO_DETECT, "QHY Camera");
@@ -140,6 +147,7 @@ camera->saveImage("light_frame.fits");
 ```
 
 ### **Multi-Camera Coordination**
+
 ```cpp
 // Setup different camera roles
 auto main_camera = factory->createCamera(CameraDriverType::QHY, "Main Camera");
@@ -155,6 +163,7 @@ guide_camera->startExposure(0.5);
 ```
 
 ### **Advanced Sequence Capture**
+
 ```cpp
 // Start automated sequence
 camera->startSequence(
@@ -173,18 +182,20 @@ while (camera->isSequenceRunning()) {
 ## 📊 Performance Characteristics
 
 ### **Typical Performance**
-| Camera Type | Max Frame Rate | Cooling Range | Power Draw | Readout Speed |
-|-------------|----------------|---------------|------------|---------------|
-| **QHY Professional** | 30 FPS | -40°C | 5-12W | 1-10 FPS |
-| **ASI Planetary** | 200+ FPS | -35°C | 3-8W | 10-100 FPS |
-| **Atik One Series** | 20 FPS | -45°C | 8-15W | 1-5 FPS |
-| **SBIG ST Series** | 5 FPS | -50°C | 10-20W | 0.5-2 FPS |
-| **FLI ProLine** | 10 FPS | -50°C | 12-25W | 1-3 FPS |
-| **PlayerOne Apollo** | 100+ FPS | -35°C | 4-10W | 5-50 FPS |
+
+| Camera Type          | Max Frame Rate | Cooling Range | Power Draw | Readout Speed |
+| -------------------- | -------------- | ------------- | ---------- | ------------- |
+| **QHY Professional** | 30 FPS         | -40°C         | 5-12W      | 1-10 FPS      |
+| **ASI Planetary**    | 200+ FPS       | -35°C         | 3-8W       | 10-100 FPS    |
+| **Atik One Series**  | 20 FPS         | -45°C         | 8-15W      | 1-5 FPS       |
+| **SBIG ST Series**   | 5 FPS          | -50°C         | 10-20W     | 0.5-2 FPS     |
+| **FLI ProLine**      | 10 FPS         | -50°C         | 12-25W     | 1-3 FPS       |
+| **PlayerOne Apollo** | 100+ FPS       | -35°C         | 4-10W      | 5-50 FPS      |
 
 ## 🔮 Future Enhancements
 
 ### **Planned Additions**
+
 - **Moravian Instruments** cameras
 - **Altair Astro** cameras
 - **ToupTek** cameras  
@@ -192,6 +203,7 @@ while (camera->isSequenceRunning()) {
 - **Raspberry Pi HQ Camera**
 
 ### **Advanced Features Roadmap**
+
 - **GPU-accelerated processing** for real-time image enhancement
 - **Machine learning auto-focusing** using star profile analysis
 - **Cloud storage integration** for automatic backup
@@ -201,6 +213,7 @@ while (camera->isSequenceRunning()) {
 ## 🛠️ Installation & Build
 
 ### **Prerequisites**
+
 ```bash
 # Ubuntu/Debian
 sudo apt install cmake build-essential
@@ -216,6 +229,7 @@ sudo apt install indi-full  # For INDI support
 ```
 
 ### **Build Configuration**
+
 ```bash
 mkdir build && cd build
 cmake .. \
@@ -233,9 +247,10 @@ make -j$(nproc)
 ## 🎯 Implementation Status Summary
 
 ✅ **Completed Successfully:**
+
 - Enhanced camera factory with 9 driver types
 - Complete Atik camera implementation (507 lines)
-- Complete SBIG camera implementation 
+- Complete SBIG camera implementation
 - Complete FLI camera implementation
 - Complete PlayerOne camera implementation
 - SDK stub interfaces for all camera types
@@ -245,6 +260,7 @@ make -j$(nproc)
 - Auto-detection and fallback system
 
 🚧 **Ready for Testing:**
+
 - All camera implementations are complete and ready
 - Build system configured for optional compilation
 - Comprehensive error handling and logging

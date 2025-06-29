@@ -9,6 +9,7 @@ The optimized camera task system provides comprehensive control over astrophotog
 ### Task Categories
 
 #### 1. Core Camera Tasks
+
 - **Basic Exposure Tasks** (`basic_exposure.hpp/.cpp`)
   - `TakeExposureTask` - Single exposure with full parameter control
   - `TakeManyExposureTask` - Sequence of exposures with delay support
@@ -56,6 +57,7 @@ The optimized camera task system provides comprehensive control over astrophotog
 ## Design Principles
 
 ### Modern C++ Features
+
 - **C++20 Standard**: Utilizes latest language features
 - **Concepts**: Type safety and template constraints
 - **Smart Pointers**: Automatic memory management
@@ -63,12 +65,14 @@ The optimized camera task system provides comprehensive control over astrophotog
 - **Move Semantics**: Efficient object handling
 
 ### Error Handling
+
 - **Exception Safety**: Strong exception safety guarantees
 - **Comprehensive Validation**: Parameter validation with detailed error messages
 - **Error Propagation**: Proper error context preservation
 - **Graceful Degradation**: Fallback mechanisms where appropriate
 
 ### Logging and Monitoring
+
 - **Structured Logging**: JSON-formatted logs for easy parsing
 - **Multiple Log Levels**: DEBUG, INFO, WARN, ERROR categories
 - **Performance Metrics**: Execution time and memory usage tracking
@@ -77,6 +81,7 @@ The optimized camera task system provides comprehensive control over astrophotog
 ## Usage Examples
 
 ### Complete Imaging Session
+
 ```cpp
 // Create a complete deep-sky imaging session
 auto session = lithium::task::examples::ImagingSessionExample::createFullImagingSequence();
@@ -86,6 +91,7 @@ bool success = lithium::task::examples::executeTaskSequence(session);
 ```
 
 ### Video Streaming Session
+
 ```cpp
 // Set up video streaming for planetary observation
 auto videoSession = lithium::task::examples::VideoStreamingExample::createVideoStreamingSequence();
@@ -95,6 +101,7 @@ bool success = lithium::task::examples::executeTaskSequence(videoSession);
 ```
 
 ### ROI Imaging for Planets
+
 ```cpp
 // Configure high-speed ROI imaging
 auto roiSession = lithium::task::examples::ROIImagingExample::createROIImagingSequence();
@@ -104,6 +111,7 @@ bool success = lithium::task::examples::executeTaskSequence(roiSession);
 ```
 
 ### Parameter Profile Management
+
 ```cpp
 // Manage different camera profiles
 auto profileSession = lithium::task::examples::ProfileManagementExample::createProfileManagementSequence();
@@ -115,25 +123,27 @@ bool success = lithium::task::examples::executeTaskSequence(profileSession);
 ## Integration with AtomCamera Interface
 
 ### Direct Mapping
+
 Each task category directly maps to AtomCamera interface methods:
 
-| AtomCamera Method | Corresponding Tasks |
-|---|---|
-| `startExposure()` | `TakeExposureTask`, `TakeManyExposureTask` |
-| `startVideo()` | `StartVideoTask` |
-| `stopVideo()` | `StopVideoTask` |
-| `getVideoFrame()` | `GetVideoFrameTask` |
-| `startCooling()` | `CoolingControlTask` |
-| `getTemperature()` | `TemperatureMonitorTask` |
-| `setGain()` | `GainControlTask` |
-| `setOffset()` | `OffsetControlTask` |
-| `setISO()` | `ISOControlTask` |
-| `setResolution()` | `FrameConfigTask`, `ROIConfigTask` |
-| `setBinning()` | `BinningConfigTask` |
-| `setFrameType()` | `FrameConfigTask` |
-| `setUploadMode()` | `UploadModeTask` |
+| AtomCamera Method  | Corresponding Tasks                        |
+| ------------------ | ------------------------------------------ |
+| `startExposure()`  | `TakeExposureTask`, `TakeManyExposureTask` |
+| `startVideo()`     | `StartVideoTask`                           |
+| `stopVideo()`      | `StopVideoTask`                            |
+| `getVideoFrame()`  | `GetVideoFrameTask`                        |
+| `startCooling()`   | `CoolingControlTask`                       |
+| `getTemperature()` | `TemperatureMonitorTask`                   |
+| `setGain()`        | `GainControlTask`                          |
+| `setOffset()`      | `OffsetControlTask`                        |
+| `setISO()`         | `ISOControlTask`                           |
+| `setResolution()`  | `FrameConfigTask`, `ROIConfigTask`         |
+| `setBinning()`     | `BinningConfigTask`                        |
+| `setFrameType()`   | `FrameConfigTask`                          |
+| `setUploadMode()`  | `UploadModeTask`                           |
 
 ### Enhanced Functionality
+
 The task system provides enhanced functionality beyond the basic interface:
 
 - **Automated Sequences**: Complex multi-step operations
@@ -145,6 +155,7 @@ The task system provides enhanced functionality beyond the basic interface:
 ## Configuration and Customization
 
 ### Parameter Schemas
+
 Each task includes comprehensive JSON schemas for parameter validation:
 
 ```json
@@ -169,6 +180,7 @@ Each task includes comprehensive JSON schemas for parameter validation:
 ```
 
 ### Task Dependencies
+
 Tasks can declare dependencies to ensure proper execution order:
 
 ```cpp
@@ -176,6 +188,7 @@ Tasks can declare dependencies to ensure proper execution order:
 ```
 
 ### Custom Task Creation
+
 Create custom tasks by inheriting from the base Task class:
 
 ```cpp
@@ -190,18 +203,21 @@ public:
 ## Performance Considerations
 
 ### Memory Management
+
 - Smart pointers for automatic cleanup
 - RAII for resource management
 - Move semantics for efficient transfers
 - Minimal copying of large objects
 
 ### Execution Efficiency
+
 - Lazy initialization of resources
 - Background monitoring tasks
 - Efficient parameter validation
 - Optimized mock implementations for testing
 
 ### Scalability
+
 - Modular task design
 - Thread-safe implementations
 - Configurable timeout handling
@@ -210,6 +226,7 @@ public:
 ## Testing and Validation
 
 ### Mock Implementations
+
 Complete mock camera implementations for testing:
 
 - **MockCameraDevice**: Video streaming simulation
@@ -218,6 +235,7 @@ Complete mock camera implementations for testing:
 - **MockParameterController**: Parameter control simulation
 
 ### Parameter Validation
+
 Comprehensive validation for all parameters:
 
 - Range checking for numeric values
@@ -226,6 +244,7 @@ Comprehensive validation for all parameters:
 - Required parameter enforcement
 
 ### Error Scenarios
+
 Testing of various error conditions:
 
 - Hardware communication failures
@@ -236,12 +255,14 @@ Testing of various error conditions:
 ## Future Enhancements
 
 ### Planned Features
+
 - **AI-Powered Optimization**: Machine learning for parameter tuning
 - **Advanced Scheduling**: Complex time-based task scheduling
 - **Cloud Integration**: Remote monitoring and control
 - **Advanced Analytics**: Deep frame analysis and quality metrics
 
 ### Extension Points
+
 - **Custom Parameter Types**: Support for complex parameter structures
 - **Plugin Architecture**: Third-party task extensions
 - **Hardware Abstraction**: Support for multiple camera types

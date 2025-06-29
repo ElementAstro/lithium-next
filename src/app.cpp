@@ -21,7 +21,7 @@
 
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include "utils/logging/spdlog_config.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/system/env.hpp"
 #include "atom/utils/argsview.hpp"
@@ -32,7 +32,7 @@
 // #include "server/controller/python.hpp"
 #include "server/controller/script.hpp"
 #include "server/controller/search.hpp"
-#include "server/controller/sequencer.hpp"
+// #include "server/controller/sequencer.hpp"
 #include "server/websocket.hpp"
 
 using namespace std::string_literals;
@@ -60,17 +60,23 @@ void setupLogFile() {
     char filename[100];
     std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", localTime);
     std::filesystem::path logFilePath = logsFolder / filename;
-    loguru::add_file(logFilePath.string().c_str(), loguru::Append,
-                     loguru::Verbosity_MAX);
-
-    loguru::set_fatal_handler([](const loguru::Message &message) {
-        atom::system::saveCrashLog(std::string(message.prefix) +
-                                   message.message);
-    });
+    
+    // Initialize spdlog with file and console sinks
+    lithium::logging::LoggerConfig config;
+    config.log_file_path = logFilePath.string();
+    config.async = true;
+    lithium::logging::LogConfig::initialize(config);
+    
+    // Set up crash handler using spdlog
+    auto logger = spdlog::get("lithium");
+    if (!logger) {
+        logger = spdlog::default_logger();
+    }
 }
 
 void injectPtr() {
-    LOG_F(INFO, "Injecting global pointers...");
+    auto logger = lithium::logging::LogConfig::getLogger("lithium");
+    LITHIUM_LOG_INFO(logger, "Injecting global pointers...");
 
     auto ioContext = atom::memory::makeShared<asio::io_context>();
     AddPtr<atom::async::MessageBus>(
@@ -116,7 +122,7 @@ void injectPtr() {
         atom::memory::makeShared<lithium::ScriptAnalyzer>(
             scriptDir.empty() ? "./config/script/analysis.json"s : scriptDir));
 
-    LOG_F(INFO, "Global pointers injected.");
+    LITHIUM_LOG_INFO(logger, "Global pointers injected.");
 }
 
 int main(int argc, char *argv[]) {
@@ -135,7 +141,6 @@ int main(int argc, char *argv[]) {
 
     // Set log file
     setupLogFile();
-    loguru::init(argc, argv);
 
     injectPtr();
 
@@ -204,20 +209,24 @@ int main(int argc, char *argv[]) {
         if (cmdWebPanel) {
             configManager.value()->set("/lithium/web-panel/enabled",
                                        *cmdWebPanel);
-            DLOG_F(INFO, "Set web panel to {}", *cmdWebPanel);
+            auto logger = lithium::logging::LogConfig::getLogger("lithium");
+            LITHIUM_LOG_DEBUG(logger, "Set web panel to {}", *cmdWebPanel);
         }
         if (cmdDebug) {
             configManager.value()->set("/lithium/debug/enabled", *cmdDebug);
-            DLOG_F(INFO, "Set debug mode to {}", *cmdDebug);
+            auto logger = lithium::logging::LogConfig::getLogger("lithium");
+            LITHIUM_LOG_DEBUG(logger, "Set debug mode to {}", *cmdDebug);
         }
         if (program.get<std::string>("log-file")) {
-            loguru::add_file(
-                program.get<std::string>("log-file").value().c_str(),
-                loguru::Append, loguru::Verbosity_MAX);
+            // Additional log file is handled by spdlog configuration
+            auto logger = lithium::logging::LogConfig::getLogger("lithium");
+            LITHIUM_LOG_INFO(logger, "Additional log file specified: {}", 
+                           program.get<std::string>("log-file").value());
         }
 
     } catch (const std::bad_any_cast &e) {
-        LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
+        auto logger = lithium::logging::LogConfig::getLogger("lithium");
+        logger->error("Invalid args format! Error: {}", e.what());
         atom::system::saveCrashLog(e.what());
         return 1;
     }
@@ -232,7 +241,7 @@ int main(int argc, char *argv[]) {
     // controllers.push_back(atom::memory::makeShared<PythonController>());
     controllers.push_back(atom::memory::makeShared<ScriptController>());
     controllers.push_back(atom::memory::makeShared<SearchController>());
-    controllers.push_back(atom::memory::makeShared<SequenceController>());
+    // controllers.push_back(atom::memory::makeShared<SequenceController>());
 
     AddPtr<lithium::ConfigManager>(
         Constants::CONFIG_MANAGER,

@@ -110,18 +110,59 @@ endif()
 
 # Additional compiler flags
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE 
+        -Wall -Wextra -Wpedantic
+        -march=native              # Optimize for current CPU
+        -mtune=native               # Tune for current CPU
+        -fno-omit-frame-pointer     # Better debugging
+        -ffast-math                 # Enable fast math optimizations
+        -funroll-loops              # Unroll loops for performance
+        -fprefetch-loop-arrays      # Prefetch loop arrays
+        -fthread-jumps              # Optimize thread jumps
+        -fgcse-after-reload         # Global common subexpression elimination
+        -fipa-cp-clone              # Interprocedural constant propagation
+        -floop-nest-optimize        # Loop nest optimization
+        -ftree-loop-distribution    # Loop distribution optimization
+        -ftree-vectorize            # Auto-vectorization
+        -msse4.2                    # Enable SSE 4.2 instructions
+        -mavx                       # Enable AVX instructions
+        -mavx2                      # Enable AVX2 instructions if available
+    )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+    target_compile_options(${PROJECT_NAME} PRIVATE 
+        /W4
+        /arch:AVX2                  # Enable AVX2 instructions
+        /favor:INTEL64              # Optimize for Intel x64
+        /Oi                         # Enable intrinsic functions
+        /Ot                         # Favor fast code
+        /O2                         # Maximum optimization
+        /GL                         # Whole program optimization
+    )
 endif()
 
-# Enable LTO for Release builds
+# Enable LTO for Release builds with enhanced optimizations
 if(CMAKE_BUILD_TYPE MATCHES "Release")
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(${PROJECT_NAME} PRIVATE -flto)
-        target_link_options(${PROJECT_NAME} PRIVATE -flto)
+        target_compile_options(${PROJECT_NAME} PRIVATE 
+            -flto=auto                  # Auto LTO with parallel compilation
+            -fno-fat-lto-objects        # Reduce object file size
+            -fuse-linker-plugin         # Use linker plugin for better optimization
+            -fwhole-program             # Whole program optimization
+            -fdevirtualize-at-ltrans    # Devirtualize at link time
+            -fipa-pta                   # Interprocedural points-to analysis
+        )
+        target_link_options(${PROJECT_NAME} PRIVATE 
+            -flto=auto
+            -fuse-linker-plugin
+            -Wl,--gc-sections           # Remove unused sections
+            -Wl,--strip-all             # Strip all symbols
+        )
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         target_compile_options(${PROJECT_NAME} PRIVATE /GL)
-        target_link_options(${PROJECT_NAME} PRIVATE /LTCG)
+        target_link_options(${PROJECT_NAME} PRIVATE 
+            /LTCG                       # Link-time code generation
+            /OPT:REF                    # Remove unreferenced functions/data
+            /OPT:ICF                    # Identical COMDAT folding
+        )
     endif()
 endif()

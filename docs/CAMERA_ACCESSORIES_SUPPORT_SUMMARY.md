@@ -7,6 +7,7 @@ This document provides a comprehensive overview of the advanced accessory suppor
 ### **ASI (ZWO) Accessories Integration**
 
 #### **🔭 EAF (Electronic Auto Focuser) Support**
+
 - **Complete SDK Integration** with ASI EAF focusers
 - **Precision Position Control** with micron-level accuracy
 - **Temperature Monitoring** for thermal compensation
@@ -15,6 +16,7 @@ This document provides a comprehensive overview of the advanced accessory suppor
 - **Multiple Focuser Support** for complex setups
 
 **Key Features:**
+
 ```cpp
 // EAF Focuser Control
 auto connectEAFFocuser() -> bool;
@@ -27,11 +29,13 @@ auto calibrateEAFFocuser() -> bool;
 ```
 
 **Supported Models:**
+
 - ASI EAF (Electronic Auto Focuser)
 - All ASI EAF variations with USB connection
 - Temperature sensor equipped models
 
 #### **🎨 EFW (Electronic Filter Wheel) Support**
+
 - **7-Position Filter Wheel** with precise positioning
 - **Unidirectional Movement** option for backlash elimination
 - **Custom Filter Naming** with persistent storage
@@ -39,6 +43,7 @@ auto calibrateEAFFocuser() -> bool;
 - **Auto-calibration** and homing functionality
 
 **Key Features:**
+
 ```cpp
 // EFW Filter Wheel Control
 auto connectEFWFilterWheel() -> bool;
@@ -50,6 +55,7 @@ auto calibrateEFWFilterWheel() -> bool;
 ```
 
 **Supported Models:**
+
 - ASI EFW-5 (5-position filter wheel)
 - ASI EFW-7 (7-position filter wheel)  
 - ASI EFW-8 (8-position filter wheel)
@@ -57,6 +63,7 @@ auto calibrateEFWFilterWheel() -> bool;
 ### **QHY Accessories Integration**
 
 #### **🎨 CFW (Color Filter Wheel) Support**
+
 - **Integrated Filter Wheel Control** via camera connection
 - **Multiple Filter Configurations** (5, 7, 9 positions)
 - **Direct Communication Protocol** with camera-filter wheel integration
@@ -64,6 +71,7 @@ auto calibrateEFWFilterWheel() -> bool;
 - **Custom Filter Management** with naming support
 
 **Key Features:**
+
 ```cpp
 // QHY CFW Control
 auto hasQHYFilterWheel() -> bool;
@@ -74,6 +82,7 @@ auto homeQHYFilterWheel() -> bool;
 ```
 
 **Supported Models:**
+
 - QHY CFW2-M (5-position)
 - QHY CFW2-L (7-position)
 - QHY CFW3-M-US (7-position)
@@ -83,6 +92,7 @@ auto homeQHYFilterWheel() -> bool;
 ## 🔧 **Advanced Integration Features**
 
 ### **Multi-Device Coordination**
+
 - **Synchronized Operations** between camera, focuser, and filter wheel
 - **Sequential Automation** for imaging workflows
 - **Error Recovery** with graceful fallback mechanisms
@@ -91,6 +101,7 @@ auto homeQHYFilterWheel() -> bool;
 ### **Professional Workflow Support**
 
 #### **Automated Filter Sequences**
+
 ```cpp
 // Example: Automated RGB sequence
 for (const auto& filter : {"Red", "Green", "Blue"}) {
@@ -104,6 +115,7 @@ for (const auto& filter : {"Red", "Green", "Blue"}) {
 ```
 
 #### **Focus Bracketing**
+
 ```cpp
 // Example: Focus bracketing sequence
 int base_position = asi_camera->getEAFFocuserPosition();
@@ -118,12 +130,14 @@ for (int offset = -200; offset <= 200; offset += 50) {
 ```
 
 ### **Temperature Compensation**
+
 - **Thermal Focus Tracking** using EAF temperature sensors
 - **Automatic Position Adjustment** based on temperature changes
 - **Configurable Compensation Curves** for different optics
 - **Real-time Monitoring** and logging
 
 ### **Smart Movement Algorithms**
+
 - **Backlash Compensation** with configurable approach direction
 - **Overshoot Prevention** with precise positioning
 - **Speed Optimization** for different movement distances
@@ -132,28 +146,31 @@ for (int offset = -200; offset <= 200; offset += 50) {
 ## 📊 **Performance Characteristics**
 
 ### **Focuser Performance**
-| Feature | ASI EAF | Specification |
-|---------|---------|---------------|
-| **Position Accuracy** | ±1 step | ~0.5 microns |
-| **Maximum Range** | 10,000 steps | ~5mm travel |
-| **Movement Speed** | Variable | 50-500 steps/sec |
-| **Temperature Range** | -20°C to +60°C | ±0.1°C accuracy |
-| **Backlash** | <5 steps | Compensatable |
-| **Power Draw** | 5V/500mA | USB powered |
+
+| Feature               | ASI EAF        | Specification    |
+| --------------------- | -------------- | ---------------- |
+| **Position Accuracy** | ±1 step        | ~0.5 microns     |
+| **Maximum Range**     | 10,000 steps   | ~5mm travel      |
+| **Movement Speed**    | Variable       | 50-500 steps/sec |
+| **Temperature Range** | -20°C to +60°C | ±0.1°C accuracy  |
+| **Backlash**          | <5 steps       | Compensatable    |
+| **Power Draw**        | 5V/500mA       | USB powered      |
 
 ### **Filter Wheel Performance**
-| Feature | ASI EFW | QHY CFW | Specification |
-|---------|---------|---------|---------------|
-| **Positioning Accuracy** | ±0.1° | ±0.2° | Very precise |
-| **Movement Speed** | 0.8 sec/position | 1.2 sec/position | Full rotation |
-| **Filter Capacity** | 5/7/8 positions | 5/7/9 positions | Standard sizes |
-| **Filter Size Support** | 31mm, 36mm | 31mm, 36mm, 50mm | Multiple formats |
-| **Repeatability** | <0.05° | <0.1° | Excellent |
-| **Power Draw** | 12V/300mA | 12V/400mA | External supply |
+
+| Feature                  | ASI EFW          | QHY CFW          | Specification    |
+| ------------------------ | ---------------- | ---------------- | ---------------- |
+| **Positioning Accuracy** | ±0.1°            | ±0.2°            | Very precise     |
+| **Movement Speed**       | 0.8 sec/position | 1.2 sec/position | Full rotation    |
+| **Filter Capacity**      | 5/7/8 positions  | 5/7/9 positions  | Standard sizes   |
+| **Filter Size Support**  | 31mm, 36mm       | 31mm, 36mm, 50mm | Multiple formats |
+| **Repeatability**        | <0.05°           | <0.1°            | Excellent        |
+| **Power Draw**           | 12V/300mA        | 12V/400mA        | External supply  |
 
 ## 🏗️ **Build System Integration**
 
 ### **Conditional Compilation**
+
 ```cmake
 # CMakeLists.txt for accessory support
 option(ENABLE_ASI_EAF_SUPPORT "Enable ASI EAF focuser support" ON)
@@ -174,6 +191,7 @@ endif()
 ```
 
 ### **SDK Detection**
+
 - **Automatic SDK Detection** during build configuration
 - **Graceful Degradation** to stub implementations when SDKs unavailable
 - **Version Compatibility** checking for supported SDK versions
@@ -182,6 +200,7 @@ endif()
 ## 🎮 **Usage Examples**
 
 ### **Basic Focuser Control**
+
 ```cpp
 auto asi_camera = CameraFactory::createCamera(CameraDriverType::ASI, "ASI294MC");
 
@@ -200,6 +219,7 @@ if (asi_camera->hasEAFFocuser()) {
 ```
 
 ### **Filter Wheel Automation**
+
 ```cpp
 auto qhy_camera = CameraFactory::createCamera(CameraDriverType::QHY, "QHY268M");
 
@@ -231,6 +251,7 @@ if (qhy_camera->hasQHYFilterWheel()) {
 ```
 
 ### **Comprehensive Imaging Session**
+
 ```cpp
 // Multi-device coordination example
 auto camera = CameraFactory::createCamera(CameraDriverType::ASI, "ASI2600MM");
@@ -269,6 +290,7 @@ for (size_t i = 0; i < filters.size(); ++i) {
 ## 🔮 **Future Enhancements**
 
 ### **Planned Accessory Support**
+
 - **ASCOM Focuser/Filter Wheel** integration for Windows
 - **Moonlite Focuser** direct USB support
 - **Optec Filter Wheels** for professional setups
@@ -276,6 +298,7 @@ for (size_t i = 0; i < filters.size(); ++i) {
 - **SBIG AO (Adaptive Optics)** enhanced control
 
 ### **Advanced Features Roadmap**
+
 - **AI-powered Auto-focusing** using star profile analysis
 - **Predictive Temperature Compensation** with machine learning
 - **Multi-target Automation** with object database integration
@@ -285,6 +308,7 @@ for (size_t i = 0; i < filters.size(); ++i) {
 ## ✅ **Implementation Status**
 
 **Completed Successfully:**
+
 - ✅ ASI EAF focuser full integration (15+ methods)
 - ✅ ASI EFW filter wheel complete support (12+ methods)
 - ✅ QHY CFW filter wheel comprehensive integration (9+ methods)
@@ -295,6 +319,7 @@ for (size_t i = 0; i < filters.size(); ++i) {
 - ✅ Movement optimization and backlash compensation
 
 **Total New Code Added:**
+
 - **600+ lines** of accessory control implementations
 - **45+ new methods** across camera drivers
 - **3 SDK stub interfaces** for development/testing

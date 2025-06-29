@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <fstream>
 
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 
 Database::Database(const std::string& filename) : filepath_(filename) {
     LOG_F(INFO, "Initializing Database with file: {}", filename);

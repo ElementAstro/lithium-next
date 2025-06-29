@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 
 // Constructor
 SS::SS(QObject* parent) : QObject(parent), app(nullptr), solver(nullptr) {}

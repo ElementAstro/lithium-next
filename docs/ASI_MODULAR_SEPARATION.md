@@ -33,6 +33,7 @@ src/device/asi/
 ## 🎯 模块分离的核心优势
 
 ### 1. **完全独立运行**
+
 ```cpp
 // 只使用相机，不需要配件
 auto camera = createASICameraCore("ASI294MC Pro");
@@ -51,6 +52,7 @@ focuser->setPosition(15000);
 ```
 
 ### 2. **独立的SDK依赖**
+
 ```cmake
 # 相机模块 - 只需要ASI Camera SDK
 find_library(ASI_CAMERA_LIBRARY NAMES ASICamera2)
@@ -63,6 +65,7 @@ find_library(ASI_EAF_LIBRARY NAMES EAF_focuser)
 ```
 
 ### 3. **灵活的部署选项**
+
 ```bash
 # 构建所有模块
 cmake --build build --target asi_camera_core asi_filterwheel asi_focuser
@@ -78,6 +81,7 @@ cmake --build build --target asi_focuser         # 只要对焦器
 ### ASI 相机模块 (`src/device/asi/camera/`)
 
 **专注纯相机功能**：
+
 - ✅ 图像捕获和曝光控制
 - ✅ 相机参数设置（增益、偏移、ROI等）
 - ✅ 内置冷却系统控制
@@ -113,6 +117,7 @@ auto frame = camera->getImageData();
 ### ASI 滤镜轮模块 (`src/device/asi/filterwheel/`)
 
 **专门的EFW控制**：
+
 - ✅ 5/7/8位置滤镜轮支持
 - ✅ 自定义滤镜命名
 - ✅ 单向/双向运动模式
@@ -147,6 +152,7 @@ efw->setFilterOffset(2, 0.25);  // R滤镜偏移0.25
 ### ASI 对焦器模块 (`src/device/asi/focuser/`)
 
 **专业的EAF控制**：
+
 - ✅ 精确位置控制（0-31000步）
 - ✅ 温度监控和补偿
 - ✅ 反冲补偿
@@ -286,24 +292,28 @@ cmake --build build
 ## 🎁 分离架构的优势总结
 
 ### ✅ **开发优势**
+
 - **独立开发**：每个模块可以独立开发和测试
 - **减少依赖**：不需要安装不用的SDK
 - **编译速度**：只编译需要的模块
 - **调试简化**：问题隔离在特定模块
 
 ### ✅ **部署优势**
+
 - **灵活部署**：根据硬件配置选择模块
 - **资源优化**：只加载需要的功能
 - **更新独立**：可以单独更新某个模块
 - **故障隔离**：某个模块故障不影响其他模块
 
 ### ✅ **用户优势**
+
 - **按需使用**：只使用拥有的硬件
 - **学习简化**：专注于需要的功能
 - **配置清晰**：每个设备独立配置
 - **扩展性好**：容易添加新的ASI设备
 
 ### ✅ **系统优势**
+
 - **内存效率**：不加载未使用的功能
 - **启动速度**：减少初始化时间
 - **稳定性好**：模块间错误不传播
