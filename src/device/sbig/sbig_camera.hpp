@@ -15,7 +15,7 @@ Description: SBIG Camera Implementation with Universal Driver support
 #pragma once
 
 #include "../template/camera.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <memory>
 #include <string>

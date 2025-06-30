@@ -43,9 +43,9 @@ target_link_libraries(lithium_advanced_tasks
     PRIVATE
         lithium_task_base
         lithium_camera_tasks
-        atom::log
-        atom::error
-        atom::type
+        atom
+        atom
+        atom
 )
 
 target_include_directories(lithium_advanced_tasks

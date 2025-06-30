@@ -8,7 +8,7 @@
 
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/sysinfo/disk.hpp"
 #include "atom/system/env.hpp"
 

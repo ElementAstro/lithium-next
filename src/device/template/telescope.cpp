@@ -13,7 +13,7 @@ Description: AtomTelescope Implementation
 *************************************************/
 
 #include "telescope.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 // Notification methods implementation
 void AtomTelescope::notifySlewComplete(bool success, const std::string &message) {

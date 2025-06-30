@@ -18,7 +18,7 @@ functionality for ASCOM cameras.
 #include "video_manager.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/utils/time.hpp"
 
 #include <algorithm>

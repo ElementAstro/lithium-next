@@ -36,7 +36,7 @@ set(INDI_DEVICE_FILES
 set(PROJECT_LIBS
     atom
     lithium_config
-    loguru
+    spdlog::spdlog
     yaml-cpp
 )
 
@@ -126,15 +126,3 @@ function(add_subdirectories_recursively start_dir)
   endforeach()
 endfunction()
 add_subdirectories_recursively(${CMAKE_CURRENT_SOURCE_DIR})
-
-# Add subdirectories
-add_subdirectory(template)
-add_subdirectory(indi)
-add_subdirectory(ascom)
-# Add camera implementations
-add_subdirectory(qhy)
-add_subdirectory(asi)
-add_subdirectory(atik)
-add_subdirectory(sbig)
-add_subdirectory(fli)
-add_subdirectory(playerone)

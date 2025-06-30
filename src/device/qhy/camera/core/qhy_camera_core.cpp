@@ -13,7 +13,7 @@ Description: Core QHY camera functionality implementation
 *************************************************/
 
 #include "qhy_camera_core.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <thread>

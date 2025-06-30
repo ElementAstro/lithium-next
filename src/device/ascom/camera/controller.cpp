@@ -17,7 +17,7 @@ a clean, maintainable, and testable interface for ASCOM camera control.
 
 #include "controller.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::device::ascom::camera {
 

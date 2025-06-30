@@ -18,7 +18,7 @@ guide pulses, guiding calibration, and autoguiding support.
 #include "guide_manager.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/utils/string.hpp"
 
 #include <algorithm>

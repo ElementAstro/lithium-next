@@ -7,7 +7,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/ScanModule.cmake)
 
 # Common libraries
 set(COMMON_LIBS
-    loguru atom-system atom-io atom-utils atom-component atom-error)
+    spdlog::spdlog atom-system atom-io atom-utils atom-component atom-error)
 
 if (NOT WIN32)
     find_package(INDI 2.0 REQUIRED)

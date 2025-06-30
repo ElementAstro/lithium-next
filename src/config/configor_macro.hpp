@@ -3,7 +3,7 @@
 
 #include <string_view>
 #include <type_traits>
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "configor.hpp"
 
 namespace lithium {

@@ -16,7 +16,7 @@ Description: QHY Camera Implementation with full SDK integration
 
 #include "../../template/camera.hpp"
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <memory>
 #include <string>

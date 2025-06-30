@@ -65,8 +65,8 @@ endif()
 # Link common libraries
 target_link_libraries(asi_focuser PUBLIC
     asi_focuser_components  # Link our components library
-    atom::log
-    atom::utils
+    atom
+    atom
     pthread
 )
 

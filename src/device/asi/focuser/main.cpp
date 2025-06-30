@@ -15,7 +15,7 @@ Description: ASI Electronic Auto Focuser (EAF) implementation
 #include "main.hpp"
 
 #include <spdlog/spdlog.h>
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include "controller.hpp"
 

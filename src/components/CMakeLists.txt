@@ -2,7 +2,12 @@
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: Lithium-Components
-# Description: Core component system for Lithium astrophotography software
+# Description: Core component system for Lithium astrophotograp# Export targets (temporarily disabled due to dependency issues)
+# install(EXPORT lithium_components_targets
+#     FILE lithium_components_targets.cmake
+#     NAMESPACE lithium::
+#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lithium
+# )ftware
 # Author: Max Qian
 # License: GPL3
 
@@ -49,10 +54,10 @@ find_package(yaml-cpp REQUIRED)
 find_package(Threads REQUIRED)
 
 set(COMPONENT_REQUIRED_LIBS
-    atom::atom
+    atom
     yaml-cpp
     Threads::Threads
-    loguru
+    spdlog::spdlog
 )
 
 # =============================================================================
@@ -101,7 +106,7 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC
         ${COMPONENT_REQUIRED_LIBS}
         lithium::components::manager
-        lithium::debug
+        lithium_debug
     PRIVATE
         $<$<BOOL:${BUILD_COMPONENTS_SHARED}>:${CMAKE_DL_LIBS}>
 )
@@ -183,7 +188,6 @@ include(GNUInstallDirs)
 
 # Install the library
 install(TARGETS ${PROJECT_NAME}
-    EXPORT lithium_components_targets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -201,12 +205,12 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/components
 )
 
-# Install export targets
-install(EXPORT lithium_components_targets
-    FILE lithium_components_targets.cmake
-    NAMESPACE lithium::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lithium_components
-)
+# Install export targets (temporarily disabled due to dependency issues)
+# install(EXPORT lithium_components_targets
+#     FILE lithium_components_targets.cmake
+#     NAMESPACE lithium::
+#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lithium_components
+# )
 
 # =============================================================================
 # Status Messages

@@ -46,9 +46,9 @@ find_package(Threads REQUIRED)
 
 target_link_libraries(lithium_components_manager
     PUBLIC
-        atom::atom
+        atom
         Threads::Threads
-        loguru
+        spdlog::spdlog
     PRIVATE
         ${CMAKE_DL_LIBS}
 )
@@ -125,9 +125,9 @@ install(FILES ${COMPONENT_MANAGER_HEADERS}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/components/manager
 )
 
-# Install export targets
-install(EXPORT lithium_components_manager_targets
-    FILE lithium_components_manager_targets.cmake
-    NAMESPACE lithium::components::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lithium_components_manager
-)
+# Install export targets (temporarily disabled due to dependency issues)
+# install(EXPORT lithium_components_manager_targets
+#     FILE lithium_components_manager_targets.cmake
+#     NAMESPACE lithium::components::
+#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lithium_components_manager
+# )

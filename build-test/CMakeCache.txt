@@ -98,6 +98,9 @@ BZIP2_LIBRARY_DEBUG:FILEPATH=BZIP2_LIBRARY_DEBUG-NOTFOUND
 //Path to a library.
 BZIP2_LIBRARY_RELEASE:FILEPATH=BZIP2_LIBRARY_RELEASE-NOTFOUND
 
+//Path to a program.
+CCACHE_PROGRAM:FILEPATH=/usr/bin/ccache
+
 //Path to a file.
 CFITSIO_INCLUDE_DIR:PATH=/usr/include
 
@@ -398,11 +401,20 @@ CURSES_NCURSES_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libncurses.so
 //Enable Atik camera support
 ENABLE_ATIK_CAMERA:BOOL=ON
 
+//Enable performance benchmarks
+ENABLE_BENCHMARKS:BOOL=OFF
+
+//Enable ccache for faster rebuilds
+ENABLE_CCACHE:BOOL=ON
+
 //Enable component profiling
 ENABLE_COMPONENT_PROFILING:BOOL=OFF
 
 //Enable FLI camera support
 ENABLE_FLI_CAMERA:BOOL=ON
+
+//Enable memory profiling support
+ENABLE_MEMORY_PROFILING:BOOL=OFF
 
 //Enable architecture-specific optimizations
 ENABLE_OPT:BOOL=ON
@@ -410,8 +422,14 @@ ENABLE_OPT:BOOL=ON
 //Enable PlayerOne camera support
 ENABLE_PLAYERONE_CAMERA:BOOL=ON
 
+//Enable performance profiling support
+ENABLE_PROFILING:BOOL=OFF
+
 //Enable SBIG camera support
 ENABLE_SBIG_CAMERA:BOOL=ON
+
+//Enable unity builds for faster compilation
+ENABLE_UNITY_BUILD:BOOL=OFF
 
 //The directory containing a CMake configuration file for Eigen3.
 Eigen3_DIR:PATH=/usr/share/eigen3/cmake
@@ -612,6 +630,25 @@ PLAYERONE_INCLUDE_DIR:PATH=PLAYERONE_INCLUDE_DIR-NOTFOUND
 //Path to a library.
 PLAYERONE_LIBRARY:FILEPATH=PLAYERONE_LIBRARY-NOTFOUND
 
+//Overwrite cached values read from Python library (classic search).
+// Turn off if cross-compiling and manually setting these values.
+PYBIND11_PYTHONLIBS_OVERWRITE:BOOL=ON
+
+//Python version to use for compiling modules
+PYBIND11_PYTHON_VERSION:STRING=
+
+//Path to a program.
+PYTHON_EXECUTABLE:FILEPATH=/home/max/lithium-next/.venv/bin/python
+
+//Path to a library.
+PYTHON_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libpython3.12.so
+
+//Path to a program.
+ProcessorCount_cmd_nproc:FILEPATH=/usr/bin/nproc
+
+//Path to a program.
+ProcessorCount_cmd_sysctl:FILEPATH=/usr/sbin/sysctl
+
 //Path to a file.
 QHY_INCLUDE_DIR:PATH=QHY_INCLUDE_DIR-NOTFOUND
 
@@ -660,6 +697,12 @@ SQLite3_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libsqlite3.so
 
 //The directory containing a CMake configuration file for StellarSolver.
 StellarSolver_DIR:PATH=StellarSolver_DIR-NOTFOUND
+
+//The directory containing a CMake configuration file for TBB.
+TBB_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/TBB
+
+//Use precompiled headers for faster builds
+USE_PRECOMPILED_HEADERS:BOOL=ON
 
 //Path to a file.
 ZLIBNG_INCLUDE_DIRS:PATH=ZLIBNG_INCLUDE_DIRS-NOTFOUND
@@ -822,6 +865,9 @@ base64_SOURCE_DIR:STATIC=/home/max/lithium-next/libs/atom/extra/base64
 
 //The directory containing a CMake configuration file for fmt.
 fmt_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/fmt
+
+//The directory containing a CMake configuration file for jemalloc.
+jemalloc_DIR:PATH=jemalloc_DIR-NOTFOUND
 
 //Value Computed by CMake
 libspng_BINARY_DIR:STATIC=/home/max/lithium-next/build-test/libs/thirdparty/libspng
@@ -1376,10 +1422,14 @@ FIND_PACKAGE_MESSAGE_DETAILS_OpenMP_C:INTERNAL=[-fopenmp][/usr/lib/gcc/x86_64-li
 FIND_PACKAGE_MESSAGE_DETAILS_OpenMP_CXX:INTERNAL=[-fopenmp][/usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so][/usr/lib/x86_64-linux-gnu/libpthread.a][v4.5()]
 //Details about finding OpenSSL
 FIND_PACKAGE_MESSAGE_DETAILS_OpenSSL:INTERNAL=[/usr/lib/x86_64-linux-gnu/libcrypto.so][/usr/include][c ][v3.0.13()]
+//Details about finding PYTHON
+FIND_PACKAGE_MESSAGE_DETAILS_PYTHON:INTERNAL=/home/max/lithium-next/.venv/bin/python3.12.3
 //Details about finding PkgConfig
 FIND_PACKAGE_MESSAGE_DETAILS_PkgConfig:INTERNAL=[/usr/bin/pkg-config][v1.8.1()]
 //Details about finding Python
 FIND_PACKAGE_MESSAGE_DETAILS_Python:INTERNAL=[/home/max/lithium-next/.venv/bin/python3][/usr/include/python3.12][/usr/lib/x86_64-linux-gnu/libpython3.12.so][cfound components: Interpreter Development Development.Module Development.Embed ][v3.12.3()]
+//Details about finding PythonInterp
+FIND_PACKAGE_MESSAGE_DETAILS_PythonInterp:INTERNAL=[/home/max/lithium-next/.venv/bin/python][v3.12.3(3.6)]
 //Details about finding Readline
 FIND_PACKAGE_MESSAGE_DETAILS_Readline:INTERNAL=[/usr/lib/x86_64-linux-gnu/libreadline.so][/usr/include][v()]
 //Details about finding SQLite3
@@ -1564,6 +1614,8 @@ LIBSECRET_PKGCONF_STATIC_LIBS_L:INTERNAL=
 LIBSECRET_PKGCONF_STATIC_LIBS_OTHER:INTERNAL=
 LIBSECRET_PKGCONF_STATIC_LIBS_PATHS:INTERNAL=
 LIBSECRET_PKGCONF_VERSION:INTERNAL=
+//Found packages
+LITHIUM_FOUND_PACKAGES:INTERNAL=Threads;spdlog;TBB;OpenMP;Python;pybind11;Readline;Curses
 //ADVANCED property for variable: MZ_FILE32_API
 MZ_FILE32_API-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: MZ_LIB_SUFFIX
@@ -1746,11 +1798,23 @@ PC_INDI_libindi_VERSION:INTERNAL=
 PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PKG_CONFIG_EXECUTABLE
 PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
-//Python executable during the last CMake run
-PYBIND11_PYTHON_EXECUTABLE_LAST:INTERNAL=/home/max/lithium-next/.venv/bin/python3
-//Python debug status
+//ADVANCED property for variable: PYTHON_EXECUTABLE
+PYTHON_EXECUTABLE-ADVANCED:INTERNAL=1
+PYTHON_INCLUDE_DIRS:INTERNAL=/usr/include/python3.12
 PYTHON_IS_DEBUG:INTERNAL=0
+PYTHON_LIBRARIES:INTERNAL=/usr/lib/x86_64-linux-gnu/libpython3.12.so
+//ADVANCED property for variable: PYTHON_LIBRARY
+PYTHON_LIBRARY-ADVANCED:INTERNAL=1
 PYTHON_MODULE_EXTENSION:INTERNAL=.cpython-312-x86_64-linux-gnu.so
+PYTHON_MODULE_PREFIX:INTERNAL=
+PYTHON_VERSION:INTERNAL=3.12.3
+PYTHON_VERSION_MAJOR:INTERNAL=3
+PYTHON_VERSION_MINOR:INTERNAL=12
+//ADVANCED property for variable: ProcessorCount_cmd_nproc
+ProcessorCount_cmd_nproc-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: ProcessorCount_cmd_sysctl
+ProcessorCount_cmd_sysctl-ADVANCED:INTERNAL=1
+Python_ADDITIONAL_VERSIONS:INTERNAL=3.11;3.10;3.9;3.8;3.7;3.6
 //Qt feature: aesni (from target Qt6::Core)
 QT_FEATURE_aesni:INTERNAL=ON
 //Qt feature: alloca (from target Qt6::Core)
@@ -2171,13 +2235,14 @@ _OPENSSL_openssl_INCLUDEDIR:INTERNAL=
 _OPENSSL_openssl_LIBDIR:INTERNAL=
 _OPENSSL_openssl_PREFIX:INTERNAL=
 _OPENSSL_openssl_VERSION:INTERNAL=
-_Python:INTERNAL=Python
+_Python:INTERNAL=PYTHON
 //Compiler reason failure
 _Python_Compiler_REASON_FAILURE:INTERNAL=
 _Python_DEVELOPMENT_EMBED_SIGNATURE:INTERNAL=ca5d01059675c54b1df9ae9ce33468c1
 _Python_DEVELOPMENT_MODULE_SIGNATURE:INTERNAL=95a6b3a905b31a053078ff046e537c6d
 //Development reason failure
 _Python_Development_REASON_FAILURE:INTERNAL=
+//Path to a program.
 _Python_EXECUTABLE:INTERNAL=/home/max/lithium-next/.venv/bin/python3
 //Path to a file.
 _Python_INCLUDE_DIR:INTERNAL=/usr/include/python3.12

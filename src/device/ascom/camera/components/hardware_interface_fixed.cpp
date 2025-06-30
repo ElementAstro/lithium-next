@@ -18,7 +18,7 @@ and both COM and Alpaca protocol integration.
 
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #ifdef _WIN32
 // These headers are only available on Windows

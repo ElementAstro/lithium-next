@@ -61,8 +61,8 @@ endif()
 
 # Link common libraries
 target_link_libraries(asi_filterwheel PUBLIC
-    atom::log
-    atom::utils
+    atom
+    atom
     pthread
     asi_filterwheel_components  # Link the modular components
 )

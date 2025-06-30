@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 auto calculateHist(const cv::Mat& img, int histSize,
                    bool normalize) -> std::vector<cv::Mat> {

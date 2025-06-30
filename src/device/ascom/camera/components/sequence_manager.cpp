@@ -18,7 +18,7 @@ shooting sequences for the ASCOM camera.
 #include "sequence_manager.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::device::ascom::camera::components {
 

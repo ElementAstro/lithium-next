@@ -14,7 +14,7 @@ Description: QHY camera filter wheel controller implementation
 
 #include "filterwheel_controller.hpp"
 // #include "../camera/core/qhy_camera_core.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <chrono>
 #include <fstream>

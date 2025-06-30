@@ -14,9 +14,9 @@ add_library(lithium_device_template STATIC
 
 target_link_libraries(lithium_device_template
     PUBLIC
-        atom::utils
-        atom::log
-        atom::meta
+        atom
+        atom
+        atom
 )
 
 target_include_directories(lithium_device_template

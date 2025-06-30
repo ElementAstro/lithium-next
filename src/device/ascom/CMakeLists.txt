@@ -4,7 +4,9 @@ add_library(
   lithium_device_ascom STATIC
   # Core headers
   telescope.hpp
-  camera.hpp
+  camera/main.hpp
+  camera/controller.hpp
+  camera/legacy_camera.hpp
   focuser.hpp
   filterwheel.hpp
   dome.hpp
@@ -15,7 +17,9 @@ add_library(
   ascom_alpaca_client.hpp
   # Implementation files
   telescope.cpp
-  camera.cpp
+  camera/main.cpp
+  camera/controller.cpp
+  camera/legacy_camera.cpp
   focuser.cpp
   filterwheel.cpp
   dome.cpp
@@ -47,7 +51,7 @@ target_link_libraries(lithium_device_ascom PRIVATE lithium_atom_log
 
 target_link_libraries(
   lithium_device_ascom
-  PUBLIC lithium_device_template atom::log
+  PUBLIC lithium_device_template atom
   PRIVATE $<$<PLATFORM_ID:Windows>:ole32> $<$<PLATFORM_ID:Windows>:oleaut32>
           $<$<NOT:$<PLATFORM_ID:Windows>>:curl>)
 

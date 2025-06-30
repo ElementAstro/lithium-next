@@ -10,7 +10,7 @@
 #include <string>
 
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "components/loader.hpp"
 #include "constant/constant.hpp"
 

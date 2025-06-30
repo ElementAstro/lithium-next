@@ -13,7 +13,7 @@ Description: QHY Camera Implementation with full SDK integration
 *************************************************/
 
 #include "qhy_camera.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/utils/string.hpp"
 
 #include <algorithm>

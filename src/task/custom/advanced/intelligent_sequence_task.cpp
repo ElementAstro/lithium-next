@@ -9,7 +9,7 @@
 #include "deep_sky_sequence_task.hpp"
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 
 namespace lithium::task::task {

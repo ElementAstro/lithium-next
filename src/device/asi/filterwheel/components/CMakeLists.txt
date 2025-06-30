@@ -44,7 +44,7 @@ target_include_directories(asi_filterwheel_components
 # Link libraries
 target_link_libraries(asi_filterwheel_components
     PRIVATE
-        atom::log
+        atom
         ${CMAKE_THREAD_LIBS_INIT}
 )
 

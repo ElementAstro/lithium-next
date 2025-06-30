@@ -46,7 +46,7 @@ if(ENABLE_ATIK_CAMERA)
             PUBLIC
                 ${ATIK_LIBRARY}
                 lithium_camera_template
-                atom::log
+                atom
             PRIVATE
                 Threads::Threads
         )

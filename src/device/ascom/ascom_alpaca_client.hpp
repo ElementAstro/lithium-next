@@ -33,7 +33,7 @@ Description: Enhanced ASCOM Alpaca REST Client - API Version 9 Compatible
 #include <curl/curl.h>
 #endif
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 
 // Use modern JSON library

@@ -15,7 +15,7 @@ Description: Enhanced Camera Factory for creating camera instances
 #pragma once
 
 #include "../template/camera.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <memory>
 #include <string>

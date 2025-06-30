@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::tools {
 auto extractWCSParams(const std::string& wcsInfo) -> WCSParams {

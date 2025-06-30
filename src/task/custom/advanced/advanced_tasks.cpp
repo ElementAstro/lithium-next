@@ -1,5 +1,5 @@
 #include "advanced_tasks.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 
 namespace lithium::task::advanced {

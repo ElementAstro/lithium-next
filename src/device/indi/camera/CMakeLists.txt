@@ -49,10 +49,11 @@ add_library(indi_camera_components STATIC ${INDI_CAMERA_SOURCES} ${INDI_CAMERA_H
 # Include directories
 target_include_directories(indi_camera_components
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/..
-        ${CMAKE_CURRENT_SOURCE_DIR}/../..
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../..>
+        $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/core
         ${CMAKE_CURRENT_SOURCE_DIR}/exposure
@@ -113,7 +114,14 @@ install(FILES ${INDI_CAMERA_HEADERS}
 add_library(lithium::indi_camera ALIAS indi_camera_components)
 
 # Export target
-install(EXPORT indi_camera_componentsTargets
+install(TARGETS indi_camera_components
+    EXPORT INDICameraTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(EXPORT INDICameraTargets
     FILE LithiumINDICameraTargets.cmake
     NAMESPACE lithium::
     DESTINATION lib/cmake/lithium

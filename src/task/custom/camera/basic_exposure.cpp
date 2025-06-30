@@ -13,7 +13,7 @@
 #include "atom/function/concept.hpp"
 #include "atom/function/enum.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 
 #include <spdlog/spdlog.h>

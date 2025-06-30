@@ -17,7 +17,7 @@ system, providing simplified access to camera functionality.
 
 #include "main.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::device::ascom::camera {
 

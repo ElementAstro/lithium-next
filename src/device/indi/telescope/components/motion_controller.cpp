@@ -18,7 +18,7 @@ slewing, directional movement, speed control, and motion state tracking.
 #include "motion_controller.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/utils/string.hpp"
 
 #include <cmath>

@@ -3,21 +3,21 @@
 
 # Header files
 set(GUIDE_TASK_HEADERS
-    connection_tasks.hpp
-    calibration_tasks.hpp
-    control_tasks.hpp
-    dither_tasks.hpp
-    exposure_tasks.hpp
+    connection.hpp
+    calibration.hpp
+    control.hpp
+    dither.hpp
+    exposure.hpp
     all_tasks.hpp
 )
 
 # Source files
 set(GUIDE_TASK_SOURCES
-    connection_tasks.cpp
-    calibration_tasks.cpp
-    control_tasks.cpp
+    connection.cpp
+    calibration.cpp
+    control.cpp
     dither_tasks.cpp
-    exposure_tasks.cpp
+    exposure.cpp
     all_tasks.cpp
 )
 
@@ -50,7 +50,7 @@ target_link_libraries(lithium_task_guide_tasks
         lithium_task_common
     PRIVATE
         spdlog::spdlog
-        nlohmann_json::nlohmann_json
+        # nlohmann_json is header-only, no linking needed
         atom_error
 )
 

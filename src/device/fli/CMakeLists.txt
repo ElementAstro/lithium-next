@@ -46,7 +46,7 @@ if(ENABLE_FLI_CAMERA)
             PUBLIC
                 ${FLI_LIBRARY}
                 lithium_camera_template
-                atom::log
+                atom
             PRIVATE
                 Threads::Threads
         )

@@ -2,7 +2,6 @@
 #define LITHIUM_TASK_CAMERA_TELESCOPE_TASKS_HPP
 
 #include "../../task.hpp"
-#include "common.hpp"
 
 namespace lithium::task::task {
 

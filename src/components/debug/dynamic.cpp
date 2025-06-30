@@ -24,7 +24,7 @@
 #endif
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/system/command.hpp"
 #include "atom/type/json.hpp"
 

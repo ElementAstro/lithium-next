@@ -18,7 +18,7 @@ monitoring, cooler control, and thermal management.
 #include "temperature_controller.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/utils/time.hpp"
 
 #include <algorithm>

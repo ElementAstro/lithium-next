@@ -14,7 +14,7 @@ Description: ASI Camera dedicated module implementation
 
 #include "main.hpp"
 #include "controller.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::device::asi::camera {
 

@@ -18,7 +18,7 @@ including gain, offset, binning, ROI, and other camera parameters.
 #include "property_manager.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "device/template/camera.hpp"
 
 namespace lithium::device::ascom::camera::components {

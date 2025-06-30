@@ -15,7 +15,7 @@
 #include "atom/io/file_permission.hpp"
 #include "atom/io/glob.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/system/command.hpp"
 #include "atom/system/env.hpp"
 #include "atom/type/json.hpp"

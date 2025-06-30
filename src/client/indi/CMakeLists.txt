@@ -36,7 +36,7 @@ set(TEST_FILES
 
 # Specify the external libraries
 set(LIBS
-    loguru
+    spdlog::spdlog
     atom-system
     atom-io
     tinyxml2

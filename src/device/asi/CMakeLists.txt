@@ -46,7 +46,7 @@ if(ASI_FOUND)
     target_link_libraries(lithium_asi_camera
         PUBLIC
             lithium_device_template
-            atom::atom
+            atom
             ${ASI_LIBRARY}
         PRIVATE
             pthread

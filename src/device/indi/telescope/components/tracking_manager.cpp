@@ -18,7 +18,7 @@ track modes, track rates, tracking state control, and tracking accuracy.
 #include "tracking_manager.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/utils/string.hpp"
 
 #include <cmath>

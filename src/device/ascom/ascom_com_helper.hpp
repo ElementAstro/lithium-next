@@ -32,7 +32,7 @@ Description: ASCOM COM Helper Utilities
 #include <functional>
 #include <mutex>
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 // COM object wrapper with automatic cleanup
 class COMObjectWrapper {

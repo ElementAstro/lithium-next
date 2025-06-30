@@ -18,7 +18,7 @@ single exposures, exposure sequences, progress tracking, and result handling.
 #include "exposure_manager.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <thread>

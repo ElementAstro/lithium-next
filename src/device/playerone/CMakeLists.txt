@@ -46,7 +46,7 @@ if(ENABLE_PLAYERONE_CAMERA)
             PUBLIC
                 ${PLAYERONE_LIBRARY}
                 lithium_camera_template
-                atom::log
+                atom
             PRIVATE
                 Threads::Threads
         )

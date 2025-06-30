@@ -9,19 +9,20 @@ find_package(spdlog REQUIRED)
 
 # Define platesolve task sources
 set(PLATESOLVE_TASK_SOURCES
-    platesolve_common.cpp
-    platesolve_exposure.cpp
-    centering_task.cpp
-    mosaic_task.cpp
+    common.cpp
+    exposure.cpp
+    centering.cpp
+    mosaic.cpp
+    platesolve_tasks.cpp
     task_registration.cpp
 )
 
 # Define platesolve task headers
 set(PLATESOLVE_TASK_HEADERS
-    platesolve_common.hpp
-    platesolve_exposure.hpp
-    centering_task.hpp
-    mosaic_task.hpp
+    common.hpp
+    exposure.hpp
+    centering.hpp
+    mosaic.hpp
     platesolve_tasks.hpp
 )
 

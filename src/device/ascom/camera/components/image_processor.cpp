@@ -18,7 +18,7 @@ and post-processing operations for captured images.
 #include "image_processor.hpp"
 #include "hardware_interface.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::device::ascom::camera::components {
 

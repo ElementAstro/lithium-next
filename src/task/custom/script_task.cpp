@@ -1,5 +1,5 @@
 #include "script_task.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "factory.hpp"
 #include "spdlog/spdlog.h"
 #include "script/python_caller.hpp"

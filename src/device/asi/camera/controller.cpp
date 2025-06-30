@@ -13,7 +13,7 @@ Description: Modular ASI Camera Controller V2 Implementation
 *************************************************/
 
 #include "controller.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::device::asi::camera {
 

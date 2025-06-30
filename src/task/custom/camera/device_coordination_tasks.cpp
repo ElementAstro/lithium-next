@@ -8,7 +8,7 @@
 #include "../../task.hpp"
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 
 #define MOCK_DEVICES

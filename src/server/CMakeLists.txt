@@ -21,7 +21,7 @@ set(PROJECT_FILES
 set(PROJECT_LIBS
     atom
     lithium_config
-    loguru
+    spdlog::spdlog
     yaml-cpp
     ${CMAKE_THREAD_LIBS_INIT}
 )

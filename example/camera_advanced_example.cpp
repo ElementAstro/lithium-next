@@ -13,7 +13,7 @@ Description: Advanced example demonstrating multi-camera coordination and profes
 *************************************************/
 
 #include "../src/device/camera_factory.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <iostream>
 #include <thread>

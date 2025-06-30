@@ -46,7 +46,7 @@ if(QHY_FOUND)
     target_link_libraries(lithium_qhy_camera
         PUBLIC
             lithium_device_template
-            atom::atom
+            atom
             ${QHY_LIBRARY}
         PRIVATE
             pthread

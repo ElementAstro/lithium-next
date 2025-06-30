@@ -39,7 +39,7 @@ target_link_libraries(telescope_modular_components
     ${INDI_LIBRARIES}
     spdlog::spdlog
     atom-component
-    nlohmann_json::nlohmann_json
+    # nlohmann_json is header-only, no linking needed
 )
 
 # Install headers

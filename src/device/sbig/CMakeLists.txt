@@ -46,7 +46,7 @@ if(ENABLE_SBIG_CAMERA)
             PUBLIC
                 ${SBIG_LIBRARY}
                 lithium_camera_template
-                atom::log
+                atom
             PRIVATE
                 Threads::Threads
         )

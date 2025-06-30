@@ -17,7 +17,7 @@ and calibration.
 *************************************************/
 
 #include "controller/asi_filterwheel_controller_v2.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include <iostream>
 #include <thread>
 #include <chrono>

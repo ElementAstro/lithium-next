@@ -11,7 +11,7 @@
 
 #include <functional>
 #include <string>
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 
 // Import specific camera task types

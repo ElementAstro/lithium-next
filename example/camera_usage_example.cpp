@@ -13,7 +13,7 @@ Description: Comprehensive example demonstrating QHY and ASI camera usage
 *************************************************/
 
 #include "camera_factory.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 #include <iostream>
 #include <thread>
