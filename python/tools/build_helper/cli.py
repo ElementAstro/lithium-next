@@ -7,6 +7,7 @@ Command-line interface for the build system helper.
 import argparse
 import os
 import sys
+import asyncio
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -49,7 +50,7 @@ def parse_args() -> argparse.Namespace:
         help="Build type for CMake")
 
     meson_group = parser.add_argument_group("Meson options")
-    meson_group.add_argument("--meson_build_type", choices=[
+    meson_group.add_argument("--meson_build_type", choices=[ 
         "debug", "release", "debugoptimized"], default="debug",
         help="Build type for Meson")
 
@@ -141,8 +142,8 @@ def setup_logging(args: argparse.Namespace) -> None:
     logger.debug(f"Logging initialized at {log_level} level")
 
 
-def main() -> int:
-    """Main function to run the build system helper from command line."""
+async def amain() -> int:
+    """Main asynchronous function to run the build system helper from command line."""
     args = parse_args()
     setup_logging(args)
 
@@ -179,6 +180,7 @@ def main() -> int:
                     f"Invalid environment variable format: {var} (expected VAR=value)")
 
         # Create the builder based on the specified build system
+        builder = None
         match args.builder:
             case "cmake":
                 with logger.contextualize(builder="cmake"):
@@ -221,26 +223,30 @@ def main() -> int:
                 logger.error(f"Unsupported builder type: {args.builder}")
                 return 1
 
+        if builder is None:
+            logger.error("Builder could not be initialized.")
+            return 1
+
         # Execute build operations with logging context
         with logger.contextualize(builder=args.builder):
             # Perform cleaning if requested
             if args.clean:
                 try:
-                    builder.clean()
+                    await builder.clean()
                 except Exception as e:
                     logger.error(f"Failed to clean build directory: {e}")
                     return 1
 
             # Configure the build system
             try:
-                builder.configure()
+                await builder.configure()
             except ConfigurationError as e:
                 logger.error(f"Configuration failed: {e}")
                 return 1
 
             # Build the project with the specified target
             try:
-                builder.build(args.target)
+                await builder.build(args.target)
             except BuildError as e:
                 logger.error(f"Build failed: {e}")
                 return 1
@@ -248,7 +254,7 @@ def main() -> int:
             # Run tests if requested
             if args.test:
                 try:
-                    builder.test()
+                    await builder.test()
                 except TestError as e:
                     logger.error(f"Tests failed: {e}")
                     return 1
@@ -256,7 +262,7 @@ def main() -> int:
             # Generate documentation if requested
             if args.generate_docs:
                 try:
-                    builder.generate_docs(args.doc_target)
+                    await builder.generate_docs(args.doc_target)
                 except BuildError as e:
                     logger.error(f"Documentation generation failed: {e}")
                     return 1
@@ -264,7 +270,7 @@ def main() -> int:
             # Install the project if requested
             if args.install:
                 try:
-                    builder.install()
+                    await builder.install()
                 except InstallationError as e:
                     logger.error(f"Installation failed: {e}")
                     return 1
@@ -277,6 +283,11 @@ def main() -> int:
         if args.verbose:
             logger.exception("Detailed error information:")
         return 1
+
+
+def main() -> int:
+    """Main function to run the build system helper from command line."""
+    return asyncio.run(amain())
 
 
 if __name__ == "__main__":

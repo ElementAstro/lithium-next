@@ -5,7 +5,6 @@ MesonBuilder implementation for building projects using Meson.
 """
 
 import os
-import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -47,35 +46,34 @@ class MesonBuilder(BuildHelperBase):
         self.build_type = build_type
 
         # Meson-specific cache keys
-        self._meson_version = self._get_meson_version()
+        # self._meson_version = await self._get_meson_version() # Cannot call async in __init__
 
         logger.debug(f"MesonBuilder initialized with build_type={build_type}")
 
-    def _get_meson_version(self) -> str:
-        """Get the Meson version string."""
+    async def _get_meson_version(self) -> str:
+        """Get the Meson version string asynchronously."""
         try:
-            result = subprocess.run(
-                ["meson", "--version"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            version = result.stdout.strip()
-            logger.debug(f"Detected Meson: {version}")
-            return version
-        except subprocess.SubprocessError:
-            logger.warning("Failed to determine Meson version")
+            result = await self.run_command(["meson", "--version"])
+            if result.success:
+                version = result.output.strip()  # Changed from stdout to output
+                logger.debug(f"Detected Meson: {version}")
+                return version
+            else:
+                logger.warning(
+                    f"Failed to determine Meson version: {result.error}")
+                return ""
+        except Exception as e:
+            logger.warning(
+                f"Failed to determine Meson version due to exception: {e}")
             return ""
 
-    def configure(self) -> BuildResult:
-        """Configure the Meson build system."""
+    async def configure(self) -> BuildResult:
+        """Configure the Meson build system asynchronously."""
         self.status = BuildStatus.CONFIGURING
         logger.info(f"Configuring Meson build in {self.build_dir}")
 
-        # Create build directory if it doesn't exist
         self.build_dir.mkdir(parents=True, exist_ok=True)
 
-        # Construct Meson setup command
         meson_args = [
             "meson",
             "setup",
@@ -83,14 +81,13 @@ class MesonBuilder(BuildHelperBase):
             str(self.source_dir),
             f"--buildtype={self.build_type}",
             f"--prefix={self.install_prefix}",
-        ] + self.options
+        ] + (self.options or [])  # Ensure options is not None
 
-        # Add verbosity flag if requested
         if self.verbose:
             meson_args.append("--verbose")
 
-        # Run Meson setup
-        result = self.run_command(*meson_args)
+        # Fixed: Pass the list directly instead of unpacking with *
+        result = await self.run_command(meson_args)
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -103,13 +100,12 @@ class MesonBuilder(BuildHelperBase):
 
         return result
 
-    def build(self, target: str = "") -> BuildResult:
-        """Build the project using Meson."""
+    async def build(self, target: str = "") -> BuildResult:
+        """Build the project using Meson asynchronously."""
         self.status = BuildStatus.BUILDING
         logger.info(
             f"Building {'target ' + target if target else 'project'} using Meson")
 
-        # Construct Meson compile command
         build_cmd = [
             "meson",
             "compile",
@@ -118,16 +114,14 @@ class MesonBuilder(BuildHelperBase):
             f"-j{self.parallel}"
         ]
 
-        # Add target if specified
         if target:
             build_cmd.append(target)
 
-        # Add verbosity flag if requested
         if self.verbose:
             build_cmd.append("--verbose")
 
-        # Run Meson compile
-        result = self.run_command(*build_cmd)
+        # Fixed: Pass the list directly instead of unpacking with *
+        result = await self.run_command(build_cmd)
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -140,14 +134,18 @@ class MesonBuilder(BuildHelperBase):
 
         return result
 
-    def install(self) -> BuildResult:
-        """Install the project to the specified prefix."""
+    async def install(self) -> BuildResult:
+        """Install the project to the specified prefix asynchronously."""
         self.status = BuildStatus.INSTALLING
         logger.info(f"Installing project to {self.install_prefix}")
 
-        # Run Meson install
-        result = self.run_command(
-            "meson", "install", "-C", str(self.build_dir))
+        # Fixed: Pass as a list instead of separate arguments
+        result = await self.run_command([
+            "meson",
+            "install",
+            "-C",
+            str(self.build_dir)
+        ])
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -161,12 +159,11 @@ class MesonBuilder(BuildHelperBase):
 
         return result
 
-    def test(self) -> BuildResult:
-        """Run tests using Meson, with error logs printed on failures."""
+    async def test(self) -> BuildResult:
+        """Run tests using Meson, with error logs printed on failures asynchronously."""
         self.status = BuildStatus.TESTING
         logger.info("Running tests with Meson")
 
-        # Construct Meson test command
         test_cmd = [
             "meson",
             "test",
@@ -178,8 +175,8 @@ class MesonBuilder(BuildHelperBase):
         if self.verbose:
             test_cmd.append("-v")
 
-        # Run Meson test
-        result = self.run_command(*test_cmd)
+        # Fixed: Pass the list directly instead of unpacking with *
+        result = await self.run_command(test_cmd)
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -191,14 +188,13 @@ class MesonBuilder(BuildHelperBase):
 
         return result
 
-    def generate_docs(self, doc_target: str = "doc") -> BuildResult:
-        """Generate documentation using the specified documentation target."""
+    async def generate_docs(self, doc_target: str = "doc") -> BuildResult:
+        """Generate documentation using the specified documentation target asynchronously."""
         self.status = BuildStatus.GENERATING_DOCS
         logger.info(f"Generating documentation with target '{doc_target}'")
 
         try:
-            # Build the documentation target
-            result = self.build(doc_target)
+            result = await self.build(doc_target)
             if result.success:
                 logger.success(
                     f"Documentation generated successfully with target '{doc_target}'")

@@ -28,6 +28,20 @@ class CppVersion(Enum):
     CPP20 = "c++20"   # Published in 2020 (concepts, ranges, coroutines)
     CPP23 = "c++23"   # Latest standard (modules improvements, stacktrace)
 
+    @staticmethod
+    def resolve_cpp_version(version: Union[str, 'CppVersion']) -> 'CppVersion':
+        if isinstance(version, CppVersion):
+            return version
+        try:
+            return CppVersion(version)
+        except ValueError:
+            # Handle common variations like "c++17", "cpp17", "C++17"
+            normalized_version = version.lower().replace("c++", "cpp").upper()
+            if not normalized_version.startswith("CPP"):
+                normalized_version = "CPP" + normalized_version
+            return CppVersion[normalized_version]
+
+
 
 class CompilerType(Enum):
     """Enum representing supported compiler types."""

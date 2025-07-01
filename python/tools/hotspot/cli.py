@@ -1,276 +1,139 @@
 #!/usr/bin/env python3
 """
-Command-line interface for WiFi Hotspot Manager.
-Provides a user-friendly interface for managing WiFi hotspots from the command line.
+Asynchronous command-line interface for the WiFi Hotspot Manager.
 """
 
-import sys
 import argparse
 import asyncio
+import sys
+from typing import Any, Dict
 
 from loguru import logger
-from .models import AuthenticationType, EncryptionType, BandType
+
 from .hotspot_manager import HotspotManager
+from .models import AuthenticationType, BandType, EncryptionType
 
 
-def setup_logger(verbose: bool = False):
-    """Configure loguru logger with appropriate verbosity level."""
-    # Remove default logger
+def setup_logger(verbose: bool) -> None:
     logger.remove()
-
-    # Set log level based on verbosity
-    log_level = "DEBUG" if verbose else "INFO"
-
-    # Add a handler with custom format
-    logger.add(
-        sys.stderr,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-        level=log_level
-    )
+    level = "DEBUG" if verbose else "INFO"
+    logger.add(sys.stderr, level=level, format="<level>{message}</level>")
 
 
-def main():
-    """
-    Main entry point for command-line usage.
+class HotspotCLI:
+    def __init__(self) -> None:
+        self.manager = HotspotManager()
+        self.parser = self._create_parser()
 
-    Parses command-line arguments and executes the requested action.
-    """
-    parser = argparse.ArgumentParser(
-        description='Advanced WiFi Hotspot Manager')
-    subparsers = parser.add_subparsers(dest='action', help='Action to perform')
+    def _create_parser(self) -> argparse.ArgumentParser:
+        parser = argparse.ArgumentParser(description="WiFi Hotspot Manager")
+        parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
 
-    # Start command
-    start_parser = subparsers.add_parser('start', help='Start a WiFi hotspot')
-    start_parser.add_argument('--name', help='Hotspot name')
-    start_parser.add_argument('--password', help='Hotspot password')
-    start_parser.add_argument('--authentication',
-                              choices=[t.value for t in AuthenticationType],
-                              help='Authentication type')
-    start_parser.add_argument('--encryption',
-                              choices=[t.value for t in EncryptionType],
-                              help='Encryption type')
-    start_parser.add_argument('--channel', type=int, help='Channel number')
-    start_parser.add_argument('--interface', help='Network interface')
-    start_parser.add_argument('--band',
-                              choices=[b.value for b in BandType],
-                              help='WiFi band')
-    start_parser.add_argument('--hidden', action='store_true',
-                              help='Make the hotspot hidden (not broadcast)')
-    start_parser.add_argument(
-        '--max-clients', type=int, help='Maximum number of clients')
+        subparsers = parser.add_subparsers(dest="action", required=True)
+        self._add_start_parser(subparsers)
+        self._add_stop_parser(subparsers)
+        self._add_status_parser(subparsers)
+        self._add_restart_parser(subparsers)
+        self._add_clients_parser(subparsers)
 
-    # Stop command
-    subparsers.add_parser('stop', help='Stop the WiFi hotspot')
+        return parser
 
-    # Status command
-    subparsers.add_parser('status', help='Show hotspot status')
+    def _add_start_parser(self, subparsers: Any) -> None:
+        p = subparsers.add_parser("start", help="Start a hotspot.")
+        p.add_argument("--name", help="SSID of the hotspot.")
+        p.add_argument("--password", help="Password for the hotspot.")
+        p.add_argument("--auth", choices=[e.value for e in AuthenticationType])
+        p.add_argument("--enc", choices=[e.value for e in EncryptionType])
+        p.add_argument("--band", choices=[e.value for e in BandType])
+        p.add_argument("--channel", type=int)
+        p.add_argument("--hidden", action="store_true")
 
-    # List command
-    subparsers.add_parser('list', help='List active connections')
+    def _add_stop_parser(self, subparsers: Any) -> None:
+        subparsers.add_parser("stop", help="Stop the hotspot.")
 
-    # Config command
-    config_parser = subparsers.add_parser(
-        'config', help='Update hotspot configuration')
-    config_parser.add_argument('--name', help='Hotspot name')
-    config_parser.add_argument('--password', help='Hotspot password')
-    config_parser.add_argument('--authentication',
-                               choices=[t.value for t in AuthenticationType],
-                               help='Authentication type')
-    config_parser.add_argument('--encryption',
-                               choices=[t.value for t in EncryptionType],
-                               help='Encryption type')
-    config_parser.add_argument('--channel', type=int, help='Channel number')
-    config_parser.add_argument('--interface', help='Network interface')
-    config_parser.add_argument('--band',
-                               choices=[b.value for b in BandType],
-                               help='WiFi band')
-    config_parser.add_argument('--hidden', action='store_true',
-                               help='Make the hotspot hidden (not broadcast)')
-    config_parser.add_argument(
-        '--max-clients', type=int, help='Maximum number of clients')
+    def _add_status_parser(self, subparsers: Any) -> None:
+        subparsers.add_parser("status", help="Show hotspot status.")
 
-    # Restart command
-    restart_parser = subparsers.add_parser(
-        'restart', help='Restart the WiFi hotspot')
-    restart_parser.add_argument('--name', help='Hotspot name')
-    restart_parser.add_argument('--password', help='Hotspot password')
-    restart_parser.add_argument('--authentication',
-                                choices=[t.value for t in AuthenticationType],
-                                help='Authentication type')
-    restart_parser.add_argument('--encryption',
-                                choices=[t.value for t in EncryptionType],
-                                help='Encryption type')
-    restart_parser.add_argument('--channel', type=int, help='Channel number')
-    restart_parser.add_argument('--interface', help='Network interface')
-    restart_parser.add_argument('--band',
-                                choices=[b.value for b in BandType],
-                                help='WiFi band')
-    restart_parser.add_argument('--hidden', action='store_true',
-                                help='Make the hotspot hidden (not broadcast)')
-    restart_parser.add_argument(
-        '--max-clients', type=int, help='Maximum number of clients')
+    def _add_restart_parser(self, subparsers: Any) -> None:
+        p = subparsers.add_parser("restart", help="Restart the hotspot.")
+        p.add_argument("--name", help="New SSID for the hotspot.")
+        p.add_argument("--password", help="New password for the hotspot.")
 
-    # Interfaces command
-    subparsers.add_parser(
-        'interfaces', help='List available network interfaces')
+    def _add_clients_parser(self, subparsers: Any) -> None:
+        p = subparsers.add_parser("clients", help="List or monitor connected clients.")
+        p.add_argument("--monitor", action="store_true", help="Monitor clients in real-time.")
+        p.add_argument("--interval", type=int, default=5, help="Monitoring interval.")
 
-    # Clients command
-    clients_parser = subparsers.add_parser(
-        'clients', help='List connected clients')
-    clients_parser.add_argument('--monitor', action='store_true',
-                                help='Continuously monitor clients')
-    clients_parser.add_argument('--interval', type=int, default=5,
-                                help='Monitoring interval in seconds')
+    async def run(self) -> int:
+        args = self.parser.parse_args()
+        setup_logger(args.verbose)
 
-    # Channels command
-    channels_parser = subparsers.add_parser(
-        'channels', help='List available WiFi channels')
-    channels_parser.add_argument(
-        '--interface', help='Network interface to check')
+        action_map = {
+            "start": self.start_hotspot,
+            "stop": self.stop_hotspot,
+            "status": self.show_status,
+            "restart": self.restart_hotspot,
+            "clients": self.handle_clients,
+        }
 
-    # Add global verbose flag
-    parser.add_argument('--verbose', '-v', action='store_true',
-                        help='Enable verbose logging')
-
-    # Parse arguments
-    args = parser.parse_args()
-
-    # If no arguments were provided, show help
-    if not args.action:
-        parser.print_help()
-        return 1
-
-    # Configure logger based on verbose flag
-    setup_logger(args.verbose)
-
-    # Create the hotspot manager
-    manager = HotspotManager()
-
-    # Process commands using pattern matching (Python 3.10+)
-    match args.action:
-        case 'start':
-            # Collect parameters for start command
-            params = {}
-            for param in ['name', 'password', 'authentication', 'encryption',
-                          'channel', 'interface', 'band', 'hidden', 'max_clients']:
-                if hasattr(args, param) and getattr(args, param) is not None:
-                    params[param] = getattr(args, param)
-
-            # Convert string enum values to actual enums
-            if 'authentication' in params:
-                params['authentication'] = AuthenticationType(
-                    params['authentication'])
-            if 'encryption' in params:
-                params['encryption'] = EncryptionType(params['encryption'])
-            if 'band' in params:
-                params['band'] = BandType(params['band'])
-
-            success = manager.start(**params)
-            return 0 if success else 1
-
-        case 'stop':
-            success = manager.stop()
-            return 0 if success else 1
-
-        case 'status':
-            manager.status()
+        try:
+            await action_map[args.action](args)
             return 0
-
-        case 'list':
-            manager.list()
-            return 0
-
-        case 'config':
-            # Collect parameters for config command
-            params = {}
-            for param in ['name', 'password', 'authentication', 'encryption',
-                          'channel', 'interface', 'band', 'hidden', 'max_clients']:
-                if hasattr(args, param) and getattr(args, param) is not None:
-                    params[param] = getattr(args, param)
-
-            # Convert string enum values to actual enums
-            if 'authentication' in params:
-                params['authentication'] = AuthenticationType(
-                    params['authentication'])
-            if 'encryption' in params:
-                params['encryption'] = EncryptionType(params['encryption'])
-            if 'band' in params:
-                params['band'] = BandType(params['band'])
-
-            success = manager.set(**params)
-            return 0 if success else 1
-
-        case 'restart':
-            # Collect parameters for restart command
-            params = {}
-            for param in ['name', 'password', 'authentication', 'encryption',
-                          'channel', 'interface', 'band', 'hidden', 'max_clients']:
-                if hasattr(args, param) and getattr(args, param) is not None:
-                    params[param] = getattr(args, param)
-
-            # Convert string enum values to actual enums
-            if 'authentication' in params:
-                params['authentication'] = AuthenticationType(
-                    params['authentication'])
-            if 'encryption' in params:
-                params['encryption'] = EncryptionType(params['encryption'])
-            if 'band' in params:
-                params['band'] = BandType(params['band'])
-
-            success = manager.restart(**params)
-            return 0 if success else 1
-
-        case 'interfaces':
-            interfaces = manager.get_network_interfaces()
-            if interfaces:
-                print("**Available network interfaces:**")
-                for interface in interfaces:
-                    print(
-                        f"- {interface['name']} ({interface['type']}): {interface['state']}")
-            else:
-                print("No network interfaces found")
-            return 0
-
-        case 'clients':
-            if args.monitor:
-                # Run asynchronously for monitoring
-                try:
-                    print("Monitoring clients... Press Ctrl+C to stop")
-                    asyncio.run(manager.monitor_clients(
-                        interval=args.interval))
-                except KeyboardInterrupt:
-                    print("\nMonitoring stopped")
-            else:
-                # Just show current clients
-                clients = manager.get_connected_clients()
-                if clients:
-                    print(f"**{len(clients)} clients connected:**")
-                    for client in clients:
-                        ip = client.get('ip_address', 'Unknown IP')
-                        hostname = client.get('hostname', '')
-                        if hostname:
-                            print(
-                                f"- {client['mac_address']} ({ip}) - {hostname}")
-                        else:
-                            print(f"- {client['mac_address']} ({ip})")
-                else:
-                    print("No clients connected")
-            return 0
-
-        case 'channels':
-            interface = args.interface or manager.current_config.interface
-            channels = manager.get_available_channels(interface)
-            if channels:
-                print(f"**Available channels for {interface}:**")
-                print(", ".join(map(str, channels)))
-            else:
-                print(f"No channel information available for {interface}")
-            return 0
-
-        case _:
-            parser.print_help()
+        except (ValueError, KeyError) as e:
+            logger.error(f"Error: {e}")
             return 1
+
+    async def start_hotspot(self, args: argparse.Namespace) -> None:
+        params = self._collect_params(args)
+        if await self.manager.start(**params):
+            logger.info("Hotspot started successfully.")
+        else:
+            logger.error("Failed to start hotspot.")
+
+    async def stop_hotspot(self, args: argparse.Namespace) -> None:
+        if await self.manager.stop():
+            logger.info("Hotspot stopped successfully.")
+        else:
+            logger.error("Failed to stop hotspot.")
+
+    async def show_status(self, args: argparse.Namespace) -> None:
+        status = await self.manager.get_status()
+        if not status.get("running"):
+            print("Hotspot is not running.")
+            return
+        for key, value in status.items():
+            print(f"{key.replace('_', ' ').title()}: {value}")
+
+    async def restart_hotspot(self, args: argparse.Namespace) -> None:
+        params = self._collect_params(args)
+        if await self.manager.restart(**params):
+            logger.info("Hotspot restarted successfully.")
+        else:
+            logger.error("Failed to restart hotspot.")
+
+    async def handle_clients(self, args: argparse.Namespace) -> None:
+        if args.monitor:
+            await self.manager.monitor_clients(args.interval)
+        else:
+            clients = await self.manager.get_connected_clients()
+            print(f"Found {len(clients)} clients:")
+            for client in clients:
+                print(f"- {client.mac_address} (IP: {client.ip_address or 'N/A'})")
+
+    def _collect_params(self, args: argparse.Namespace) -> Dict[str, Any]:
+        return {k: v for k, v in vars(args).items() if v is not None and k != "action"}
+
+
+def main() -> None:
+    cli = HotspotCLI()
+    try:
+        asyncio.run(cli.run())
+    except KeyboardInterrupt:
+        logger.info("Exiting.")
+    except Exception as e:
+        logger.critical(f"An unexpected error occurred: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

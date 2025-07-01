@@ -145,7 +145,8 @@ Examples:
         return 0
 
     # Parse C++ version
-    cpp_version = args.cpp_version
+    from .core_types import CppVersion # Import CppVersion here to avoid circular dependency
+    cpp_version = CppVersion.resolve_cpp_version(args.cpp_version)
 
     # Prepare compile options
     compile_options: CompileOptions = {}

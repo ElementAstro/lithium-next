@@ -22,7 +22,12 @@ classifiers = [
     "Topic :: Security :: Cryptography",
     "Topic :: System :: Systems Administration",
 ]
-dependencies = ["cryptography>=41.0.0", "loguru>=0.7.0"]
+dependencies = [
+    "cryptography>=41.0.0",
+    "loguru>=0.7.0",
+    "typer[all]>=0.9.0",
+    "toml>=0.10.0",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -38,7 +43,7 @@ dev = [
 "Bug Tracker" = "https://github.com/yourusername/cert_manager/issues"
 
 [project.scripts]
-certmanager = "cert_manager.cert_cli:run_cli"
+certmanager = "cert_manager.cert_cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cert_manager"]

@@ -1,4 +1,3 @@
-
 # WiFi Hotspot Manager
 
 A comprehensive utility for managing WiFi hotspots on Linux systems using NetworkManager. This package provides both a command-line interface and a programmable API, allowing you to easily create, manage, and monitor WiFi hotspots.

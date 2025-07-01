@@ -34,8 +34,7 @@ def change_directory(path: Path):
     finally:
         os.chdir(original_dir)
 
-
-def ensure_path(path: Union[str, Path]) -> Path:
+def ensure_path(path: Union[str, Path, None]) -> Optional[Path]:
     """
     Convert a string to a Path object if it isn't already.
 
@@ -45,8 +44,9 @@ def ensure_path(path: Union[str, Path]) -> Path:
     Returns:
         Path: A Path object representing the input path.
     """
+    if path is None:
+        return None
     return path if isinstance(path, Path) else Path(path)
-
 
 def validate_repository(func: Callable) -> Callable:
     """

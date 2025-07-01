@@ -1,24 +1,10 @@
 #!/usr/bin/env python3
 """
-Main entry point for running nginx_manager as a Python module.
+Main entry point for running the async nginx_manager as a Python module.
 """
 
 import sys
-from loguru import logger
-
-from .cli import NginxManagerCLI
-
-
-def main() -> int:
-    """
-    Main entry point for the command-line application.
-
-    Returns:
-        Exit code (0 for success, non-zero for failure)
-    """
-    cli = NginxManagerCLI()
-    return cli.run()
-
+from .cli import main
 
 if __name__ == "__main__":
     sys.exit(main())

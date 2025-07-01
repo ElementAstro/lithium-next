@@ -26,11 +26,11 @@ class PacmanManager:
     A comprehensive manager for the pacman package manager.
     Supports both Windows (MSYS2) and Linux environments.
     """
-    
+
     def __init__(self, config_path: Optional[Path] = None, use_sudo: bool = True):
         """
         Initialize the PacmanManager with platform detection and configuration.
-        
+
         Args:
             config_path: Custom path to pacman.conf
             use_sudo: Whether to use sudo for privileged operations (Linux only)
@@ -38,37 +38,38 @@ class PacmanManager:
         # Platform detection
         self.is_windows = platform.system().lower() == 'windows'
         self.use_sudo = use_sudo and not self.is_windows
-        
+
         # Set up config management
         self.config = PacmanConfig(config_path)
-        
+
         # Find pacman command
         self.pacman_command = self._find_pacman_command()
-        
+
         # Cache for installed packages
         self._installed_packages: Optional[Dict[str, PackageInfo]] = None
-        
+
         # Set up ThreadPoolExecutor for concurrent operations
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
-        
+
         # Check if AUR helper is available
         self.aur_helper = self._detect_aur_helper()
-        
-        logger.debug(f"PacmanManager initialized with pacman at {self.pacman_command}")
-        
+
+        logger.debug(
+            f"PacmanManager initialized with pacman at {self.pacman_command}")
+
     def __del__(self):
         """Cleanup resources when the instance is deleted"""
         if hasattr(self, '_executor'):
             self._executor.shutdown(wait=False)
-            
+
     @lru_cache(maxsize=1)
     def _find_pacman_command(self) -> str:
         """
         Locate the 'pacman' command based on the current platform.
-        
+
         Returns:
             Path to pacman executable
-        
+
         Raises:
             FileNotFoundError: If pacman is not found
         """
@@ -78,53 +79,55 @@ class PacmanManager:
                 r'C:\msys64\usr\bin\pacman.exe',
                 r'C:\msys32\usr\bin\pacman.exe'
             ]
-            
+
             for path in possible_paths:
                 if os.path.exists(path):
                     return path
-                    
-            raise FileNotFoundError("MSYS2 pacman not found. Please ensure MSYS2 is installed.")
+
+            raise FileNotFoundError(
+                "MSYS2 pacman not found. Please ensure MSYS2 is installed.")
         else:
             # For Linux, check if pacman is in PATH
             pacman_path = shutil.which('pacman')
             if not pacman_path:
-                raise FileNotFoundError("pacman not found in PATH. Is it installed?")
+                raise FileNotFoundError(
+                    "pacman not found in PATH. Is it installed?")
             return pacman_path
-            
+
     def _detect_aur_helper(self) -> Optional[str]:
         """
         Detect if any popular AUR helper is installed.
-        
+
         Returns:
             Name of the found AUR helper or None if not found
         """
         aur_helpers = ['yay', 'paru', 'pikaur', 'aurman', 'trizen']
-        
+
         for helper in aur_helpers:
             if shutil.which(helper):
                 logger.debug(f"Found AUR helper: {helper}")
                 return helper
-                
+
         logger.debug("No AUR helper detected")
         return None
-        
+
     def run_command(self, command: List[str], capture_output: bool = True) -> CommandResult:
         """
         Execute a command with proper handling for Windows/Linux differences.
-        
+
         Args:
             command: The command to execute as a list of strings
             capture_output: Whether to capture and return command output
-            
+
         Returns:
             CommandResult with execution results and metadata
-            
+
         Raises:
             CommandError: If the command execution fails
         """
         # Prepare the final command for execution
         final_command = command.copy()
-        
+
         # Handle Windows vs Linux differences
         if self.is_windows:
             if final_command[0] not in ['sudo', self.pacman_command]:
@@ -134,56 +137,67 @@ class PacmanManager:
             if self.use_sudo and final_command[0] != 'sudo' and os.geteuid() != 0:
                 if final_command[0] == 'pacman':
                     final_command.insert(0, 'sudo')
-                    
+
         logger.debug(f"Executing command: {' '.join(final_command)}")
-        
+
         try:
             # Execute the command
+            import time
+            start_time = time.time()
             if capture_output:
                 process = subprocess.run(
-                    final_command, 
+                    final_command,
                     check=False,  # Don't raise exception, we'll handle errors ourselves
-                    text=True, 
+                    text=True,
                     capture_output=True
                 )
             else:
                 # For commands where we want to see output in real-time
                 process = subprocess.run(
-                    final_command, 
+                    final_command,
                     check=False,
                     text=True
                 )
                 # Create empty strings for stdout/stderr since we didn't capture them
                 process.stdout = ""
                 process.stderr = ""
-                
+            end_time = time.time()
+
             result: CommandResult = {
                 "success": process.returncode == 0,
-                "stdout": process.stdout,
-                "stderr": process.stderr,
+                "stdout": process.stdout if isinstance(process.stdout, str) else str(process.stdout),
+                "stderr": process.stderr if isinstance(process.stderr, str) else str(process.stderr),
                 "command": final_command,
-                "return_code": process.returncode
+                "return_code": process.returncode,
+                "duration": end_time - start_time,
+                "timestamp": end_time,
+                "working_directory": os.getcwd(),
+                "environment": dict(os.environ),
             }
-            
+
             if process.returncode != 0:
-                logger.warning(f"Command {' '.join(final_command)} failed with code {process.returncode}")
+                logger.warning(
+                    f"Command {' '.join(final_command)} failed with code {process.returncode}")
                 logger.debug(f"Error output: {process.stderr}")
             else:
-                logger.debug(f"Command {' '.join(final_command)} executed successfully")
-                
+                logger.debug(
+                    f"Command {' '.join(final_command)} executed successfully")
+
             return result
-            
+
         except Exception as e:
-            logger.error(f"Exception executing command {' '.join(final_command)}: {str(e)}")
-            raise CommandError(f"Failed to execute command {' '.join(final_command)}", -1, str(e))
-            
+            logger.error(
+                f"Exception executing command {' '.join(final_command)}: {str(e)}")
+            raise CommandError(
+                f"Failed to execute command {' '.join(final_command)}", -1, str(e))
+
     async def run_command_async(self, command: List[str]) -> CommandResult:
         """
         Execute a command asynchronously using asyncio.
-        
+
         Args:
             command: The command to execute as a list of strings
-            
+
         Returns:
             CommandResult with execution results
         """
@@ -194,10 +208,10 @@ class PacmanManager:
     def update_package_database(self) -> CommandResult:
         """
         Update the package database to get the latest package information.
-        
+
         Returns:
             CommandResult with the operation result
-            
+
         Example:
             ```python
             result = pacman.update_package_database()
@@ -208,11 +222,11 @@ class PacmanManager:
             ```
         """
         return self.run_command(['pacman', '-Sy'])
-        
+
     async def update_package_database_async(self) -> CommandResult:
         """
         Asynchronously update the package database.
-        
+
         Returns:
             CommandResult with the operation result
         """
@@ -221,10 +235,10 @@ class PacmanManager:
     def upgrade_system(self, no_confirm: bool = False) -> CommandResult:
         """
         Upgrade the system by updating all installed packages to the latest versions.
-        
+
         Args:
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -232,14 +246,14 @@ class PacmanManager:
         if no_confirm:
             cmd.append('--noconfirm')
         return self.run_command(cmd, capture_output=False)
-        
+
     async def upgrade_system_async(self, no_confirm: bool = False) -> CommandResult:
         """
         Asynchronously upgrade the system.
-        
+
         Args:
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -251,11 +265,11 @@ class PacmanManager:
     def install_package(self, package_name: str, no_confirm: bool = False) -> CommandResult:
         """
         Install a specific package.
-        
+
         Args:
             package_name: Name of the package to install
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -263,15 +277,15 @@ class PacmanManager:
         if no_confirm:
             cmd.append('--noconfirm')
         return self.run_command(cmd, capture_output=False)
-        
+
     def install_packages(self, package_names: List[str], no_confirm: bool = False) -> CommandResult:
         """
         Install multiple packages in a single transaction.
-        
+
         Args:
             package_names: List of package names to install
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -279,15 +293,15 @@ class PacmanManager:
         if no_confirm:
             cmd.append('--noconfirm')
         return self.run_command(cmd, capture_output=False)
-        
+
     async def install_package_async(self, package_name: str, no_confirm: bool = False) -> CommandResult:
         """
         Asynchronously install a package.
-        
+
         Args:
             package_name: Name of the package to install
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -296,16 +310,16 @@ class PacmanManager:
             cmd.append('--noconfirm')
         return await self.run_command_async(cmd)
 
-    def remove_package(self, package_name: str, remove_deps: bool = False, 
-                      no_confirm: bool = False) -> CommandResult:
+    def remove_package(self, package_name: str, remove_deps: bool = False,
+                       no_confirm: bool = False) -> CommandResult:
         """
         Remove a specific package.
-        
+
         Args:
             package_name: Name of the package to remove
             remove_deps: Whether to remove dependencies that aren't required by other packages
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -316,17 +330,17 @@ class PacmanManager:
         if no_confirm:
             cmd.append('--noconfirm')
         return self.run_command(cmd, capture_output=False)
-        
+
     async def remove_package_async(self, package_name: str, remove_deps: bool = False,
-                                 no_confirm: bool = False) -> CommandResult:
+                                   no_confirm: bool = False) -> CommandResult:
         """
         Asynchronously remove a package.
-        
+
         Args:
             package_name: Name of the package to remove
             remove_deps: Whether to remove dependencies that aren't required by other packages
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -341,10 +355,10 @@ class PacmanManager:
     def search_package(self, query: str) -> List[PackageInfo]:
         """
         Search for packages by name or description.
-        
+
         Args:
             query: The search query string
-            
+
         Returns:
             List of PackageInfo objects matching the query
         """
@@ -352,15 +366,15 @@ class PacmanManager:
         if not result["success"]:
             logger.error(f"Error searching for packages: {result['stderr']}")
             return []
-            
+
         # Parse the output to extract package information
         packages: List[PackageInfo] = []
         current_package: Optional[PackageInfo] = None
-        
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             if not line.strip():
                 continue
-                
+
             # Package line starts with repository/name
             if line.startswith(' '):  # Description line
                 if current_package:
@@ -368,29 +382,31 @@ class PacmanManager:
                     packages.append(current_package)
                     current_package = None
             else:  # New package line
-                package_match = re.match(r'^(\w+)/(\S+)\s+(\S+)(?:\s+\[(.*)\])?', line)
+                package_match = re.match(
+                    r'^(\w+)/(\S+)\s+(\S+)(?:\s+\[(.*)\])?', line)
                 if package_match:
                     repo, name, version, status = package_match.groups()
+                    from .types import PackageName, PackageVersion, RepositoryName
                     current_package = PackageInfo(
-                        name=name,
-                        version=version,
-                        repository=repo,
+                        name=PackageName(name),
+                        version=PackageVersion(version),
+                        repository=RepositoryName(repo),
                         installed=(status == 'installed')
                     )
-        
+
         # Add the last package if it's still pending
         if current_package:
             packages.append(current_package)
-            
+
         return packages
-        
+
     async def search_package_async(self, query: str) -> List[PackageInfo]:
         """
         Asynchronously search for packages.
-        
+
         Args:
             query: The search query string
-            
+
         Returns:
             List of PackageInfo objects matching the query
         """
@@ -398,159 +414,191 @@ class PacmanManager:
         if not result["success"]:
             logger.error(f"Error searching for packages: {result['stderr']}")
             return []
-        
+
         # Use the same parsing logic as the synchronous method
         packages: List[PackageInfo] = []
         current_package: Optional[PackageInfo] = None
-        
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             if not line.strip():
                 continue
-                
+
             if line.startswith(' '):  # Description line
                 if current_package:
                     current_package.description = line.strip()
                     packages.append(current_package)
                     current_package = None
             else:  # New package line
-                package_match = re.match(r'^(\w+)/(\S+)\s+(\S+)(?:\s+\[(.*)\])?', line)
+                package_match = re.match(
+                    r'^(\w+)/(\S+)\s+(\S+)(?:\s+\[(.*)\])?', line)
                 if package_match:
                     repo, name, version, status = package_match.groups()
+                    from .types import PackageName, PackageVersion, RepositoryName
                     current_package = PackageInfo(
-                        name=name,
-                        version=version,
-                        repository=repo,
+                        name=PackageName(name),
+                        version=PackageVersion(version),
+                        repository=RepositoryName(repo),
                         installed=(status == 'installed')
                     )
-        
+
         # Add the last package if it's still pending
         if current_package:
             packages.append(current_package)
-            
+
         return packages
 
     def list_installed_packages(self, refresh: bool = False) -> Dict[str, PackageInfo]:
         """
         List all installed packages on the system.
-        
+
         Args:
             refresh: Force refreshing the cached package list
-            
+
         Returns:
             Dictionary mapping package names to PackageInfo objects
         """
         if self._installed_packages is not None and not refresh:
             return self._installed_packages
-            
+
         result = self.run_command(['pacman', '-Qi'])
         if not result["success"]:
-            logger.error(f"Error listing installed packages: {result['stderr']}")
+            logger.error(
+                f"Error listing installed packages: {result['stderr']}")
             return {}
-            
+
         packages: Dict[str, PackageInfo] = {}
         current_package: Optional[PackageInfo] = None
-        
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             line = line.strip()
             if not line:
                 if current_package:
                     packages[current_package.name] = current_package
                     current_package = None
                 continue
-                
+
             if line.startswith('Name'):
                 name = line.split(':', 1)[1].strip()
+                from .types import PackageName, PackageVersion
                 current_package = PackageInfo(
-                    name=name,
-                    version="",
+                    name=PackageName(name),
+                    version=PackageVersion(""),
                     installed=True
                 )
             elif line.startswith('Version') and current_package:
-                current_package.version = line.split(':', 1)[1].strip()
+                from .types import PackageVersion
+                current_package.version = PackageVersion(
+                    line.split(':', 1)[1].strip())
             elif line.startswith('Description') and current_package:
                 current_package.description = line.split(':', 1)[1].strip()
             elif line.startswith('Installed Size') and current_package:
-                current_package.install_size = line.split(':', 1)[1].strip()
+                current_package.install_size = int(line.split(
+                    ':', 1)[1].strip().replace(" ", "").replace("B", ""))
             elif line.startswith('Install Date') and current_package:
-                current_package.install_date = line.split(':', 1)[1].strip()
+                from datetime import datetime
+                current_package.install_date = datetime.fromisoformat(
+                    line.split(':', 1)[1].strip())
             elif line.startswith('Build Date') and current_package:
-                current_package.build_date = line.split(':', 1)[1].strip()
+                from datetime import datetime
+                current_package.build_date = datetime.fromisoformat(
+                    line.split(':', 1)[1].strip())
             elif line.startswith('Depends On') and current_package:
                 deps = line.split(':', 1)[1].strip()
                 if deps and deps.lower() != 'none':
-                    current_package.dependencies = deps.split()
+                    from .models import Dependency
+                    from .types import PackageName
+                    current_package.dependencies = [Dependency(
+                        name=PackageName(dep)) for dep in deps.split()]
             elif line.startswith('Optional Deps') and current_package:
                 opt_deps = line.split(':', 1)[1].strip()
                 if opt_deps and opt_deps.lower() != 'none':
-                    current_package.optional_dependencies = opt_deps.split()
-        
+                    from .models import Dependency
+                    from .types import PackageName
+                    current_package.optional_dependencies = [Dependency(
+                        name=PackageName(dep)) for dep in opt_deps.split()]
+
         # Add the last package if any
         if current_package:
             packages[current_package.name] = current_package
-            
+
         # Cache the results
         self._installed_packages = packages
         return packages
-        
+
     async def list_installed_packages_async(self, refresh: bool = False) -> Dict[str, PackageInfo]:
         """
         Asynchronously list all installed packages.
-        
+
         Args:
             refresh: Force refreshing the cached package list
-            
+
         Returns:
             Dictionary mapping package names to PackageInfo objects
         """
         if self._installed_packages is not None and not refresh:
             return self._installed_packages
-            
+
         result = await self.run_command_async(['pacman', '-Qi'])
         if not result["success"]:
-            logger.error(f"Error listing installed packages: {result['stderr']}")
+            logger.error(
+                f"Error listing installed packages: {result['stderr']}")
             return {}
-            
+
         packages: Dict[str, PackageInfo] = {}
         current_package: Optional[PackageInfo] = None
-        
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             line = line.strip()
             if not line:
                 if current_package:
                     packages[current_package.name] = current_package
                     current_package = None
                 continue
-                
+
             if line.startswith('Name'):
                 name = line.split(':', 1)[1].strip()
+                from .types import PackageName, PackageVersion
                 current_package = PackageInfo(
-                    name=name,
-                    version="",
+                    name=PackageName(name),
+                    version=PackageVersion(""),
                     installed=True
                 )
             elif line.startswith('Version') and current_package:
-                current_package.version = line.split(':', 1)[1].strip()
+                from .types import PackageVersion
+                current_package.version = PackageVersion(
+                    line.split(':', 1)[1].strip())
             elif line.startswith('Description') and current_package:
                 current_package.description = line.split(':', 1)[1].strip()
             elif line.startswith('Installed Size') and current_package:
-                current_package.install_size = line.split(':', 1)[1].strip()
+                current_package.install_size = int(line.split(
+                    ':', 1)[1].strip().replace(" ", "").replace("B", ""))
             elif line.startswith('Install Date') and current_package:
-                current_package.install_date = line.split(':', 1)[1].strip()
+                from datetime import datetime
+                current_package.install_date = datetime.fromisoformat(
+                    line.split(':', 1)[1].strip())
             elif line.startswith('Build Date') and current_package:
-                current_package.build_date = line.split(':', 1)[1].strip()
+                from datetime import datetime
+                current_package.build_date = datetime.fromisoformat(
+                    line.split(':', 1)[1].strip())
             elif line.startswith('Depends On') and current_package:
                 deps = line.split(':', 1)[1].strip()
                 if deps and deps.lower() != 'none':
-                    current_package.dependencies = deps.split()
+                    from .models import Dependency
+                    from .types import PackageName
+                    current_package.dependencies = [Dependency(
+                        name=PackageName(dep)) for dep in deps.split()]
             elif line.startswith('Optional Deps') and current_package:
                 opt_deps = line.split(':', 1)[1].strip()
                 if opt_deps and opt_deps.lower() != 'none':
-                    current_package.optional_dependencies = opt_deps.split()
-        
+                    from .models import Dependency
+                    from .types import PackageName
+                    current_package.optional_dependencies = [Dependency(
+                        name=PackageName(dep)) for dep in opt_deps.split()]
+
         # Add the last package if any
         if current_package:
             packages[current_package.name] = current_package
-            
+
         # Cache the results
         self._installed_packages = packages
         return packages
@@ -558,92 +606,106 @@ class PacmanManager:
     def show_package_info(self, package_name: str) -> Optional[PackageInfo]:
         """
         Display detailed information about a specific package.
-        
+
         Args:
             package_name: Name of the package to query
-            
+
         Returns:
             PackageInfo object with package details, or None if not found
         """
         result = self.run_command(['pacman', '-Qi', package_name])
         if not result["success"]:
-            logger.debug(f"Package {package_name} not installed, trying remote info...")
+            logger.debug(
+                f"Package {package_name} not installed, trying remote info...")
             # Try with -Si to get info for packages not installed
             result = self.run_command(['pacman', '-Si', package_name])
             if not result["success"]:
-                logger.error(f"Package {package_name} not found: {result['stderr']}")
+                logger.error(
+                    f"Package {package_name} not found: {result['stderr']}")
                 return None
-                
+
+        from .types import PackageName, PackageVersion
         package = PackageInfo(
-            name=package_name,
-            version="",
+            name=PackageName(package_name),
+            version=PackageVersion(""),
             installed=True
         )
-        
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             line = line.strip()
             if not line:
                 continue
-                
+
             if ':' in line:
                 key, value = line.split(':', 1)
                 key = key.strip()
                 value = value.strip()
-                
+
                 if key == 'Version':
-                    package.version = value
+                    from .types import PackageVersion
+                    package.version = PackageVersion(value)
                 elif key == 'Description':
                     package.description = value
                 elif key == 'Installed Size':
-                    package.install_size = value
+                    package.install_size = int(
+                        value.replace(" ", "").replace("B", ""))
                 elif key == 'Install Date':
-                    package.install_date = value
+                    from datetime import datetime
+                    package.install_date = datetime.fromisoformat(value)
                 elif key == 'Build Date':
-                    package.build_date = value
+                    from datetime import datetime
+                    package.build_date = datetime.fromisoformat(value)
                 elif key == 'Depends On' and value.lower() != 'none':
-                    package.dependencies = value.split()
+                    from .models import Dependency
+                    from .types import PackageName
+                    package.dependencies = [Dependency(
+                        name=PackageName(dep)) for dep in value.split()]
                 elif key == 'Optional Deps' and value.lower() != 'none':
-                    package.optional_dependencies = value.split()
+                    from .models import Dependency
+                    from .types import PackageName
+                    package.optional_dependencies = [Dependency(
+                        name=PackageName(dep)) for dep in value.split()]
                 elif key == 'Repository':
-                    package.repository = value
-                    
+                    from .types import RepositoryName
+                    package.repository = RepositoryName(value)
+
         return package
 
     def list_outdated_packages(self) -> Dict[str, Tuple[str, str]]:
         """
         List all packages that are outdated and need to be upgraded.
-        
+
         Returns:
             Dictionary mapping package name to (current_version, latest_version)
         """
         result = self.run_command(['pacman', '-Qu'])
         outdated: Dict[str, Tuple[str, str]] = {}
-        
+
         if not result["success"]:
             logger.debug("No outdated packages found or error occurred")
             return outdated
-            
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             line = line.strip()
             if not line:
                 continue
-                
+
             parts = line.split()
             if len(parts) >= 3:
                 package = parts[0]
                 current_version = parts[1]
                 latest_version = parts[3]
                 outdated[package] = (current_version, latest_version)
-                
+
         return outdated
 
     def clear_cache(self, keep_recent: bool = False) -> CommandResult:
         """
         Clear the package cache to free up space.
-        
+
         Args:
             keep_recent: If True, keep the most recently cached packages
-            
+
         Returns:
             CommandResult with the operation result
         """
@@ -655,65 +717,67 @@ class PacmanManager:
     def list_package_files(self, package_name: str) -> List[str]:
         """
         List all the files installed by a specific package.
-        
+
         Args:
             package_name: Name of the package to query
-            
+
         Returns:
             List of file paths installed by the package
         """
         result = self.run_command(['pacman', '-Ql', package_name])
         files: List[str] = []
-        
+
         if not result["success"]:
-            logger.error(f"Error listing files for package {package_name}: {result['stderr']}")
+            logger.error(
+                f"Error listing files for package {package_name}: {result['stderr']}")
             return files
-            
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             line = line.strip()
             if not line:
                 continue
-                
+
             parts = line.split(None, 1)
             if len(parts) > 1:
                 files.append(parts[1])
-                
+
         return files
 
     def show_package_dependencies(self, package_name: str) -> Tuple[List[str], List[str]]:
         """
         Show the dependencies of a specific package.
-        
+
         Args:
             package_name: Name of the package to query
-            
+
         Returns:
             Tuple of (dependencies, optional_dependencies)
         """
         package_info = self.show_package_info(package_name)
         if not package_info:
             return [], []
-            
-        return package_info.dependencies, package_info.optional_dependencies or []
+
+        return [str(dep) for dep in package_info.dependencies], [str(dep) for dep in (package_info.optional_dependencies or [])]
 
     def find_file_owner(self, file_path: str) -> Optional[str]:
         """
         Find which package owns a specific file.
-        
+
         Args:
             file_path: Path to the file to query
-            
+
         Returns:
             Name of the package owning the file, or None if not found
         """
         result = self.run_command(['pacman', '-Qo', file_path])
-        
+
         if not result["success"]:
-            logger.error(f"Error finding owner of file {file_path}: {result['stderr']}")
+            logger.error(
+                f"Error finding owner of file {file_path}: {result['stderr']}")
             return None
-            
+
         # Parse output like: "/usr/bin/pacman is owned by pacman 6.0.1-5"
-        match = re.search(r'is owned by (\S+)', result["stdout"])
+        match = re.search(r'is owned by (\S+)', str(result["stdout"]))
         if match:
             return match.group(1)
         return None
@@ -721,117 +785,141 @@ class PacmanManager:
     def show_fastest_mirrors(self) -> CommandResult:
         """
         Display and select the fastest mirrors for package downloads.
-        
+
         Returns:
             CommandResult with the operation result
         """
         if self.is_windows:
             logger.warning("Mirror ranking not supported on Windows MSYS2")
+            import time
+            import os
             return {
                 "success": False,
                 "stdout": "",
                 "stderr": "Mirror ranking not supported on Windows MSYS2",
                 "command": [],
-                "return_code": 1
+                "return_code": 1,
+                "duration": 0.0,
+                "timestamp": time.time(),
+                "working_directory": os.getcwd(),
+                "environment": dict(os.environ),
             }
-            
+
         if shutil.which('pacman-mirrors'):
             return self.run_command(['sudo', 'pacman-mirrors', '--fasttrack'])
         elif shutil.which('reflector'):
             return self.run_command(['sudo', 'reflector', '--latest', '20', '--sort', 'rate', '--save', '/etc/pacman.d/mirrorlist'])
         else:
-            logger.error("No mirror ranking tool found (pacman-mirrors or reflector)")
+            logger.error(
+                "No mirror ranking tool found (pacman-mirrors or reflector)")
+            import time
+            import os
             return {
                 "success": False,
                 "stdout": "",
                 "stderr": "No mirror ranking tool found",
                 "command": [],
-                "return_code": 1
+                "return_code": 1,
+                "duration": 0.0,
+                "timestamp": time.time(),
+                "working_directory": os.getcwd(),
+                "environment": dict(os.environ),
             }
 
     def downgrade_package(self, package_name: str, version: str) -> CommandResult:
         """
         Downgrade a package to a specific version.
-        
+
         Args:
             package_name: Name of the package to downgrade
             version: Target version to downgrade to
-            
+
         Returns:
             CommandResult with the operation result
         """
         # Check if the specific version is available in the cache
-        cache_dir = Path('/var/cache/pacman/pkg') if not self.is_windows else None
-        
+        cache_dir = Path(
+            '/var/cache/pacman/pkg') if not self.is_windows else None
+
         if self.is_windows:
             # For MSYS2, the cache directory is different
             msys_root = Path(self.pacman_command).parents[2]
             cache_dir = msys_root / 'var' / 'cache' / 'pacman' / 'pkg'
-            
+
         if cache_dir and cache_dir.exists():
             # Look for matching package files
-            package_files = list(cache_dir.glob(f"{package_name}-{version}*.pkg.tar.*"))
+            package_files = list(cache_dir.glob(
+                f"{package_name}-{version}*.pkg.tar.*"))
             if package_files:
                 return self.run_command(['pacman', '-U', str(package_files[0])])
-                
+
         # If not in cache, try downgrading using an AUR helper if available
         if self.aur_helper in ['yay', 'paru']:
             return self.run_command([self.aur_helper, '-S', f"{package_name}={version}"])
-            
-        logger.error(f"Package {package_name} version {version} not found in cache")
+
+        logger.error(
+            f"Package {package_name} version {version} not found in cache")
+        import time
+        import os
         return {
             "success": False,
             "stdout": "",
             "stderr": f"Package {package_name} version {version} not found in cache",
             "command": [],
-            "return_code": 1
+            "return_code": 1,
+            "duration": 0.0,
+            "timestamp": time.time(),
+            "working_directory": os.getcwd(),
+            "environment": dict(os.environ),
         }
 
     def list_cache_packages(self) -> Dict[str, List[str]]:
         """
         List all packages currently stored in the local package cache.
-        
+
         Returns:
             Dictionary mapping package names to lists of available versions
         """
-        cache_dir = Path('/var/cache/pacman/pkg') if not self.is_windows else None
-        
+        cache_dir = Path(
+            '/var/cache/pacman/pkg') if not self.is_windows else None
+
         if self.is_windows:
             # For MSYS2, the cache directory is different
             msys_root = Path(self.pacman_command).parents[2]
             cache_dir = msys_root / 'var' / 'cache' / 'pacman' / 'pkg'
-            
+
         if not cache_dir or not cache_dir.exists():
             logger.error(f"Package cache directory not found: {cache_dir}")
             return {}
-            
+
         cache_packages: Dict[str, List[str]] = {}
-        
+
         # Process all package files in the cache directory
         for pkg_file in cache_dir.glob('*.pkg.tar.*'):
             # Extract package name and version from filename
-            match = re.match(r'(.+?)-([^-]+?-[^-]+?)(?:-.+)?\.pkg\.tar', pkg_file.name)
+            match = re.match(
+                r'(.+?)-([^-]+?-[^-]+?)(?:-.+)?\.pkg\.tar', pkg_file.name)
             if match:
                 pkg_name = match.group(1)
                 pkg_version = match.group(2)
-                
+
                 if pkg_name not in cache_packages:
                     cache_packages[pkg_name] = []
                 cache_packages[pkg_name].append(pkg_version)
-                
+
         # Sort versions for each package
         for pkg_name in cache_packages:
             cache_packages[pkg_name].sort()
-            
+
         return cache_packages
 
     def enable_multithreaded_downloads(self, threads: int = 5) -> bool:
         """
         Enable multithreaded downloads to speed up package installation.
-        
+
         Args:
             threads: Number of parallel download threads
-            
+
         Returns:
             True if successful, False otherwise
         """
@@ -840,60 +928,62 @@ class PacmanManager:
     def list_package_group(self, group_name: str) -> List[str]:
         """
         List all packages in a specific package group.
-        
+
         Args:
             group_name: Name of the package group to query
-            
+
         Returns:
             List of package names in the group
         """
         result = self.run_command(['pacman', '-Sg', group_name])
         packages: List[str] = []
-        
+
         if not result["success"]:
-            logger.error(f"Error listing packages in group {group_name}: {result['stderr']}")
+            logger.error(
+                f"Error listing packages in group {group_name}: {result['stderr']}")
             return packages
-            
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             line = line.strip()
             if not line:
                 continue
-                
+
             parts = line.split()
             if len(parts) == 2 and parts[0] == group_name:
                 packages.append(parts[1])
-                
+
         return packages
 
     def list_optional_dependencies(self, package_name: str) -> Dict[str, str]:
         """
         List optional dependencies of a package with descriptions.
-        
+
         Args:
             package_name: Name of the package to query
-            
+
         Returns:
             Dictionary mapping dependency names to their descriptions
         """
         result = self.run_command(['pacman', '-Si', package_name])
         opt_deps: Dict[str, str] = {}
-        
+
         if not result["success"]:
             # Try with -Qi for installed packages
             result = self.run_command(['pacman', '-Qi', package_name])
             if not result["success"]:
-                logger.error(f"Error retrieving optional deps for package {package_name}: {result['stderr']}")
+                logger.error(
+                    f"Error retrieving optional deps for package {package_name}: {result['stderr']}")
                 return opt_deps
-                
+
         parsing_opt_deps = False
-        
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             line = line.strip()
-            
+
             if not line:
                 parsing_opt_deps = False
                 continue
-                
+
             if line.startswith('Optional Deps'):
                 parsing_opt_deps = True
                 # Extract any deps on the same line
@@ -902,13 +992,13 @@ class PacmanManager:
                     self._parse_opt_deps_line(deps_part, opt_deps)
             elif parsing_opt_deps:
                 self._parse_opt_deps_line(line, opt_deps)
-                
+
         return opt_deps
-        
+
     def _parse_opt_deps_line(self, line: str, opt_deps: Dict[str, str]) -> None:
         """
         Parse a line containing optional dependency information.
-        
+
         Args:
             line: Line to parse
             opt_deps: Dictionary to update with parsed dependencies
@@ -918,7 +1008,7 @@ class PacmanManager:
             parts = line.split(':', 1)
             dep = parts[0].strip()
             desc = parts[1].strip() if len(parts) > 1 else ""
-            
+
             # Remove the [installed] suffix if present
             dep = re.sub(r'\s*\[installed\]$', '', dep)
             opt_deps[dep] = desc
@@ -926,22 +1016,22 @@ class PacmanManager:
     def enable_color_output(self, enable: bool = True) -> bool:
         """
         Enable or disable color output in pacman command-line results.
-        
+
         Args:
             enable: Whether to enable or disable color output
-            
+
         Returns:
             True if successful, False otherwise
         """
         return self.config.set_option('Color', 'true' if enable else 'false')
-        
+
     def get_package_status(self, package_name: str) -> PackageStatus:
         """
         Check the installation status of a package.
-        
+
         Args:
             package_name: Name of the package to check
-            
+
         Returns:
             PackageStatus enum value indicating the package status
         """
@@ -953,67 +1043,74 @@ class PacmanManager:
             if package_name in outdated:
                 return PackageStatus.OUTDATED
             return PackageStatus.INSTALLED
-            
+
         # Check if it exists in repositories
         sync_result = self.run_command(['pacman', '-Ss', f"^{package_name}$"])
         if sync_result["success"] and sync_result["stdout"].strip():
             return PackageStatus.NOT_INSTALLED
-            
+
         return PackageStatus.NOT_INSTALLED
 
     # AUR Support Methods
     def has_aur_support(self) -> bool:
         """
         Check if an AUR helper is available.
-        
+
         Returns:
             True if an AUR helper is available, False otherwise
         """
         return self.aur_helper is not None
-        
+
     def install_aur_package(self, package_name: str, no_confirm: bool = False) -> CommandResult:
         """
         Install a package from the AUR using the detected helper.
-        
+
         Args:
             package_name: Name of the AUR package to install
             no_confirm: Skip confirmation prompts if supported
-            
+
         Returns:
             CommandResult with the operation result
         """
         if not self.aur_helper:
-            logger.error("No AUR helper detected. Cannot install AUR packages.")
+            logger.error(
+                "No AUR helper detected. Cannot install AUR packages.")
+            import time
+            import os
             return {
                 "success": False,
                 "stdout": "",
                 "stderr": "No AUR helper detected. Cannot install AUR packages.",
                 "command": [],
-                "return_code": 1
+                "return_code": 1,
+                "duration": 0.0,
+                "timestamp": time.time(),
+                "working_directory": os.getcwd(),
+                "environment": dict(os.environ),
             }
-            
+
         cmd = [self.aur_helper, '-S', package_name]
-        
+
         if no_confirm:
             if self.aur_helper in ['yay', 'paru', 'pikaur', 'trizen']:
                 cmd.append('--noconfirm')
-                
+
         return self.run_command(cmd, capture_output=False)
-        
+
     def search_aur_package(self, query: str) -> List[PackageInfo]:
         """
         Search for packages in the AUR.
-        
+
         Args:
             query: The search query string
-            
+
         Returns:
             List of PackageInfo objects matching the query
         """
         if not self.aur_helper:
             logger.error("No AUR helper detected. Cannot search AUR packages.")
             return []
-            
+
         aur_search_flags = {
             'yay': '-Ssa',
             'paru': '-Ssa',
@@ -1021,23 +1118,23 @@ class PacmanManager:
             'aurman': '-Ssa',
             'trizen': '-Ssa'
         }
-        
+
         search_flag = aur_search_flags.get(self.aur_helper, '-Ss')
         result = self.run_command([self.aur_helper, search_flag, query])
-        
+
         if not result["success"]:
             logger.error(f"Error searching AUR: {result['stderr']}")
             return []
-            
+
         # Parsing logic will depend on the AUR helper's output format
         # This is a simplified example for yay/paru-like output
         packages: List[PackageInfo] = []
         current_package: Optional[PackageInfo] = None
-        
-        for line in result["stdout"].split('\n'):
+
+        for line in str(result["stdout"]).strip().split('\\n'):
             if not line.strip():
                 continue
-                
+
             if line.startswith(' '):  # Description line
                 if current_package:
                     current_package.description = line.strip()
@@ -1047,23 +1144,24 @@ class PacmanManager:
                 package_match = re.match(r'^(?:aur|.*)/(\S+)\s+(\S+)', line)
                 if package_match:
                     name, version = package_match.groups()
+                    from .types import PackageName, PackageVersion, RepositoryName
                     current_package = PackageInfo(
-                        name=name,
-                        version=version,
-                        repository="aur"
+                        name=PackageName(name),
+                        version=PackageVersion(version),
+                        repository=RepositoryName("aur")
                     )
-        
+
         # Add the last package if it's still pending
         if current_package:
             packages.append(current_package)
-            
+
         return packages
-        
+
     # System Maintenance Methods
     def check_package_problems(self) -> Dict[str, List[str]]:
         """
         Check for common package problems like orphans or broken dependencies.
-        
+
         Returns:
             Dictionary mapping problem categories to lists of affected packages
         """
@@ -1072,59 +1170,68 @@ class PacmanManager:
             "foreign": [],
             "broken_deps": []
         }
-        
+
         # Find orphaned packages (installed as dependencies but no longer required)
         orphan_result = self.run_command(['pacman', '-Qtdq'])
         if orphan_result["success"] and orphan_result["stdout"].strip():
-            problems["orphaned"] = orphan_result["stdout"].strip().split('\n')
-            
+            problems["orphaned"] = str(
+                orphan_result["stdout"]).strip().split('\n')
+
         # Find foreign packages (not in the official repositories)
         foreign_result = self.run_command(['pacman', '-Qm'])
         if foreign_result["success"] and foreign_result["stdout"].strip():
-            problems["foreign"] = [line.split()[0] for line in foreign_result["stdout"].strip().split('\n')]
-            
+            problems["foreign"] = [line.split()[0]
+                                   for line in str(foreign_result["stdout"]).strip().split('\n')]
+
         # Check for broken dependencies
         broken_result = self.run_command(['pacman', '-Dk'])
         if not broken_result["success"]:
-            problems["broken_deps"] = [line.strip() for line in broken_result["stderr"].strip().split('\n')
-                                    if "requires" in line and "not found" in line]
-                                    
+            problems["broken_deps"] = [str(line).strip() for line in str(broken_result["stderr"]).strip().split('\n')
+                                       if "requires" in str(line) and "not found" in str(line)]
+
         return problems
-        
+
     def clean_orphaned_packages(self, no_confirm: bool = False) -> CommandResult:
         """
         Remove orphaned packages (those installed as dependencies but no longer required).
-        
+
         Args:
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             CommandResult with the operation result
         """
         orphan_result = self.run_command(['pacman', '-Qtdq'])
         if not orphan_result["success"] or not orphan_result["stdout"].strip():
+            import time
+            import os
             return {
                 "success": True,
                 "stdout": "No orphaned packages to remove",
                 "stderr": "",
                 "command": [],
-                "return_code": 0
+                "return_code": 0,
+                "duration": 0.0,
+                "timestamp": time.time(),
+                "working_directory": os.getcwd(),
+                "environment": dict(os.environ),
             }
-            
-        cmd = ['pacman', '-Rs'] + orphan_result["stdout"].strip().split('\n')
+
+        cmd = ['pacman', '-Rs'] + \
+            str(orphan_result["stdout"]).strip().split('\n')
         if no_confirm:
             cmd.append('--noconfirm')
-        
+
         return self.run_command(cmd)
-        
+
     def export_package_list(self, output_path: str, include_foreign: bool = True) -> bool:
         """
         Export a list of installed packages for backup or system replication.
-        
+
         Args:
             output_path: File path to save the package list
             include_foreign: Whether to include foreign (AUR) packages
-            
+
         Returns:
             True if successful, False otherwise
         """
@@ -1134,53 +1241,53 @@ class PacmanManager:
                 native_result = self.run_command(['pacman', '-Qn'])
                 if native_result["success"] and native_result["stdout"].strip():
                     f.write("# Native packages\n")
-                    for line in native_result["stdout"].strip().split('\n'):
+                    for line in str(native_result["stdout"]).strip().split('\n'):
                         pkg, ver = line.split()
                         f.write(f"{pkg}\n")
-                        
+
                 # Export foreign packages if requested
                 if include_foreign:
                     foreign_result = self.run_command(['pacman', '-Qm'])
                     if foreign_result["success"] and foreign_result["stdout"].strip():
                         f.write("\n# Foreign packages (AUR)\n")
-                        for line in foreign_result["stdout"].strip().split('\n'):
+                        for line in str(foreign_result["stdout"]).strip().split('\n'):
                             pkg, ver = line.split()
                             f.write(f"{pkg}\n")
-                            
+
             logger.info(f"Package list exported to {output_path}")
             return True
         except Exception as e:
             logger.error(f"Error exporting package list: {str(e)}")
             return False
-            
+
     def import_package_list(self, input_path: str, no_confirm: bool = False) -> bool:
         """
         Import and install packages from a previously exported package list.
-        
+
         Args:
             input_path: Path to the file containing the package list
             no_confirm: Skip confirmation prompts by passing --noconfirm
-            
+
         Returns:
             True if successful, False otherwise
         """
         try:
             with open(input_path, 'r') as f:
                 content = f.read()
-                
+
             # Extract packages (skip comments and empty lines)
-            packages = [line.strip() for line in content.split('\n') 
-                       if line.strip() and not line.startswith('#')]
-                       
+            packages = [line.strip() for line in content.split('\n')
+                        if line.strip() and not line.startswith('#')]
+
             if not packages:
                 logger.warning("No packages found in the import file")
                 return False
-                
+
             # Install packages
             cmd = ['pacman', '-S'] + packages
             if no_confirm:
                 cmd.append('--noconfirm')
-                
+
             result = self.run_command(cmd)
             return result["success"]
         except Exception as e:

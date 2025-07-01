@@ -31,16 +31,7 @@ def compile_file(source_file: PathLike,
     """
     Compile a single source file.
     """
-    # Convert string cpp_version to enum if needed
-    if isinstance(cpp_version, str):
-        try:
-            cpp_version = CppVersion(cpp_version)
-        except ValueError:
-            try:
-                cpp_version = CppVersion["CPP" +
-                                         cpp_version.replace("++", "").replace("c", "")]
-            except KeyError:
-                raise ValueError(f"Invalid C++ version: {cpp_version}")
+    cpp_version = CppVersion.resolve_cpp_version(cpp_version)
 
     compiler = get_compiler(compiler_name)
     return compiler.compile([Path(source_file)], Path(output_file), cpp_version, options)
@@ -57,16 +48,7 @@ def build_project(source_files: List[PathLike],
     """
     Build a project from multiple source files.
     """
-    # Convert string cpp_version to enum if needed
-    if isinstance(cpp_version, str):
-        try:
-            cpp_version = CppVersion(cpp_version)
-        except ValueError:
-            try:
-                cpp_version = CppVersion["CPP" +
-                                         cpp_version.replace("++", "").replace("c", "")]
-            except KeyError:
-                raise ValueError(f"Invalid C++ version: {cpp_version}")
+    cpp_version = CppVersion.resolve_cpp_version(cpp_version)
 
     build_manager = BuildManager(build_dir=build_dir or "build")
     return build_manager.build(

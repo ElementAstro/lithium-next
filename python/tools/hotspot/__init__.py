@@ -29,7 +29,7 @@ from .hotspot_manager import HotspotManager
 # Function to create a pybind11 module
 
 
-def create_pybind11_module():
+def def create_pybind11_module():
     """
     Create the core functions and classes for pybind11 integration.
 

@@ -7,7 +7,7 @@ Configuration loading utilities for the build system helper.
 import configparser
 import json
 from pathlib import Path
-from typing import Dict, Any, cast
+from typing import cast
 
 from loguru import logger
 

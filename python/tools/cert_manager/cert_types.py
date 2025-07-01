@@ -1,48 +1,55 @@
 #!/usr/bin/env python3
 """
 Certificate types and data structures.
-
-This module contains type definitions, enums, dataclasses, and custom exceptions
-used throughout the certificate management tool.
 """
 
 import datetime
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional
 
 from cryptography import x509
-from loguru import logger
 
 
-# Type definitions for enhanced type safety
-class CertificateType(Enum):
+class CertificateType(str, Enum):
     """Types of certificates that can be created."""
-    SERVER = auto()
-    CLIENT = auto()
-    CA = auto()
+    SERVER = "server"
+    CLIENT = "client"
+    CA = "ca"
 
     @classmethod
     def from_string(cls, value: str) -> 'CertificateType':
-        """Convert string value to CertificateType."""
-        return {
-            "server": cls.SERVER,
-            "client": cls.CLIENT,
-            "ca": cls.CA
-        }.get(value.lower(), cls.SERVER)
+        return cls(value.lower())
+
+
+class RevocationReason(str, Enum):
+    """CRL revocation reasons."""
+    unspecified = "unspecified"
+    key_compromise = "keyCompromise"
+    ca_compromise = "cACompromise"
+    affiliation_changed = "affiliationChanged"
+    superseded = "superseded"
+    cessation_of_operation = "cessationOfOperation"
+    certificate_hold = "certificateHold"
+    remove_from_crl = "removeFromCRL"
+    privilege_withdrawn = "privilegeWithdrawn"
+    aa_compromise = "aACompromise"
+
+    def to_crypto_reason(self) -> x509.ReasonFlags:
+        """Converts string reason to cryptography's ReasonFlags enum."""
+        return getattr(x509.ReasonFlags, self.value)
 
 
 @dataclass
 class CertificateOptions:
-    """Options for certificate generation."""
+    """Options for certificate or CSR generation."""
     hostname: str
     cert_dir: Path
     key_size: int = 2048
     valid_days: int = 365
     san_list: List[str] = field(default_factory=list)
     cert_type: CertificateType = CertificateType.SERVER
-    # Additional fields for enhanced certificates
     country: Optional[str] = None
     state: Optional[str] = None
     organization: Optional[str] = None
@@ -52,16 +59,41 @@ class CertificateOptions:
 
 @dataclass
 class CertificateResult:
-    """Result of certificate generation operations."""
+    """Result of certificate generation."""
     cert_path: Path
     key_path: Path
-    success: bool = True
-    message: str = ""
+
+
+@dataclass
+class CSRResult:
+    """Result of CSR generation."""
+    csr_path: Path
+    key_path: Path
+
+
+@dataclass
+class SignOptions:
+    """Options for signing a CSR."""
+    csr_path: Path
+    ca_cert_path: Path
+    ca_key_path: Path
+    output_dir: Path
+    valid_days: int = 365
+
+
+@dataclass
+class RevokeOptions:
+    """Options for revoking a certificate."""
+    cert_to_revoke_path: Path
+    ca_cert_path: Path
+    ca_key_path: Path
+    crl_path: Path
+    reason: RevocationReason
 
 
 @dataclass
 class RevokedCertInfo:
-    """Information about a revoked certificate."""
+    """Information about a revoked certificate for CRL generation."""
     serial_number: int
     revocation_date: datetime.datetime
     reason: Optional[x509.ReasonFlags] = None
@@ -81,22 +113,20 @@ class CertificateDetails:
     fingerprint: str
 
 
-# Custom exceptions for better error handling
+# --- Custom Exceptions ---
+
 class CertificateError(Exception):
     """Base exception for certificate operations."""
-    pass
 
 
 class KeyGenerationError(CertificateError):
     """Raised when key generation fails."""
-    pass
 
 
 class CertificateGenerationError(CertificateError):
     """Raised when certificate generation fails."""
-    pass
 
 
-class CertificateNotFoundError(CertificateError):
-    """Raised when a certificate is not found."""
-    pass
+class CertificateNotFoundError(CertificateError, FileNotFoundError):
+    """Raised when a certificate file is not found."""
+

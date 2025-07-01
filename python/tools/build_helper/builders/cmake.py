@@ -49,46 +49,45 @@ class CMakeBuilder(BuildHelperBase):
         self.build_type = build_type
 
         # CMake-specific cache keys
-        self._cmake_version = self._get_cmake_version()
+        # self._cmake_version = await self._get_cmake_version() # Cannot call async in __init__
 
         logger.debug(
             f"CMakeBuilder initialized with generator={generator}, build_type={build_type}")
 
-    def _get_cmake_version(self) -> str:
-        """Get the CMake version string."""
+    async def _get_cmake_version(self) -> str:
+        """Get the CMake version string asynchronously."""
         try:
-            result = subprocess.run(
-                ["cmake", "--version"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            version_line = result.stdout.strip().split('\n')[0]
-            logger.debug(f"Detected CMake: {version_line}")
-            return version_line
-        except (subprocess.SubprocessError, IndexError):
-            logger.warning("Failed to determine CMake version")
+            result = await self.run_command(["cmake", "--version"])
+            if result.success:
+                version_line = result.output.strip().split('\n')[0]
+                logger.debug(f"Detected CMake: {version_line}")
+                return version_line
+            else:
+                logger.warning(
+                    f"Failed to determine CMake version: {result.error}")
+                return ""
+        except Exception as e:
+            logger.warning(
+                f"Failed to determine CMake version due to exception: {e}")
             return ""
 
-    def configure(self) -> BuildResult:
-        """Configure the CMake build system."""
+    async def configure(self) -> BuildResult:
+        """Configure the CMake build system asynchronously."""
         self.status = BuildStatus.CONFIGURING
         logger.info(f"Configuring CMake build in {self.build_dir}")
 
-        # Create build directory if it doesn't exist
         self.build_dir.mkdir(parents=True, exist_ok=True)
 
-        # Construct CMake command
         cmake_args = [
             "cmake",
             f"-G{self.generator}",
             f"-DCMAKE_BUILD_TYPE={self.build_type}",
             f"-DCMAKE_INSTALL_PREFIX={self.install_prefix}",
             str(self.source_dir),
-        ] + self.options
+        ] + (self.options or [])
 
-        # Run CMake configure
-        result = self.run_command(*cmake_args)
+        # Fixed: Pass the list directly instead of unpacking with *
+        result = await self.run_command(cmake_args)
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -101,13 +100,12 @@ class CMakeBuilder(BuildHelperBase):
 
         return result
 
-    def build(self, target: str = "") -> BuildResult:
-        """Build the project using CMake."""
+    async def build(self, target: str = "") -> BuildResult:
+        """Build the project using CMake asynchronously."""
         self.status = BuildStatus.BUILDING
         logger.info(
             f"Building {'target ' + target if target else 'project'} using CMake")
 
-        # Construct build command
         build_cmd = [
             "cmake",
             "--build",
@@ -116,16 +114,14 @@ class CMakeBuilder(BuildHelperBase):
             str(self.parallel)
         ]
 
-        # Add target if specified
         if target:
             build_cmd += ["--target", target]
 
-        # Add verbosity flag if requested
         if self.verbose:
             build_cmd += ["--verbose"]
 
-        # Run CMake build
-        result = self.run_command(*build_cmd)
+        # Fixed: Pass the list directly instead of unpacking with *
+        result = await self.run_command(build_cmd)
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -138,13 +134,17 @@ class CMakeBuilder(BuildHelperBase):
 
         return result
 
-    def install(self) -> BuildResult:
-        """Install the project to the specified prefix."""
+    async def install(self) -> BuildResult:
+        """Install the project to the specified prefix asynchronously."""
         self.status = BuildStatus.INSTALLING
         logger.info(f"Installing project to {self.install_prefix}")
 
-        # Run CMake install
-        result = self.run_command("cmake", "--install", str(self.build_dir))
+        # Fixed: Pass as a list instead of separate arguments
+        result = await self.run_command([
+            "cmake",
+            "--install",
+            str(self.build_dir)
+        ])
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -158,12 +158,11 @@ class CMakeBuilder(BuildHelperBase):
 
         return result
 
-    def test(self) -> BuildResult:
-        """Run tests using CTest with detailed output on failure."""
+    async def test(self) -> BuildResult:
+        """Run tests using CTest with detailed output on failure asynchronously."""
         self.status = BuildStatus.TESTING
         logger.info("Running tests with CTest")
 
-        # Construct CTest command
         ctest_cmd = [
             "ctest",
             "--output-on-failure",
@@ -176,11 +175,10 @@ class CMakeBuilder(BuildHelperBase):
         if self.verbose:
             ctest_cmd.append("-V")
 
-        # Add working directory
         ctest_cmd.extend(["-S", str(self.build_dir)])
 
-        # Run CTest
-        result = self.run_command(*ctest_cmd)
+        # Fixed: Pass the list directly instead of unpacking with *
+        result = await self.run_command(ctest_cmd)
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -192,14 +190,13 @@ class CMakeBuilder(BuildHelperBase):
 
         return result
 
-    def generate_docs(self, doc_target: str = "doc") -> BuildResult:
-        """Generate documentation using the specified documentation target."""
+    async def generate_docs(self, doc_target: str = "doc") -> BuildResult:
+        """Generate documentation using the specified documentation target asynchronously."""
         self.status = BuildStatus.GENERATING_DOCS
         logger.info(f"Generating documentation with target '{doc_target}'")
 
         try:
-            # Build the documentation target
-            result = self.build(doc_target)
+            result = await self.build(doc_target)
             if result.success:
                 logger.success(
                     f"Documentation generated successfully with target '{doc_target}'")

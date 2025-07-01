@@ -1,99 +1,55 @@
 #!/usr/bin/env python3
 """
-Command execution utilities for WiFi Hotspot Manager.
-Provides functions for running shell commands synchronously and asynchronously.
+Robust command execution utilities for the WiFi Hotspot Manager.
 """
 
 import asyncio
-import subprocess
 from typing import List
+
 from loguru import logger
 
 from .models import CommandResult
 
 
-def run_command(cmd: List[str]) -> CommandResult:
-    """
-    Run a command synchronously and return the result.
-
-    Args:
-        cmd: List of command parts to execute
-
-    Returns:
-        CommandResult object containing the command output and status
-    """
-    logger.debug(f"Running command: {' '.join(cmd)}")
-    try:
-        result = subprocess.run(
-            cmd,
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        success = result.returncode == 0
-
-        if not success:
-            logger.error(f"Command failed: {' '.join(cmd)}")
-            logger.error(f"Error: {result.stderr}")
-
-        return CommandResult(
-            success=success,
-            stdout=result.stdout,
-            stderr=result.stderr,
-            return_code=result.returncode,
-            command=cmd
-        )
-    except Exception as e:
-        logger.exception(f"Exception running command: {e}")
-        return CommandResult(
-            success=False,
-            stderr=str(e),
-            command=cmd
-        )
-
-
 async def run_command_async(cmd: List[str]) -> CommandResult:
     """
-    Run a command asynchronously and return the result.
+    Run a command asynchronously with improved error handling and logging.
 
     Args:
-        cmd: List of command parts to execute
+        cmd: A list of command parts to execute.
 
     Returns:
-        CommandResult object containing the command output and status
+        A CommandResult object with the execution outcome.
     """
-    logger.debug(f"Running command asynchronously: {' '.join(cmd)}")
+    cmd_str = " ".join(cmd)
+    logger.debug(f"Executing command: {cmd_str}")
+
     try:
-        process = await asyncio.create_subprocess_exec(
+        proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            text=False
         )
-        stdout_bytes, stderr_bytes = await process.communicate()
+        stdout, stderr = await proc.communicate()
 
-        # Decode bytes to strings
-        stdout = stdout_bytes.decode('utf-8') if stdout_bytes else ""
-        stderr = stderr_bytes.decode('utf-8') if stderr_bytes else ""
-
-        success = process.returncode == 0
+        success = proc.returncode == 0
+        result = CommandResult(
+            success=success,
+            stdout=stdout.decode().strip(),
+            stderr=stderr.decode().strip(),
+            return_code=proc.returncode or -1,
+            command=cmd,
+        )
 
         if not success:
-            logger.error(f"Command failed: {' '.join(cmd)}")
-            logger.error(f"Error: {stderr}")
+            logger.error(f"Command failed with code {result.return_code}: {cmd_str}")
+            logger.error(f"Stderr: {result.stderr}")
 
-        return CommandResult(
-            success=success,
-            stdout=stdout,
-            stderr=stderr,
-            return_code=process.returncode if process.returncode is not None else -1,
-            command=cmd
-        )
+        return result
+
+    except FileNotFoundError:
+        logger.error(f"Command not found: {cmd[0]}. Please ensure it is installed.")
+        return CommandResult(success=False, stderr=f"Command not found: {cmd[0]}", command=cmd)
     except Exception as e:
-        logger.exception(f"Exception running command: {e}")
-        return CommandResult(
-            success=False,
-            stderr=str(e),
-            command=cmd
-        )
+        logger.exception(f"An unexpected error occurred while running '{cmd_str}'.")
+        return CommandResult(success=False, stderr=str(e), command=cmd)

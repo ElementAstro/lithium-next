@@ -3,8 +3,8 @@
 """
 File: options.py
 Author: Max Qian <astro_air@126.com>
-Enhanced: 2025-06-08
-Version: 2.0
+Enhanced: 2025-07-01
+Version: 2.1
 
 Description:
 ------------
@@ -13,19 +13,11 @@ Classes for handling conversion options in the convert_to_header package.
 
 import json
 from dataclasses import dataclass, field, asdict
-from enum import Enum, auto
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from loguru import logger
 from .utils import PathLike, DataFormat, CommentStyle, CompressionType, ChecksumAlgo
-
-
-class ConversionMode(Enum):
-    """Enum representing the conversion mode."""
-    TO_HEADER = auto()
-    TO_FILE = auto()
-    INFO = auto()
 
 
 @dataclass
@@ -49,13 +41,13 @@ class ConversionOptions:
     compression: CompressionType = "none"
     start_offset: int = 0
     end_offset: Optional[int] = None
-    verify_checksum: bool = False
+    include_checksum: bool = False
+    verify_checksum: bool = False  # For to_file mode
     checksum_algorithm: ChecksumAlgo = "sha256"
 
     # Output structure options
     add_include_guard: bool = True
     add_header_comment: bool = True
-    include_original_filename: bool = True
     include_timestamp: bool = True
     cpp_namespace: Optional[str] = None
     cpp_class: bool = False
@@ -63,7 +55,6 @@ class ConversionOptions:
     split_size: Optional[int] = None
 
     # Advanced options
-    extra_headers: List[str] = field(default_factory=list)
     extra_includes: List[str] = field(default_factory=list)
     custom_header: Optional[str] = None
     custom_footer: Optional[str] = None
@@ -75,8 +66,10 @@ class ConversionOptions:
     @classmethod
     def from_dict(cls, options_dict: Dict[str, Any]) -> 'ConversionOptions':
         """Create ConversionOptions from dictionary."""
-        return cls(**{k: v for k, v in options_dict.items()
-                      if k in cls.__dataclass_fields__})
+        valid_keys = {f.name for f in cls.__dataclass_fields__.values()}
+        filtered_dict = {k: v for k, v in options_dict.items()
+                         if k in valid_keys}
+        return cls(**filtered_dict)
 
     @classmethod
     def from_json(cls, json_file: PathLike) -> 'ConversionOptions':
@@ -86,7 +79,7 @@ class ConversionOptions:
                 options_dict = json.load(f)
             return cls.from_dict(options_dict)
         except Exception as e:
-            logger.error(f"Failed to load options from JSON file: {str(e)}")
+            logger.error(f"Failed to load options from JSON file: {e}")
             raise
 
     @classmethod
@@ -98,10 +91,8 @@ class ConversionOptions:
                 options_dict = yaml.safe_load(f)
             return cls.from_dict(options_dict)
         except ImportError:
-            logger.error(
-                "YAML support requires PyYAML. Install with 'pip install pyyaml'")
-            raise ImportError(
-                "YAML support requires PyYAML. Install with 'pip install pyyaml'")
+            logger.error("YAML support requires PyYAML. Install with 'pip install "convert_to_header[yaml]"'")
+            raise
         except Exception as e:
-            logger.error(f"Failed to load options from YAML file: {str(e)}")
+            logger.error(f"Failed to load options from YAML file: {e}")
             raise

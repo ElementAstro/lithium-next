@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Base class for build helpers providing shared functionality.
+Base class for build helpers providing shared asynchronous functionality.
 """
 
 import os
 import json
 import shutil
-import subprocess
-import time
 import asyncio
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Any, Optional, cast, Union
+from typing import Dict, List, Any, Optional, Union, Callable, Awaitable
 
 from loguru import logger
 
 from .models import BuildStatus, BuildResult, BuildOptions
-from .errors import BuildSystemError
+from .errors import BuildError  # Changed from BuildSystemError to BuildError
 
 
 class BuildHelperBase(ABC):
     """
-    Abstract base class for build helpers providing shared functionality.
+    Abstract base class for build helpers providing shared asynchronous functionality.
 
     This class defines the common interface and behavior for all build system
-    implementations.
+    implementations, leveraging asyncio for non-blocking operations.
 
     Attributes:
         source_dir (Path): Path to the source directory.
@@ -35,6 +34,7 @@ class BuildHelperBase(ABC):
         env_vars (Dict[str, str]): Environment variables for the build process.
         verbose (bool): Flag to enable verbose output during execution.
         parallel (int): Number of parallel jobs to use for building.
+        run_command (Callable): The asynchronous command runner.
     """
 
     def __init__(
@@ -46,136 +46,51 @@ class BuildHelperBase(ABC):
         env_vars: Optional[Dict[str, str]] = None,
         verbose: bool = False,
         parallel: int = os.cpu_count() or 4,
+        command_runner: Optional[Callable[[List[str]], Awaitable[Any]]] = None,
     ) -> None:
-        # Convert string paths to Path objects if necessary
-        self.source_dir = source_dir if isinstance(
-            source_dir, Path) else Path(source_dir)
-        self.build_dir = build_dir if isinstance(
-            build_dir, Path) else Path(build_dir)
-        self.install_prefix = (
-            install_prefix if install_prefix is not None
-            else self.build_dir / "install"
-        )
-        if isinstance(self.install_prefix, str):
-            self.install_prefix = Path(self.install_prefix)
+        self.source_dir = Path(source_dir)
+        self.build_dir = Path(build_dir)
+        self.install_prefix = Path(install_prefix) if install_prefix else self.build_dir / "install"
 
         self.options = options or []
         self.env_vars = env_vars or {}
         self.verbose = verbose
         self.parallel = parallel
 
-        # Build status tracking
         self.status = BuildStatus.NOT_STARTED
         self.last_result: Optional[BuildResult] = None
 
-        # Setup caching
         self.cache_file = self.build_dir / ".build_cache.json"
         self._cache: Dict[str, Any] = {}
         self._load_cache()
 
-        # Ensure build directory exists
         self.build_dir.mkdir(parents=True, exist_ok=True)
 
+        # Use a provided command runner or default to internal async runner
+        self.run_command = command_runner or self._default_run_command_async
+
         logger.debug(
-            f"Initialized {self.__class__.__name__} with source={self.source_dir}, build={self.build_dir}")
+            f"Initialized {self.__class__.__name__} with source={self.source_dir}, build={self.build_dir}"
+        )
 
     def _load_cache(self) -> None:
-        """Load the build cache from disk if it exists."""
         if self.cache_file.exists():
             try:
-                with open(self.cache_file, "r") as f:
-                    self._cache = json.load(f)
+                self._cache = json.loads(self.cache_file.read_text())
                 logger.debug(f"Loaded build cache from {self.cache_file}")
             except (json.JSONDecodeError, IOError) as e:
                 logger.warning(f"Failed to load build cache: {e}")
                 self._cache = {}
-        else:
-            self._cache = {}
 
     def _save_cache(self) -> None:
-        """Save the build cache to disk."""
         try:
             self.cache_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.cache_file, "w") as f:
-                json.dump(self._cache, f)
+            self.cache_file.write_text(json.dumps(self._cache))
             logger.debug(f"Saved build cache to {self.cache_file}")
         except IOError as e:
             logger.warning(f"Failed to save build cache: {e}")
 
-    def run_command(self, *cmd: str) -> BuildResult:
-        """
-        Run a shell command with environment variables and logging.
-
-        Args:
-            *cmd (str): The command and its arguments as separate strings.
-
-        Returns:
-            BuildResult: Object containing the execution status and details.
-        """
-        cmd_str = " ".join(cmd)
-        logger.info(f"Running: {cmd_str}")
-
-        env = os.environ.copy()
-        env.update(self.env_vars)
-
-        start_time = time.time()
-
-        try:
-            result = subprocess.run(
-                cmd,
-                check=True,
-                capture_output=True,
-                text=True,
-                env=env
-            )
-            end_time = time.time()
-
-            # Create BuildResult object
-            build_result = BuildResult(
-                success=True,
-                output=result.stdout,
-                error=result.stderr,
-                exit_code=result.returncode,
-                execution_time=end_time - start_time
-            )
-
-            if self.verbose:
-                logger.info(result.stdout)
-                if result.stderr:
-                    logger.warning(result.stderr)
-
-            self.last_result = build_result
-            return build_result
-
-        except subprocess.CalledProcessError as e:
-            end_time = time.time()
-
-            # Create BuildResult object for the error
-            build_result = BuildResult(
-                success=False,
-                output=e.stdout if e.stdout else "",
-                error=e.stderr if e.stderr else str(e),
-                exit_code=e.returncode,
-                execution_time=end_time - start_time
-            )
-
-            logger.error(f"Command failed: {cmd_str}")
-            logger.error(f"Error message: {build_result.error}")
-
-            self.last_result = build_result
-            self.status = BuildStatus.FAILED
-            return build_result
-
-    async def run_command_async(self, *cmd: str) -> BuildResult:
-        """
-        Run a shell command asynchronously with environment variables and logging.
-
-        Args:
-            *cmd (str): The command and its arguments as separate strings.
-
-        Returns:
-            BuildResult: Object containing the execution status and details.
-        """
+    async def _default_run_command_async(self, cmd: List[str]) -> BuildResult:
         cmd_str = " ".join(cmd)
         logger.info(f"Running async: {cmd_str}")
 
@@ -185,7 +100,6 @@ class BuildHelperBase(ABC):
         start_time = time.time()
 
         try:
-            # Create subprocess
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -193,19 +107,17 @@ class BuildHelperBase(ABC):
                 env=env
             )
 
-            # Wait for the subprocess to complete and capture output
             stdout, stderr = await process.communicate()
-            exit_code = process.returncode
+            exit_code = process.returncode if process.returncode is not None else 1  # Fixed: Ensure exit_code is never None
             end_time = time.time()
 
             success = exit_code == 0
 
-            # Create BuildResult object
             build_result = BuildResult(
                 success=success,
-                output=stdout.decode() if isinstance(stdout, bytes) else str(stdout),
-                error=stderr.decode() if isinstance(stderr, bytes) else str(stderr),
-                exit_code=exit_code or 0,
+                output=stdout.decode().strip(),
+                error=stderr.decode().strip(),
+                exit_code=exit_code,  # Now guaranteed to be int
                 execution_time=end_time - start_time
             )
 
@@ -221,32 +133,22 @@ class BuildHelperBase(ABC):
 
             return build_result
 
+        except FileNotFoundError:
+            error_msg = f"Command not found: {cmd[0]}. Please ensure it is installed and in your PATH."
+            logger.error(error_msg)
+            self.status = BuildStatus.FAILED
+            return BuildResult(
+                success=False, output="", error=error_msg, exit_code=1, execution_time=time.time() - start_time
+            )
         except Exception as e:
-            end_time = time.time()
-
-            # Create BuildResult object for the error
-            build_result = BuildResult(
-                success=False,
-                output="",
-                error=str(e),
-                exit_code=1,
-                execution_time=end_time - start_time
+            error_msg = f"An unexpected error occurred while running '{cmd_str}': {e}"
+            logger.exception(error_msg)
+            self.status = BuildStatus.FAILED
+            return BuildResult(
+                success=False, output="", error=error_msg, exit_code=1, execution_time=time.time() - start_time
             )
 
-            logger.error(f"Async command failed: {cmd_str}")
-            logger.error(f"Error message: {str(e)}")
-
-            self.last_result = build_result
-            self.status = BuildStatus.FAILED
-            return build_result
-
-    def clean(self) -> BuildResult:
-        """
-        Clean the build directory by removing all files and subdirectories.
-
-        Returns:
-            BuildResult: Object containing the execution status and details.
-        """
+    async def clean(self) -> BuildResult:
         self.status = BuildStatus.CLEANING
         logger.info(f"Cleaning build directory: {self.build_dir}")
 
@@ -255,43 +157,29 @@ class BuildHelperBase(ABC):
         error_message = ""
 
         try:
-            # Save cache to reload after cleaning
-            cache_content = None
-            if self.cache_file.exists():
-                try:
-                    with open(self.cache_file, "r") as f:
-                        cache_content = f.read()
-                except IOError as e:
-                    logger.warning(
-                        f"Failed to backup cache before cleaning: {e}")
-
-            # Remove all contents of the build directory
             if self.build_dir.exists():
+                # Preserve the cache file if it exists
+                cache_content = None
+                if self.cache_file.exists():
+                    cache_content = self.cache_file.read_bytes()
+
+                # Remove all contents except the cache file itself
                 for item in self.build_dir.iterdir():
-                    if item == self.cache_file:
-                        # Skip the cache file
-                        continue
+                    if item != self.cache_file:
+                        try:
+                            if item.is_dir():
+                                shutil.rmtree(item)
+                            else:
+                                item.unlink()
+                        except Exception as e:
+                            success = False
+                            error_message += f"Error removing {item}: {e}\n"
 
-                    try:
-                        if item.is_dir():
-                            shutil.rmtree(item)
-                        else:
-                            item.unlink()
-                    except Exception as e:
-                        success = False
-                        error_message += f"Error removing {item}: {str(e)}\n"
+                # Restore cache file if it was backed up
+                if cache_content is not None:
+                    self.cache_file.write_bytes(cache_content)
             else:
-                # Create the build directory if it doesn't exist
                 self.build_dir.mkdir(parents=True, exist_ok=True)
-
-            # Restore cache if it was backed up
-            if cache_content is not None:
-                try:
-                    with open(self.cache_file, "w") as f:
-                        f.write(cache_content)
-                except IOError as e:
-                    logger.warning(
-                        f"Failed to restore cache after cleaning: {e}")
 
         except Exception as e:
             success = False
@@ -300,7 +188,6 @@ class BuildHelperBase(ABC):
 
         end_time = time.time()
 
-        # Create BuildResult object
         build_result = BuildResult(
             success=success,
             output=f"Cleaned build directory: {self.build_dir}" if success else "",
@@ -310,8 +197,7 @@ class BuildHelperBase(ABC):
         )
 
         if success:
-            logger.success(
-                f"Successfully cleaned build directory: {self.build_dir}")
+            logger.success(f"Successfully cleaned build directory: {self.build_dir}")
             self.status = BuildStatus.COMPLETED
         else:
             logger.error(f"Failed to clean build directory: {self.build_dir}")
@@ -321,37 +207,13 @@ class BuildHelperBase(ABC):
         return build_result
 
     def get_status(self) -> BuildStatus:
-        """
-        Get the current build status.
-
-        Returns:
-            BuildStatus: Current status of the build process.
-        """
         return self.status
 
     def get_last_result(self) -> Optional[BuildResult]:
-        """
-        Get the result of the last executed command.
-
-        Returns:
-            Optional[BuildResult]: Result object of the last command or None if no command was executed.
-        """
         return self.last_result
 
     @classmethod
     def from_options(cls, options: BuildOptions) -> 'BuildHelperBase':
-        """
-        Create a BuildHelperBase instance from a BuildOptions dictionary.
-
-        This class method creates an instance of the derived class using
-        the provided options dictionary.
-
-        Args:
-            options (BuildOptions): Dictionary containing build options.
-
-        Returns:
-            BuildHelperBase: Instance of the build helper.
-        """
         return cls(
             source_dir=options.get('source_dir', Path('.')),
             build_dir=options.get('build_dir', Path('build')),
@@ -362,28 +224,22 @@ class BuildHelperBase(ABC):
             parallel=options.get('parallel', os.cpu_count() or 4)
         )
 
-    # Abstract methods that must be implemented by subclasses
     @abstractmethod
-    def configure(self) -> BuildResult:
-        """Configure the build system."""
+    async def configure(self) -> BuildResult:
         pass
 
     @abstractmethod
-    def build(self, target: str = "") -> BuildResult:
-        """Build the project."""
+    async def build(self, target: str = "") -> BuildResult:
         pass
 
     @abstractmethod
-    def install(self) -> BuildResult:
-        """Install the project to the specified prefix."""
+    async def install(self) -> BuildResult:
         pass
 
     @abstractmethod
-    def test(self) -> BuildResult:
-        """Run the project's tests."""
+    async def test(self) -> BuildResult:
         pass
 
     @abstractmethod
-    def generate_docs(self, doc_target: str = "doc") -> BuildResult:
-        """Generate documentation for the project."""
+    async def generate_docs(self, doc_target: str = "doc") -> BuildResult:
         pass

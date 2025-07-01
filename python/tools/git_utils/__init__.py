@@ -5,12 +5,13 @@ This module provides a comprehensive set of utility functions to interact with G
 It supports both command-line usage and embedding via pybind11 for C++ applications.
 
 Features:
-- Repository operations: clone, pull, fetch, push
+- Repository operations: clone, pull, fetch, push, rebase, cherry-pick, diff
 - Branch management: create, switch, merge, list, delete
 - Change management: add, commit, reset, stash
 - Tag operations: create, delete, list
 - Remote repository management: add, remove, list, set-url
-- Repository information: status, log, diff
+- Submodule management
+- Repository information: status, log, diff, ahead/behind status
 - Configuration: user info, settings
 
 Author:
@@ -20,19 +21,21 @@ License:
     GPL-3.0-or-later
 
 Version:
-    2.0.0
+    3.0.0
 """
 
 from .exceptions import (
     GitException, GitCommandError, GitRepositoryNotFound,
-    GitBranchError, GitMergeConflict
+    GitBranchError, GitMergeConflict, GitRebaseConflictError, GitCherryPickError
 )
-from .models import GitResult, GitOutputFormat
+from .models import (
+    GitResult, GitOutputFormat, CommitInfo, StatusInfo, FileStatus, AheadBehindInfo
+)
 from .utils import change_directory, ensure_path, validate_repository
 from .git_utils import GitUtils
 from .pybind_adapter import GitUtilsPyBindAdapter
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"
 __all__ = [
     'GitUtils',
     'GitUtilsPyBindAdapter',
@@ -41,8 +44,14 @@ __all__ = [
     'GitRepositoryNotFound',
     'GitBranchError',
     'GitMergeConflict',
+    'GitRebaseConflictError',
+    'GitCherryPickError',
     'GitResult',
     'GitOutputFormat',
+    'CommitInfo',
+    'StatusInfo',
+    'FileStatus',
+    'AheadBehindInfo',
     'change_directory',
     'ensure_path',
     'validate_repository'

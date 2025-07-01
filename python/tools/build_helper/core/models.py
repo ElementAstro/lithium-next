@@ -7,7 +7,7 @@ Data models for the build system helper.
 from enum import Enum, auto
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, TypedDict, Optional, Union
+from typing import Dict, List, TypedDict
 
 
 class BuildStatus(Enum):
