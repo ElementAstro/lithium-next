@@ -1,30 +1,76 @@
 # ASCOM Device Implementation
 
+# Add the modular filterwheel subdirectory
+add_subdirectory(filterwheel)
+
+# Add the modular focuser subdirectory
+add_subdirectory(focuser)
+
+# Add the modular rotator subdirectory
+add_subdirectory(rotator)
+
 add_library(
   lithium_device_ascom STATIC
   # Core headers
-  telescope.hpp
+  telescope/main.hpp
+  telescope/controller.hpp
+  telescope/legacy_telescope.hpp
   camera/main.hpp
   camera/controller.hpp
   camera/legacy_camera.hpp
-  focuser.hpp
-  filterwheel.hpp
+  focuser/main.hpp
+  focuser/controller.hpp
+  # Modular rotator (new structure)
+  rotator/main.hpp
+  rotator/controller.hpp
+  rotator/components/hardware_interface.hpp
+  rotator/components/position_manager.hpp
+  rotator/components/property_manager.hpp
+  rotator/components/preset_manager.hpp
   dome.hpp
-  rotator.hpp
   switch.hpp
+  # Modular switch (new structure)
+  switch/main.hpp
+  switch/controller.hpp
+  switch/components/hardware_interface.hpp
+  switch/components/switch_manager.hpp
+  switch/components/group_manager.hpp
+  switch/components/timer_manager.hpp
+  switch/components/power_manager.hpp
+  switch/components/state_manager.hpp
+  # Legacy focuser (moved to legacy folder)
+  legacy/focuser.hpp
   # Enhanced support components
   ascom_com_helper.hpp
-  ascom_alpaca_client.hpp
+  alpaca_client.hpp
   # Implementation files
-  telescope.cpp
+  telescope/main.cpp
+  telescope/controller.cpp
+  telescope/legacy_telescope.cpp
   camera/main.cpp
   camera/controller.cpp
   camera/legacy_camera.cpp
-  focuser.cpp
-  filterwheel.cpp
+  focuser/main.cpp
+  focuser/controller.cpp
+  legacy/focuser.cpp
+  # Modular rotator implementation
+  rotator/main.cpp
+  rotator/controller.cpp
+  rotator/components/hardware_interface.cpp
+  rotator/components/position_manager.cpp
+  rotator/components/property_manager.cpp
+  rotator/components/preset_manager.cpp
   dome.cpp
-  rotator.cpp
-  switch.cpp)
+  switch.cpp
+  # Modular switch implementation
+  switch/main.cpp
+  switch/controller.cpp
+  switch/components/hardware_interface.cpp
+  switch/components/switch_manager.cpp
+  switch/components/group_manager.cpp
+  switch/components/timer_manager.cpp
+  switch/components/power_manager.cpp
+  switch/components/state_manager.cpp)
 
 # Windows-specific COM support
 if(WIN32)
@@ -41,13 +87,16 @@ if(UNIX)
   target_include_directories(lithium_device_ascom PRIVATE ${CURL_INCLUDE_DIRS})
   target_sources(
     lithium_device_ascom
-    PRIVATE ascom_alpaca_client.cpp ascom_alpaca_client_v9.cpp
-            ascom_alpaca_imagebytes.cpp ascom_alpaca_utils.cpp)
+    PRIVATE alpaca_client.cpp)
 endif()
 
 # Link common dependencies
-target_link_libraries(lithium_device_ascom PRIVATE lithium_atom_log
-                                                   lithium_atom_type)
+target_link_libraries(lithium_device_ascom PRIVATE 
+    lithium_atom_log
+    lithium_atom_type
+    lithium_device_ascom_focuser
+    lithium_device_ascom_rotator
+)
 
 target_link_libraries(
   lithium_device_ascom
@@ -76,6 +125,6 @@ install(
         focuser.hpp
         filterwheel.hpp
         dome.hpp
-        rotator.hpp
+        rotator/main.hpp
         switch.hpp
   DESTINATION include/lithium/device/ascom)

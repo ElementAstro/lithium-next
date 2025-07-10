@@ -10,5 +10,5 @@ Version: 4.0.7
 
 Requires.private: zlib
 Libs: -L${libdir} -L${sharedlibdir} -lminizip
-Libs.private: -llzma -lzstd -lssl -lcrypto
+Libs.private: -llzma -lzstd -l/usr/lib/x86_64-linux-gnu/libssl.so -l/usr/lib/x86_64-linux-gnu/libcrypto.so
 Cflags: -I${includedir}

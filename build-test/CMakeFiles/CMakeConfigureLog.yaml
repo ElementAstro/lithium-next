@@ -1770,3 +1770,1383 @@ events:
         
       exitCode: 0
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "libs/atom/extra/base64/cmake/Modules/TargetArch.cmake:18 (try_compile)"
+      - "libs/atom/extra/base64/CMakeLists.txt:31 (detect_target_architecture)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+      binary: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/max/lithium-next/cmake/;/home/max/lithium-next/libs/atom/cmake/;/home/max/lithium-next/libs/atom/../cmake/;/home/max/lithium-next/libs/atom/extra/cmake_modules/;/home/max/lithium-next/libs/atom/extra/../cmake_modules/;/home/max/lithium-next/libs/atom/extra/base64/cmake/Modules"
+      CMAKE_OSX_ARCHITECTURES: "x86_64"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "_IGNORED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_6a600/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_6a600.dir/build.make CMakeFiles/cmTC_6a600.dir/build
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_6a600.dir/test-arch.c.o
+        /usr/bin/cc   -std=gnu17 -fPIE -o CMakeFiles/cmTC_6a600.dir/test-arch.c.o -c /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c
+        /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c:26:2: error: #error ##arch=x64##
+           26 | #error ##arch=x64##
+              |  ^~~~~
+        gmake[1]: *** [CMakeFiles/cmTC_6a600.dir/build.make:78: CMakeFiles/cmTC_6a600.dir/test-arch.c.o] Error 1
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        gmake: *** [Makefile:127: cmTC_6a600/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "libs/atom/extra/base64/cmake/Modules/TargetArch.cmake:18 (try_compile)"
+      - "libs/atom/extra/base64/CMakeLists.txt:31 (detect_target_architecture)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+      binary: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/max/lithium-next/cmake/;/home/max/lithium-next/libs/atom/cmake/;/home/max/lithium-next/libs/atom/../cmake/;/home/max/lithium-next/libs/atom/extra/cmake_modules/;/home/max/lithium-next/libs/atom/extra/../cmake_modules/;/home/max/lithium-next/libs/atom/extra/base64/cmake/Modules"
+      CMAKE_OSX_ARCHITECTURES: "x86_64"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "_IGNORED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_978e3/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_978e3.dir/build.make CMakeFiles/cmTC_978e3.dir/build
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_978e3.dir/test-arch.c.o
+        /usr/bin/cc   -std=gnu17 -fPIE -o CMakeFiles/cmTC_978e3.dir/test-arch.c.o -c /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c
+        /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c:26:2: error: #error ##arch=x64##
+           26 | #error ##arch=x64##
+              |  ^~~~~
+        gmake[1]: *** [CMakeFiles/cmTC_978e3.dir/build.make:78: CMakeFiles/cmTC_978e3.dir/test-arch.c.o] Error 1
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        gmake: *** [Makefile:127: cmTC_978e3/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "libs/atom/extra/base64/cmake/Modules/TargetArch.cmake:18 (try_compile)"
+      - "libs/atom/extra/base64/CMakeLists.txt:31 (detect_target_architecture)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+      binary: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/max/lithium-next/cmake/;/home/max/lithium-next/libs/atom/cmake/;/home/max/lithium-next/libs/atom/../cmake/;/home/max/lithium-next/libs/atom/extra/cmake_modules/;/home/max/lithium-next/libs/atom/extra/../cmake_modules/;/home/max/lithium-next/libs/atom/extra/base64/cmake/Modules"
+      CMAKE_OSX_ARCHITECTURES: "x86_64"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "_IGNORED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_35164/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_35164.dir/build.make CMakeFiles/cmTC_35164.dir/build
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_35164.dir/test-arch.c.o
+        /usr/bin/cc   -std=gnu17 -fPIE -o CMakeFiles/cmTC_35164.dir/test-arch.c.o -c /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c
+        /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c:26:2: error: #error ##arch=x64##
+           26 | #error ##arch=x64##
+              |  ^~~~~
+        gmake[1]: *** [CMakeFiles/cmTC_35164.dir/build.make:78: CMakeFiles/cmTC_35164.dir/test-arch.c.o] Error 1
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        gmake: *** [Makefile:127: cmTC_35164/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "libs/atom/extra/base64/cmake/Modules/TargetArch.cmake:18 (try_compile)"
+      - "libs/atom/extra/base64/CMakeLists.txt:31 (detect_target_architecture)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+      binary: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/max/lithium-next/cmake/;/home/max/lithium-next/libs/atom/cmake/;/home/max/lithium-next/libs/atom/../cmake/;/home/max/lithium-next/libs/atom/extra/cmake_modules/;/home/max/lithium-next/libs/atom/extra/../cmake_modules/;/home/max/lithium-next/libs/atom/extra/base64/cmake/Modules"
+      CMAKE_OSX_ARCHITECTURES: "x86_64"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "_IGNORED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_863f2/fast
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_863f2.dir/build.make CMakeFiles/cmTC_863f2.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_863f2.dir/test-arch.c.o
+        /usr/bin/cc   -std=gnu17 -fPIE -o CMakeFiles/cmTC_863f2.dir/test-arch.c.o -c /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c
+        /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c:26:2: error: #error ##arch=x64##
+           26 | #error ##arch=x64##
+              |  ^~~~~
+        gmake[2]: *** [CMakeFiles/cmTC_863f2.dir/build.make:78: CMakeFiles/cmTC_863f2.dir/test-arch.c.o] Error 1
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        gmake[1]: *** [Makefile:127: cmTC_863f2/fast] Error 2
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "cmake/LithiumOptimizations.cmake:471 (check_ipo_supported)"
+      - "CMakeLists.txt:49 (lithium_configure_build_system)"
+    directories:
+      source: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "libs/atom/extra/base64/cmake/Modules/TargetArch.cmake:18 (try_compile)"
+      - "libs/atom/extra/base64/CMakeLists.txt:31 (detect_target_architecture)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+      binary: "/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/max/lithium-next/cmake/;/home/max/lithium-next/libs/atom/cmake/;/home/max/lithium-next/libs/atom/../cmake/;/home/max/lithium-next/libs/atom/extra/cmake_modules/;/home/max/lithium-next/libs/atom/extra/../cmake_modules/;/home/max/lithium-next/libs/atom/extra/base64/cmake/Modules"
+      CMAKE_OSX_ARCHITECTURES: "x86_64"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "_IGNORED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_18d57/fast
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_18d57.dir/build.make CMakeFiles/cmTC_18d57.dir/build
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_18d57.dir/test-arch.c.o
+        /usr/bin/cc   -std=gnu17 -fPIE -o CMakeFiles/cmTC_18d57.dir/test-arch.c.o -c /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c
+        /home/max/lithium-next/libs/atom/extra/base64/cmake/test-arch.c:26:2: error: #error ##arch=x64##
+           26 | #error ##arch=x64##
+              |  ^~~~~
+        gmake[2]: *** [CMakeFiles/cmTC_18d57.dir/build.make:78: CMakeFiles/cmTC_18d57.dir/test-arch.c.o] Error 1
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        gmake[1]: *** [Makefile:127: cmTC_18d57/fast] Error 2
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/atom/extra/base64/CMakeFiles/CMakeTmp'
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 25%] Building CXX object CMakeFiles/foo.dir/foo.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+        [ 50%] Linking CXX static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.cpp.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [ 75%] Building CXX object CMakeFiles/boo.dir/main.cpp.o
+        /usr/bin/c++   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.cpp.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
+        [100%] Linking CXX executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/c++ -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.cpp.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:138 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckIPOSupported.cmake:266 (_ipo_run_language_check)"
+      - "libs/thirdparty/pocketpy/CMakeLists.txt:10 (check_ipo_supported)"
+    directories:
+      source: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src"
+      binary: "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin"
+    buildResult:
+      variable: "_IPO_LANGUAGE_CHECK_RESULT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile
+        gmake[1]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -S/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src -B/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin --check-build-system CMakeFiles/Makefile.cmake 0
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+        /usr/bin/gmake  -f CMakeFiles/Makefile2 all
+        gmake[2]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/foo.dir/depend.internal".
+        Scanning dependencies of target foo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/foo.dir/build.make CMakeFiles/foo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 25%] Building C object CMakeFiles/foo.dir/foo.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/foo.dir/foo.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/foo.c
+        [ 50%] Linking C static library libfoo.a
+        /usr/bin/cmake -P CMakeFiles/foo.dir/cmake_clean_target.cmake
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+        "/usr/bin/gcc-ar-13" cr libfoo.a CMakeFiles/foo.dir/foo.c.o
+        "/usr/bin/gcc-ranlib-13" libfoo.a
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 50%] Built target foo
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/depend
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/DependInfo.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Dependee "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles/boo.dir/depend.internal".
+        Scanning dependencies of target boo
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/gmake  -f CMakeFiles/boo.dir/build.make CMakeFiles/boo.dir/build
+        gmake[3]: Entering directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [ 75%] Building C object CMakeFiles/boo.dir/main.c.o
+        /usr/bin/cc   -flto=auto -fno-fat-lto-objects -o CMakeFiles/boo.dir/main.c.o -c /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/src/main.c
+        [100%] Linking C executable boo
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/boo.dir/link.txt --verbose=1
+        /usr/bin/cc -flto=auto -fno-fat-lto-objects CMakeFiles/boo.dir/main.c.o -o boo  libfoo.a 
+        gmake[3]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        [100%] Built target boo
+        gmake[2]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        /usr/bin/cmake -E cmake_progress_start /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+        gmake[1]: Leaving directory '/home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-C/bin'
+        
+      exitCode: 0
+...

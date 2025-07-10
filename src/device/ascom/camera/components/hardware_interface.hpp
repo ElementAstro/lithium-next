@@ -25,6 +25,10 @@ and both COM and Alpaca protocol integration.
 #include <vector>
 #include <memory>
 
+#include <boost/asio/io_context.hpp>
+
+#include "../../alpaca_client.hpp"
+
 #ifdef _WIN32
 // clang-format off
 #include <windows.h>
@@ -119,7 +123,7 @@ public:
     };
 
 public:
-    HardwareInterface();
+    HardwareInterface(boost::asio::io_context& io_context);
     ~HardwareInterface();
 
     // Non-copyable and non-movable
@@ -405,10 +409,16 @@ private:
     std::atomic<bool> initialized_{false};
     std::atomic<bool> connected_{false};
     mutable std::mutex mutex_;
+    mutable std::mutex infoMutex_;
     
     // Connection details
     ConnectionType connectionType_{ConnectionType::ALPACA_REST};
     ConnectionSettings currentSettings_;
+    std::string deviceName_;
+    
+    // Alpaca client integration
+    boost::asio::io_context& io_context_;
+    std::unique_ptr<lithium::device::ascom::DeviceClient<lithium::device::ascom::DeviceType::Camera>> alpaca_client_;
     
     // Camera information cache
     mutable std::optional<CameraInfo> cameraInfo_;
@@ -427,26 +437,27 @@ private:
     auto setCOMProperty(const std::string& property, const VARIANT& value) -> bool;
 #endif
 
-    // Alpaca helper methods
-    auto sendAlpacaRequest(const std::string& method, const std::string& endpoint, const std::string& params = "") const -> std::optional<std::string>;
-    auto parseAlpacaResponse(const std::string& response) -> std::optional<std::string>;
-    auto buildAlpacaUrl(const std::string& endpoint) const -> std::string;
+    // Alpaca helper methods (using new optimized client)
+    auto connectAlpaca(const ConnectionSettings& settings) -> bool;
+    auto disconnectAlpaca() -> bool;
     
     // Connection type specific methods
     auto connectCOM(const ConnectionSettings& settings) -> bool;
-    auto connectAlpaca(const ConnectionSettings& settings) -> bool;
     auto disconnectCOM() -> bool;
-    auto disconnectAlpaca() -> bool;
     
-    // Alpaca discovery
+    // Alpaca discovery using new client
     auto discoverAlpacaDevices() -> std::vector<std::string>;
     
     // Information caching
-    auto updateCameraInfo() const -> bool;
+    auto updateCameraInfo() -> bool;
     auto shouldUpdateInfo() const -> bool;
     
     // Error handling helpers
-    void setError(const std::string& error) const { lastError_ = error; }
+    void setLastError(const std::string& error) const { lastError_ = error; }
+    
+    // Alpaca communication helper
+    auto sendAlpacaRequest(const std::string& method, const std::string& endpoint, 
+                          const std::string& params = "") const -> std::optional<std::string>;
 };
 
 } // namespace lithium::device::ascom::camera::components
