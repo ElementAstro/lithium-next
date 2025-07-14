@@ -17,7 +17,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, TypedDict, Union
 from .cache import LRUCache
 from .exceptions import PacmanError
 from .models import CommandResult, PackageInfo, PackageStatus
-from .types import PackageName, RepositoryName
+from .pacman_types import PackageName, RepositoryName
 
 
 class PackageUsageStats(TypedDict):

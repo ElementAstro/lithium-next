@@ -17,7 +17,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from .types import PluginHook, AsyncPluginHook
+from .pacman_types import PluginHook, AsyncPluginHook
 from .exceptions import PacmanError
 
 

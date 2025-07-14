@@ -14,6 +14,7 @@ from .packaging import ZipPackageHandler
 
 class SyncProgressCallback:
     """Adapts an async progress callback to a synchronous interface."""
+
     def __init__(self, sync_callback: Callable[[str, float, str], None]):
         self._sync_callback = sync_callback
 
@@ -46,13 +47,16 @@ class AutoUpdaterSync:
             package_handler=ZipPackageHandler(),
             install_dir=Path(config["install_dir"]),
             current_version=config["current_version"],
-            temp_dir=Path(config.get("temp_dir", Path(config["install_dir"]) / "temp")),
-            backup_dir=Path(config.get("backup_dir", Path(config["install_dir"]) / "backup")),
+            temp_dir=Path(config.get("temp_dir", Path(
+                config["install_dir"]) / "temp")),
+            backup_dir=Path(config.get("backup_dir", Path(
+                config["install_dir"]) / "backup")),
             custom_hooks=config.get("custom_hooks", {})
         )
 
         if progress_callback:
-            updater_config.progress_callback = SyncProgressCallback(progress_callback)
+            updater_config.progress_callback = SyncProgressCallback(
+                progress_callback)
 
         self.updater = AutoUpdater(updater_config)
         # 修复：asyncio.current_tasks 并不存在，应该用 asyncio.all_tasks

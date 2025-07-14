@@ -7,7 +7,7 @@ name = "build_helper"
 version = "2.0.0"
 description = "Advanced Build System Helper"
 readme = "README.md"
-authors = [{ name = "Max Qian", email = "lightapt.com" }]
+authors = [{ name = "Max Qian" }]
 license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.10"
 dependencies = ["loguru>=0.6.0"]

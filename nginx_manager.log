@@ -1,0 +1,4 @@
+2025-07-12 22:48:17 | INFO     | python.tools.nginx_manager.logging_config:setup_logging:37 - Logging initialized
+2025-07-12 22:48:25 | INFO     | python.tools.nginx_manager.logging_config:setup_logging:37 - Logging initialized
+2025-07-12 22:48:39 | INFO     | python.tools.nginx_manager.logging_config:setup_logging:37 - Logging initialized
+2025-07-12 22:48:39 | WARNING  | python.tools.nginx_manager.manager:list_virtual_hosts:619 - Error listing virtual hosts: [Errno 2] No such file or directory: '/etc/nginx/sites-available'

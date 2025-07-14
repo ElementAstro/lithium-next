@@ -23,9 +23,9 @@ from .api import (
     compiler_manager,  # singleton instance
 )
 from .utils import load_json, save_json
-from .build_manager import BuildManager
 from .compiler_manager import CompilerManager
-from .compiler import Compiler
+from .build_manager import BuildManager
+from .compiler import EnhancedCompiler as Compiler
 from .core_types import (
     CppVersion,
     CompilerType,
@@ -35,7 +35,7 @@ from .core_types import (
     CompilationError,
     CompilerNotFoundError,
 )
-from cli import main
+from .cli import main
 import sys
 from loguru import logger
 

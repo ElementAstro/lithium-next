@@ -3,10 +3,12 @@
 PyBind11 bindings for the asynchronous Nginx Manager.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Awaitable, TypeVar, Coroutine
+from typing import Any, Coroutine, TypeVar
 
 from loguru import logger
 
@@ -38,19 +40,21 @@ class NginxManagerBindings:
 
     def _run_sync(self, coro: Coroutine[Any, Any, T]) -> T:
         """
-        Run an awaitable coroutine synchronously.
+        Run an awaitable coroutine synchronously with enhanced error handling.
         This is a blocking call that will run the asyncio event loop until the future is done.
         """
         try:
             return asyncio.run(coro)
         except NginxError as e:
-            logger.error(f"An Nginx operation failed: {e}")
+            logger.error(f"Nginx operation failed: {e}")
             # Re-raise the exception to allow C++ to catch it if needed
             raise
+        except asyncio.TimeoutError as e:
+            logger.error(f"Operation timed out: {e}")
+            raise NginxError(f"Operation timed out: {e}") from e
         except Exception as e:
-            logger.error(
-                f"An unexpected error occurred in async execution: {e}")
-            raise
+            logger.error(f"Unexpected error in async execution: {e}")
+            raise NginxError(f"Unexpected error: {e}") from e
 
     def is_installed(self) -> bool:
         """Check if Nginx is installed."""

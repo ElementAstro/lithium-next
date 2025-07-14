@@ -14,7 +14,13 @@ __description__ = "Advanced Pacman Package Manager with Modern Python Features"
 from .manager import PacmanManager
 from .config import PacmanConfig
 from .models import PackageInfo, PackageStatus, CommandResult
-from .exceptions import PacmanError, CommandError, PackageNotFoundError, ConfigError
+# Exceptions
+from .exceptions import (
+    PacmanError, CommandError, PackageNotFoundError, ConfigError,
+    DependencyError, PermissionError, NetworkError, CacheError,
+    ValidationError, PluginError, DatabaseError, RepositoryError,
+    SignatureError, LockError, ErrorContext, create_error_context
+)
 from .async_manager import AsyncPacmanManager
 from .api import PacmanAPI
 from .cli import CLI
@@ -30,7 +36,7 @@ from .plugins import (
 )
 
 # Type definitions
-from .types import (
+from .pacman_types import (
     PackageName,
     PackageVersion,
     RepositoryName,
@@ -69,6 +75,18 @@ __all__ = [
     "CommandError",
     "PackageNotFoundError",
     "ConfigError",
+    "DependencyError",
+    "PermissionError",
+    "NetworkError",
+    "CacheError",
+    "ValidationError",
+    "PluginError",
+    "DatabaseError",
+    "RepositoryError",
+    "SignatureError",
+    "LockError",
+    "ErrorContext",
+    "create_error_context",
 
     # Advanced features
     "PackageCache",

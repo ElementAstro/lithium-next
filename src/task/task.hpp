@@ -69,6 +69,14 @@ public:
     Task(std::string name, std::function<void(const json&)> action);
 
     /**
+     * @brief Constructs a Task with a given name, type and action.
+     * @param name The name of the task.
+     * @param taskType The type of the task.
+     * @param action The action to be performed by the task.
+     */
+    Task(std::string name, std::string taskType, std::function<void(const json&)> action);
+
+    /**
      * @brief Executes the task with the given parameters.
      * @param params The parameters to be passed to the task action.
      */
@@ -90,6 +98,18 @@ public:
      * @brief Gets the UUID of the task.
      * @return The UUID of the task.
      */
+     
+    /**
+     * @brief Sets the type of the task.
+     * @param taskType The type identifier for the task.
+     */
+    void setTaskType(const std::string& taskType);
+    
+    /**
+     * @brief Gets the type of the task.
+     * @return The type identifier of the task.
+     */
+    [[nodiscard]] auto getTaskType() const -> const std::string&;
     [[nodiscard]] auto getUUID() const -> const std::string&;
 
     /**
@@ -316,22 +336,25 @@ public:
     void clearExceptionCallback();
 
     /**
-     * @brief Converts the task to a JSON representation.
-     * @return The JSON representation of the task.
+     * @brief Serializes the task to JSON.
+     * @param includeRuntime Whether to include runtime data (execution time, memory usage, etc.)
+     * @return JSON representation of the task.
      */
-    json toJson() const;
+    [[nodiscard]] json toJson(bool includeRuntime = true) const;
 
     /**
-     * @brief Sets the task type for factory-based creation.
-     * @param type The task type identifier.
+     * @brief Initializes a task from JSON.
+     * @param data JSON representation of the task.
+     * @throws std::runtime_error If the JSON is invalid.
      */
-    void setTaskType(const std::string& type);
+    void fromJson(const json& data);
 
     /**
-     * @brief Gets the task type identifier.
-     * @return The task type identifier.
+     * @brief Creates a task from JSON.
+     * @param data JSON representation of the task.
+     * @return A unique pointer to the created task.
      */
-    [[nodiscard]] auto getTaskType() const -> const std::string&;
+    static std::unique_ptr<Task> createFromJson(const json& data);
 
     void setResult(const json& result) { result_ = result; }
     

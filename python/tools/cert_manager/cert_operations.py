@@ -207,8 +207,12 @@ def get_cert_details(cert_path: Path) -> CertificateDetails:
     cert = load_certificate(cert_path)
     is_ca = False
     try:
-        basic_constraints = cert.extensions.get_extension_for_oid(ExtensionOID.BASIC_CONSTRAINTS)  # Fixed
-        is_ca = basic_constraints.value.ca
+        basic_constraints = cert.extensions.get_extension_for_oid(ExtensionOID.BASIC_CONSTRAINTS)
+        # Defensive: ensure .value is BasicConstraints and has .ca
+        try:
+            is_ca = bool(getattr(basic_constraints.value, 'ca', False))
+        except Exception:
+            is_ca = False
     except x509.ExtensionNotFound:
         pass
 
@@ -218,13 +222,19 @@ def get_cert_details(cert_path: Path) -> CertificateDetails:
         serial_number=cert.serial_number,
         not_valid_before=cert.not_valid_before,
         not_valid_after=cert.not_valid_after,
-        public_key=cert.public_key().public_bytes(
+        public_key_info=cert.public_key().public_bytes(
             serialization.Encoding.PEM,
             serialization.PublicFormat.SubjectPublicKeyInfo,
         ).decode(),
-        extensions=list(cert.extensions),
+        signature_algorithm=cert.signature_hash_algorithm.name if cert.signature_hash_algorithm else "unknown",
+        # Handle cryptography.x509.Version enum safely
+        version=(cert.version.value if hasattr(cert.version, 'value') and isinstance(cert.version.value, int) else 3),
         is_ca=is_ca,
-        fingerprint=cert.fingerprint(hashes.SHA256()).hex(),
+        fingerprint_sha256=cert.fingerprint(hashes.SHA256()).hex(),
+        fingerprint_sha1=cert.fingerprint(hashes.SHA1()).hex(),
+        key_usage=[str(ku) for ku in getattr(cert, 'key_usage', [])] if hasattr(cert, 'key_usage') else [],
+        extended_key_usage=[str(eku) for eku in getattr(cert, 'extended_key_usage', [])] if hasattr(cert, 'extended_key_usage') else [],
+        subject_alt_names=[str(san) for san in getattr(cert, 'subject_alt_name', [])] if hasattr(cert, 'subject_alt_name') else [],
     )
 
 

@@ -8,7 +8,7 @@ from typing import List, Optional, Union
 
 from .core_types import CompilationResult, CompileOptions, LinkOptions, CppVersion, PathLike
 from .compiler_manager import CompilerManager
-from .compiler import Compiler
+from .compiler import EnhancedCompiler as Compiler
 from .build_manager import BuildManager
 
 
@@ -31,7 +31,7 @@ def compile_file(source_file: PathLike,
     """
     Compile a single source file.
     """
-    cpp_version = CppVersion.resolve_cpp_version(cpp_version)
+    cpp_version = CppVersion.resolve_version(cpp_version)
 
     compiler = get_compiler(compiler_name)
     return compiler.compile([Path(source_file)], Path(output_file), cpp_version, options)
@@ -48,7 +48,7 @@ def build_project(source_files: List[PathLike],
     """
     Build a project from multiple source files.
     """
-    cpp_version = CppVersion.resolve_cpp_version(cpp_version)
+    cpp_version = CppVersion.resolve_version(cpp_version)
 
     build_manager = BuildManager(build_dir=build_dir or "build")
     return build_manager.build(

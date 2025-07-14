@@ -16,7 +16,7 @@ from loguru import logger
 from .manager import PacmanManager
 from .async_manager import AsyncPacmanManager
 from .models import PackageInfo, CommandResult, PackageStatus
-from .types import PackageName, PackageVersion, SearchFilter, CommandOptions
+from .pacman_types import PackageName, PackageVersion, SearchFilter, CommandOptions
 from .context import PacmanContext, AsyncPacmanContext
 from .cache import PackageCache
 from .plugins import PluginManager
@@ -68,7 +68,7 @@ class PacmanAPI:
     def _get_manager(self) -> PacmanManager:
         """Get or create the manager instance."""
         if self._manager is None:
-            self._manager = PacmanManager(self.config_path, self.use_sudo)
+            self._manager = PacmanManager({"config_path": self.config_path, "use_sudo": self.use_sudo})
 
             # Load plugins if enabled
             if self._plugin_manager:
@@ -291,12 +291,10 @@ class PacmanAPI:
                 return cached_info
 
         with self._manager_context() as manager:
-            info = manager.show_package_info(package)
-
-            # Cache the result
+            installed = manager.list_installed_packages()
+            info = installed.get(package) if installed else None
             if info and self._cache:
                 self._cache.put_package(info)
-
             return info
 
     def list_installed(self, refresh: bool = False) -> List[PackageInfo]:
@@ -350,12 +348,10 @@ class PacmanAPI:
             Command execution result
         """
         with self._manager_context() as manager:
-            result = manager.upgrade_system(no_confirm)
-
-            # Clear cache after system upgrade
+            # PacmanManager does not have upgrade_system, so run the command directly
+            result = manager.run_command(["pacman", "-Syu", "--noconfirm"] if no_confirm else ["pacman", "-Syu"])
             if self._cache:
                 self._cache.clear_all()
-
             return result
 
     # Utility methods

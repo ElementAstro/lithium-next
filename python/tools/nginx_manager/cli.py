@@ -3,10 +3,14 @@
 Asynchronous command-line interface for Nginx Manager.
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import sys
 from pathlib import Path
+from typing import NoReturn
+
 from loguru import logger
 
 from .manager import (
@@ -82,7 +86,7 @@ class NginxManagerCLI:
 
     async def run(self) -> int:
         """
-        Parse arguments and execute the requested async command.
+        Parse arguments and execute the requested async command with enhanced error handling.
         """
         parser = self.setup_parser()
         args = parser.parse_args()
@@ -96,33 +100,51 @@ class NginxManagerCLI:
             logger.debug(f"Executing command: {args.command}")
             cmd = args.command
 
-            if cmd in ["start", "stop", "reload", "restart"]:
-                await self.manager.manage_service(cmd)
-            elif cmd == "install":
-                await self.manager.install_nginx()
-            elif cmd == "status":
-                await self.manager.get_status()
-            elif cmd == "version":
-                await self.manager.get_version()
-            elif cmd == "check":
-                await self.manager.check_config()
-            elif cmd == "health":
-                await self.manager.health_check()
-            elif cmd == "backup":
-                await self.manager.backup_config(custom_name=args.name)
-            elif cmd == "list-backups":
-                for backup in self.manager.list_backups():
-                    print(backup)
-            elif cmd == "restore":
-                await self.manager.restore_config(backup_file=args.backup)
-            elif cmd == "vhost":
-                await self.handle_vhost_command(args)
+            match cmd:
+                case "start" | "stop" | "reload" | "restart":
+                    await self.manager.manage_service(cmd)
+                case "install":
+                    await self.manager.install_nginx()
+                case "status":
+                    await self.manager.get_status()
+                case "version":
+                    await self.manager.get_version()
+                case "check":
+                    await self.manager.check_config()
+                case "health":
+                    await self.manager.health_check()
+                case "backup":
+                    await self.manager.backup_config(custom_name=args.name)
+                case "list-backups":
+                    backups = self.manager.list_backups()
+                    if backups:
+                        print("Available backups:")
+                        for backup in backups:
+                            print(f"  - {backup.name} ({backup.stat().st_mtime})")
+                    else:
+                        print("No backups found.")
+                case "restore":
+                    await self.manager.restore_config(backup_file=args.backup)
+                case "vhost":
+                    await self.handle_vhost_command(args)
+                case _:
+                    logger.error(f"Unknown command: {cmd}")
+                    return 1
 
             logger.debug("Command executed successfully.")
             return 0
+            
         except NginxError as e:
-            logger.error(f"An error occurred: {e}")
+            logger.error(f"Nginx operation failed: {e}")
             print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except KeyboardInterrupt:
+            logger.info("Operation cancelled by user")
+            print("\nOperation cancelled by user.", file=sys.stderr)
+            return 130
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            print(f"Unexpected error: {e}", file=sys.stderr)
             return 1
 
     async def handle_vhost_command(self, args: argparse.Namespace) -> None:
@@ -146,7 +168,7 @@ class NginxManagerCLI:
 
 def main() -> int:
     """
-    Main entry point for the asynchronous CLI.
+    Main entry point for the asynchronous CLI with enhanced error handling.
     """
     try:
         return asyncio.run(NginxManagerCLI().run())
@@ -156,6 +178,11 @@ def main() -> int:
     except NginxError as e:
         # Catch exceptions that might be raised during initialization
         print(f"Critical Error: {e}", file=sys.stderr)
+        logger.error(f"Critical initialization error: {e}")
+        return 1
+    except Exception as e:
+        print(f"Unexpected critical error: {e}", file=sys.stderr)
+        logger.error(f"Unexpected critical error: {e}")
         return 1
 
 

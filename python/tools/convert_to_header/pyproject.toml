@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "convert_to_header"
-version = "2.1.0"
-description = "A highly flexible tool to convert binary files into C/C++ header files and back."
+version = "2.2.0"
+description = "A highly flexible tool to convert binary files into C/C++ header files and back. Enhanced with modern Python features and robust error handling."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

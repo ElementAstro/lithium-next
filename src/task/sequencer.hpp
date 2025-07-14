@@ -1,3 +1,8 @@
+/**
+ * @file sequencer.hpp
+ * @brief Defines the task sequencer for managing target execution.
+ */
+
 #ifndef LITHIUM_TASK_SEQUENCER_HPP
 #define LITHIUM_TASK_SEQUENCER_HPP
 
@@ -12,11 +17,13 @@
 #include <unordered_map>
 #include <vector>
 #include "../database/orm.hpp"
+#include "../config/config_serializer.hpp"
 #include "generator.hpp"
 #include "target.hpp"
 
 namespace lithium::task {
 using namespace lithium::database;
+using json = nlohmann::json;
 
 /**
  * @enum SequenceState
@@ -63,6 +70,18 @@ public:
         std::function<void(const std::string& targetName, TargetStatus status)>;
     using ErrorCallback = std::function<void(const std::string& targetName,
                                              const std::exception& e)>;
+
+    /**
+     * @enum SerializationFormat
+     * @brief Supported formats for sequence serialization.
+     */
+    enum class SerializationFormat {
+        JSON,           ///< Standard JSON format
+        COMPACT_JSON,   ///< Compact JSON (minimal whitespace)
+        PRETTY_JSON,    ///< Pretty-printed JSON (default for files)
+        JSON5,          ///< JSON5 format (with comments)
+        BINARY          ///< Binary format for efficient storage
+    };
 
     /**
      * @brief Constructor that initializes database and task generator.
@@ -121,19 +140,59 @@ public:
      */
     void resume();
 
-    // Serialization methods
+    // Enhanced serialization methods
 
     /**
-     * @brief Saves the sequence to a file.
+     * @brief Saves the sequence to a file with enhanced format.
      * @param filename The name of the file to save to.
+     * @param format The serialization format to use.
+     * @throws std::runtime_error If the file cannot be written.
      */
-    void saveSequence(const std::string& filename) const;
+    void saveSequence(const std::string& filename, 
+                      SerializationFormat format = SerializationFormat::PRETTY_JSON) const;
 
     /**
-     * @brief Loads a sequence from a file.
+     * @brief Loads a sequence from a file with enhanced format.
      * @param filename The name of the file to load from.
+     * @param detectFormat Whether to auto-detect the file format (true) or use the extension (false).
+     * @throws std::runtime_error If the file cannot be read or contains invalid data.
      */
-    void loadSequence(const std::string& filename);
+    void loadSequence(const std::string& filename, bool detectFormat = true);
+    
+    /**
+     * @brief Exports the sequence to a specific format.
+     * @param format The target format for export.
+     * @return String representation of the sequence in the specified format.
+     */
+    std::string exportToFormat(SerializationFormat format) const;
+
+    /**
+     * @brief Validates a sequence file against the schema.
+     * @param filename The name of the file to validate.
+     * @return True if valid, false otherwise.
+     */
+    bool validateSequenceFile(const std::string& filename) const;
+    
+    /**
+     * @brief Validates a sequence JSON against the schema.
+     * @param data The JSON data to validate.
+     * @param errorMessage Output parameter for error message if validation fails.
+     * @return True if valid, false otherwise.
+     */
+    bool validateSequenceJson(const json& data, std::string& errorMessage) const;
+
+    /**
+     * @brief Exports a sequence as a reusable template.
+     * @param filename The name of the file to save the template to.
+     */
+    void exportAsTemplate(const std::string& filename) const;
+
+    /**
+     * @brief Creates a sequence from a template.
+     * @param filename The name of the template file.
+     * @param params The parameters to customize the template.
+     */
+    void createFromTemplate(const std::string& filename, const json& params);
 
     // Query methods
 
@@ -565,6 +624,7 @@ private:
     std::shared_ptr<database::Database> db_;  ///< Database connection
     std::unique_ptr<database::Table<SequenceModel>>
         sequenceTable_;  ///< Database table
+    std::unique_ptr<lithium::ConfigSerializer> configSerializer_;  ///< Configuration serializer
 
     // Serialization helper methods
 
@@ -595,6 +655,13 @@ private:
      * @param data The JSON data to process.
      */
     void processJsonWithGenerator(json& data);
+
+    /**
+     * @brief Applies template parameters to a template JSON.
+     * @param templateJson The template JSON to modify.
+     * @param params The parameters to apply.
+     */
+    void applyTemplateParameters(json& templateJson, const json& params);
 };
 
 }  // namespace lithium::task

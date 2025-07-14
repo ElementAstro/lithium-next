@@ -1,11 +1,13 @@
 # cli.py
 import argparse
 import json
-from pathlib import Path
 import sys
+import traceback
+from pathlib import Path
 
 from .core import AutoUpdater
-from .types import UpdaterError
+from .types import UpdaterError, UpdaterConfig
+
 
 def main() -> int:
     """
@@ -94,7 +96,7 @@ def main() -> int:
             # Only check for updates
             update_available = updater.check_for_updates()
             if update_available and updater.update_info:
-                print(f"Update available: {updater.update_info['version']}")
+                print(f"Update available: {updater.update_info.version}")
             else:
                 print(
                     f"No updates available (current version: {config['current_version']})")
@@ -121,6 +123,10 @@ def main() -> int:
                 return 0
 
             download_path = updater.download_update()
+            # Ensure download_path is a Path object
+            if not isinstance(download_path, Path):
+                download_path = Path(download_path)
+                
             verified = updater.verify_update(download_path)
             if verified:
                 print("Update verification successful")
@@ -134,7 +140,7 @@ def main() -> int:
             success = updater.update()
             if success and updater.update_info:
                 print(
-                    f"Update to version {updater.update_info['version']} completed successfully")
+                    f"Update to version {updater.update_info.version} completed successfully")
                 return 0
             else:
                 print("No updates installed")

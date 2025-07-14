@@ -1,147 +1,359 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Configuration loading utilities for the build system helper.
+Enhanced configuration loading utilities with modern Python features and robust error handling.
 """
+
+from __future__ import annotations
 
 import configparser
 import json
 from pathlib import Path
-from typing import cast
+from typing import Any, Dict, Union, Optional
+from functools import lru_cache
 
 from loguru import logger
 
 from ..core.models import BuildOptions
+from ..core.errors import ConfigurationError, ErrorContext
 
 
 class BuildConfig:
     """
-    Utility class for loading and parsing build configuration from files.
+    Enhanced utility class for loading and parsing build configuration from files.
 
     This class provides functionality to load build configuration from different file formats
-    (INI, JSON, YAML) and convert it to a format usable by the builder classes.
+    (INI, JSON, YAML) with robust error handling, caching, and validation.
     """
 
-    @staticmethod
-    def load_from_file(file_path: Path) -> BuildOptions:
-        """
-        Load build configuration from a file.
+    # Supported configuration file extensions
+    _SUPPORTED_EXTENSIONS = {
+        '.json': 'json',
+        '.yaml': 'yaml', 
+        '.yml': 'yaml',
+        '.ini': 'ini',
+        '.conf': 'ini',
+        '.toml': 'toml'
+    }
 
-        This method determines the file format based on the file extension and calls
-        the appropriate loader method.
+    @classmethod
+    def load_from_file(cls, file_path: Union[Path, str]) -> BuildOptions:
+        """
+        Load build configuration from a file with enhanced validation.
 
         Args:
-            file_path (Path): Path to the configuration file.
+            file_path: Path to the configuration file.
 
         Returns:
-            BuildOptions: Dictionary containing the build options.
+            BuildOptions: Enhanced build options object.
 
         Raises:
-            ValueError: If the file format is not supported or the file cannot be read.
+            ConfigurationError: If the file format is not supported or cannot be read.
         """
-        if not file_path.exists():
-            raise ValueError(f"Configuration file not found: {file_path}")
+        config_path = Path(file_path)
+        
+        if not config_path.exists():
+            raise ConfigurationError(
+                f"Configuration file not found: {config_path}",
+                config_file=config_path,
+                context=ErrorContext(working_directory=config_path.parent)
+            )
 
-        suffix = file_path.suffix.lower()
-        with open(file_path, "r") as f:
-            content = f.read()
+        if not config_path.is_file():
+            raise ConfigurationError(
+                f"Configuration path is not a file: {config_path}",
+                config_file=config_path,
+                context=ErrorContext(working_directory=config_path.parent)
+            )
 
-        match suffix:
-            case ".json":
-                logger.debug(f"Loading JSON configuration from {file_path}")
-                return BuildConfig.load_from_json(content)
-            case ".yaml" | ".yml":
-                logger.debug(f"Loading YAML configuration from {file_path}")
-                return BuildConfig.load_from_yaml(content)
-            case ".ini" | ".conf":
-                logger.debug(f"Loading INI configuration from {file_path}")
-                return BuildConfig.load_from_ini(content)
-            case _:
-                raise ValueError(
-                    f"Unsupported configuration file format: {suffix}")
+        suffix = config_path.suffix.lower()
+        if suffix not in cls._SUPPORTED_EXTENSIONS:
+            supported = ', '.join(cls._SUPPORTED_EXTENSIONS.keys())
+            raise ConfigurationError(
+                f"Unsupported configuration file format: {suffix}. Supported formats: {supported}",
+                config_file=config_path,
+                context=ErrorContext(working_directory=config_path.parent)
+            )
 
-    @staticmethod
-    def load_from_json(json_str: str) -> BuildOptions:
-        """Load build configuration from a JSON string."""
         try:
-            config = json.loads(json_str)
+            content = config_path.read_text(encoding='utf-8')
+            logger.debug(f"Loading {cls._SUPPORTED_EXTENSIONS[suffix].upper()} configuration from {config_path}")
+            
+            format_type = cls._SUPPORTED_EXTENSIONS[suffix]
+            match format_type:
+                case 'json':
+                    return cls.load_from_json(content, config_path)
+                case 'yaml':
+                    return cls.load_from_yaml(content, config_path)
+                case 'ini':
+                    return cls.load_from_ini(content, config_path)
+                case 'toml':
+                    return cls.load_from_toml(content, config_path)
+                case _:
+                    raise ConfigurationError(
+                        f"Internal error: unhandled format type {format_type}",
+                        config_file=config_path
+                    )
+                    
+        except UnicodeDecodeError as e:
+            raise ConfigurationError(
+                f"Failed to read configuration file (encoding error): {e}",
+                config_file=config_path,
+                context=ErrorContext(working_directory=config_path.parent)
+            )
+        except OSError as e:
+            raise ConfigurationError(
+                f"Failed to read configuration file: {e}",
+                config_file=config_path,
+                context=ErrorContext(working_directory=config_path.parent)
+            )
 
-            # Convert string paths to Path objects
-            if "source_dir" in config:
-                config["source_dir"] = Path(config["source_dir"])
-            if "build_dir" in config:
-                config["build_dir"] = Path(config["build_dir"])
-            if "install_prefix" in config:
-                config["install_prefix"] = Path(config["install_prefix"])
+    @classmethod
+    def load_from_json(cls, json_str: str, source_file: Optional[Path] = None) -> BuildOptions:
+        """Load build configuration from a JSON string with validation."""
+        try:
+            config_data = json.loads(json_str)
+            
+            if not isinstance(config_data, dict):
+                raise ConfigurationError(
+                    "JSON configuration must be an object/dictionary",
+                    config_file=source_file
+                )
 
-            # Cast the dictionary to the correct type
-            return cast(BuildOptions, config)
+            return cls._normalize_config(config_data, source_file)
 
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON configuration: {e}")
-            raise ValueError(f"Invalid JSON configuration: {e}")
+            raise ConfigurationError(
+                f"Invalid JSON configuration: {e}",
+                config_file=source_file,
+                context=ErrorContext(
+                    additional_info={"line": e.lineno, "column": e.colno} if hasattr(e, 'lineno') else {}
+                )
+            )
 
-    @staticmethod
-    def load_from_yaml(yaml_str: str) -> BuildOptions:
-        """Load build configuration from a YAML string."""
+    @classmethod
+    def load_from_yaml(cls, yaml_str: str, source_file: Optional[Path] = None) -> BuildOptions:
+        """Load build configuration from a YAML string with validation."""
         try:
-            # Import yaml only when needed
             import yaml
-
-            config = yaml.safe_load(yaml_str)
-
-            # Convert string paths to Path objects
-            if "source_dir" in config:
-                config["source_dir"] = Path(config["source_dir"])
-            if "build_dir" in config:
-                config["build_dir"] = Path(config["build_dir"])
-            if "install_prefix" in config:
-                config["install_prefix"] = Path(config["install_prefix"])
-
-            # Cast the dictionary to the correct type
-            return cast(BuildOptions, config)
-
         except ImportError:
-            logger.error("PyYAML is not installed")
-            raise ValueError(
-                "PyYAML is not installed. Install it with: pip install pyyaml")
-        except Exception as e:
-            logger.error(f"Invalid YAML configuration: {e}")
-            raise ValueError(f"Invalid YAML configuration: {e}")
+            raise ConfigurationError(
+                "PyYAML is not installed. Install it with: pip install pyyaml",
+                config_file=source_file
+            )
 
-    @staticmethod
-    def load_from_ini(ini_str: str) -> BuildOptions:
-        """Load build configuration from an INI string."""
+        try:
+            config_data = yaml.safe_load(yaml_str)
+            
+            if config_data is None:
+                config_data = {}
+            elif not isinstance(config_data, dict):
+                raise ConfigurationError(
+                    "YAML configuration must be a mapping/dictionary",
+                    config_file=source_file
+                )
+
+            return cls._normalize_config(config_data, source_file)
+
+        except yaml.YAMLError as e:
+            error_details = {}
+            if hasattr(e, 'problem_mark'):
+                mark = e.problem_mark
+                error_details.update({
+                    "line": mark.line + 1,
+                    "column": mark.column + 1
+                })
+            
+            raise ConfigurationError(
+                f"Invalid YAML configuration: {e}",
+                config_file=source_file,
+                context=ErrorContext(additional_info=error_details)
+            )
+
+    @classmethod
+    def load_from_ini(cls, ini_str: str, source_file: Optional[Path] = None) -> BuildOptions:
+        """Load build configuration from an INI string with validation."""
         try:
             parser = configparser.ConfigParser()
             parser.read_string(ini_str)
 
             if "build" not in parser:
-                raise ValueError(
-                    "Configuration must contain a [build] section")
+                raise ConfigurationError(
+                    "INI configuration must contain a [build] section",
+                    config_file=source_file
+                )
 
-            config = dict(parser["build"])
+            config_data = dict(parser["build"])
 
-            # Convert string boolean values to actual booleans
-            for key in ["verbose"]:
-                if key in config:
-                    config[key] = str(parser.getboolean("build", key))
+            # Convert string values to appropriate types
+            type_conversions = {
+                "verbose": lambda x: parser.getboolean("build", x),
+                "parallel": lambda x: parser.getint("build", x),
+                "options": lambda x: [item.strip() for item in config_data[x].split(",") if item.strip()],
+            }
 
-            # Convert string integer values to string
-            for key in ["parallel"]:
-                if key in config:
-                    config[key] = str(parser.getint("build", key))
+            for key, converter in type_conversions.items():
+                if key in config_data:
+                    try:
+                        config_data[key] = converter(key)
+                    except ValueError as e:
+                        raise ConfigurationError(
+                            f"Invalid value for {key} in INI configuration: {e}",
+                            config_file=source_file,
+                            invalid_option=key
+                        )
 
-            # Parse lists as comma-separated string
-            for key in ["options"]:
-                if key in config:
-                    config[key] = ",".join(
-                        [item.strip() for item in config[key].split(",")]
-                    )
-
-            # Cast the dictionary to the correct type
-            return cast(BuildOptions, config)
+            return cls._normalize_config(config_data, source_file)
 
         except (configparser.Error, ValueError) as e:
-            logger.error(f"Invalid INI configuration: {e}")
-            raise ValueError(f"Invalid INI configuration: {e}")
+            raise ConfigurationError(
+                f"Invalid INI configuration: {e}",
+                config_file=source_file
+            )
+
+    @classmethod
+    def load_from_toml(cls, toml_str: str, source_file: Optional[Path] = None) -> BuildOptions:
+        """Load build configuration from a TOML string with validation."""
+        try:
+            import tomllib  # Python 3.11+
+        except ImportError:
+            try:
+                import tomli as tomllib  # Fallback for older Python versions
+            except ImportError:
+                raise ConfigurationError(
+                    "TOML support requires Python 3.11+ or 'tomli' package. Install with: pip install tomli",
+                    config_file=source_file
+                )
+
+        try:
+            config_data = tomllib.loads(toml_str)
+            
+            # Look for build configuration in 'build' section or root
+            if 'build' in config_data:
+                config_data = config_data['build']
+            elif not any(key in config_data for key in ['source_dir', 'build_dir']):
+                raise ConfigurationError(
+                    "TOML configuration must contain build settings in root or [build] section",
+                    config_file=source_file
+                )
+
+            return cls._normalize_config(config_data, source_file)
+
+        except Exception as e:
+            raise ConfigurationError(
+                f"Invalid TOML configuration: {e}",
+                config_file=source_file
+            )
+
+    @classmethod
+    def _normalize_config(cls, config_data: Dict[str, Any], source_file: Optional[Path] = None) -> BuildOptions:
+        """Normalize and validate configuration data."""
+        try:
+            # Convert string paths to Path objects
+            path_keys = ['source_dir', 'build_dir', 'install_prefix']
+            for key in path_keys:
+                if key in config_data and config_data[key] is not None:
+                    config_data[key] = Path(config_data[key])
+
+            # Ensure required keys exist
+            if 'source_dir' not in config_data:
+                config_data['source_dir'] = Path('.')
+            if 'build_dir' not in config_data:
+                config_data['build_dir'] = Path('build')
+
+            # Validate and create BuildOptions
+            return BuildOptions(config_data)
+
+        except Exception as e:
+            raise ConfigurationError(
+                f"Failed to normalize configuration: {e}",
+                config_file=source_file
+            )
+
+    @classmethod
+    @lru_cache(maxsize=32)
+    def get_default_config_files(cls, directory: Path) -> list[Path]:
+        """Get list of potential configuration files in order of preference."""
+        config_files = []
+        base_names = ['build', 'buildconfig', '.build']
+        
+        for base_name in base_names:
+            for ext in cls._SUPPORTED_EXTENSIONS:
+                config_file = directory / f"{base_name}{ext}"
+                if config_file.exists():
+                    config_files.append(config_file)
+        
+        return config_files
+
+    @classmethod
+    def auto_discover_config(cls, start_directory: Union[Path, str]) -> Optional[BuildOptions]:
+        """
+        Automatically discover and load configuration from common locations.
+        
+        Args:
+            start_directory: Directory to start searching from
+            
+        Returns:
+            BuildOptions if configuration found, None otherwise
+        """
+        search_dir = Path(start_directory)
+        
+        # Search current directory and parent directories
+        for directory in [search_dir] + list(search_dir.parents):
+            config_files = cls.get_default_config_files(directory)
+            if config_files:
+                logger.info(f"Auto-discovered configuration file: {config_files[0]}")
+                return cls.load_from_file(config_files[0])
+        
+        logger.debug("No configuration file auto-discovered")
+        return None
+
+    @classmethod
+    def merge_configs(cls, *configs: BuildOptions) -> BuildOptions:
+        """
+        Merge multiple configuration objects, with later configs taking precedence.
+        
+        Args:
+            *configs: BuildOptions objects to merge
+            
+        Returns:
+            Merged BuildOptions object
+        """
+        if not configs:
+            return BuildOptions({})
+        
+        merged_data = {}
+        for config in configs:
+            merged_data.update(config.to_dict())
+        
+        return BuildOptions(merged_data)
+
+    @classmethod
+    def validate_config(cls, config: BuildOptions) -> list[str]:
+        """
+        Validate a configuration object and return list of warnings/issues.
+        
+        Args:
+            config: BuildOptions object to validate
+            
+        Returns:
+            List of validation warning messages
+        """
+        warnings = []
+        
+        # Check if source directory exists
+        if not config.source_dir.exists():
+            warnings.append(f"Source directory does not exist: {config.source_dir}")
+        
+        # Check parallel job count
+        if config.parallel < 1:
+            warnings.append(f"Parallel job count should be at least 1, got {config.parallel}")
+        elif config.parallel > 32:
+            warnings.append(f"Parallel job count seems high: {config.parallel}")
+        
+        # Check build type
+        valid_build_types = {'Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'}
+        if hasattr(config, 'build_type') and config.get('build_type') not in valid_build_types:
+            warnings.append(f"Unusual build type: {config.get('build_type')}")
+        
+        return warnings

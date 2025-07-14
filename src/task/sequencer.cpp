@@ -15,8 +15,124 @@
 #include "atom/type/json.hpp"
 #include "spdlog/spdlog.h"
 
+#include "config/config_serializer.hpp"
 #include "constant/constant.hpp"
 #include "registration.hpp"
+#include "uuid.hpp"
+
+namespace {
+// Forward declarations for helper functions
+json convertTargetToStandardFormat(const json& targetJson);
+json convertBetweenSchemaVersions(const json& sourceJson,
+                                  const std::string& sourceVersion,
+                                  const std::string& targetVersion);
+
+lithium::SerializationFormat convertFormat(
+    lithium::task::ExposureSequence::SerializationFormat format) {
+    switch (format) {
+        case lithium::task::ExposureSequence::SerializationFormat::JSON:
+            return lithium::SerializationFormat::JSON;
+        case lithium::task::ExposureSequence::SerializationFormat::COMPACT_JSON:
+            return lithium::SerializationFormat::COMPACT_JSON;
+        case lithium::task::ExposureSequence::SerializationFormat::PRETTY_JSON:
+            return lithium::SerializationFormat::PRETTY_JSON;
+        case lithium::task::ExposureSequence::SerializationFormat::JSON5:
+            return lithium::SerializationFormat::JSON5;
+        case lithium::task::ExposureSequence::SerializationFormat::BINARY:
+            return lithium::SerializationFormat::BINARY_JSON;
+        default:
+            return lithium::SerializationFormat::PRETTY_JSON;
+    }
+}
+
+/**
+ * @brief Convert a specific target format to a common JSON format
+ * @param targetJson The target-specific JSON data
+ * @return Standardized JSON format
+ */
+json convertTargetToStandardFormat(const json& targetJson) {
+    // Create a standardized format
+    json standardJson = targetJson;
+
+    // Handle version differences
+    if (!standardJson.contains("version")) {
+        standardJson["version"] = "2.0.0";
+    }
+
+    // Ensure essential fields exist
+    if (!standardJson.contains("uuid") || standardJson["uuid"].is_null()) {
+        standardJson["uuid"] = atom::utils::UUID().toString();
+    }
+
+    // Ensure tasks array exists
+    if (!standardJson.contains("tasks")) {
+        standardJson["tasks"] = json::array();
+    }
+
+    // Standardize task format
+    for (auto& taskJson : standardJson["tasks"]) {
+        if (!taskJson.contains("version")) {
+            taskJson["version"] = "2.0.0";
+        }
+
+        // Ensure task has a UUID
+        if (!taskJson.contains("uuid")) {
+            taskJson["uuid"] = atom::utils::UUID().toString();
+        }
+    }
+
+    return standardJson;
+}
+
+/**
+ * @brief Convert a JSON object from one schema to another
+ * @param sourceJson Source JSON object
+ * @param sourceVersion Source schema version
+ * @param targetVersion Target schema version
+ * @return Converted JSON object
+ */
+json convertBetweenSchemaVersions(const json& sourceJson,
+                                  const std::string& sourceVersion,
+                                  const std::string& targetVersion) {
+    // If versions match, no conversion needed
+    if (sourceVersion == targetVersion) {
+        return sourceJson;
+    }
+
+    json result = sourceJson;
+
+    // Handle specific version upgrades
+    if (sourceVersion == "1.0.0" && targetVersion == "2.0.0") {
+        // Upgrade from 1.0 to 2.0
+        result["version"] = "2.0.0";
+
+        // Add additional fields for 2.0.0 schema
+        if (!result.contains("schedulingStrategy")) {
+            result["schedulingStrategy"] = 0;  // Default strategy
+        }
+
+        if (!result.contains("recoveryStrategy")) {
+            result["recoveryStrategy"] = 0;  // Default strategy
+        }
+
+        // Update task format if needed
+        if (result.contains("targets") && result["targets"].is_array()) {
+            for (auto& target : result["targets"]) {
+                target["version"] = "2.0.0";
+
+                // Update task format
+                if (target.contains("tasks") && target["tasks"].is_array()) {
+                    for (auto& task : target["tasks"]) {
+                        task["version"] = "2.0.0";
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
+}
+}  // namespace
 
 namespace lithium::task {
 
@@ -35,16 +151,26 @@ ExposureSequence::ExposureSequence() {
                             std::string(e.what()));
     }
 
+    // Initialize config serializer with optimized settings
+    lithium::ConfigSerializer::Config serializerConfig;
+    serializerConfig.enableMetrics = true;
+    serializerConfig.enableValidation = true;
+    serializerConfig.bufferSize =
+        128 * 1024;  // 128KB buffer for better performance
+    configSerializer_ =
+        std::make_unique<lithium::ConfigSerializer>(serializerConfig);
+    spdlog::info("ConfigSerializer initialized with optimized settings");
+
     AddPtr(
         Constants::TASK_QUEUE,
         std::make_shared<atom::async::LockFreeHashTable<std::string, json>>());
 
     taskGenerator_ = TaskGenerator::createShared();
-    
+
     // Register built-in tasks with the factory
     registerBuiltInTasks();
     spdlog::info("Built-in tasks registered with factory");
-    
+
     initializeDefaultMacros();
 }
 
@@ -171,96 +297,361 @@ void ExposureSequence::resume() {
     spdlog::info("Sequence resumed");
 }
 
-void ExposureSequence::saveSequence(const std::string& filename) const {
+/**
+ * @brief Serializes the sequence to JSON with enhanced format.
+ * @return JSON representation of the sequence.
+ */
+json ExposureSequence::serializeToJson() const {
     json j;
     std::shared_lock lock(mutex_);
 
+    j["version"] = "2.0.0";  // Version information for schema compatibility
+    j["uuid"] = uuid_;
+    j["state"] = static_cast<int>(state_.load());
+    j["maxConcurrentTargets"] = maxConcurrentTargets_;
+    j["globalTimeout"] = globalTimeout_.count();
+    j["schedulingStrategy"] = static_cast<int>(schedulingStrategy_);
+    j["recoveryStrategy"] = static_cast<int>(recoveryStrategy_);
+
+    // Serialize main targets
     j["targets"] = json::array();
     for (const auto& target : targets_) {
-        json targetJson = {{"name", target->getName()},
-                           {"enabled", target->isEnabled()},
-                           {"tasks", json::array()}};
-
-        for (const auto& task : target->getTasks()) {
-            json taskJson = {{"name", task->getName()},
-                             {"status", static_cast<int>(task->getStatus())},
-                             {"parameters", json::array()}};
-
-            for (const auto& param : task->getParamDefinitions()) {
-                taskJson["parameters"].push_back(
-                    {{"name", param.name},
-                     {"type", param.type},
-                     {"required", param.required},
-                     {"defaultValue", param.defaultValue},
-                     {"description", param.description}});
-            }
-
-            taskJson["errorType"] = static_cast<int>(task->getErrorType());
-            taskJson["errorDetails"] = task->getErrorDetails();
-            taskJson["executionTime"] = task->getExecutionTime().count();
-            taskJson["memoryUsage"] = task->getMemoryUsage();
-            taskJson["cpuUsage"] = task->getCPUUsage();
-            taskJson["taskHistory"] = task->getTaskHistory();
-
-            targetJson["tasks"].push_back(taskJson);
-        }
-
-        j["targets"].push_back(targetJson);
+        j["targets"].push_back(target->toJson());
     }
 
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        spdlog::error("Failed to open file '{}' for writing", filename);
-        THROW_RUNTIME_ERROR("Failed to open file '" + filename +
-                            "' for writing");
+    // Serialize alternative targets
+    j["alternativeTargets"] = json::object();
+    for (const auto& [name, target] : alternativeTargets_) {
+        j["alternativeTargets"][name] = target->toJson();
     }
 
-    file << j.dump(4);
-    spdlog::info("Sequence saved to file: {}", filename);
+    // Serialize dependencies
+    j["dependencies"] = targetDependencies_;
+
+    // Serialize execution statistics
+    j["executionStats"] = {
+        {"totalExecutions", stats_.totalExecutions},
+        {"successfulExecutions", stats_.successfulExecutions},
+        {"failedExecutions", stats_.failedExecutions},
+        {"averageExecutionTime", stats_.averageExecutionTime}};
+
+    return j;
 }
 
-void ExposureSequence::loadSequence(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        spdlog::error("Failed to open file '{}' for reading", filename);
-        THROW_RUNTIME_ERROR("Failed to open file '" + filename +
-                            "' for reading");
-    }
-
-    json j;
-    file >> j;
-
+/**
+ * @brief Initializes the sequence from JSON with enhanced format.
+ * @param data The JSON data.
+ * @throws std::runtime_error If the JSON is invalid or incompatible.
+ */
+void ExposureSequence::deserializeFromJson(const json& data) {
     std::unique_lock lock(mutex_);
-    targets_.clear();
 
-    if (!j.contains("targets") || !j["targets"].is_array()) {
-        spdlog::error("Invalid sequence file format: 'targets' array missing");
-        THROW_RUNTIME_ERROR(
-            "Invalid sequence file format: 'targets' array missing");
+    // Get the current version and the data version
+    const std::string currentVersion = "2.0.0";
+    std::string dataVersion =
+        data.contains("version") ? data["version"].get<std::string>() : "1.0.0";
+
+    // Standardize and convert the data format if needed
+    json processedData;
+
+    try {
+        // First, convert to a standard format to handle different schemas
+        processedData = convertTargetToStandardFormat(data);
+
+        // Then, handle schema version differences
+        if (dataVersion != currentVersion) {
+            processedData = convertBetweenSchemaVersions(
+                processedData, dataVersion, currentVersion);
+            spdlog::info("Converted sequence from version {} to {}",
+                         dataVersion, currentVersion);
+        }
+    } catch (const std::exception& e) {
+        spdlog::warn(
+            "Error converting sequence format: {}, proceeding with original "
+            "data",
+            e.what());
+        processedData = data;
     }
 
-    for (const auto& targetJson : j["targets"]) {
-        // Process JSON with generator before creating the target
-        json processedJson = targetJson;
-        processJsonWithGenerator(processedJson);
+    // Process JSON with macro replacements if a task generator is available
+    if (taskGenerator_) {
+        try {
+            processJsonWithGenerator(processedData);
+            spdlog::debug("Applied macro replacements to sequence data");
+        } catch (const std::exception& e) {
+            spdlog::warn("Failed to apply macro replacements: {}", e.what());
+        }
+    }
 
-        std::string name = processedJson["name"].get<std::string>();
-        bool enabled = processedJson["enabled"].get<bool>();
-        auto target = std::make_unique<Target>(name);
-        target->setEnabled(enabled);
+    // Load basic properties with validation
+    try {
+        // Core properties with defaults
+        uuid_ = processedData.value("uuid", atom::utils::UUID().toString());
+        state_ = static_cast<SequenceState>(processedData.value("state", 0));
+        maxConcurrentTargets_ =
+            processedData.value("maxConcurrentTargets", size_t(1));
+        globalTimeout_ = std::chrono::seconds(
+            processedData.value("globalTimeout", int64_t(3600)));
 
-        // Load tasks using the improved loadTasksFromJson method
-        if (processedJson.contains("tasks") &&
-            processedJson["tasks"].is_array()) {
-            target->loadTasksFromJson(processedJson["tasks"]);
+        // Strategy properties
+        schedulingStrategy_ = static_cast<SchedulingStrategy>(
+            processedData.value("schedulingStrategy", 0));
+        recoveryStrategy_ = static_cast<RecoveryStrategy>(
+            processedData.value("recoveryStrategy", 0));
+
+        // Clear existing targets
+        targets_.clear();
+        alternativeTargets_.clear();
+        targetDependencies_.clear();
+
+        // Load main targets with error handling for each target
+        if (processedData.contains("targets") &&
+            processedData["targets"].is_array()) {
+            for (const auto& targetJson : processedData["targets"]) {
+                try {
+                    auto target = Target::createFromJson(targetJson);
+                    targets_.push_back(std::move(target));
+                } catch (const std::exception& e) {
+                    spdlog::error("Failed to create target: {}", e.what());
+                }
+            }
         }
 
-        targets_.push_back(std::move(target));
+        // Load alternative targets
+        if (processedData.contains("alternativeTargets") &&
+            processedData["alternativeTargets"].is_object()) {
+            for (auto it = processedData["alternativeTargets"].begin();
+                 it != processedData["alternativeTargets"].end(); ++it) {
+                try {
+                    auto target = Target::createFromJson(it.value());
+                    alternativeTargets_[it.key()] = std::move(target);
+                } catch (const std::exception& e) {
+                    spdlog::error("Failed to create alternative target: {}",
+                                  e.what());
+                }
+            }
+        }
+
+        // Load dependencies
+        if (processedData.contains("dependencies") &&
+            processedData["dependencies"].is_object()) {
+            targetDependencies_ =
+                processedData["dependencies"]
+                    .get<std::unordered_map<std::string,
+                                            std::vector<std::string>>>();
+        }
+
+        // Load execution statistics
+        if (processedData.contains("executionStats")) {
+            const auto& statsJson = processedData["executionStats"];
+            stats_.totalExecutions =
+                statsJson.value("totalExecutions", size_t(0));
+            stats_.successfulExecutions =
+                statsJson.value("successfulExecutions", size_t(0));
+            stats_.failedExecutions =
+                statsJson.value("failedExecutions", size_t(0));
+            stats_.averageExecutionTime =
+                statsJson.value("averageExecutionTime", 0.0);
+        }
+
+    } catch (const std::exception& e) {
+        spdlog::error("Error deserializing sequence: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to deserialize sequence: " +
+                            std::string(e.what()));
     }
 
+    // Update target ready status
+    updateTargetReadyStatus();
+
+    // Reset counters
     totalTargets_ = targets_.size();
-    spdlog::info("Sequence loaded from file: {}", filename);
-    spdlog::info("Total targets loaded: {}", totalTargets_);
+    completedTargets_ = 0;
+    failedTargets_ = 0;
+    failedTargetNames_.clear();
+
+    spdlog::info("Loaded sequence with {} targets and {} alternative targets",
+                 targets_.size(), alternativeTargets_.size());
+}
+
+/**
+ * @brief Saves the sequence to a file with enhanced format.
+ * @param filename The name of the file to save to.
+ * @throws std::runtime_error If the file cannot be written.
+ */
+void ExposureSequence::saveSequence(const std::string& filename,
+                                    SerializationFormat format) const {
+    json j = serializeToJson();
+
+    try {
+        // Use ConfigSerializer for enhanced format support and performance
+        lithium::SerializationOptions options;
+
+        switch (format) {
+            case SerializationFormat::COMPACT_JSON:
+                options = lithium::SerializationOptions::compact();
+                break;
+            case SerializationFormat::PRETTY_JSON:
+                options = lithium::SerializationOptions::pretty(4);
+                break;
+            case SerializationFormat::JSON5:
+                options = lithium::SerializationOptions::json5();
+                break;
+            case SerializationFormat::BINARY:
+                // Use binary format with defaults
+                break;
+            default:
+                options = lithium::SerializationOptions::pretty(4);
+                break;
+        }
+
+        bool success = configSerializer_->serializeToFile(j, filename, options);
+        if (!success) {
+            spdlog::error("Failed to save sequence to file: {}", filename);
+            THROW_RUNTIME_ERROR("Failed to save sequence to file: " + filename);
+        }
+
+        spdlog::info("Sequence saved to file: {}", filename);
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to save sequence: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to save sequence: " +
+                            std::string(e.what()));
+    }
+}
+
+/**
+ * @brief Loads a sequence from a file with enhanced format.
+ * @param filename The name of the file to load from.
+ * @throws std::runtime_error If the file cannot be read or contains invalid
+ * data.
+ */
+void ExposureSequence::loadSequence(const std::string& filename,
+                                    bool detectFormat) {
+    try {
+        // Use ConfigSerializer for enhanced format support and automatic format
+        // detection
+        std::optional<lithium::SerializationFormat> format = std::nullopt;
+
+        // Auto-detect format if requested
+        if (detectFormat) {
+            const std::filesystem::path filePath(filename);
+            format = configSerializer_->detectFormat(filePath);
+            if (!format) {
+                spdlog::warn(
+                    "Failed to auto-detect format, will try using file "
+                    "extension");
+            } else {
+                spdlog::info("Auto-detected format: {}",
+                             static_cast<int>(format.value()));
+            }
+        }
+
+        // Load and deserialize the file
+        auto result = configSerializer_->deserializeFromFile(filename, format);
+
+        if (!result.isValid()) {
+            spdlog::error("Failed to load sequence from file: {}",
+                          result.errorMessage);
+            THROW_RUNTIME_ERROR("Failed to load sequence from file: " +
+                                result.errorMessage);
+        }
+
+        deserializeFromJson(result.data);
+
+        spdlog::info("Sequence loaded from file: {} ({}KB, {}ms)", filename,
+                     result.bytesProcessed / 1024, result.duration.count());
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to load sequence: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to load sequence: " +
+                            std::string(e.what()));
+    }
+}
+
+/**
+ * @brief Processes JSON with the task generator.
+ * @param data The JSON data to process.
+ */
+void ExposureSequence::processJsonWithGenerator(json& data) {
+    if (!taskGenerator_) {
+        spdlog::warn("Task generator not available, skipping macro processing");
+        return;
+    }
+
+    try {
+        // Process the JSON with full macro replacement
+        taskGenerator_->processJsonWithJsonMacros(data);
+
+        spdlog::debug("Successfully processed JSON with task generator");
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to process JSON with generator: {}", e.what());
+        // Continue without throwing to make the system more robust
+        spdlog::warn("Continuing with unprocessed JSON");
+    }
+}
+
+/**
+ * @brief Saves the sequence to the database with enhanced format.
+ * @throws std::runtime_error If the database operation fails.
+ */
+void ExposureSequence::saveToDatabase() {
+    if (!db_ || !sequenceTable_) {
+        spdlog::error("Database connection not initialized");
+        THROW_RUNTIME_ERROR("Database connection not initialized");
+    }
+
+    try {
+        SequenceModel model;
+        model.uuid = uuid_;
+        model.name = targets_.empty() ? "Unnamed Sequence"
+                                      : targets_[0]->getName() + " Sequence";
+        model.data = serializeToJson().dump();
+        model.createdAt = std::to_string(
+            std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count());
+
+        sequenceTable_->insert(model);
+        spdlog::info("Sequence saved to database with UUID: {}", uuid_);
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to save sequence to database: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to save sequence to database: " +
+                            std::string(e.what()));
+    }
+}
+
+/**
+ * @brief Loads a sequence from the database with enhanced format.
+ * @param uuid The UUID of the sequence.
+ * @throws std::runtime_error If the database operation fails or sequence not
+ * found.
+ */
+void ExposureSequence::loadFromDatabase(const std::string& uuid) {
+    if (!db_ || !sequenceTable_) {
+        spdlog::error("Database connection not initialized");
+        THROW_RUNTIME_ERROR("Database connection not initialized");
+    }
+
+    try {
+        std::string condition = "uuid = '" + uuid + "'";
+        auto results = sequenceTable_->query(condition);
+        if (results.empty()) {
+            spdlog::error("Sequence not found in database: {}", uuid);
+            THROW_RUNTIME_ERROR("Sequence not found in database: " + uuid);
+        }
+
+        auto& model = results[0];
+        json data = json::parse(model.data);
+        deserializeFromJson(data);
+        spdlog::info("Sequence loaded from database: {} ({})", model.name,
+                     uuid);
+    } catch (const json::exception& e) {
+        spdlog::error("Failed to parse sequence data: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to parse sequence data: " +
+                            std::string(e.what()));
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to load sequence from database: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to load sequence from database: " +
+                            std::string(e.what()));
+    }
 }
 
 auto ExposureSequence::getTargetNames() const -> std::vector<std::string> {
@@ -913,303 +1304,132 @@ auto ExposureSequence::getTargetParams(const std::string& targetName) const
     return std::nullopt;
 }
 
-void ExposureSequence::saveToDatabase() {
-    if (!db_ || !sequenceTable_) {
-        spdlog::error("Database not initialized");
-        THROW_RUNTIME_ERROR("Database not initialized");
-    }
+std::string ExposureSequence::exportToFormat(SerializationFormat format) const {
+    json j = serializeToJson();
 
     try {
-        db_->beginTransaction();
+        // Use ConfigSerializer for enhanced format support
+        lithium::SerializationOptions options;
 
-        SequenceModel model;
-        model.uuid = uuid_;
-        model.name = "Sequence_" + uuid_;
-        model.data = serializeToJson().dump();
-        model.createdAt = std::to_string(
-            std::chrono::system_clock::now().time_since_epoch().count());
-
-        sequenceTable_->insert(model);
-
-        db_->commit();
-        spdlog::info("Sequence saved to database with UUID: {}", uuid_);
-    } catch (const std::exception& e) {
-        db_->rollback();
-        spdlog::error("Failed to save sequence to database: {}", e.what());
-        THROW_RUNTIME_ERROR("Failed to save sequence to database: " +
-                            std::string(e.what()));
-    }
-}
-
-void ExposureSequence::loadFromDatabase(const std::string& uuid) {
-    if (!db_ || !sequenceTable_) {
-        spdlog::error("Database not initialized");
-        THROW_RUNTIME_ERROR("Database not initialized");
-    }
-
-    try {
-        auto results = sequenceTable_->query("uuid = '" + uuid + "'", 1);
-        if (results.empty()) {
-            spdlog::error("Sequence with UUID {} not found", uuid);
-            THROW_RUNTIME_ERROR("Sequence not found: " + uuid);
+        switch (format) {
+            case SerializationFormat::COMPACT_JSON:
+                options = lithium::SerializationOptions::compact();
+                break;
+            case SerializationFormat::PRETTY_JSON:
+                options = lithium::SerializationOptions::pretty(4);
+                break;
+            case SerializationFormat::JSON5:
+                options = lithium::SerializationOptions::json5();
+                break;
+            case SerializationFormat::BINARY:
+                // For binary format, we'll use the default binary serialization
+                break;
+            default:
+                options = lithium::SerializationOptions::pretty(4);
+                break;
         }
 
-        const auto& model = results[0];
-        uuid_ = model.uuid;
-        json data = json::parse(model.data);
-        deserializeFromJson(data);
-
-        spdlog::info("Sequence loaded from database: {}", uuid);
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to load sequence from database: {}", e.what());
-        THROW_RUNTIME_ERROR("Failed to load sequence from database: " +
-                            std::string(e.what()));
-    }
-}
-
-auto ExposureSequence::listSequences() -> std::vector<SequenceModel> {
-    if (!db_ || !sequenceTable_) {
-        spdlog::error("Database not initialized");
-        THROW_RUNTIME_ERROR("Database not initialized");
-    }
-
-    try {
-        return sequenceTable_->query();
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to list sequences: {}", e.what());
-        THROW_RUNTIME_ERROR("Failed to list sequences: " +
-                            std::string(e.what()));
-    }
-}
-
-void ExposureSequence::deleteFromDatabase(const std::string& uuid) {
-    if (!db_ || !sequenceTable_) {
-        spdlog::error("Database not initialized");
-        THROW_RUNTIME_ERROR("Database not initialized");
-    }
-
-    try {
-        db_->beginTransaction();
-        sequenceTable_->remove("uuid = '" + uuid + "'");
-        db_->commit();
-        spdlog::info("Sequence deleted from database: {}", uuid);
-    } catch (const std::exception& e) {
-        db_->rollback();
-        spdlog::error("Failed to delete sequence from database: {}", e.what());
-        THROW_RUNTIME_ERROR("Failed to delete sequence from database: " +
-                            std::string(e.what()));
-    }
-}
-
-json ExposureSequence::serializeToJson() const {
-    json j;
-    std::shared_lock lock(mutex_);
-
-    j["uuid"] = uuid_;
-    j["state"] = static_cast<int>(state_.load());
-    j["maxConcurrentTargets"] = maxConcurrentTargets_;
-    j["globalTimeout"] = globalTimeout_.count();
-
-    j["targets"] = json::array();
-    for (const auto& target : targets_) {
-        j["targets"].push_back(target->toJson());
-    }
-
-    j["dependencies"] = targetDependencies_;
-    j["executionStats"] = {
-        {"totalExecutions", stats_.totalExecutions},
-        {"successfulExecutions", stats_.successfulExecutions},
-        {"failedExecutions", stats_.failedExecutions},
-        {"averageExecutionTime", stats_.averageExecutionTime}};
-
-    return j;
-}
-
-void ExposureSequence::deserializeFromJson(const json& data) {
-    std::unique_lock lock(mutex_);
-
-    uuid_ = data["uuid"].get<std::string>();
-    state_ = static_cast<SequenceState>(data["state"].get<int>());
-    maxConcurrentTargets_ = data["maxConcurrentTargets"].get<size_t>();
-    globalTimeout_ = std::chrono::seconds(data["globalTimeout"].get<int64_t>());
-
-    targets_.clear();
-    for (const auto& targetJson : data["targets"]) {
-        auto target =
-            std::make_unique<Target>(targetJson["name"].get<std::string>());
-        target->fromJson(targetJson);
-        targets_.push_back(std::move(target));
-    }
-
-    targetDependencies_ =
-        data["dependencies"]
-            .get<std::unordered_map<std::string, std::vector<std::string>>>();
-
-    const auto& statsJson = data["executionStats"];
-    stats_.totalExecutions = statsJson["totalExecutions"].get<size_t>();
-    stats_.successfulExecutions =
-        statsJson["successfulExecutions"].get<size_t>();
-    stats_.failedExecutions = statsJson["failedExecutions"].get<size_t>();
-    stats_.averageExecutionTime =
-        statsJson["averageExecutionTime"].get<double>();
-
-    updateTargetReadyStatus();
-    spdlog::info("Sequence deserialized from JSON data");
-}
-
-void ExposureSequence::initializeDefaultMacros() {
-    // Add default macros for task processing
-    taskGenerator_->addMacro(
-        "target.uuid",
-        [this](const std::vector<std::string>& args) -> std::string {
-            if (args.empty())
-                return "";
-
-            std::shared_lock lock(mutex_);
-            auto target = std::find_if(
-                targets_.begin(), targets_.end(),
-                [&args](const auto& t) { return t->getName() == args[0]; });
-            return target != targets_.end() ? (*target)->getUUID() : "";
-        });
-
-    taskGenerator_->addMacro(
-        "target.status",
-        [this](const std::vector<std::string>& args) -> std::string {
-            if (args.empty())
-                return "Unknown";
-            return std::to_string(static_cast<int>(getTargetStatus(args[0])));
-        });
-
-    taskGenerator_->addMacro(
-        "sequence.progress",
-        [this](const std::vector<std::string>&) -> std::string {
-            return std::to_string(getProgress());
-        });
-
-    spdlog::info("Default macros initialized");
-}
-
-void ExposureSequence::setTaskGenerator(
-    std::shared_ptr<TaskGenerator> generator) {
-    if (!generator) {
-        spdlog::error("Cannot set null task generator");
-        throw std::invalid_argument("Cannot set null task generator");
-    }
-
-    std::unique_lock lock(mutex_);
-    taskGenerator_ = std::move(generator);
-    spdlog::info("Task generator set");
-}
-
-auto ExposureSequence::getTaskGenerator() const
-    -> std::shared_ptr<TaskGenerator> {
-    std::shared_lock lock(mutex_);
-    return taskGenerator_;
-}
-
-void ExposureSequence::processTargetWithMacros(const std::string& targetName) {
-    std::shared_lock lock(mutex_);
-    auto target = std::find_if(
-        targets_.begin(), targets_.end(),
-        [&targetName](const auto& t) { return t->getName() == targetName; });
-
-    if (target == targets_.end()) {
-        spdlog::error("Target not found: {}", targetName);
-        THROW_RUNTIME_ERROR("Target not found: " + targetName);
-    }
-
-    try {
-        json targetData = (*target)->toJson();
-        taskGenerator_->processJsonWithJsonMacros(targetData);
-        (*target)->fromJson(targetData);
-        spdlog::info("Successfully processed target {} with macros",
-                     targetName);
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to process target {} with macros: {}", targetName,
-                      e.what());
-        THROW_RUNTIME_ERROR("Failed to process target with macros: " +
-                            std::string(e.what()));
-    }
-}
-
-void ExposureSequence::processAllTargetsWithMacros() {
-    std::shared_lock lock(mutex_);
-    for (const auto& target : targets_) {
-        try {
-            json targetData = target->toJson();
-            taskGenerator_->processJsonWithJsonMacros(targetData);
-            target->fromJson(targetData);
-        } catch (const std::exception& e) {
-            spdlog::error("Failed to process target {} with macros: {}",
-                          target->getName(), e.what());
-            THROW_RUNTIME_ERROR("Failed to process target with macros: " +
-                                std::string(e.what()));
+        auto result = configSerializer_->serialize(j, options);
+        if (!result.isValid()) {
+            spdlog::error("Failed to export sequence: {}", result.errorMessage);
+            THROW_RUNTIME_ERROR("Failed to export sequence: " +
+                                result.errorMessage);
         }
-    }
-    spdlog::info("Successfully processed all targets with macros");
-}
 
-void ExposureSequence::processJsonWithGenerator(json& data) {
-    try {
-        taskGenerator_->processJsonWithJsonMacros(data);
+        return result.data;
     } catch (const std::exception& e) {
-        spdlog::error("Failed to process JSON with generator: {}", e.what());
-        THROW_RUNTIME_ERROR("Failed to process JSON with generator: " +
+        spdlog::error("Failed to export sequence: {}", e.what());
+        THROW_RUNTIME_ERROR("Failed to export sequence: " +
                             std::string(e.what()));
     }
 }
 
-void ExposureSequence::addMacro(const std::string& name, MacroValue value) {
-    std::unique_lock lock(mutex_);
-    taskGenerator_->addMacro(name, std::move(value));
-    spdlog::info("Macro added: {}", name);
-}
+/**
+ * @brief Convert a specific target format to a common JSON format
+ * @param targetJson The target-specific JSON data
+ * @return Standardized JSON format
+ */
+json convertTargetToStandardFormat(const json& targetJson) {
+    // Create a standardized format
+    json standardJson = targetJson;
 
-void ExposureSequence::removeMacro(const std::string& name) {
-    std::unique_lock lock(mutex_);
-    taskGenerator_->removeMacro(name);
-    spdlog::info("Macro removed: {}", name);
-}
+    // Handle version differences
+    if (!standardJson.contains("version")) {
+        standardJson["version"] = "2.0.0";
+    }
 
-auto ExposureSequence::listMacros() const -> std::vector<std::string> {
-    std::shared_lock lock(mutex_);
-    return taskGenerator_->listMacros();
-}
+    // Ensure essential fields exist
+    if (!standardJson.contains("uuid")) {
+        standardJson["uuid"] = atom::utils::UUID().toString();
+    }
 
-auto ExposureSequence::getAverageExecutionTime() const
-    -> std::chrono::milliseconds {
-    std::shared_lock lock(mutex_);
-    return std::chrono::milliseconds(
-        static_cast<int64_t>(stats_.averageExecutionTime));
-}
+    // Ensure tasks array exists
+    if (!standardJson.contains("tasks")) {
+        standardJson["tasks"] = json::array();
+    }
 
-auto ExposureSequence::getTotalMemoryUsage() const -> size_t {
-    std::shared_lock lock(mutex_);
-    size_t totalMemory = 0;
+    // Standardize task format
+    for (auto& taskJson : standardJson["tasks"]) {
+        if (!taskJson.contains("version")) {
+            taskJson["version"] = "2.0.0";
+        }
 
-    for (const auto& target : targets_) {
-        for (const auto& task : target->getTasks()) {
-            totalMemory += task->getMemoryUsage();
+        // Ensure task has a UUID
+        if (!taskJson.contains("uuid")) {
+            taskJson["uuid"] = atom::utils::UUID().toString();
         }
     }
 
-    return totalMemory;
+    return standardJson;
 }
 
-void ExposureSequence::setTargetPriority(const std::string& targetName,
-                                         int priority) {
-    std::shared_lock lock(mutex_);
-    auto target =
-        std::find_if(targets_.begin(), targets_.end(),
-                     [&](const auto& t) { return t->getName() == targetName; });
-
-    if (target != targets_.end()) {
-        // Implementation would set priority on the target
-        spdlog::info("Set priority {} for target {}", priority, targetName);
-    } else {
-        spdlog::error("Target not found for priority setting: {}", targetName);
-        THROW_RUNTIME_ERROR("Target not found: " + targetName);
+/**
+ * @brief Convert a JSON object from one schema to another
+ * @param sourceJson Source JSON object
+ * @param sourceVersion Source schema version
+ * @param targetVersion Target schema version
+ * @return Converted JSON object
+ */
+json convertBetweenSchemaVersions(const json& sourceJson,
+                                  const std::string& sourceVersion,
+                                  const std::string& targetVersion) {
+    // If versions match, no conversion needed
+    if (sourceVersion == targetVersion) {
+        return sourceJson;
     }
+
+    json result = sourceJson;
+
+    // Handle specific version upgrades
+    if (sourceVersion == "1.0.0" && targetVersion == "2.0.0") {
+        // Upgrade from 1.0 to 2.0
+        result["version"] = "2.0.0";
+
+        // Add additional fields for 2.0.0 schema
+        if (!result.contains("schedulingStrategy")) {
+            result["schedulingStrategy"] = 0;  // Default strategy
+        }
+
+        if (!result.contains("recoveryStrategy")) {
+            result["recoveryStrategy"] = 0;  // Default strategy
+        }
+
+        // Update task format if needed
+        if (result.contains("targets") && result["targets"].is_array()) {
+            for (auto& target : result["targets"]) {
+                target["version"] = "2.0.0";
+
+                // Update task format
+                if (target.contains("tasks") && target["tasks"].is_array()) {
+                    for (auto& task : target["tasks"]) {
+                        task["version"] = "2.0.0";
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 }  // namespace lithium::task

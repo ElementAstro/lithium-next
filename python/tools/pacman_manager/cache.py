@@ -12,11 +12,10 @@ import threading
 from pathlib import Path
 from typing import TypeVar, Generic, Optional, Dict, Any, Protocol
 from collections import OrderedDict
-from datetime import datetime, timedelta
 
 from loguru import logger
 
-from .types import PackageName, CacheKey, CacheConfig
+from .pacman_types import PackageName, CacheConfig
 from .models import PackageInfo
 
 T = TypeVar('T')

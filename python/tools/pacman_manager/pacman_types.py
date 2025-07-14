@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import NewType, TypedDict, Literal, Union, Any
 from pathlib import Path
-from collections.abc import Sequence, Mapping, Callable, Awaitable
+from collections.abc import Callable, Awaitable
 from dataclasses import dataclass
 
 # Strong type aliases using NewType for better type safety

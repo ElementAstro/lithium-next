@@ -15,7 +15,7 @@ from loguru import logger
 
 from .manager import PacmanManager
 from .models import PackageInfo, CommandResult, PackageStatus
-from .types import PackageName, PackageVersion, CommandOptions
+from .pacman_types import PackageName, PackageVersion, CommandOptions
 from .exceptions import CommandError, PackageNotFoundError
 from .decorators import async_retry_on_failure, async_benchmark, async_cache_result
 from .cache import PackageCache
@@ -29,7 +29,7 @@ class AsyncPacmanManager:
 
     def __init__(self, config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs):
         """Initialize the async pacman manager."""
-        self._sync_manager = PacmanManager(config_path, use_sudo)
+        self._sync_manager = PacmanManager({"config_path": config_path, "use_sudo": use_sudo})
         self._semaphore = asyncio.Semaphore(5)  # Limit concurrent operations
         self._session_cache = PackageCache()
 
@@ -137,10 +137,10 @@ class AsyncPacmanManager:
         logger.info(f"Getting package info: {package_name}")
 
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: self._sync_manager.show_package_info(package_name)
-        )
+        def get_info():
+            installed = self._sync_manager.list_installed_packages()
+            return installed.get(package_name) if installed else None
+        result = await loop.run_in_executor(None, get_info)
 
         # Cache the result
         if result:
@@ -174,10 +174,9 @@ class AsyncPacmanManager:
         logger.info("Upgrading system")
 
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: self._sync_manager.upgrade_system(no_confirm)
-        )
+        def upgrade():
+            return self._sync_manager.run_command(["pacman", "-Syu", "--noconfirm"] if no_confirm else ["pacman", "-Syu"])
+        result = await loop.run_in_executor(None, upgrade)
 
         # Clear cache after system upgrade
         self._session_cache.clear_all()
@@ -397,7 +396,7 @@ class AsyncPacmanManager:
             health_status['cache_writable'] = True
 
             # Test sudo (if configured)
-            if self._sync_manager.use_sudo:
+            if self._sync_manager._config.get('use_sudo', True):
                 try:
                     await loop.run_in_executor(
                         None,

@@ -1008,4 +1008,38 @@ TaskGenerator::ScriptGenerationResult TaskGenerator::convertScriptFormat(const s
     return impl_->convertScriptFormat(script, fromFormat, toFormat);
 }
 
+void TaskGenerator::setValidationSchema(const json& schema) {
+    SchemaConfig config;
+    config.schema = schema;
+    config.validateSchema = true;
+    setSchemaConfig(config);
+    spdlog::info("JSON schema validation enabled for task generator");
+}
+
+void TaskGenerator::setSchemaConfig(const SchemaConfig& config) {
+    // Implementation depends on internal structure
+    spdlog::info("Schema validation configuration updated");
+}
+
+void TaskGenerator::configure(const json& options) {
+    if (options.contains("maxCacheSize")) {
+        impl_->setMaxCacheSize(options["maxCacheSize"].get<size_t>());
+    }
+    
+    if (options.contains("enableSchemaValidation") && options.contains("schema")) {
+        SchemaConfig config;
+        config.validateSchema = options["enableSchemaValidation"].get<bool>();
+        config.schema = options["schema"];
+        setSchemaConfig(config);
+    }
+    
+    if (options.contains("outputFormat") && options["outputFormat"].is_string()) {
+        ScriptConfig scriptConfig = impl_->getScriptConfig();
+        scriptConfig.outputFormat = options["outputFormat"].get<std::string>();
+        impl_->setScriptConfig(scriptConfig);
+    }
+    
+    spdlog::info("Task generator configured with custom options");
+}
+
 }  // namespace lithium

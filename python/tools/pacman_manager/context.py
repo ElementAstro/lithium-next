@@ -38,10 +38,7 @@ class PacmanContext:
     def __enter__(self) -> PacmanManager:
         """Enter the context and create manager instance."""
         try:
-            self._manager = PacmanManager(
-                config_path=self.config_path,
-                use_sudo=self.use_sudo
-            )
+            self._manager = PacmanManager({"config_path": self.config_path, "use_sudo": self.use_sudo})
             logger.debug("Entered PacmanContext")
             return self._manager
         except Exception as e:
@@ -87,10 +84,7 @@ class AsyncPacmanContext:
         """Enter the async context and create manager instance."""
         try:
             # For now, use regular manager - async manager will be implemented separately
-            self._manager = PacmanManager(
-                config_path=self.config_path,
-                use_sudo=self.use_sudo
-            )
+            self._manager = PacmanManager({"config_path": self.config_path, "use_sudo": self.use_sudo})
             logger.debug("Entered AsyncPacmanContext")
             return self._manager
         except Exception as e:

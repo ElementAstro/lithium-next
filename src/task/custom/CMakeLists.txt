@@ -19,6 +19,8 @@ set(CUSTOM_TASK_HEADERS
     factory.hpp
     script_task.hpp
     search_task.hpp
+    task_factory.hpp
+    sequence_manager.hpp
 )
 
 # Create custom task base library

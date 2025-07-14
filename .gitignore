@@ -36,3 +36,4 @@ build/
 test/
 .venv/
 build-test/
+__pycache__/

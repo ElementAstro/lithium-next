@@ -9,16 +9,14 @@ from __future__ import annotations
 import time
 import functools
 import asyncio
-import inspect
 import os
-from typing import TypeVar, ParamSpec, Callable, Any, overload
+from typing import TypeVar, ParamSpec, Callable, Any
 from collections.abc import Awaitable
-from pathlib import Path
 
 from loguru import logger
 
 from .exceptions import CommandError, PackageNotFoundError
-from .types import PackageName, PackageIdentifier, OperationResult
+from .pacman_types import PackageName, OperationResult
 
 T = TypeVar('T')
 P = ParamSpec('P')

@@ -27,8 +27,8 @@ class HeaderFormatter:
             case "oct":
                 return f"0{byte_value:o}"
             case "char":
-                if 32 <= byte_value <= 126 and chr(byte_value) not in "'\\"
-                return f"'{chr(byte_value)}'"
+                if 32 <= byte_value <= 126 and chr(byte_value) not in "'\\":
+                    return f"'{chr(byte_value)}'"
                 if byte_value == ord("'"):
                     return "'\''"
                 if byte_value == ord("\\"):

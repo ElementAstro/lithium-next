@@ -103,8 +103,8 @@ def create(
         console.print(f"[green]✔[/green] Private key created: {result.key_path}")
 
 
-@app.command()
-def create_csr(
+@app.command("csr")
+def create_csr_command(
     ctx: typer.Context,
     hostname: str = typer.Option(..., "--hostname", help="The hostname for the CSR (CN)."),
     cert_dir: Optional[Path] = typer.Option(None, "--cert-dir", help="Directory to save files."),
@@ -116,7 +116,7 @@ def create_csr(
         if k != 'ctx' and v is not None
     })
     console.print(f"Creating CSR for [bold cyan]{options.hostname}[/bold cyan]...")
-    result = create_csr(ctx=ctx, options=options)  # Pass both context and options
+    result = create_csr(options)
     if result and hasattr(result, 'csr_path') and hasattr(result, 'key_path'):
         console.print(f"[green]✔[/green] CSR created: {result.csr_path}")
         console.print(f"[green]✔[/green] Private key created: {result.key_path}")
@@ -195,7 +195,7 @@ def revoke(
     ca_cert_path: Path = typer.Option(..., "--ca-cert", help="Path to the CA certificate."),
     ca_key_path: Path = typer.Option(..., "--ca-key", help="Path to the CA private key."),
     crl_path: Path = typer.Option(..., "--crl", help="Path to the existing CRL file."),
-    reason: RevocationReason = typer.Option(RevocationReason.unspecified, "--reason", help="Reason for revocation."),
+    reason: RevocationReason = typer.Option(RevocationReason.UNSPECIFIED, "--reason", help="Reason for revocation."),
 ):
     """Revoke a certificate and update the CRL."""
     options = RevokeOptions(

@@ -9,10 +9,27 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium_device VERSION 1.0.0 LANGUAGES C CXX)
 
+# Enhanced device management sources
+set(ENHANCED_DEVICE_FILES
+    enhanced_device_factory.hpp
+    device_performance_monitor.hpp
+    device_resource_manager.hpp
+    device_connection_pool.hpp
+    device_task_scheduler.hpp
+    device_cache_system.hpp
+)
+
+# Performance optimization sources
+set(PERFORMANCE_FILES
+    # Implementation files will be added as needed
+)
+
 # Sources and Headers
 set(PROJECT_FILES
     manager.cpp
     device_factory.cpp
+    ${ENHANCED_DEVICE_FILES}
+    ${PERFORMANCE_FILES}
 )
 
 # Mock device sources

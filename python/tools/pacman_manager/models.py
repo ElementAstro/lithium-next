@@ -13,7 +13,7 @@ from typing import TypedDict, Self, ClassVar, Callable, Any
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .types import (
+from .pacman_types import (
     PackageName, PackageVersion, RepositoryName,
     CommandOutput
 )

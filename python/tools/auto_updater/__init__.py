@@ -16,6 +16,7 @@ from .types import (
 )
 from .core import AutoUpdater
 from .sync import AutoUpdaterSync, create_updater, run_updater
+from .updater import AutoUpdater as AsyncAutoUpdater
 from .utils import compare_versions, parse_version, calculate_file_hash
 from .logger import logger
 
@@ -25,6 +26,7 @@ __all__ = [
     # Core classes
     "AutoUpdater",
     "AutoUpdaterSync",
+    "AsyncAutoUpdater",
 
     # Types
     "UpdaterConfig",
