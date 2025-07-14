@@ -1,53 +1,49 @@
-# QHY Camera Device Implementation
-cmake_minimum_required(VERSION 3.20)
+# QHY Device Implementation
 
-# Find QHY SDK
-find_path(QHY_INCLUDE_DIR qhyccd.h
-    HINTS
-    ${QHY_ROOT_DIR}/include
-    ${QHY_ROOT_DIR}
-    /usr/local/include
-    /usr/include
-    PATH_SUFFIXES qhy qhyccd
+# Include common device configuration
+include(${CMAKE_CURRENT_SOURCE_DIR}/../DeviceConfig.cmake)
+
+# Find QHY SDK using common function
+find_device_sdk(qhy qhyccd.h qhyccd
+    RESULT_VAR QHY_FOUND
+    LIBRARY_VAR QHY_LIBRARY
+    INCLUDE_VAR QHY_INCLUDE_DIR
+    HEADER_NAMES qhyccd.h
+    LIBRARY_NAMES qhyccd libqhyccd
+    SEARCH_PATHS
+        ${QHY_ROOT_DIR}/include
+        ${QHY_ROOT_DIR}
+        /usr/local/include
+        /usr/include
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/qhy/include
 )
 
-find_library(QHY_LIBRARY
-    NAMES qhyccd libqhyccd
-    HINTS
-    ${QHY_ROOT_DIR}/lib
-    ${QHY_ROOT_DIR}
-    /usr/local/lib
-    /usr/lib
-    PATH_SUFFIXES x86_64 x64 lib64
+# Add subdirectories for each device type using common macro
+add_device_subdirectory(camera)
+add_device_subdirectory(filterwheel)
+
+# QHY specific sources
+set(QHY_SOURCES)
+set(QHY_HEADERS qhyccd.h)
+
+# Create QHY vendor library using common function
+create_vendor_library(qhy
+    TARGET_NAME lithium_device_qhy
+    SOURCES ${QHY_SOURCES}
+    HEADERS ${QHY_HEADERS}
+    DEVICE_MODULES
+        lithium_device_qhy_camera
+        lithium_device_qhy_filterwheel
 )
 
-if(QHY_INCLUDE_DIR AND QHY_LIBRARY)
-    set(QHY_FOUND TRUE)
-    message(STATUS "Found QHY SDK: ${QHY_LIBRARY}")
-else()
-    set(QHY_FOUND FALSE)
-    message(WARNING "QHY SDK not found. QHY camera support will be disabled.")
-endif()
+# Apply standard settings
+apply_standard_settings(lithium_device_qhy)
 
-# QHY Camera Implementation
+# SDK specific settings
 if(QHY_FOUND)
-    add_library(lithium_qhy_camera STATIC
-        camera/qhy_camera.cpp
-    )
-
-    target_include_directories(lithium_qhy_camera
-        PUBLIC
-            ${CMAKE_CURRENT_SOURCE_DIR}
-            ${QHY_INCLUDE_DIR}
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/src
-    )
-
-    target_link_libraries(lithium_qhy_camera
-        PUBLIC
-            lithium_device_template
-            atom
-            ${QHY_LIBRARY}
+    target_include_directories(lithium_device_qhy PRIVATE ${QHY_INCLUDE_DIR})
+    target_link_libraries(lithium_device_qhy PRIVATE ${QHY_LIBRARY})
+endif()
         PRIVATE
             pthread
             ${CMAKE_DL_LIBS}

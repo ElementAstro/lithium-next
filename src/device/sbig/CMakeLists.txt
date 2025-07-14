@@ -1,43 +1,86 @@
-# CMakeLists.txt for SBIG Camera Support
+# Standardized SBIG Device Implementation
+
+cmake_minimum_required(VERSION 3.20)
 
 option(ENABLE_SBIG_CAMERA "Enable SBIG camera support" ON)
 
-if(ENABLE_SBIG_CAMERA)
-    # Try to find SBIG Universal Driver
-    find_path(SBIG_INCLUDE_DIR
-        NAMES sbigudrv.h
-        PATHS
-            /usr/include
-            /usr/local/include
-            /opt/sbig/include
-            ${CMAKE_SOURCE_DIR}/libs/thirdparty/sbig/include
-    )
+# Find SBIG Universal Driver
+find_path(SBIG_INCLUDE_DIR
+    NAMES sbigudrv.h
+    PATHS
+        /usr/include
+        /usr/local/include
+        /opt/sbig/include
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/sbig/include
+)
 
-    find_library(SBIG_LIBRARY
-        NAMES sbigudrv SBIGUDrv
-        PATHS
-            /usr/lib
-            /usr/local/lib
-            /opt/sbig/lib
-            ${CMAKE_SOURCE_DIR}/libs/thirdparty/sbig/lib
-    )
+find_library(SBIG_LIBRARY
+    NAMES sbigudrv SBIGUDrv
+    PATHS
+        /usr/lib
+        /usr/local/lib
+        /opt/sbig/lib
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/sbig/lib
+)
 
-    if(SBIG_INCLUDE_DIR AND SBIG_LIBRARY)
-        set(SBIG_FOUND TRUE)
-        message(STATUS "SBIG Universal Driver found: ${SBIG_LIBRARY}")
-        
-        # Define macro for conditional compilation
-        add_definitions(-DLITHIUM_SBIG_CAMERA_ENABLED)
-        
-        # Create SBIG camera library
-        add_library(lithium_sbig_camera SHARED
-            sbig_camera.cpp
-        )
-        
-        target_include_directories(lithium_sbig_camera
-            PUBLIC
-                ${CMAKE_CURRENT_SOURCE_DIR}
-                ${SBIG_INCLUDE_DIR}
+if(SBIG_INCLUDE_DIR AND SBIG_LIBRARY)
+    set(SBIG_FOUND TRUE)
+    message(STATUS "Found SBIG Universal Driver: ${SBIG_LIBRARY}")
+    add_compile_definitions(LITHIUM_SBIG_ENABLED)
+else()
+    set(SBIG_FOUND FALSE)
+    message(WARNING "SBIG Universal Driver not found. SBIG device support will be disabled.")
+endif()
+
+# Main SBIG library
+add_library(lithium_device_sbig STATIC
+    sbig_camera.cpp
+    sbig_camera.hpp
+)
+
+# Set properties
+set_property(TARGET lithium_device_sbig PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(lithium_device_sbig PROPERTIES
+    VERSION 1.0.0
+    SOVERSION 1
+    OUTPUT_NAME lithium_device_sbig
+)
+
+# Link dependencies
+target_link_libraries(lithium_device_sbig
+    PUBLIC
+        lithium_device_template
+        atom
+    PRIVATE
+        lithium_atom_log
+        lithium_atom_type
+)
+
+# SDK specific settings
+if(SBIG_FOUND)
+    target_include_directories(lithium_device_sbig PRIVATE ${SBIG_INCLUDE_DIR})
+    target_link_libraries(lithium_device_sbig PRIVATE ${SBIG_LIBRARY})
+endif()
+
+# Include directories
+target_include_directories(lithium_device_sbig
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+# Install targets
+install(
+    TARGETS lithium_device_sbig
+    EXPORT lithium_device_sbig_targets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+# Install headers
+install(
+    FILES sbig_camera.hpp
+    DESTINATION include/lithium/device/sbig
+)
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )

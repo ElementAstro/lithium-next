@@ -1,33 +1,38 @@
-cmake_minimum_required(VERSION 3.20)
+# ASI Focuser Modular Implementation
 
-# ASI Focuser module
-project(lithium_asi_focuser LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20)
 
 # Add components subdirectory
 add_subdirectory(components)
 
-set(ASI_FOCUSER_SOURCES
-    asi_focuser.hpp
-    asi_focuser.cpp
-    eaf_sdk_stub.hpp
-    controller/asi_focuser_controller.hpp
-    controller/asi_focuser_controller.cpp
-    controller/asi_focuser_controller_v2.hpp
-    controller/asi_focuser_controller_v2.cpp
-    controller/controller_factory.hpp
-    controller/controller_factory.cpp
+# Create the ASI focuser library
+add_library(
+    lithium_device_asi_focuser STATIC
+    # Main files
+    main.cpp
+    controller.cpp
+    # Headers
+    main.hpp
+    controller.hpp
 )
 
-# Create shared library
-add_library(asi_focuser SHARED ${ASI_FOCUSER_SOURCES})
-set_property(TARGET asi_focuser PROPERTY POSITION_INDEPENDENT_CODE 1)
+# Set properties
+set_property(TARGET lithium_device_asi_focuser PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(lithium_device_asi_focuser PROPERTIES
+    VERSION 1.0.0
+    SOVERSION 1
+    OUTPUT_NAME lithium_device_asi_focuser
+)
 
-# Target properties
-target_compile_features(asi_focuser PRIVATE cxx_std_20)
-target_compile_options(asi_focuser PRIVATE
-    $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>
-    $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra -Wpedantic>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+# Find and link ASI SDK
+find_library(ASI_FOCUSER_LIBRARY 
+    NAMES ASICamera2 libASICamera2 ASIEAF libASIEAF
+    PATHS
+        /usr/local/lib
+        /usr/lib
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/lib
+    DOC "ASI Focuser SDK library"
+)
 )
 
 # Find and link ASI EAF SDK if available

@@ -1,53 +1,45 @@
-# ASI Camera Device Implementation
-cmake_minimum_required(VERSION 3.20)
+# ASI Device Implementation
 
-# Find ASI SDK
-find_path(ASI_INCLUDE_DIR ASICamera2.h
-    HINTS
-    ${ASI_ROOT_DIR}/include
-    ${ASI_ROOT_DIR}
-    /usr/local/include
-    /usr/include
-    PATH_SUFFIXES asi zwo ASI
+# Include common device configuration
+include(${CMAKE_CURRENT_SOURCE_DIR}/../DeviceConfig.cmake)
+
+# Find ASI SDK using common function
+find_device_sdk(asi ASICamera2.h ASICamera2
+    RESULT_VAR ASI_FOUND
+    LIBRARY_VAR ASI_LIBRARY
+    INCLUDE_VAR ASI_INCLUDE_DIR
+    HEADER_NAMES ASICamera2.h ASIEFW.h ASIEAF.h
+    LIBRARY_NAMES ASICamera2 libASICamera2 ASIEFW libASIEFW ASIEAF libASIEAF
+    SEARCH_PATHS
+        ${ASI_ROOT_DIR}/include
+        ${ASI_ROOT_DIR}
+        /usr/local/include
+        /usr/include
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/include
 )
 
-find_library(ASI_LIBRARY
-    NAMES ASICamera2 libASICamera2
-    HINTS
-    ${ASI_ROOT_DIR}/lib
-    ${ASI_ROOT_DIR}
-    /usr/local/lib
-    /usr/lib
-    PATH_SUFFIXES x86_64 x64 lib64 armv6 armv7 armv8
+# Add subdirectories for each device type using common macro
+add_device_subdirectory(camera)
+add_device_subdirectory(filterwheel)
+add_device_subdirectory(focuser)
+
+# Create ASI vendor library using common function
+create_vendor_library(asi
+    TARGET_NAME lithium_device_asi
+    DEVICE_MODULES
+        lithium_device_asi_camera
+        lithium_device_asi_filterwheel
+        lithium_device_asi_focuser
 )
 
-if(ASI_INCLUDE_DIR AND ASI_LIBRARY)
-    set(ASI_FOUND TRUE)
-    message(STATUS "Found ASI SDK: ${ASI_LIBRARY}")
-else()
-    set(ASI_FOUND FALSE)
-    message(WARNING "ASI SDK not found. ASI camera support will be disabled.")
-endif()
+# Apply standard settings
+apply_standard_settings(lithium_device_asi)
 
-# ASI Camera Implementation
+# SDK specific settings
 if(ASI_FOUND)
-    add_library(lithium_asi_camera STATIC
-        camera/asi_camera.cpp
-    )
-
-    target_include_directories(lithium_asi_camera
-        PUBLIC
-            ${CMAKE_CURRENT_SOURCE_DIR}
-            ${ASI_INCLUDE_DIR}
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/src
-    )
-
-    target_link_libraries(lithium_asi_camera
-        PUBLIC
-            lithium_device_template
-            atom
-            ${ASI_LIBRARY}
+    target_include_directories(lithium_device_asi PRIVATE ${ASI_INCLUDE_DIR})
+    target_link_libraries(lithium_device_asi PRIVATE ${ASI_LIBRARY})
+endif()
         PRIVATE
             pthread
             ${CMAKE_DL_LIBS}

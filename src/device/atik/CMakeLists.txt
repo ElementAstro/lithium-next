@@ -1,43 +1,41 @@
-# CMakeLists.txt for Atik Camera Support
+# Atik Device Implementation
 
-option(ENABLE_ATIK_CAMERA "Enable Atik camera support" ON)
+# Include common device configuration
+include(${CMAKE_CURRENT_SOURCE_DIR}/../DeviceConfig.cmake)
 
-if(ENABLE_ATIK_CAMERA)
-    # Try to find Atik SDK
-    find_path(ATIK_INCLUDE_DIR
-        NAMES AtikCameras.h
-        PATHS
-            /usr/include
-            /usr/local/include
-            /opt/AtikSDK/include
-            ${CMAKE_SOURCE_DIR}/libs/thirdparty/atik/include
-    )
+# Find Atik SDK using common function
+find_device_sdk(atik AtikCameras.h AtikCameras
+    RESULT_VAR ATIK_FOUND
+    LIBRARY_VAR ATIK_LIBRARY
+    INCLUDE_VAR ATIK_INCLUDE_DIR
+    HEADER_NAMES AtikCameras.h
+    LIBRARY_NAMES AtikCameras atikcameras
+    SEARCH_PATHS
+        /usr/include
+        /usr/local/include
+        /opt/AtikSDK/include
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/atik/include
+)
 
-    find_library(ATIK_LIBRARY
-        NAMES AtikCameras atikcameras
-        PATHS
-            /usr/lib
-            /usr/local/lib
-            /opt/AtikSDK/lib
-            ${CMAKE_SOURCE_DIR}/libs/thirdparty/atik/lib
-    )
+# Atik specific sources
+set(ATIK_SOURCES atik_camera.cpp)
+set(ATIK_HEADERS atik_camera.hpp)
 
-    if(ATIK_INCLUDE_DIR AND ATIK_LIBRARY)
-        set(ATIK_FOUND TRUE)
-        message(STATUS "Atik SDK found: ${ATIK_LIBRARY}")
-        
-        # Define macro for conditional compilation
-        add_definitions(-DLITHIUM_ATIK_CAMERA_ENABLED)
-        
-        # Create Atik camera library
-        add_library(lithium_atik_camera SHARED
-            atik_camera.cpp
-        )
-        
-        target_include_directories(lithium_atik_camera
-            PUBLIC
-                ${CMAKE_CURRENT_SOURCE_DIR}
-                ${ATIK_INCLUDE_DIR}
+# Create Atik vendor library using common function
+create_vendor_library(atik
+    TARGET_NAME lithium_device_atik
+    SOURCES ${ATIK_SOURCES}
+    HEADERS ${ATIK_HEADERS}
+)
+
+# Apply standard settings
+apply_standard_settings(lithium_device_atik)
+
+# SDK specific settings
+if(ATIK_FOUND)
+    target_include_directories(lithium_device_atik PRIVATE ${ATIK_INCLUDE_DIR})
+    target_link_libraries(lithium_device_atik PRIVATE ${ATIK_LIBRARY})
+endif()
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )

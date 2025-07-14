@@ -4,10 +4,6 @@
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-# Find GMock package
-find_package(GMock REQUIRED)
-include_directories(${GMOCK_INCLUDE_DIRS})
-
 # Add test executables
 add_executable(test_sequence_manager
     test_sequence_manager.cpp

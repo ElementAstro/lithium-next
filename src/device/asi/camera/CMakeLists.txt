@@ -1,32 +1,31 @@
-cmake_minimum_required(VERSION 3.20)
+# ASI Camera Modular Implementation
 
-# ASI Camera module
-project(lithium_asi_camera LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20)
 
 # Add components subdirectory
 add_subdirectory(components)
 
-set(ASI_CAMERA_SOURCES
-    main.hpp
+# Create the ASI camera library
+add_library(
+    lithium_device_asi_camera STATIC
+    # Main files
     main.cpp
-    controller.hpp
     controller.cpp
+    # Headers
+    main.hpp
+    controller.hpp
     controller_impl.hpp
 )
 
-# Create shared library
-add_library(asi_camera SHARED ${ASI_CAMERA_SOURCES})
-set_property(TARGET asi_camera PROPERTY POSITION_INDEPENDENT_CODE 1)
-
-# Target properties
-target_compile_features(asi_camera PRIVATE cxx_std_20)
-target_compile_options(asi_camera PRIVATE
-    $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>
-    $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra -Wpedantic>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+# Set properties
+set_property(TARGET lithium_device_asi_camera PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(lithium_device_asi_camera PROPERTIES
+    VERSION 1.0.0
+    SOVERSION 1
+    OUTPUT_NAME lithium_device_asi_camera
 )
 
-# Find and link ASI Camera SDK if available
+# Find and link ASI Camera SDK
 find_library(ASI_CAMERA_LIBRARY 
     NAMES ASICamera2 libASICamera2
     PATHS
@@ -39,7 +38,6 @@ find_library(ASI_CAMERA_LIBRARY
 if(ASI_CAMERA_LIBRARY)
     message(STATUS "Found ASI Camera SDK: ${ASI_CAMERA_LIBRARY}")
     add_compile_definitions(LITHIUM_ASI_CAMERA_ENABLED)
-    target_link_libraries(asi_camera PRIVATE ${ASI_CAMERA_LIBRARY})
     
     # Find ASI Camera headers
     find_path(ASI_CAMERA_INCLUDE_DIR
@@ -48,6 +46,50 @@ if(ASI_CAMERA_LIBRARY)
             /usr/local/include
             /usr/include
             ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/include
+    )
+    
+    if(ASI_CAMERA_INCLUDE_DIR)
+        target_include_directories(lithium_device_asi_camera PRIVATE ${ASI_CAMERA_INCLUDE_DIR})
+    endif()
+    
+    target_link_libraries(lithium_device_asi_camera PRIVATE ${ASI_CAMERA_LIBRARY})
+endif()
+
+# Include directories
+target_include_directories(
+    lithium_device_asi_camera
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..
+           ${CMAKE_CURRENT_SOURCE_DIR}/../..
+           ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/components
+)
+
+# Link dependencies
+target_link_libraries(
+    lithium_device_asi_camera
+    PUBLIC lithium_device_template
+           atom
+    PRIVATE lithium_atom_log
+            lithium_atom_type
+            asi_camera_components
+)
+
+# Install the camera library
+install(
+    TARGETS lithium_device_asi_camera
+    EXPORT lithium_device_asi_camera_targets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+# Install headers
+install(
+    FILES controller.hpp
+          main.hpp
+          controller_impl.hpp
+    DESTINATION include/lithium/device/asi/camera
+)
         DOC "ASI Camera SDK include directory"
     )
     

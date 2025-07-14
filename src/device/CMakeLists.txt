@@ -9,6 +9,20 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium_device VERSION 1.0.0 LANGUAGES C CXX)
 
+# Include common device configuration
+include(${CMAKE_CURRENT_SOURCE_DIR}/DeviceConfig.cmake)
+
+# Add all device module subdirectories using the common macro
+add_device_subdirectory(template)
+add_device_subdirectory(ascom)
+add_device_subdirectory(indi)
+add_device_subdirectory(asi)
+add_device_subdirectory(qhy)
+add_device_subdirectory(atik)
+add_device_subdirectory(fli)
+add_device_subdirectory(sbig)
+add_device_subdirectory(playerone)
+
 # Enhanced device management sources
 set(ENHANCED_DEVICE_FILES
     enhanced_device_factory.hpp
@@ -21,32 +35,49 @@ set(ENHANCED_DEVICE_FILES
 
 # Performance optimization sources
 set(PERFORMANCE_FILES
-    # Implementation files will be added as needed
+    device_performance_monitor.cpp
+    device_connection_pool.cpp
+    integrated_device_manager.cpp
+    device_integration_test.cpp
 )
 
 # Sources and Headers
 set(PROJECT_FILES
     manager.cpp
     device_factory.cpp
+    camera_factory.cpp
     ${ENHANCED_DEVICE_FILES}
     ${PERFORMANCE_FILES}
 )
 
-# Mock device sources
-set(MOCK_DEVICE_FILES
-    template/mock/mock_camera.cpp
-    template/mock/mock_focuser.cpp
-    template/mock/mock_rotator.cpp
-    template/mock/mock_dome.cpp
-    template/mock/mock_filterwheel.cpp
+# Create main device library using common function
+create_vendor_library(device
+    TARGET_NAME lithium_device
+    SOURCES ${PROJECT_FILES}
+    DEVICE_MODULES
+        lithium_device_template
+        lithium_device_ascom
+        lithium_device_asi
+        lithium_device_qhy
+        lithium_device_atik
+        lithium_device_fli
+        lithium_device_sbig
+        lithium_device_playerone
 )
 
-# INDI device sources (if available)
-set(INDI_DEVICE_FILES
-    indi/camera.cpp
-    indi/telescope.cpp
-    indi/focuser.cpp
-    indi/filterwheel.cpp
+# Apply standard settings
+apply_standard_settings(lithium_device)
+
+# Install main headers
+install(
+    FILES manager.hpp
+          device_factory.hpp
+          camera_factory.hpp
+          device_interface.hpp
+          device_config.hpp
+          device_configuration_manager.hpp
+          enhanced_device_factory.hpp
+    DESTINATION include/lithium/device
 )
 
 # Required libraries

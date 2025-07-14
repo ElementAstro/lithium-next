@@ -1,33 +1,40 @@
-cmake_minimum_required(VERSION 3.20)
+# ASI Filterwheel Modular Implementation
 
-# ASI Filter Wheel module
-project(lithium_asi_filterwheel LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20)
 
 # Add components subdirectory
 add_subdirectory(components)
 
-set(ASI_FILTERWHEEL_SOURCES
-    asi_filterwheel.hpp
-    asi_filterwheel.cpp
-    controller/asi_filterwheel_controller.hpp
-    controller/asi_filterwheel_controller.cpp
-    controller/asi_filterwheel_controller_v2.hpp
-    controller/asi_filterwheel_controller_v2.cpp
+# Create the ASI filterwheel library
+add_library(
+    lithium_device_asi_filterwheel STATIC
+    # Main files
+    main.cpp
+    controller.cpp
+    # Headers
+    main.hpp
+    controller.hpp
+    controller_impl.hpp
+    controller_stub.hpp
 )
 
-# Create shared library
-add_library(asi_filterwheel SHARED ${ASI_FILTERWHEEL_SOURCES})
-set_property(TARGET asi_filterwheel PROPERTY POSITION_INDEPENDENT_CODE 1)
-
-# Target properties
-target_compile_features(asi_filterwheel PRIVATE cxx_std_20)
-target_compile_options(asi_filterwheel PRIVATE
-    $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>
-    $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra -Wpedantic>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+# Set properties
+set_property(TARGET lithium_device_asi_filterwheel PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(lithium_device_asi_filterwheel PROPERTIES
+    VERSION 1.0.0
+    SOVERSION 1
+    OUTPUT_NAME lithium_device_asi_filterwheel
 )
 
-# Find and link ASI EFW SDK if available
+# Find and link ASI SDK
+find_library(ASI_FILTERWHEEL_LIBRARY 
+    NAMES ASICamera2 libASICamera2 ASIEFW libASIEFW
+    PATHS
+        /usr/local/lib
+        /usr/lib
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/lib
+    DOC "ASI Filterwheel SDK library"
+)
 find_library(ASI_EFW_LIBRARY 
     NAMES EFW_filter libEFW_filter
     PATHS

@@ -1,43 +1,41 @@
-# CMakeLists.txt for FLI Camera Support
+# FLI Device Implementation
 
-option(ENABLE_FLI_CAMERA "Enable FLI camera support" ON)
+# Include common device configuration
+include(${CMAKE_CURRENT_SOURCE_DIR}/../DeviceConfig.cmake)
 
-if(ENABLE_FLI_CAMERA)
-    # Try to find FLI SDK
-    find_path(FLI_INCLUDE_DIR
-        NAMES libfli.h
-        PATHS
-            /usr/include
-            /usr/local/include
-            /opt/fli/include
-            ${CMAKE_SOURCE_DIR}/libs/thirdparty/fli/include
-    )
+# Find FLI SDK using common function
+find_device_sdk(fli libfli.h fli
+    RESULT_VAR FLI_FOUND
+    LIBRARY_VAR FLI_LIBRARY
+    INCLUDE_VAR FLI_INCLUDE_DIR
+    HEADER_NAMES libfli.h
+    LIBRARY_NAMES fli FLI
+    SEARCH_PATHS
+        /usr/include
+        /usr/local/include
+        /opt/fli/include
+        ${CMAKE_SOURCE_DIR}/libs/thirdparty/fli/include
+)
 
-    find_library(FLI_LIBRARY
-        NAMES fli FLI
-        PATHS
-            /usr/lib
-            /usr/local/lib
-            /opt/fli/lib
-            ${CMAKE_SOURCE_DIR}/libs/thirdparty/fli/lib
-    )
+# FLI specific sources
+set(FLI_SOURCES fli_camera.cpp)
+set(FLI_HEADERS fli_camera.hpp)
 
-    if(FLI_INCLUDE_DIR AND FLI_LIBRARY)
-        set(FLI_FOUND TRUE)
-        message(STATUS "FLI SDK found: ${FLI_LIBRARY}")
-        
-        # Define macro for conditional compilation
-        add_definitions(-DLITHIUM_FLI_CAMERA_ENABLED)
-        
-        # Create FLI camera library
-        add_library(lithium_fli_camera SHARED
-            fli_camera.cpp
-        )
-        
-        target_include_directories(lithium_fli_camera
-            PUBLIC
-                ${CMAKE_CURRENT_SOURCE_DIR}
-                ${FLI_INCLUDE_DIR}
+# Create FLI vendor library using common function
+create_vendor_library(fli
+    TARGET_NAME lithium_device_fli
+    SOURCES ${FLI_SOURCES}
+    HEADERS ${FLI_HEADERS}
+)
+
+# Apply standard settings
+apply_standard_settings(lithium_device_fli)
+
+# SDK specific settings
+if(FLI_FOUND)
+    target_include_directories(lithium_device_fli PRIVATE ${FLI_INCLUDE_DIR})
+    target_link_libraries(lithium_device_fli PRIVATE ${FLI_LIBRARY})
+endif()
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )
