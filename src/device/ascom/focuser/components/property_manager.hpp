@@ -47,7 +47,7 @@ class PropertyManager {
 public:
     // Property value types
     using PropertyValue = std::variant<bool, int, double, std::string>;
-    
+
     // Property metadata
     struct PropertyMetadata {
         std::string name;
@@ -219,7 +219,7 @@ public:
     /**
      * @brief Set property validator
      */
-    auto setPropertyValidator(const std::string& name, 
+    auto setPropertyValidator(const std::string& name,
                              std::function<bool(const PropertyValue&)> validator) -> bool;
 
     /**
@@ -412,57 +412,57 @@ public:
 private:
     // Hardware interface reference
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // Configuration
     PropertyConfig config_;
-    
+
     // Property storage
     std::unordered_map<std::string, PropertyMetadata> property_metadata_;
     std::unordered_map<std::string, PropertyCacheEntry> property_cache_;
     std::unordered_map<std::string, PropertyStats> property_stats_;
     std::unordered_map<std::string, std::function<bool(const PropertyValue&)>> property_validators_;
-    
+
     // Monitoring
     std::vector<std::string> monitored_properties_;
     std::thread monitoring_thread_;
     std::atomic<bool> monitoring_active_{false};
-    
+
     // Synchronization
     mutable std::mutex metadata_mutex_;
     mutable std::mutex cache_mutex_;
     mutable std::mutex stats_mutex_;
     mutable std::mutex config_mutex_;
     mutable std::mutex monitoring_mutex_;
-    
+
     // Callbacks
     PropertyChangeCallback property_change_callback_;
     PropertyErrorCallback property_error_callback_;
     PropertyValidationCallback property_validation_callback_;
-    
+
     // Private methods
     auto getCachedProperty(const std::string& name) -> std::optional<PropertyValue>;
     auto setCachedProperty(const std::string& name, const PropertyValue& value) -> void;
     auto isCacheValid(const std::string& name) -> bool;
     auto updatePropertyCache(const std::string& name, const PropertyValue& value) -> void;
-    auto updatePropertyStats(const std::string& name, bool isRead, bool isWrite, 
+    auto updatePropertyStats(const std::string& name, bool isRead, bool isWrite,
                            std::chrono::milliseconds duration, bool success) -> void;
-    
+
     auto monitoringLoop() -> void;
     auto checkPropertyChanges() -> void;
     auto validatePropertyValue(const std::string& name, const PropertyValue& value) -> bool;
-    
+
     // Notification methods
-    auto notifyPropertyChange(const std::string& name, const PropertyValue& oldValue, 
+    auto notifyPropertyChange(const std::string& name, const PropertyValue& oldValue,
                              const PropertyValue& newValue) -> void;
     auto notifyPropertyError(const std::string& name, const std::string& error) -> void;
     auto notifyPropertyValidation(const std::string& name, const PropertyValue& value, bool isValid) -> void;
-    
+
     // Utility methods
     auto propertyValueToString(const PropertyValue& value) -> std::string;
     auto stringToPropertyValue(const std::string& str, const PropertyValue& defaultValue) -> PropertyValue;
     auto comparePropertyValues(const PropertyValue& a, const PropertyValue& b) -> bool;
     auto clampPropertyValue(const PropertyValue& value, const PropertyValue& min, const PropertyValue& max) -> PropertyValue;
-    
+
     // Standard property helpers
     auto initializeStandardProperty(const std::string& name, const PropertyValue& defaultValue,
                                    const std::string& description = "", const std::string& unit = "",
@@ -478,11 +478,11 @@ auto PropertyManager::getPropertyAs(const std::string& name) -> std::optional<T>
     if (!value) {
         return std::nullopt;
     }
-    
+
     if (std::holds_alternative<T>(*value)) {
         return std::get<T>(*value);
     }
-    
+
     return std::nullopt;
 }
 

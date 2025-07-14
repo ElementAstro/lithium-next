@@ -42,16 +42,24 @@ def version_callback(value: bool):
 @app.callback()
 def main_options(
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose logging."),
+        False, "--verbose", "-v", help="Enable verbose logging."
+    ),
     version: Optional[bool] = typer.Option(
-        None, "--version", callback=version_callback, is_eager=True, help="Show version and exit."
+        None,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and exit.",
     ),
 ):
     """Manage global options."""
     logger.remove()
     level = "DEBUG" if verbose else "INFO"
-    logger.add(sys.stderr, level=level,
-               format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}")
+    logger.add(
+        sys.stderr,
+        level=level,
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
+    )
 
 
 def _get_options_from_args(config_file: Optional[Path], **kwargs) -> ConversionOptions:
@@ -59,7 +67,7 @@ def _get_options_from_args(config_file: Optional[Path], **kwargs) -> ConversionO
     options = ConversionOptions()
     if config_file and config_file.exists():
         logger.info(f"Loading options from config file: {config_file}")
-        if config_file.suffix.lower() in ('.yml', '.yaml'):
+        if config_file.suffix.lower() in (".yml", ".yaml"):
             options = ConversionOptions.from_yaml(config_file)
         else:
             options = ConversionOptions.from_json(config_file)
@@ -72,23 +80,30 @@ def _get_options_from_args(config_file: Optional[Path], **kwargs) -> ConversionO
 
 @app.command("to-header")
 def to_header_command(
-    input_file: Path = typer.Argument(..., help="Input binary file.",
-                                      exists=True, readable=True),
+    input_file: Path = typer.Argument(
+        ..., help="Input binary file.", exists=True, readable=True
+    ),
     output_file: Optional[Path] = typer.Argument(
-        None, help="Output header file. [default: <input>.h]"),
+        None, help="Output header file. [default: <input>.h]"
+    ),
     config: Optional[Path] = typer.Option(
-        None, help="Path to JSON/YAML configuration file.", exists=True),
+        None, help="Path to JSON/YAML configuration file.", exists=True
+    ),
     # ... other options ...
 ):
     """Convert a binary file to a C/C++ header."""
     try:
-        cli_args = {k: v for k, v in locals().items() if k not in [
-            'input_file', 'output_file', 'config']}
+        cli_args = {
+            k: v
+            for k, v in locals().items()
+            if k not in ["input_file", "output_file", "config"]
+        }
         options = _get_options_from_args(config, **cli_args)
         converter = Converter(options)
         generated_files = converter.to_header(input_file, output_file)
         console.print(
-            f"[green]✔[/green] Generated {len(generated_files)} header file(s):")
+            f"[green]✔[/green] Generated {len(generated_files)} header file(s):"
+        )
         for file_path in generated_files:
             console.print(f"  - {file_path}")
     except ConversionError as e:
@@ -98,23 +113,27 @@ def to_header_command(
 
 @app.command("to-file")
 def to_file_command(
-    input_file: Path = typer.Argument(..., help="Input header file.",
-                                      exists=True, readable=True),
+    input_file: Path = typer.Argument(
+        ..., help="Input header file.", exists=True, readable=True
+    ),
     output_file: Optional[Path] = typer.Argument(
-        None, help="Output binary file. [default: <input>.bin]"),
+        None, help="Output binary file. [default: <input>.bin]"
+    ),
     compression: Optional[CompressionType] = typer.Option(
-        None, help="Override compression auto-detection."),
+        None, help="Override compression auto-detection."
+    ),
     verify_checksum: bool = typer.Option(
-        False, "--verify-checksum", help="Verify checksum if present in header."),
+        False, "--verify-checksum", help="Verify checksum if present in header."
+    ),
 ):
     """Convert a C/C++ header back to a binary file."""
     try:
         options = ConversionOptions(
-            compression=compression, verify_checksum=verify_checksum)
+            compression=compression, verify_checksum=verify_checksum
+        )
         converter = Converter(options)
         generated_file = converter.to_file(input_file, output_file)
-        console.print(
-            f"[green]✔[/green] Generated binary file: {generated_file}")
+        console.print(f"[green]✔[/green] Generated binary file: {generated_file}")
     except ConversionError as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(code=1)
@@ -123,16 +142,15 @@ def to_file_command(
 @app.command("info")
 def info_command(
     input_file: Path = typer.Argument(
-        ..., help="Header file to analyze.", exists=True, readable=True)
+        ..., help="Header file to analyze.", exists=True, readable=True
+    )
 ):
     """Show information about a generated header file."""
     try:
         info = get_header_info(input_file)
-        console.print(
-            f"Header Information for: [bold cyan]{input_file}[/bold cyan]")
+        console.print(f"Header Information for: [bold cyan]{input_file}[/bold cyan]")
         for key, value in info.items():
-            console.print(
-                f"  [bold]{key.replace('_', ' ').title()}:[/bold] {value}")
+            console.print(f"  [bold]{key.replace('_', ' ').title()}:[/bold] {value}")
     except ConversionError as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(code=1)

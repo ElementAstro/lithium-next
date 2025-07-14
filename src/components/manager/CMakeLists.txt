@@ -82,7 +82,7 @@ target_compile_options(lithium_components_manager PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wconversion>
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wsign-conversion>
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wcast-align>
-    
+
     # MSVC warnings
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<CXX_COMPILER_ID:MSVC>:/permissive->

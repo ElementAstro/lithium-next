@@ -18,6 +18,7 @@ from loguru import logger
 
 class BuildStatus(StrEnum):
     """Enumeration of possible build status values using StrEnum for better serialization."""
+
     NOT_STARTED = "not_started"
     CONFIGURING = "configuring"
     BUILDING = "building"
@@ -40,7 +41,7 @@ class BuildStatus(StrEnum):
             BuildStatus.TESTING,
             BuildStatus.INSTALLING,
             BuildStatus.CLEANING,
-            BuildStatus.GENERATING_DOCS
+            BuildStatus.GENERATING_DOCS,
         }
 
 
@@ -48,9 +49,10 @@ class BuildStatus(StrEnum):
 class BuildResult:
     """
     Immutable data class to store build operation results with enhanced metrics.
-    
+
     Uses slots for memory efficiency and frozen=True for immutability.
     """
+
     success: bool
     output: str
     error: str = ""
@@ -58,7 +60,7 @@ class BuildResult:
     execution_time: float = 0.0
     timestamp: float = field(default_factory=time.time)
     memory_usage: Optional[int] = None  # Peak memory usage in bytes
-    cpu_time: Optional[float] = None    # CPU time in seconds
+    cpu_time: Optional[float] = None  # CPU time in seconds
 
     def __post_init__(self) -> None:
         """Validate the BuildResult after initialization."""
@@ -84,9 +86,9 @@ class BuildResult:
             "success": self.success,
             "exit_code": self.exit_code,
             "execution_time": self.execution_time,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
-        
+
         if self.memory_usage:
             log_data["memory_usage_mb"] = self.memory_usage / (1024 * 1024)
         if self.cpu_time:
@@ -107,7 +109,7 @@ class BuildResult:
             "execution_time": self.execution_time,
             "timestamp": self.timestamp,
             "memory_usage": self.memory_usage,
-            "cpu_time": self.cpu_time
+            "cpu_time": self.cpu_time,
         }
 
     @classmethod
@@ -121,14 +123,14 @@ class BuildResult:
             execution_time=data.get("execution_time", 0.0),
             timestamp=data.get("timestamp", time.time()),
             memory_usage=data.get("memory_usage"),
-            cpu_time=data.get("cpu_time")
+            cpu_time=data.get("cpu_time"),
         )
 
 
 @runtime_checkable
 class BuildOptionsProtocol(Protocol):
     """Protocol defining the interface for build options."""
-    
+
     source_dir: Path
     build_dir: Path
     install_prefix: Optional[Path]
@@ -144,10 +146,10 @@ class BuildOptionsProtocol(Protocol):
 class BuildOptions(Dict[str, Any]):
     """
     Enhanced build options dictionary with type validation and defaults.
-    
+
     Inherits from Dict for backward compatibility while adding type safety.
     """
-    
+
     _REQUIRED_KEYS = {"source_dir", "build_dir"}
     _DEFAULT_VALUES = {
         "build_type": "Debug",
@@ -161,13 +163,13 @@ class BuildOptions(Dict[str, Any]):
         """Initialize BuildOptions with validation."""
         # Start with defaults
         super().__init__(self._DEFAULT_VALUES)
-        
+
         # Update with provided data
         if data:
             self.update(data)
         if kwargs:
             self.update(kwargs)
-            
+
         # Validate and normalize
         self._validate_and_normalize()
 
@@ -271,7 +273,7 @@ class BuildOptions(Dict[str, Any]):
 @dataclass(frozen=True, slots=True)
 class BuildMetrics:
     """Performance metrics for build operations."""
-    
+
     total_time: float
     configure_time: float = 0.0
     build_time: float = 0.0
@@ -286,14 +288,24 @@ class BuildMetrics:
         """Validate metrics."""
         if self.total_time < 0:
             raise ValueError("total_time cannot be negative")
-        if any(t < 0 for t in [self.configure_time, self.build_time, self.test_time, self.install_time]):
+        if any(
+            t < 0
+            for t in [
+                self.configure_time,
+                self.build_time,
+                self.test_time,
+                self.install_time,
+            ]
+        ):
             raise ValueError("Individual operation times cannot be negative")
 
     def efficiency_ratio(self) -> float:
         """Calculate build efficiency as a ratio of useful work to total time."""
         if self.total_time == 0:
             return 0.0
-        useful_time = self.configure_time + self.build_time + self.test_time + self.install_time
+        useful_time = (
+            self.configure_time + self.build_time + self.test_time + self.install_time
+        )
         return useful_time / self.total_time
 
     def to_dict(self) -> Dict[str, float]:
@@ -308,21 +320,21 @@ class BuildMetrics:
             "cpu_usage_percent": self.cpu_usage_percent,
             "artifacts_count": float(self.artifacts_count),
             "artifacts_size_mb": self.artifacts_size_mb,
-            "efficiency_ratio": self.efficiency_ratio()
+            "efficiency_ratio": self.efficiency_ratio(),
         }
 
 
 @dataclass
 class BuildSession:
     """Context manager for tracking an entire build session."""
-    
+
     session_id: str
     start_time: float = field(default_factory=time.time)
     end_time: Optional[float] = None
     status: BuildStatus = BuildStatus.NOT_STARTED
     results: List[BuildResult] = field(default_factory=list)
     metrics: Optional[BuildMetrics] = None
-    
+
     def __enter__(self) -> BuildSession:
         """Enter build session context."""
         self.start_time = time.time()
@@ -333,13 +345,17 @@ class BuildSession:
         """Exit build session context."""
         self.end_time = time.time()
         duration = self.end_time - self.start_time
-        
+
         if exc_type is None:
             self.status = BuildStatus.COMPLETED
-            logger.success(f"Build session {self.session_id} completed in {duration:.2f}s")
+            logger.success(
+                f"Build session {self.session_id} completed in {duration:.2f}s"
+            )
         else:
             self.status = BuildStatus.FAILED
-            logger.error(f"Build session {self.session_id} failed after {duration:.2f}s")
+            logger.error(
+                f"Build session {self.session_id} failed after {duration:.2f}s"
+            )
 
     def add_result(self, result: BuildResult) -> None:
         """Add a build result to this session."""

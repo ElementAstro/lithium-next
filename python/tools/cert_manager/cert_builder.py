@@ -52,13 +52,25 @@ class CertificateBuilder:
         """Constructs the list of X.509 name attributes."""
         attrs = [x509.NameAttribute(NameOID.COMMON_NAME, self._options.hostname)]
         if self._options.country:
-            attrs.append(x509.NameAttribute(NameOID.COUNTRY_NAME, self._options.country))
+            attrs.append(
+                x509.NameAttribute(NameOID.COUNTRY_NAME, self._options.country)
+            )
         if self._options.state:
-            attrs.append(x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, self._options.state))
+            attrs.append(
+                x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, self._options.state)
+            )
         if self._options.organization:
-            attrs.append(x509.NameAttribute(NameOID.ORGANIZATION_NAME, self._options.organization))
+            attrs.append(
+                x509.NameAttribute(
+                    NameOID.ORGANIZATION_NAME, self._options.organization
+                )
+            )
         if self._options.organizational_unit:
-            attrs.append(x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, self._options.organizational_unit))
+            attrs.append(
+                x509.NameAttribute(
+                    NameOID.ORGANIZATIONAL_UNIT_NAME, self._options.organizational_unit
+                )
+            )
         if self._options.email:
             attrs.append(x509.NameAttribute(NameOID.EMAIL_ADDRESS, self._options.email))
         return attrs
@@ -66,7 +78,9 @@ class CertificateBuilder:
     def _set_validity_period(self) -> None:
         """Sets the Not Before and Not After dates."""
         not_valid_before = datetime.datetime.utcnow()
-        not_valid_after = not_valid_before + datetime.timedelta(days=self._options.valid_days)
+        not_valid_after = not_valid_before + datetime.timedelta(
+            days=self._options.valid_days
+        )
         self._builder = self._builder.not_valid_before(not_valid_before)
         self._builder = self._builder.not_valid_after(not_valid_after)
 
@@ -83,15 +97,30 @@ class CertificateBuilder:
         usage = None
         if self._options.cert_type == CertificateType.CA:
             usage = x509.KeyUsage(
-                digital_signature=True, key_cert_sign=True, crl_sign=True,
-                content_commitment=False, key_encipherment=False, data_encipherment=False,
-                key_agreement=False, encipher_only=False, decipher_only=False
+                digital_signature=True,
+                key_cert_sign=True,
+                crl_sign=True,
+                content_commitment=False,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                encipher_only=False,
+                decipher_only=False,
             )
-        elif self._options.cert_type in (CertificateType.SERVER, CertificateType.CLIENT):
+        elif self._options.cert_type in (
+            CertificateType.SERVER,
+            CertificateType.CLIENT,
+        ):
             usage = x509.KeyUsage(
-                digital_signature=True, key_encipherment=True,
-                content_commitment=False, data_encipherment=False, key_agreement=False,
-                key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False
+                digital_signature=True,
+                key_encipherment=True,
+                content_commitment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                key_cert_sign=False,
+                crl_sign=False,
+                encipher_only=False,
+                decipher_only=False,
             )
         if usage:
             self._builder = self._builder.add_extension(usage, critical=True)

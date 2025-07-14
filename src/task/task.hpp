@@ -98,13 +98,13 @@ public:
      * @brief Gets the UUID of the task.
      * @return The UUID of the task.
      */
-     
+
     /**
      * @brief Sets the type of the task.
      * @param taskType The type identifier for the task.
      */
     void setTaskType(const std::string& taskType);
-    
+
     /**
      * @brief Gets the type of the task.
      * @return The type identifier of the task.

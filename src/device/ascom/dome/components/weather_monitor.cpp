@@ -36,12 +36,12 @@ auto WeatherMonitor::startMonitoring() -> bool {
     }
 
     spdlog::info("Starting weather monitoring");
-    
+
     is_monitoring_.store(true);
     stop_monitoring_.store(false);
-    
+
     monitoring_thread_ = std::make_unique<std::thread>(&WeatherMonitor::monitoringLoop, this);
-    
+
     return true;
 }
 
@@ -51,15 +51,15 @@ auto WeatherMonitor::stopMonitoring() -> bool {
     }
 
     spdlog::info("Stopping weather monitoring");
-    
+
     stop_monitoring_.store(true);
     is_monitoring_.store(false);
-    
+
     if (monitoring_thread_ && monitoring_thread_->joinable()) {
         monitoring_thread_->join();
     }
     monitoring_thread_.reset();
-    
+
     return true;
 }
 
@@ -74,13 +74,13 @@ auto WeatherMonitor::getCurrentWeather() -> WeatherData {
 auto WeatherMonitor::getWeatherHistory(int hours) -> std::vector<WeatherData> {
     std::vector<WeatherData> filtered_history;
     auto cutoff_time = std::chrono::system_clock::now() - std::chrono::hours(hours);
-    
+
     for (const auto& data : weather_history_) {
         if (data.timestamp >= cutoff_time) {
             filtered_history.push_back(data);
         }
     }
-    
+
     return filtered_history;
 }
 
@@ -88,7 +88,7 @@ auto WeatherMonitor::isSafeToOperate() -> bool {
     if (!safety_enabled_.load()) {
         return true;
     }
-    
+
     return is_safe_.load();
 }
 
@@ -96,7 +96,7 @@ auto WeatherMonitor::getWeatherStatus() -> std::string {
     if (!safety_enabled_.load()) {
         return "Weather safety disabled";
     }
-    
+
     if (is_safe_.load()) {
         return "Weather conditions safe for operation";
     } else {
@@ -161,21 +161,21 @@ auto WeatherMonitor::monitoringLoop() -> void {
     while (!stop_monitoring_.load()) {
         // Update weather data from external sources
         updateFromExternalSource();
-        
+
         // Check safety conditions
         bool safe = checkWeatherSafety(current_weather_);
         bool previous_safe = is_safe_.load();
         is_safe_.store(safe);
-        
+
         // Trigger callbacks
         if (weather_callback_) {
             weather_callback_(current_weather_);
         }
-        
+
         if (safety_callback_ && safe != previous_safe) {
             safety_callback_(safe, safe ? "Weather conditions improved" : "Weather conditions deteriorated");
         }
-        
+
         // Add to history (limit to last 24 hours)
         weather_history_.push_back(current_weather_);
         auto cutoff_time = std::chrono::system_clock::now() - std::chrono::hours(24);
@@ -185,7 +185,7 @@ auto WeatherMonitor::monitoringLoop() -> void {
                               return data.timestamp < cutoff_time;
                           }),
             weather_history_.end());
-        
+
         std::this_thread::sleep_for(std::chrono::minutes(1)); // Update every minute
     }
 }
@@ -194,43 +194,43 @@ auto WeatherMonitor::checkWeatherSafety(const WeatherData& data) -> bool {
     if (!safety_enabled_.load()) {
         return true;
     }
-    
+
     // Check wind speed
     if (data.wind_speed > thresholds_.max_wind_speed) {
-        spdlog::warn("Wind speed too high: {:.1f} m/s (max: {:.1f})", 
+        spdlog::warn("Wind speed too high: {:.1f} m/s (max: {:.1f})",
                      data.wind_speed, thresholds_.max_wind_speed);
         return false;
     }
-    
+
     // Check rain rate
     if (data.rain_rate > thresholds_.max_rain_rate) {
-        spdlog::warn("Rain rate too high: {:.1f} mm/h (max: {:.1f})", 
+        spdlog::warn("Rain rate too high: {:.1f} mm/h (max: {:.1f})",
                      data.rain_rate, thresholds_.max_rain_rate);
         return false;
     }
-    
+
     // Check temperature range
-    if (data.temperature < thresholds_.min_temperature || 
+    if (data.temperature < thresholds_.min_temperature ||
         data.temperature > thresholds_.max_temperature) {
-        spdlog::warn("Temperature out of range: {:.1f}°C (range: {:.1f} to {:.1f})", 
+        spdlog::warn("Temperature out of range: {:.1f}°C (range: {:.1f} to {:.1f})",
                      data.temperature, thresholds_.min_temperature, thresholds_.max_temperature);
         return false;
     }
-    
+
     // Check humidity
     if (data.humidity > thresholds_.max_humidity) {
-        spdlog::warn("Humidity too high: {:.1f}% (max: {:.1f})", 
+        spdlog::warn("Humidity too high: {:.1f}% (max: {:.1f})",
                      data.humidity, thresholds_.max_humidity);
         return false;
     }
-    
+
     return true;
 }
 
 auto WeatherMonitor::fetchExternalWeatherData() -> std::optional<WeatherData> {
     // TODO: Implement actual weather data fetching from external sources
     // This is a placeholder implementation
-    
+
     WeatherData data;
     data.timestamp = std::chrono::system_clock::now();
     data.temperature = 20.0;
@@ -240,7 +240,7 @@ auto WeatherMonitor::fetchExternalWeatherData() -> std::optional<WeatherData> {
     data.wind_direction = 180.0;
     data.rain_rate = 0.0;
     data.condition = WeatherCondition::CLEAR;
-    
+
     return data;
 }
 

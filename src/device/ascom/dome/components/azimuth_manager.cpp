@@ -279,7 +279,7 @@ auto AzimuthManager::applyBacklashCompensation(double target_azimuth) -> double 
     }
 
     double diff = target_azimuth - *current;
-    
+
     // Normalize difference to [-180, 180]
     while (diff > 180.0) diff -= 360.0;
     while (diff < -180.0) diff += 360.0;
@@ -320,7 +320,7 @@ auto AzimuthManager::stopMovementMonitoring() -> void {
 
 auto AzimuthManager::monitoringLoop() -> void {
     auto start_time = std::chrono::steady_clock::now();
-    
+
     while (!stop_monitoring_.load() && is_moving_.load()) {
         auto current = getCurrentAzimuth();
         if (!current) {
@@ -330,7 +330,7 @@ auto AzimuthManager::monitoringLoop() -> void {
 
         double target = target_azimuth_.load();
         double diff = std::abs(*current - target);
-        
+
         // Normalize difference
         if (diff > 180.0) {
             diff = 360.0 - diff;

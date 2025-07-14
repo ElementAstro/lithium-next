@@ -140,10 +140,10 @@ public:
     struct ConnectionSettings {
         ConnectionType type = ConnectionType::ALPACA_REST;
         std::string deviceName;
-        
+
         // COM driver settings
         std::string progId;
-        
+
         // Alpaca settings
         std::string host = "localhost";
         int port = 11111;
@@ -568,27 +568,27 @@ private:
     std::atomic<bool> connected_{false};
     mutable std::mutex mutex_;
     mutable std::mutex infoMutex_;
-    
+
     // Connection details
     ConnectionType connectionType_{ConnectionType::ALPACA_REST};
     ConnectionSettings currentSettings_;
     std::string deviceName_;
-    
+
     // Alpaca client integration
     boost::asio::io_context& io_context_;
     std::unique_ptr<lithium::device::ascom::DeviceClient<lithium::device::ascom::DeviceType::Telescope>> alpaca_client_;
-    
+
     // Telescope information cache
     mutable std::optional<TelescopeInfo> telescopeInfo_;
     mutable std::chrono::steady_clock::time_point lastInfoUpdate_;
-    
+
     // Error handling
     mutable std::string lastError_;
 
 #ifdef _WIN32
     // COM interface
     IDispatch* comTelescope_ = nullptr;
-    
+
     // COM helper methods
     auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr, int paramCount = 0) -> std::optional<VARIANT>;
     auto getCOMProperty(const std::string& property) -> std::optional<VARIANT>;
@@ -598,22 +598,22 @@ private:
     // Alpaca helper methods
     auto connectAlpaca(const ConnectionSettings& settings) -> bool;
     auto disconnectAlpaca() -> bool;
-    
+
     // Connection type specific methods
     auto connectCOM(const ConnectionSettings& settings) -> bool;
     auto disconnectCOM() -> bool;
-    
+
     // Alpaca discovery
     auto discoverAlpacaDevices() -> std::vector<std::string>;
-    
+
     // Information caching
     auto updateTelescopeInfo() -> bool;
     auto shouldUpdateInfo() const -> bool;
-    
+
     // Communication helper
-    auto sendAlpacaRequest(const std::string& method, const std::string& endpoint, 
+    auto sendAlpacaRequest(const std::string& method, const std::string& endpoint,
                           const std::string& params = "") const -> std::optional<std::string>;
-    
+
     // Error handling helpers
     void setLastError(const std::string& error) const { lastError_ = error; }
 };

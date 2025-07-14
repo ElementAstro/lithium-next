@@ -185,7 +185,7 @@ public:
     /**
      * @brief Save position to preset slot
      */
-    auto savePreset(int slot, int position, const std::string& name = "", 
+    auto savePreset(int slot, int position, const std::string& name = "",
                    const std::string& description = "") -> bool;
 
     /**
@@ -404,28 +404,28 @@ private:
     // Component references
     std::shared_ptr<HardwareInterface> hardware_;
     std::shared_ptr<MovementController> movement_;
-    
+
     // Configuration
     PositionConfig config_;
-    
+
     // Position tracking
     std::atomic<int> current_position_{0};
     std::atomic<int> last_position_{0};
-    
+
     // Presets storage
     std::unordered_map<int, PositionPreset> presets_;
     static constexpr int MAX_PRESET_SLOTS = 20;
-    
+
     // Position history
     std::vector<PositionHistoryEntry> position_history_;
-    
+
     // Position triggers
     std::vector<PositionTrigger> position_triggers_;
     int next_trigger_id_{0};
-    
+
     // Statistics
     PositionStats stats_;
-    
+
     // Threading and synchronization
     std::thread auto_save_thread_;
     std::atomic<bool> auto_save_active_{false};
@@ -434,36 +434,36 @@ private:
     mutable std::mutex stats_mutex_;
     mutable std::mutex config_mutex_;
     mutable std::mutex triggers_mutex_;
-    
+
     // Callbacks
     PositionChangeCallback position_change_callback_;
     PresetCallback preset_callback_;
     PositionTriggerCallback position_trigger_callback_;
-    
+
     // Private methods
     auto autoSaveLoop() -> void;
     auto startAutoSave() -> void;
     auto stopAutoSave() -> void;
-    
+
     auto updatePositionStats(int position) -> void;
-    auto addPositionToHistory(int position, const std::string& source, 
+    auto addPositionToHistory(int position, const std::string& source,
                              const std::string& description) -> void;
     auto cleanupOldHistory() -> void;
-    
+
     auto validatePresetSlot(int slot) -> bool;
     auto generatePresetName(int slot) -> std::string;
     auto updatePresetUsage(int slot) -> void;
-    
+
     auto notifyPositionChange(int oldPosition, int newPosition) -> void;
     auto notifyPresetAction(int slot, const PositionPreset& preset) -> void;
     auto notifyPositionTrigger(int position, const std::string& description) -> void;
-    
+
     // Utility methods
     auto getCurrentTemperature() -> double;
     auto formatPosition(int position) -> std::string;
     auto isValidPresetSlot(int slot) -> bool;
     auto findEmptyPresetSlot() -> std::optional<int>;
-    
+
     // JSON serialization helpers
     auto presetToJson(const PositionPreset& preset) -> std::string;
     auto presetFromJson(const std::string& json) -> std::optional<PositionPreset>;

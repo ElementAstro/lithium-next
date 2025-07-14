@@ -20,7 +20,7 @@ set_target_properties(lithium_device_qhy_filterwheel PROPERTIES
 )
 
 # Find and link QHY SDK
-find_library(QHY_FILTERWHEEL_LIBRARY 
+find_library(QHY_FILTERWHEEL_LIBRARY
     NAMES qhyccd libqhyccd
     PATHS
         /usr/local/lib
@@ -32,7 +32,7 @@ find_library(QHY_FILTERWHEEL_LIBRARY
 if(QHY_FILTERWHEEL_LIBRARY)
     message(STATUS "Found QHY Filterwheel SDK: ${QHY_FILTERWHEEL_LIBRARY}")
     add_compile_definitions(LITHIUM_QHY_FILTERWHEEL_ENABLED)
-    
+
     # Find QHY headers
     find_path(QHY_FILTERWHEEL_INCLUDE_DIR
         NAMES qhyccd.h
@@ -41,11 +41,11 @@ if(QHY_FILTERWHEEL_LIBRARY)
             /usr/include
             ${CMAKE_SOURCE_DIR}/libs/thirdparty/qhy/include
     )
-    
+
     if(QHY_FILTERWHEEL_INCLUDE_DIR)
         target_include_directories(lithium_device_qhy_filterwheel PRIVATE ${QHY_FILTERWHEEL_INCLUDE_DIR})
     endif()
-    
+
     target_link_libraries(lithium_device_qhy_filterwheel PRIVATE ${QHY_FILTERWHEEL_LIBRARY})
 endif()
 

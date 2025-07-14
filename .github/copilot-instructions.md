@@ -6,7 +6,7 @@ Lithium-Next is a modular C++20 astrophotography control software with a task-ba
 ## Architecture
 
 ### Core Components
-- **Device System**: Unified interface for controlling astronomical devices 
+- **Device System**: Unified interface for controlling astronomical devices
 - **Task System**: Flexible system for creating and executing astronomical workflows
 - **Sequencer**: Manages and executes tasks in sequence with dependencies
 - **Config System**: Handles serialization/deserialization of configurations and sequences
@@ -27,7 +27,7 @@ mkdir build && cd build
 cmake ..
 make
 
-# Optimized build with Clang 
+# Optimized build with Clang
 mkdir build-clang && cd build-clang
 cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release ..
 make
@@ -53,7 +53,7 @@ make
 1. Create and configure a sequence:
    ```cpp
    ExposureSequence sequence;
-   
+
    // Set callbacks
    sequence.setOnSequenceStart([]() { /* ... */ });
    sequence.setOnTargetEnd([](const std::string& name, TargetStatus status) { /* ... */ });
@@ -62,13 +62,13 @@ make
 2. Create targets and tasks:
    ```cpp
    auto target = std::make_unique<Target>("MainTarget", std::chrono::seconds(5), 3);
-   
+
    // Create and add task
    auto task = std::make_unique<Task>("CustomTask", [](const json& params) {
        // Task implementation
    });
    target->addTask(std::move(task));
-   
+
    // Add target to sequence
    sequence.addTarget(std::move(target));
    ```
@@ -110,14 +110,14 @@ When searching for documentation related to cpp, spldog, curl, tinyxml2, nlohman
 class CustomTask : public Task {
 public:
     static auto taskName() -> std::string { return "CustomTask"; }
-    
+
     void execute(const json& params) override {
         // Extract parameters with validation
         double exposure = params.value("exposure", 1.0);
-        
+
         // Implement task logic
         // ...
-        
+
         // Signal completion
         notifyCompletion(true);
     }

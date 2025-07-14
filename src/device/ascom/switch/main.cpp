@@ -43,7 +43,7 @@ ASCOMSwitchMain::~ASCOMSwitchMain() {
 
 auto ASCOMSwitchMain::initialize() -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (initialized_.load()) {
         spdlog::warn("Switch main already initialized");
         return true;
@@ -54,7 +54,7 @@ auto ASCOMSwitchMain::initialize() -> bool {
     try {
         // Create controller
         controller_ = std::make_shared<ASCOMSwitchController>(config_.deviceName);
-        
+
         if (!controller_->initialize()) {
             setLastError("Failed to initialize controller");
             return false;
@@ -79,7 +79,7 @@ auto ASCOMSwitchMain::initialize() -> bool {
 
 auto ASCOMSwitchMain::destroy() -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (!initialized_.load()) {
         return true;
     }
@@ -88,7 +88,7 @@ auto ASCOMSwitchMain::destroy() -> bool {
 
     try {
         disconnect();
-        
+
         if (controller_) {
             controller_->destroy();
             controller_.reset();
@@ -208,7 +208,7 @@ auto ASCOMSwitchMain::getDeviceInfo() -> std::optional<std::string> {
 
 auto ASCOMSwitchMain::updateConfig(const SwitchConfig& config) -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (!validateConfig(config)) {
         setLastError("Invalid configuration");
         return false;
@@ -216,11 +216,11 @@ auto ASCOMSwitchMain::updateConfig(const SwitchConfig& config) -> bool {
 
     try {
         config_ = config;
-        
+
         if (initialized_.load()) {
             return applyConfig(config_);
         }
-        
+
         return true;
 
     } catch (const std::exception& e) {
@@ -252,7 +252,7 @@ auto ASCOMSwitchMain::loadConfigFromFile(const std::string& filename) -> bool {
         std::ifstream file(filename);
         std::string jsonStr((std::istreambuf_iterator<char>(file)),
                            std::istreambuf_iterator<char>());
-        
+
         auto config = jsonToConfig(jsonStr);
         if (!config) {
             setLastError("Failed to parse configuration file");
@@ -497,13 +497,13 @@ auto ASCOMSwitchMain::getStatus() -> std::vector<std::pair<std::string, bool>> {
     try {
         std::vector<std::pair<std::string, bool>> status;
         auto switches = controller_->getAllSwitches();
-        
+
         for (const auto& sw : switches) {
             auto state = controller_->getSwitchState(sw.name);
             bool isOn = state && (*state == SwitchState::ON);
             status.emplace_back(sw.name, isOn);
         }
-        
+
         return status;
 
     } catch (const std::exception& e) {
@@ -520,7 +520,7 @@ auto ASCOMSwitchMain::setMultiple(const std::vector<std::pair<std::string, bool>
 
     try {
         bool allSuccess = true;
-        
+
         for (const auto& [name, state] : switches) {
             SwitchState switchState = state ? SwitchState::ON : SwitchState::OFF;
             if (!controller_->setSwitchState(name, switchState)) {
@@ -530,7 +530,7 @@ auto ASCOMSwitchMain::setMultiple(const std::vector<std::pair<std::string, bool>
                 notifySwitchChange(name, state);
             }
         }
-        
+
         return allSuccess;
 
     } catch (const std::exception& e) {
@@ -583,13 +583,13 @@ auto ASCOMSwitchMain::getDiagnosticInfo() -> std::string {
         diag["connected"] = connected_.load();
         diag["device_name"] = config_.deviceName;
         diag["client_id"] = config_.clientId;
-        
+
         if (controller_) {
             diag["switch_count"] = controller_->getSwitchCount();
             diag["ascom_version"] = controller_->getASCOMVersion().value_or("Unknown");
             diag["driver_info"] = controller_->getASCOMDriverInfo().value_or("Unknown");
         }
-        
+
         return diag.dump(2);
 
     } catch (const std::exception& e) {
@@ -645,17 +645,17 @@ auto ASCOMSwitchMain::validateConfig(const SwitchConfig& config) -> bool {
         setLastError("Device name cannot be empty");
         return false;
     }
-    
+
     if (config.connectionTimeout <= 0) {
         setLastError("Connection timeout must be positive");
         return false;
     }
-    
+
     if (config.maxRetries < 0) {
         setLastError("Max retries cannot be negative");
         return false;
     }
-    
+
     return true;
 }
 
@@ -668,10 +668,10 @@ auto ASCOMSwitchMain::applyConfig(const SwitchConfig& config) -> bool {
         // Apply configuration to controller
         controller_->setASCOMClientID(config.clientId);
         controller_->enableVerboseLogging(config.enableVerboseLogging);
-        
+
         // Apply other configuration settings
         // ... additional config application logic
-        
+
         return true;
 
     } catch (const std::exception& e) {
@@ -725,7 +725,7 @@ auto ASCOMSwitchMain::configToJson(const SwitchConfig& config) -> std::string {
 auto ASCOMSwitchMain::jsonToConfig(const std::string& jsonStr) -> std::optional<SwitchConfig> {
     try {
         json j = json::parse(jsonStr);
-        
+
         SwitchConfig config;
         config.deviceName = j.value("deviceName", "Default ASCOM Switch");
         config.clientId = j.value("clientId", "Lithium-Next");
@@ -737,7 +737,7 @@ auto ASCOMSwitchMain::jsonToConfig(const std::string& jsonStr) -> std::optional<
         config.enablePowerMonitoring = j.value("enablePowerMonitoring", true);
         config.powerLimit = j.value("powerLimit", 1000.0);
         config.enableSafetyMode = j.value("enableSafetyMode", true);
-        
+
         return config;
 
     } catch (const std::exception& e) {

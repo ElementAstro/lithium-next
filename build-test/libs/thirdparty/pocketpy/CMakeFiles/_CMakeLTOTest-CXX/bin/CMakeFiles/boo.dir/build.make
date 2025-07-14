@@ -110,4 +110,3 @@ CMakeFiles/boo.dir/clean:
 CMakeFiles/boo.dir/depend:
 	cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir/DependInfo.cmake
 .PHONY : CMakeFiles/boo.dir/depend
-

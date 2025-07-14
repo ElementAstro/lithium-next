@@ -253,9 +253,9 @@ protected:
     std::string build_url(std::string_view endpoint) const;
     nlohmann::json build_transaction_params() const;
     std::string build_form_data(const nlohmann::json& params) const;
-    
+
     // Helper method for device discovery
-    std::optional<DeviceInfo> discover_device_at_host(std::string_view host, 
+    std::optional<DeviceInfo> discover_device_at_host(std::string_view host,
                                                       std::uint16_t port);
 
     int generate_transaction_id() const noexcept;

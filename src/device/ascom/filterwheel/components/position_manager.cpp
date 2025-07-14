@@ -159,7 +159,7 @@ auto PositionManager::validatePosition(int position) -> PositionValidation {
 
     if (position >= filter_count_) {
         result.is_valid = false;
-        result.error_message = "Position " + std::to_string(position) + 
+        result.error_message = "Position " + std::to_string(position) +
                               " exceeds maximum position " + std::to_string(filter_count_ - 1);
         return result;
     }
@@ -215,7 +215,7 @@ auto PositionManager::homeFilterWheel() -> bool {
 
 auto PositionManager::findHome() -> bool {
     spdlog::info("Finding home position");
-    
+
     // For most ASCOM filterwheels, position 0 is considered home
     return moveToPosition(0);
 }
@@ -428,7 +428,7 @@ auto PositionManager::verifyPosition(int expected_position) -> bool {
 auto PositionManager::estimateMovementTime(int from_position, int to_position) -> std::chrono::milliseconds {
     // Simple estimation based on position difference
     int distance = std::abs(to_position - from_position);
-    
+
     if (distance == 0) {
         return std::chrono::milliseconds(0);
     }

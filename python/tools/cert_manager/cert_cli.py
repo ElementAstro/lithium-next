@@ -50,13 +50,17 @@ def setup_logger(debug: bool):
     )
 
 
-def get_options(ctx: typer.Context, **kwargs) -> CertificateOptions:  # Added return type
+def get_options(
+    ctx: typer.Context, **kwargs
+) -> CertificateOptions:  # Added return type
     """Helper to merge config file settings with CLI arguments."""
     config_path = ctx.meta.get("config_path")
     if not config_path:
         raise typer.BadParameter("Config path is required")
     profile = ctx.meta.get("profile")
-    manager = ConfigManager(config_path=Path(config_path), profile_name=profile)  # Ensure Path conversion
+    manager = ConfigManager(
+        config_path=Path(config_path), profile_name=profile
+    )  # Ensure Path conversion
     return manager.get_options(kwargs)
 
 
@@ -64,8 +68,12 @@ def get_options(ctx: typer.Context, **kwargs) -> CertificateOptions:  # Added re
 def main(
     ctx: typer.Context,
     debug: bool = typer.Option(False, "--debug", help="Enable debug logging."),
-    config: Path = typer.Option(Path("config.toml"), "--config", help="Path to config file."),
-    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Config profile to use."),
+    config: Path = typer.Option(
+        Path("config.toml"), "--config", help="Path to config file."
+    ),
+    profile: Optional[str] = typer.Option(
+        None, "--profile", "-p", help="Config profile to use."
+    ),
 ):
     """Manage SSL/TLS certificates."""
     setup_logger(debug)
@@ -76,29 +84,55 @@ def main(
 @app.command()
 def create(
     ctx: typer.Context,
-    hostname: str = typer.Option(..., "--hostname", help="The hostname for the certificate (CN)."),
-    cert_dir: Optional[Path] = typer.Option(None, "--cert-dir", help="Directory to save files."),
-    key_size: Optional[int] = typer.Option(None, "--key-size", help="Size of RSA key in bits."),
-    valid_days: Optional[int] = typer.Option(None, "--valid-days", help="Certificate validity period."),
-    san: Optional[List[str]] = typer.Option(None, "--san", help="Subject Alternative Names."),
-    cert_type: Optional[CertificateType] = typer.Option(None, "--cert-type", help="Type of certificate."),
+    hostname: str = typer.Option(
+        ..., "--hostname", help="The hostname for the certificate (CN)."
+    ),
+    cert_dir: Optional[Path] = typer.Option(
+        None, "--cert-dir", help="Directory to save files."
+    ),
+    key_size: Optional[int] = typer.Option(
+        None, "--key-size", help="Size of RSA key in bits."
+    ),
+    valid_days: Optional[int] = typer.Option(
+        None, "--valid-days", help="Certificate validity period."
+    ),
+    san: Optional[List[str]] = typer.Option(
+        None, "--san", help="Subject Alternative Names."
+    ),
+    cert_type: Optional[CertificateType] = typer.Option(
+        None, "--cert-type", help="Type of certificate."
+    ),
     country: Optional[str] = typer.Option(None, "--country", help="Country name (C)."),
-    state: Optional[str] = typer.Option(None, "--state", help="State or Province name (ST)."),
-    organization: Optional[str] = typer.Option(None, "--org", help="Organization name (O)."),
-    org_unit: Optional[str] = typer.Option(None, "--org-unit", help="Organizational Unit (OU)."),
+    state: Optional[str] = typer.Option(
+        None, "--state", help="State or Province name (ST)."
+    ),
+    organization: Optional[str] = typer.Option(
+        None, "--org", help="Organization name (O)."
+    ),
+    org_unit: Optional[str] = typer.Option(
+        None, "--org-unit", help="Organizational Unit (OU)."
+    ),
     email: Optional[str] = typer.Option(None, "--email", help="Email address."),
-    auto_confirm: bool = typer.Option(False, "--auto-confirm", help="Skip confirmation prompts."),
+    auto_confirm: bool = typer.Option(
+        False, "--auto-confirm", help="Skip confirmation prompts."
+    ),
 ):
     """Create a new self-signed certificate."""
-    options = get_options(ctx, **{
-        k: v for k, v in locals().items() 
-        if k not in ['ctx', 'auto_confirm'] and v is not None
-    })
-    console.print(f"Creating certificate for [bold cyan]{options.hostname}[/bold cyan]...")
+    options = get_options(
+        ctx,
+        **{
+            k: v
+            for k, v in locals().items()
+            if k not in ["ctx", "auto_confirm"] and v is not None
+        },
+    )
+    console.print(
+        f"Creating certificate for [bold cyan]{options.hostname}[/bold cyan]..."
+    )
     if not auto_confirm and not typer.confirm("Proceed with certificate creation?"):
         raise typer.Abort()
     result = create_self_signed_cert(options)
-    if result and hasattr(result, 'cert_path') and hasattr(result, 'key_path'):
+    if result and hasattr(result, "cert_path") and hasattr(result, "key_path"):
         console.print(f"[green]✔[/green] Certificate created: {result.cert_path}")
         console.print(f"[green]✔[/green] Private key created: {result.key_path}")
 
@@ -106,18 +140,21 @@ def create(
 @app.command("csr")
 def create_csr_command(
     ctx: typer.Context,
-    hostname: str = typer.Option(..., "--hostname", help="The hostname for the CSR (CN)."),
-    cert_dir: Optional[Path] = typer.Option(None, "--cert-dir", help="Directory to save files."),
+    hostname: str = typer.Option(
+        ..., "--hostname", help="The hostname for the CSR (CN)."
+    ),
+    cert_dir: Optional[Path] = typer.Option(
+        None, "--cert-dir", help="Directory to save files."
+    ),
     # ... other options similar to create ...
 ):
     """Create a Certificate Signing Request (CSR)."""
-    options = get_options(ctx, **{
-        k: v for k, v in locals().items() 
-        if k != 'ctx' and v is not None
-    })
+    options = get_options(
+        ctx, **{k: v for k, v in locals().items() if k != "ctx" and v is not None}
+    )
     console.print(f"Creating CSR for [bold cyan]{options.hostname}[/bold cyan]...")
     result = create_csr(options)
-    if result and hasattr(result, 'csr_path') and hasattr(result, 'key_path'):
+    if result and hasattr(result, "csr_path") and hasattr(result, "key_path"):
         console.print(f"[green]✔[/green] CSR created: {result.csr_path}")
         console.print(f"[green]✔[/green] Private key created: {result.key_path}")
 
@@ -125,10 +162,18 @@ def create_csr_command(
 @app.command()
 def sign(
     csr_path: Path = typer.Option(..., "--csr", help="Path to the CSR file to sign."),
-    ca_cert_path: Path = typer.Option(..., "--ca-cert", help="Path to the CA certificate."),
-    ca_key_path: Path = typer.Option(..., "--ca-key", help="Path to the CA private key."),
-    output_dir: Path = typer.Option(Path("./certs"), "--out", help="Directory to save the signed certificate."),
-    valid_days: int = typer.Option(365, "--valid-days", help="Validity period for the new certificate."),
+    ca_cert_path: Path = typer.Option(
+        ..., "--ca-cert", help="Path to the CA certificate."
+    ),
+    ca_key_path: Path = typer.Option(
+        ..., "--ca-key", help="Path to the CA private key."
+    ),
+    output_dir: Path = typer.Option(
+        Path("./certs"), "--out", help="Directory to save the signed certificate."
+    ),
+    valid_days: int = typer.Option(
+        365, "--valid-days", help="Validity period for the new certificate."
+    ),
 ):
     """Sign a CSR with a CA."""
     options = SignOptions(
@@ -157,14 +202,20 @@ def check_expiry_command(
     """Check if a certificate is about to expire."""
     is_expiring, days_left = check_cert_expiry(cert_path, warning_days)
     if is_expiring:
-        console.print(f"[yellow]WARNING[/yellow]: Certificate will expire in {days_left} days.")
+        console.print(
+            f"[yellow]WARNING[/yellow]: Certificate will expire in {days_left} days."
+        )
     else:
-        console.print(f"[green]OK[/green]: Certificate is valid for {days_left} more days.")
+        console.print(
+            f"[green]OK[/green]: Certificate is valid for {days_left} more days."
+        )
 
 
 @app.command()
 def renew(
-    cert_path: Path = typer.Option(..., "--cert", help="Path to the certificate to renew."),
+    cert_path: Path = typer.Option(
+        ..., "--cert", help="Path to the certificate to renew."
+    ),
     key_path: Path = typer.Option(..., "--key", help="Path to the private key."),
     valid_days: int = typer.Option(365, "--valid-days", help="New validity period."),
 ):
@@ -178,8 +229,16 @@ def renew(
 def export_pfx_command(
     cert_path: Path = typer.Option(..., "--cert", help="Path to the certificate."),
     key_path: Path = typer.Option(..., "--key", help="Path to the private key."),
-    password: str = typer.Option(..., "--password", help="Password for the PFX file.", prompt=True, hide_input=True),
-    output_path: Optional[Path] = typer.Option(None, "--out", help="Output path for the PFX file."),
+    password: str = typer.Option(
+        ...,
+        "--password",
+        help="Password for the PFX file.",
+        prompt=True,
+        hide_input=True,
+    ),
+    output_path: Optional[Path] = typer.Option(
+        None, "--out", help="Output path for the PFX file."
+    ),
 ):
     """Export a certificate and key to a PKCS#12 (.pfx) file."""
     if not output_path:
@@ -191,11 +250,19 @@ def export_pfx_command(
 
 @app.command()
 def revoke(
-    cert_to_revoke_path: Path = typer.Option(..., "--cert", help="Path to the certificate to revoke."),
-    ca_cert_path: Path = typer.Option(..., "--ca-cert", help="Path to the CA certificate."),
-    ca_key_path: Path = typer.Option(..., "--ca-key", help="Path to the CA private key."),
+    cert_to_revoke_path: Path = typer.Option(
+        ..., "--cert", help="Path to the certificate to revoke."
+    ),
+    ca_cert_path: Path = typer.Option(
+        ..., "--ca-cert", help="Path to the CA certificate."
+    ),
+    ca_key_path: Path = typer.Option(
+        ..., "--ca-key", help="Path to the CA private key."
+    ),
     crl_path: Path = typer.Option(..., "--crl", help="Path to the existing CRL file."),
-    reason: RevocationReason = typer.Option(RevocationReason.UNSPECIFIED, "--reason", help="Reason for revocation."),
+    reason: RevocationReason = typer.Option(
+        RevocationReason.UNSPECIFIED, "--reason", help="Reason for revocation."
+    ),
 ):
     """Revoke a certificate and update the CRL."""
     options = RevokeOptions(
@@ -205,16 +272,26 @@ def revoke(
         crl_path=crl_path,
         reason=reason,
     )
-    console.print(f"Revoking certificate [bold cyan]{cert_to_revoke_path.name}[/bold cyan]...")
+    console.print(
+        f"Revoking certificate [bold cyan]{cert_to_revoke_path.name}[/bold cyan]..."
+    )
     new_crl_path = revoke_certificate(options)
-    console.print(f"[green]✔[/green] Certificate revoked. CRL updated at: {new_crl_path}")
+    console.print(
+        f"[green]✔[/green] Certificate revoked. CRL updated at: {new_crl_path}"
+    )
 
 
 @app.command("generate-crl")
 def generate_crl_command(
-    ca_cert_path: Path = typer.Option(..., "--ca-cert", help="Path to the CA certificate."),
-    ca_key_path: Path = typer.Option(..., "--ca-key", help="Path to the CA private key."),
-    output_dir: Path = typer.Option(Path("./crl"), "--out", help="Directory to save the CRL file."),
+    ca_cert_path: Path = typer.Option(
+        ..., "--ca-cert", help="Path to the CA certificate."
+    ),
+    ca_key_path: Path = typer.Option(
+        ..., "--ca-key", help="Path to the CA private key."
+    ),
+    output_dir: Path = typer.Option(
+        Path("./crl"), "--out", help="Directory to save the CRL file."
+    ),
 ):
     """Generate a new (empty) Certificate Revocation List (CRL)."""
     console.print("Generating new CRL...")

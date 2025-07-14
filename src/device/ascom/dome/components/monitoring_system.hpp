@@ -28,7 +28,7 @@ class HardwareInterface;
 
 /**
  * @brief Monitoring System Component
- * 
+ *
  * Provides comprehensive monitoring of dome systems including
  * temperature, humidity, power, motion status, and health checks.
  */
@@ -84,14 +84,14 @@ public:
 
 private:
     std::shared_ptr<HardwareInterface> hardware_interface_;
-    
+
     std::atomic<bool> is_monitoring_{false};
     std::chrono::milliseconds monitoring_interval_{std::chrono::milliseconds(1000)};
-    
+
     MonitoringData latest_data_;
     std::vector<MonitoringData> historical_data_;
     static constexpr size_t MAX_HISTORICAL_DATA = 1000;
-    
+
     // Thresholds
     double min_temperature_{-20.0};
     double max_temperature_{60.0};
@@ -100,16 +100,16 @@ private:
     double min_voltage_{11.0};
     double max_voltage_{15.0};
     double max_current_{10.0};
-    
+
     MonitoringCallback monitoring_callback_;
     AlertCallback alert_callback_;
-    
+
     std::unique_ptr<std::thread> monitoring_thread_;
     std::chrono::steady_clock::time_point start_time_;
     std::chrono::steady_clock::time_point last_health_check_;
-    
+
     mutable std::mutex data_mutex_;
-    
+
     // === Internal Methods ===
     void monitoringLoop();
     auto collectData() -> MonitoringData;

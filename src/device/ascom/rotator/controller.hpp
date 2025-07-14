@@ -47,37 +47,37 @@ struct RotatorConfig {
     std::string device_name{"ASCOM Rotator"};
     std::string client_id{"Lithium-Next"};
     components::ConnectionType connection_type{components::ConnectionType::ALPACA_REST};
-    
+
     // Alpaca configuration
     std::string alpaca_host{"localhost"};
     int alpaca_port{11111};
     int alpaca_device_number{0};
-    
+
     // COM configuration (Windows only)
     std::string com_prog_id;
-    
+
     // Monitoring configuration
     bool enable_position_monitoring{true};
     int position_monitor_interval_ms{500};
     bool enable_property_monitoring{true};
     int property_monitor_interval_ms{1000};
-    
+
     // Safety configuration
     bool enable_position_limits{false};
     double min_position{0.0};
     double max_position{360.0};
     bool enable_emergency_stop{true};
-    
+
     // Movement configuration
     double default_speed{10.0}; // degrees per second
     double default_acceleration{5.0}; // degrees per second squared
     double position_tolerance{0.1}; // degrees
     int movement_timeout_ms{30000}; // 30 seconds
-    
+
     // Backlash compensation
     bool enable_backlash_compensation{false};
     double backlash_amount{0.0}; // degrees
-    
+
     // Preset configuration
     bool enable_presets{true};
     int max_presets{100};
@@ -103,7 +103,7 @@ struct RotatorStatus {
 
 /**
  * @brief Modular ASCOM Rotator Controller
- * 
+ *
  * This controller provides a comprehensive interface to ASCOM rotator functionality
  * by coordinating specialized components for hardware communication, position control,
  * property management, and preset handling.
@@ -177,19 +177,19 @@ public:
     auto getPositionInfo() -> components::PositionInfo;
     auto performHoming() -> bool;
     auto calibratePosition(double known_angle) -> bool;
-    
+
     // Enhanced movement control
     auto setMovementParameters(const components::MovementParams& params) -> bool;
     auto getMovementParameters() -> components::MovementParams;
     auto getOptimalPath(double from_angle, double to_angle) -> std::pair<double, bool>;
     auto snapToNearestPreset(double tolerance = 5.0) -> std::optional<int>;
-    
+
     // Safety and emergency features
     auto setEmergencyStop(bool enabled) -> void;
     auto isEmergencyStopActive() -> bool;
     auto validatePosition(double position) -> bool;
     auto enforcePositionLimits(double& position) -> bool;
-    
+
     // Enhanced preset management
     auto saveCurrentPosition(int slot, const std::string& name = "") -> bool;
     auto moveToPreset(int slot) -> bool;
@@ -198,36 +198,36 @@ public:
     auto getFavoritePresets() -> std::vector<int>;
     auto exportPresets(const std::string& filename) -> bool;
     auto importPresets(const std::string& filename) -> bool;
-    
+
     // Configuration and settings
     auto updateConfiguration(const RotatorConfig& config) -> bool;
     auto getConfiguration() const -> RotatorConfig;
     auto saveConfiguration(const std::string& filename) -> bool;
     auto loadConfiguration(const std::string& filename) -> bool;
-    
+
     // Status and monitoring
     auto getStatus() -> RotatorStatus;
     auto startMonitoring() -> bool;
     auto stopMonitoring() -> bool;
     auto getDeviceCapabilities() -> components::DeviceCapabilities;
-    
+
     // Property access
     auto getProperty(const std::string& name) -> std::optional<components::PropertyValue>;
     auto setProperty(const std::string& name, const components::PropertyValue& value) -> bool;
     auto refreshProperties() -> bool;
-    
+
     // Event callbacks
     auto setPositionCallback(std::function<void(double, double)> callback) -> void;
     auto setMovementStateCallback(std::function<void(components::MovementState)> callback) -> void;
     auto setConnectionCallback(std::function<void(bool)> callback) -> void;
     auto setErrorCallback(std::function<void(const std::string&)> callback) -> void;
-    
+
     // Component access (for advanced use cases)
     auto getHardwareInterface() -> std::shared_ptr<components::HardwareInterface>;
     auto getPositionManager() -> std::shared_ptr<components::PositionManager>;
     auto getPropertyManager() -> std::shared_ptr<components::PropertyManager>;
     auto getPresetManager() -> std::shared_ptr<components::PresetManager>;
-    
+
     // Diagnostics and debugging
     auto performDiagnostics() -> std::unordered_map<std::string, std::string>;
     auto getComponentStatuses() -> std::unordered_map<std::string, bool>;
@@ -237,33 +237,33 @@ public:
 private:
     // Configuration
     RotatorConfig config_;
-    
+
     // Component instances
     std::shared_ptr<components::HardwareInterface> hardware_interface_;
     std::shared_ptr<components::PositionManager> position_manager_;
     std::shared_ptr<components::PropertyManager> property_manager_;
     std::shared_ptr<components::PresetManager> preset_manager_;
-    
+
     // Connection state
     std::atomic<bool> is_connected_{false};
     std::atomic<bool> is_initialized_{false};
-    
+
     // Monitoring
     std::unique_ptr<std::thread> monitor_thread_;
     std::atomic<bool> monitoring_active_{false};
     int monitor_interval_ms_{500};
-    
+
     // Event callbacks
     std::function<void(double, double)> position_callback_;
     std::function<void(components::MovementState)> movement_state_callback_;
     std::function<void(bool)> connection_callback_;
     std::function<void(const std::string&)> error_callback_;
     mutable std::mutex callback_mutex_;
-    
+
     // Error handling
     std::string last_error_;
     mutable std::mutex error_mutex_;
-    
+
     // Helper methods
     auto initializeComponents() -> bool;
     auto destroyComponents() -> bool;

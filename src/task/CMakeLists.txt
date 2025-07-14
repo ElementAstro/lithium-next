@@ -63,8 +63,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # Include directories - clean organization
-target_include_directories(${PROJECT_NAME} 
-    PUBLIC 
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/concurrency>
         $<INSTALL_INTERFACE:include>
@@ -87,9 +87,9 @@ if(NUMA_LIBRARIES)
     list(APPEND REQUIRED_LIBRARIES ${NUMA_LIBRARIES})
 endif()
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME}
     PUBLIC ${REQUIRED_LIBRARIES}
-    PRIVATE 
+    PRIVATE
         atom
         lithium_config
         lithium_database

@@ -61,13 +61,13 @@ __license__ = "MIT"
 def create_pybind11_module() -> dict[str, type]:
     """
     Create the core functions and classes for pybind11 integration.
-    
+
     This function provides a mapping of classes and functions that can be
     exposed to C++ code via pybind11 for high-performance integrations.
-    
+
     Returns:
         A dictionary containing the classes and functions to expose via pybind11
-        
+
     Example:
         >>> bindings = create_pybind11_module()
         >>> manager_class = bindings["HotspotManager"]
@@ -88,7 +88,7 @@ def create_pybind11_module() -> dict[str, type]:
 def get_version_info() -> dict[str, str]:
     """
     Get version and package information.
-    
+
     Returns:
         Dictionary containing version and metadata information
     """
@@ -97,7 +97,7 @@ def get_version_info() -> dict[str, str]:
         "author": __author__,
         "email": __email__,
         "license": __license__,
-        "description": "Enhanced WiFi Hotspot Manager with Modern Python Features"
+        "description": "Enhanced WiFi Hotspot Manager with Modern Python Features",
     }
 
 
@@ -109,19 +109,16 @@ logger.disable("hotspot")  # Disable by default, let applications configure
 __all__ = [
     # Core classes
     "HotspotManager",
-    "HotspotConfig", 
+    "HotspotConfig",
     "HotspotPlugin",
-    
     # Data models
     "ConnectedClient",
     "CommandResult",
     "NetworkInterface",
-    
     # Enums
     "AuthenticationType",
     "EncryptionType",
     "BandType",
-    
     # Exceptions
     "HotspotException",
     "ConfigurationError",
@@ -130,7 +127,6 @@ __all__ = [
     "CommandExecutionError",
     "CommandTimeoutError",
     "CommandNotFoundError",
-    
     # Command utilities
     "run_command",
     "run_command_async",
@@ -138,11 +134,9 @@ __all__ = [
     "stream_command_output",
     "get_command_runner_stats",
     "EnhancedCommandRunner",
-    
     # Utility functions
     "create_pybind11_module",
     "get_version_info",
-    
     # Package metadata
     "__version__",
     "logger",

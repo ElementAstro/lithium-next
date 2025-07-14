@@ -168,61 +168,61 @@ private:
     std::atomic<CalibrationStatus> calibration_status_{CalibrationStatus::NOT_CALIBRATED};
     std::optional<CalibrationResult> last_calibration_;
     std::chrono::system_clock::time_point calibration_timestamp_;
-    
+
     // Configuration
     double calibration_tolerance_{0.1};
     std::chrono::milliseconds calibration_timeout_{30000};
     int max_retries_{3};
     std::chrono::hours calibration_validity_{24 * 7}; // 1 week
-    
+
     // Calibration data
     std::map<int, std::vector<PositionAccuracy>> position_data_;
     std::map<std::string, double> calibration_parameters_;
     std::map<int, double> backlash_compensation_;
-    
+
     // Threading and synchronization
     std::atomic<bool> calibration_in_progress_{false};
     mutable std::mutex calibration_mutex_;
     mutable std::mutex data_mutex_;
-    
+
     // Callbacks
     CalibrationCallback calibration_callback_;
     TestResultCallback test_result_callback_;
-    
+
     // Error handling
     std::string last_error_;
     mutable std::mutex error_mutex_;
-    
+
     // Internal calibration methods
     auto performBasicCalibration() -> CalibrationResult;
     auto performAdvancedCalibration() -> CalibrationResult;
     auto runCalibrationTest(int position) -> CalibrationTest;
     auto analyzeCalibrationResults(const std::vector<CalibrationTest>& tests) -> CalibrationResult;
-    
+
     // Position testing implementation
     auto performPositionTest(int position, bool measure_settling = true) -> PositionAccuracy;
     auto calculatePositionError(int target, int actual) -> double;
     auto measureActualPosition(int target_position) -> int;
     auto waitForSettling(int position) -> std::chrono::milliseconds;
-    
+
     // Movement analysis
     auto analyzeMovementPattern(const std::vector<CalibrationTest>& tests) -> std::map<std::string, double>;
     auto detectMovementAnomalies(const std::vector<CalibrationTest>& tests) -> std::vector<std::string>;
     auto calculateBacklash(int position) -> double;
     auto optimizeMovementPath(int from, int to) -> std::vector<int>;
-    
+
     // Optimization algorithms
     auto optimizeUsingGradientDescent() -> bool;
     auto optimizeUsingGeneticAlgorithm() -> bool;
     auto optimizeUsingBayesian() -> bool;
     auto applyOptimizationResults(const std::map<std::string, double>& parameters) -> bool;
-    
+
     // Data persistence
     auto calibrationToJson(const CalibrationResult& result) -> std::string;
     auto calibrationFromJson(const std::string& json) -> std::optional<CalibrationResult>;
     auto saveParametersToFile() -> bool;
     auto loadParametersFromFile() -> bool;
-    
+
     // Utility methods
     auto setError(const std::string& error) -> void;
     auto notifyCalibrationProgress(CalibrationStatus status, double progress, const std::string& message) -> void;

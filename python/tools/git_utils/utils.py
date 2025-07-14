@@ -15,8 +15,18 @@ from contextlib import contextmanager, asynccontextmanager
 from functools import wraps, lru_cache
 from pathlib import Path
 from typing import (
-    Union, Callable, TypeVar, ParamSpec, Awaitable, Optional,
-    Any, List, AsyncGenerator, Generator, Protocol, runtime_checkable
+    Union,
+    Callable,
+    TypeVar,
+    ParamSpec,
+    Awaitable,
+    Optional,
+    Any,
+    List,
+    AsyncGenerator,
+    Generator,
+    Protocol,
+    runtime_checkable,
 )
 
 from loguru import logger
@@ -26,15 +36,16 @@ from .models import GitOperation
 
 
 # Type variables for generic functions
-T = TypeVar('T')
-P = ParamSpec('P')
-F = TypeVar('F', bound=Callable[..., Any])
-AsyncF = TypeVar('AsyncF', bound=Callable[..., Awaitable[Any]])
+T = TypeVar("T")
+P = ParamSpec("P")
+F = TypeVar("F", bound=Callable[..., Any])
+AsyncF = TypeVar("AsyncF", bound=Callable[..., Awaitable[Any]])
 
 
 @runtime_checkable
 class GitRepositoryProtocol(Protocol):
     """Protocol for objects that have a repository directory."""
+
     repo_dir: Optional[Path]
 
 
@@ -63,14 +74,16 @@ def change_directory(path: Optional[Union[str, Path]]) -> Generator[Path, None, 
 
     if target_dir is None:  # Added check for None after ensure_path
         logger.warning(
-            f"Invalid target directory path: {path}, staying in {original_dir}")
+            f"Invalid target directory path: {path}, staying in {original_dir}"
+        )
         yield original_dir
         return
 
     try:
         if not target_dir.exists():
             logger.warning(
-                f"Directory {target_dir} does not exist, staying in {original_dir}")
+                f"Directory {target_dir} does not exist, staying in {original_dir}"
+            )
             yield original_dir
             return
 
@@ -83,7 +96,7 @@ def change_directory(path: Optional[Union[str, Path]]) -> Generator[Path, None, 
             f"Failed to change directory to {target_dir}: {e}",
             original_error=e,
             target_directory=str(target_dir),
-            original_directory=str(original_dir)
+            original_directory=str(original_dir),
         )
     finally:
         try:
@@ -163,6 +176,7 @@ def performance_monitor(operation: GitOperation):
     Args:
         operation: The Git operation being performed.
     """
+
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
@@ -181,14 +195,14 @@ def performance_monitor(operation: GitOperation):
                         "operation": operation.name,
                         "duration": duration,
                         "function": func.__name__,
-                        "success": getattr(result, 'success', True)
-                    }
+                        "success": getattr(result, "success", True),
+                    },
                 )
 
                 # Add performance info to result if it's a GitResult
-                if hasattr(result, 'duration') and result.duration is None:
+                if hasattr(result, "duration") and result.duration is None:
                     result.duration = duration
-                if hasattr(result, 'operation') and result.operation is None:
+                if hasattr(result, "operation") and result.operation is None:
                     result.operation = operation
 
                 return result
@@ -201,12 +215,13 @@ def performance_monitor(operation: GitOperation):
                         "operation": operation.name,
                         "duration": duration,
                         "function": func.__name__,
-                        "error": str(e)
-                    }
+                        "error": str(e),
+                    },
                 )
                 raise
 
         return wrapper  # type: ignore
+
     return decorator
 
 
@@ -217,6 +232,7 @@ def async_performance_monitor(operation: GitOperation):
     Args:
         operation: The Git operation being performed.
     """
+
     def decorator(func: AsyncF) -> AsyncF:
         @wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
@@ -235,15 +251,15 @@ def async_performance_monitor(operation: GitOperation):
                         "operation": operation.name,
                         "duration": duration,
                         "function": func.__name__,
-                        "success": getattr(result, 'success', True),
-                        "async": True
-                    }
+                        "success": getattr(result, "success", True),
+                        "async": True,
+                    },
                 )
 
                 # Add performance info to result if it's a GitResult
-                if hasattr(result, 'duration') and result.duration is None:
+                if hasattr(result, "duration") and result.duration is None:
                     result.duration = duration
-                if hasattr(result, 'operation') and result.operation is None:
+                if hasattr(result, "operation") and result.operation is None:
                     result.operation = operation
 
                 return result
@@ -257,12 +273,13 @@ def async_performance_monitor(operation: GitOperation):
                         "duration": duration,
                         "function": func.__name__,
                         "error": str(e),
-                        "async": True
-                    }
+                        "async": True,
+                    },
                 )
                 raise
 
         return wrapper  # type: ignore
+
     return decorator
 
 
@@ -287,16 +304,16 @@ def validate_repository(func: F) -> F:
         repo_dir = None
 
         # Check if first argument has repo_dir attribute (self parameter)
-        if args and hasattr(args[0], 'repo_dir'):
+        if args and hasattr(args[0], "repo_dir"):
             repo_dir = args[0].repo_dir
         # Check if first argument is a path (for standalone functions)
         elif args and isinstance(args[0], (str, Path)):
             repo_dir = args[0]
         # Check kwargs
-        elif 'repo_dir' in kwargs:
-            repo_dir = kwargs['repo_dir']
-        elif 'repository_path' in kwargs:
-            repo_dir = kwargs['repository_path']
+        elif "repo_dir" in kwargs:
+            repo_dir = kwargs["repo_dir"]
+        elif "repository_path" in kwargs:
+            repo_dir = kwargs["repository_path"]
 
         if repo_dir is None:
             raise ValueError(
@@ -311,28 +328,30 @@ def validate_repository(func: F) -> F:
         # Validate repository exists
         if not repo_path.exists():
             context = create_git_error_context(
-                working_dir=Path.cwd(),
-                repo_path=repo_path,
-                function_name=func.__name__
+                working_dir=Path.cwd(), repo_path=repo_path, function_name=func.__name__
             )
             raise GitRepositoryNotFound(
                 f"Directory {repo_path} does not exist",
                 repository_path=repo_path,
-                context=context
+                context=context,
             )
 
         # Special case: clone operations don't need existing .git
-        if func.__name__ not in ['clone_repository', 'clone_repository_async', 'init_repository']:
+        if func.__name__ not in [
+            "clone_repository",
+            "clone_repository_async",
+            "init_repository",
+        ]:
             if not is_git_repository(repo_path):
                 context = create_git_error_context(
                     working_dir=Path.cwd(),
                     repo_path=repo_path,
-                    function_name=func.__name__
+                    function_name=func.__name__,
                 )
                 raise GitRepositoryNotFound(
                     f"Directory {repo_path} is not a Git repository",
                     repository_path=repo_path,
-                    context=context
+                    context=context,
                 )
 
         logger.debug(f"Repository validation passed for {repo_path}")
@@ -345,7 +364,7 @@ def retry_on_failure(
     max_attempts: int = 3,
     delay: float = 1.0,
     backoff_factor: float = 2.0,
-    exceptions: tuple[type[Exception], ...] = (GitException,)
+    exceptions: tuple[type[Exception], ...] = (GitException,),
 ):
     """
     Decorator to retry Git operations on failure with exponential backoff.
@@ -356,6 +375,7 @@ def retry_on_failure(
         backoff_factor: Factor to multiply delay by after each failure.
         exceptions: Tuple of exception types to retry on.
     """
+
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
@@ -371,8 +391,7 @@ def retry_on_failure(
                     if attempt == max_attempts - 1:
                         logger.error(
                             f"Function {func.__name__} failed after {max_attempts} attempts",
-                            extra={"final_error": str(
-                                e), "attempts": max_attempts}
+                            extra={"final_error": str(e), "attempts": max_attempts},
                         )
                         raise
 
@@ -389,6 +408,7 @@ def retry_on_failure(
                 raise last_exception
 
         return wrapper  # type: ignore
+
     return decorator
 
 
@@ -396,7 +416,7 @@ def async_retry_on_failure(
     max_attempts: int = 3,
     delay: float = 1.0,
     backoff_factor: float = 2.0,
-    exceptions: tuple[type[Exception], ...] = (GitException,)
+    exceptions: tuple[type[Exception], ...] = (GitException,),
 ):
     """
     Async decorator to retry Git operations on failure with exponential backoff.
@@ -407,6 +427,7 @@ def async_retry_on_failure(
         backoff_factor: Factor to multiply delay by after each failure.
         exceptions: Tuple of exception types to retry on.
     """
+
     def decorator(func: AsyncF) -> AsyncF:
         @wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
@@ -422,8 +443,7 @@ def async_retry_on_failure(
                     if attempt == max_attempts - 1:
                         logger.error(
                             f"Async function {func.__name__} failed after {max_attempts} attempts",
-                            extra={"final_error": str(
-                                e), "attempts": max_attempts}
+                            extra={"final_error": str(e), "attempts": max_attempts},
                         )
                         raise
 
@@ -440,6 +460,7 @@ def async_retry_on_failure(
                 raise last_exception
 
         return wrapper  # type: ignore
+
     return decorator
 
 
@@ -459,10 +480,14 @@ def validate_git_reference(ref: str) -> bool:
 
     # Git reference name rules (simplified)
     invalid_patterns = [
-        r'\.\.', r'@{', r'^\.',  # No .. or @{ or starting with .
-        r'\.$', r'/$', r'\.lock$',  # No ending with . or / or .lock
-        r'[\x00-\x1f\x7f~^:?*\[]',  # No control chars, ~, ^, :, ?, *, [
-        r'\s',  # No whitespace
+        r"\.\.",
+        r"@{",
+        r"^\.",  # No .. or @{ or starting with .
+        r"\.$",
+        r"/$",
+        r"\.lock$",  # No ending with . or / or .lock
+        r"[\x00-\x1f\x7f~^:?*\[]",  # No control chars, ~, ^, :, ?, *, [
+        r"\s",  # No whitespace
     ]
 
     return not any(re.search(pattern, ref) for pattern in invalid_patterns)
@@ -482,19 +507,19 @@ def sanitize_commit_message(message: str, max_length: int = 72) -> str:
     if not message or not message.strip():
         return "Empty commit message"
 
-    lines = message.strip().split('\n')
+    lines = message.strip().split("\n")
 
     # Sanitize first line (subject)
     subject = lines[0].strip()
     if len(subject) > max_length:
-        subject = subject[:max_length - 3] + "..."
+        subject = subject[: max_length - 3] + "..."
 
     # Remove leading/trailing whitespace from other lines
     body_lines = [line.rstrip() for line in lines[1:] if line.strip()]
 
     # Reconstruct message
     if body_lines:
-        return subject + '\n\n' + '\n'.join(body_lines)
+        return subject + "\n\n" + "\n".join(body_lines)
     else:
         return subject
 
@@ -510,10 +535,7 @@ def get_git_version() -> Optional[str]:
 
     try:
         result = subprocess.run(
-            ['git', '--version'],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["git", "--version"], capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -532,25 +554,20 @@ __all__ = [
     # Context managers
     "change_directory",
     "async_change_directory",
-
     # Path utilities
     "ensure_path",
     "is_git_repository",
-
     # Decorators
     "validate_repository",
     "performance_monitor",
     "async_performance_monitor",
     "retry_on_failure",
     "async_retry_on_failure",
-
     # Validation utilities
     "validate_git_reference",
     "sanitize_commit_message",
-
     # System utilities
     "get_git_version",
-
     # Protocols
     "GitRepositoryProtocol",
 ]

@@ -67,7 +67,7 @@ public:
     // =========================================================================
     // AtomDriver Interface Implementation
     // =========================================================================
-    
+
     auto initialize() -> bool override;
     auto destroy() -> bool override;
     auto connect(const std::string &deviceName, int timeout = 5000, int maxRetry = 3) -> bool override;
@@ -78,7 +78,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Switch Management
     // =========================================================================
-    
+
     auto addSwitch(const SwitchInfo& switchInfo) -> bool override;
     auto removeSwitch(uint32_t index) -> bool override;
     auto removeSwitch(const std::string& name) -> bool override;
@@ -91,7 +91,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Switch Control
     // =========================================================================
-    
+
     auto setSwitchState(uint32_t index, SwitchState state) -> bool override;
     auto setSwitchState(const std::string& name, SwitchState state) -> bool override;
     auto getSwitchState(uint32_t index) -> std::optional<SwitchState> override;
@@ -103,7 +103,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Batch Operations
     // =========================================================================
-    
+
     auto setSwitchStates(const std::vector<std::pair<uint32_t, SwitchState>>& states) -> bool override;
     auto setSwitchStates(const std::vector<std::pair<std::string, SwitchState>>& states) -> bool override;
     auto getAllSwitchStates() -> std::vector<std::pair<uint32_t, SwitchState>> override;
@@ -111,7 +111,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Group Management
     // =========================================================================
-    
+
     auto addGroup(const SwitchGroup& group) -> bool override;
     auto removeGroup(const std::string& name) -> bool override;
     auto getGroupCount() -> uint32_t override;
@@ -123,7 +123,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Group Control
     // =========================================================================
-    
+
     auto setGroupState(const std::string& groupName, uint32_t switchIndex, SwitchState state) -> bool override;
     auto setGroupAllOff(const std::string& groupName) -> bool override;
     auto getGroupStates(const std::string& groupName) -> std::vector<std::pair<uint32_t, SwitchState>> override;
@@ -131,7 +131,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Timer Functionality
     // =========================================================================
-    
+
     auto setSwitchTimer(uint32_t index, uint32_t durationMs) -> bool override;
     auto setSwitchTimer(const std::string& name, uint32_t durationMs) -> bool override;
     auto cancelSwitchTimer(uint32_t index) -> bool override;
@@ -142,7 +142,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Power Management
     // =========================================================================
-    
+
     auto getTotalPowerConsumption() -> double override;
     auto getSwitchPowerConsumption(uint32_t index) -> std::optional<double> override;
     auto getSwitchPowerConsumption(const std::string& name) -> std::optional<double> override;
@@ -152,7 +152,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - State Management
     // =========================================================================
-    
+
     auto saveState() -> bool override;
     auto loadState() -> bool override;
     auto resetToDefaults() -> bool override;
@@ -160,7 +160,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Safety Features
     // =========================================================================
-    
+
     auto enableSafetyMode(bool enable) -> bool override;
     auto isSafetyModeEnabled() -> bool override;
     auto setEmergencyStop() -> bool override;
@@ -170,7 +170,7 @@ public:
     // =========================================================================
     // AtomSwitch Interface Implementation - Statistics
     // =========================================================================
-    
+
     auto getSwitchOperationCount(uint32_t index) -> uint64_t override;
     auto getSwitchOperationCount(const std::string& name) -> uint64_t override;
     auto getTotalOperationCount() -> uint64_t override;
@@ -181,7 +181,7 @@ public:
     // =========================================================================
     // ASCOM-specific methods
     // =========================================================================
-    
+
     auto getASCOMDriverInfo() -> std::optional<std::string>;
     auto getASCOMVersion() -> std::optional<std::string>;
     auto getASCOMInterfaceVersion() -> std::optional<int>;
@@ -191,7 +191,7 @@ public:
     // =========================================================================
     // Error handling and diagnostics
     // =========================================================================
-    
+
     auto getLastError() const -> std::string;
     auto clearLastError() -> void;
     auto enableVerboseLogging(bool enable) -> void;
@@ -200,7 +200,7 @@ public:
     // =========================================================================
     // Component access for testing
     // =========================================================================
-    
+
     auto getHardwareInterface() const -> std::shared_ptr<components::HardwareInterface>;
     auto getSwitchManager() const -> std::shared_ptr<components::SwitchManager>;
     auto getGroupManager() const -> std::shared_ptr<components::GroupManager>;
@@ -221,7 +221,7 @@ private:
     std::atomic<bool> initialized_{false};
     std::atomic<bool> connected_{false};
     mutable std::mutex controller_mutex_;
-    
+
     // Error handling
     mutable std::string last_error_;
     mutable std::mutex error_mutex_;
@@ -233,7 +233,7 @@ private:
     auto cleanupComponents() -> void;
     auto setLastError(const std::string& error) const -> void;
     auto logOperation(const std::string& operation, bool success) const -> void;
-    
+
     // Component coordination
     auto notifyComponentsOfConnection(bool connected) -> void;
     auto synchronizeComponentStates() -> bool;
@@ -247,13 +247,13 @@ public:
 
 class ASCOMSwitchConnectionException : public ASCOMSwitchException {
 public:
-    explicit ASCOMSwitchConnectionException(const std::string& message) 
+    explicit ASCOMSwitchConnectionException(const std::string& message)
         : ASCOMSwitchException("Connection error: " + message) {}
 };
 
 class ASCOMSwitchConfigurationException : public ASCOMSwitchException {
 public:
-    explicit ASCOMSwitchConfigurationException(const std::string& message) 
+    explicit ASCOMSwitchConfigurationException(const std::string& message)
         : ASCOMSwitchException("Configuration error: " + message) {}
 };
 

@@ -106,13 +106,15 @@ class NginxManagerBindings:
 
     def restore_config(self, backup_file: str = "") -> bool:
         """Restore Nginx configuration from backup."""
-        self._run_sync(
-            self.manager.restore_config(backup_file=backup_file or None)
-        )
+        self._run_sync(self.manager.restore_config(backup_file=backup_file or None))
         return True
 
     def create_virtual_host(
-        self, server_name: str, port: int = 80, root_dir: str = "", template: str = "basic"
+        self,
+        server_name: str,
+        port: int = 80,
+        root_dir: str = "",
+        template: str = "basic",
     ) -> str:
         """Create a virtual host configuration."""
         config_path = self._run_sync(
@@ -133,8 +135,7 @@ class NginxManagerBindings:
 
     def disable_virtual_host(self, server_name: str) -> bool:
         """Disable a virtual host."""
-        self._run_sync(self.manager.manage_virtual_host(
-            "disable", server_name))
+        self._run_sync(self.manager.manage_virtual_host("disable", server_name))
         return True
 
     def list_virtual_hosts(self) -> str:

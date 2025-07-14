@@ -74,29 +74,29 @@ struct DeviceCapabilities {
     bool can_sync{true};
     bool can_abort{true};
     bool can_set_position{true};
-    
+
     // Movement capabilities
     bool has_variable_speed{false};
     bool has_acceleration_control{false};
     bool supports_homing{false};
     bool supports_presets{false};
-    
+
     // Hardware features
     bool has_temperature_sensor{false};
     bool has_position_feedback{true};
     bool supports_backlash_compensation{false};
-    
+
     // Position limits
     double step_size{1.0};
     double min_position{0.0};
     double max_position{360.0};
     double position_tolerance{0.1};
-    
+
     // Speed limits
     double min_speed{0.1};
     double max_speed{50.0};
     double default_speed{10.0};
-    
+
     // Interface information
     std::string interface_version{"2"};
     std::string driver_version;
@@ -106,7 +106,7 @@ struct DeviceCapabilities {
 
 /**
  * @brief Property Manager for ASCOM Rotator
- * 
+ *
  * This component manages all ASCOM properties, providing caching,
  * validation, and type-safe access to device properties and capabilities.
  */
@@ -124,34 +124,34 @@ public:
     auto setProperty(const std::string& name, const PropertyValue& value) -> bool;
     auto hasProperty(const std::string& name) -> bool;
     auto getPropertyMetadata(const std::string& name) -> std::optional<PropertyMetadata>;
-    
+
     // Typed property access
     auto getBoolProperty(const std::string& name) -> std::optional<bool>;
     auto getIntProperty(const std::string& name) -> std::optional<int>;
     auto getDoubleProperty(const std::string& name) -> std::optional<double>;
     auto getStringProperty(const std::string& name) -> std::optional<std::string>;
-    
+
     auto setBoolProperty(const std::string& name, bool value) -> bool;
     auto setIntProperty(const std::string& name, int value) -> bool;
     auto setDoubleProperty(const std::string& name, double value) -> bool;
     auto setStringProperty(const std::string& name, const std::string& value) -> bool;
-    
+
     // Property validation
     auto validateProperty(const std::string& name, const PropertyValue& value) -> bool;
     auto getPropertyConstraints(const std::string& name) -> std::pair<PropertyValue, PropertyValue>; // min, max
-    
+
     // Cache management
     auto enablePropertyCaching(const std::string& name, std::chrono::milliseconds duration) -> bool;
     auto disablePropertyCaching(const std::string& name) -> bool;
     auto clearPropertyCache(const std::string& name = "") -> void;
     auto refreshProperty(const std::string& name) -> bool;
     auto refreshAllProperties() -> bool;
-    
+
     // Device capabilities
     auto getDeviceCapabilities() -> DeviceCapabilities;
     auto updateDeviceCapabilities() -> bool;
     auto hasCapability(const std::string& capability) -> bool;
-    
+
     // Standard ASCOM properties
     auto isConnected() -> bool;
     auto getPosition() -> std::optional<double>;
@@ -161,26 +161,26 @@ public:
     auto isReversed() -> bool;
     auto getStepSize() -> double;
     auto getTemperature() -> std::optional<double>;
-    
+
     // Property change notifications
-    auto setPropertyChangeCallback(const std::string& name, 
+    auto setPropertyChangeCallback(const std::string& name,
                                   std::function<void(const PropertyValue&)> callback) -> void;
     auto removePropertyChangeCallback(const std::string& name) -> void;
     auto notifyPropertyChange(const std::string& name, const PropertyValue& value) -> void;
-    
+
     // Property monitoring
-    auto startPropertyMonitoring(const std::vector<std::string>& properties, 
+    auto startPropertyMonitoring(const std::vector<std::string>& properties,
                                 int interval_ms = 1000) -> bool;
     auto stopPropertyMonitoring() -> bool;
     auto addMonitoredProperty(const std::string& name) -> bool;
     auto removeMonitoredProperty(const std::string& name) -> bool;
-    
+
     // Configuration and settings
     auto savePropertyConfiguration(const std::string& filename) -> bool;
     auto loadPropertyConfiguration(const std::string& filename) -> bool;
     auto exportPropertyValues() -> std::unordered_map<std::string, PropertyValue>;
     auto importPropertyValues(const std::unordered_map<std::string, PropertyValue>& values) -> bool;
-    
+
     // Error handling
     auto getLastError() const -> std::string;
     auto clearLastError() -> void;
@@ -188,32 +188,32 @@ public:
 private:
     // Hardware interface
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // Property registry
     std::unordered_map<std::string, PropertyMetadata> property_registry_;
     std::unordered_map<std::string, PropertyCacheEntry> property_cache_;
     mutable std::shared_mutex property_mutex_;
-    
+
     // Device capabilities
     DeviceCapabilities capabilities_;
     std::atomic<bool> capabilities_loaded_{false};
     mutable std::mutex capabilities_mutex_;
-    
+
     // Property change callbacks
     std::unordered_map<std::string, std::function<void(const PropertyValue&)>> property_callbacks_;
     mutable std::mutex callback_mutex_;
-    
+
     // Property monitoring
     std::vector<std::string> monitored_properties_;
     std::unique_ptr<std::thread> monitor_thread_;
     std::atomic<bool> monitoring_active_{false};
     int monitor_interval_ms_{1000};
     mutable std::mutex monitor_mutex_;
-    
+
     // Error handling
     std::string last_error_;
     mutable std::mutex error_mutex_;
-    
+
     // Helper methods
     auto registerStandardProperties() -> void;
     auto loadPropertyFromHardware(const std::string& name) -> std::optional<PropertyValue>;
@@ -226,11 +226,11 @@ private:
     auto propertyMonitoringLoop() -> void;
     auto queryDeviceCapabilities() -> bool;
     auto validatePropertyAccess(const std::string& name, bool write_access = false) -> bool;
-    
+
     // Property conversion helpers
     template<typename T>
     auto getTypedProperty(const std::string& name) -> std::optional<T>;
-    
+
     template<typename T>
     auto setTypedProperty(const std::string& name, const T& value) -> bool;
 };

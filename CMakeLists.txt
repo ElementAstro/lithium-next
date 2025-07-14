@@ -3,7 +3,7 @@
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: Lithium
-# Description: Lithium - Open Astrophotography Terminal  
+# Description: Lithium - Open Astrophotography Terminal
 # Author: Max Qian
 # License: GPL3
 # ===================================================================================================
@@ -75,7 +75,7 @@ lithium_setup_profiling_and_benchmarks()
 # PROFILING AND BENCHMARKING CONFIGURATION
 # ===================================================================================================
 
-# Note: Profiling and benchmarking configuration is now handled by 
+# Note: Profiling and benchmarking configuration is now handled by
 # lithium_setup_profiling_and_benchmarks() from LithiumOptimizations.cmake
 
 # ===================================================================================================
@@ -157,7 +157,7 @@ if(USE_PRECOMPILED_HEADERS)
         <unordered_map>
         <unordered_set>
         <vector>
-        
+
         # Third-party headers
         <spdlog/spdlog.h>
     )
@@ -213,12 +213,12 @@ function(lithium_add_performance_test test_name)
     if(ENABLE_BENCHMARKS AND benchmark_FOUND)
         add_executable(${test_name} ${ARGN})
         target_link_libraries(${test_name} benchmark::benchmark)
-        
+
         # Apply performance optimizations
         target_compile_options(${test_name} PRIVATE
             -O3 -DNDEBUG -march=native -ffast-math
         )
-        
+
         # Add to test suite
         add_test(NAME ${test_name} COMMAND ${test_name})
     endif()
@@ -232,7 +232,7 @@ function(lithium_setup_target target)
         CXX_EXTENSIONS OFF
         POSITION_INDEPENDENT_CODE ON
     )
-    
+
     if(IPO_SUPPORTED AND CMAKE_BUILD_TYPE MATCHES "Release")
         set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()

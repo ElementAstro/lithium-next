@@ -76,7 +76,7 @@ public:
     auto getCurrentPosition() -> std::optional<int>;
     auto setPosition(int position) -> bool;
     auto isMoving() -> std::optional<bool>;
-    
+
     // Filter names
     auto getFilterNames() -> std::optional<std::vector<std::string>>;
     auto getFilterName(int slot) -> std::optional<std::string>;
@@ -112,16 +112,16 @@ private:
     std::atomic<bool> is_connected_{false};
     std::atomic<bool> is_initialized_{false};
     ConnectionType connection_type_{ConnectionType::NONE};
-    
+
     // Device information
     DeviceInfo device_info_;
     std::string client_id_{"Lithium-Next"};
-    
+
     // Alpaca connection details
     std::string alpaca_host_;
     int alpaca_port_{11111};
     int alpaca_device_number_{0};
-    
+
     // Error handling
     std::string last_error_;
     mutable std::mutex error_mutex_;
@@ -130,7 +130,7 @@ private:
     // COM interface
     IDispatch* com_interface_{nullptr};
     std::string com_prog_id_;
-    
+
     // COM helper methods
     auto initializeCOM() -> bool;
     auto shutdownCOM() -> void;
@@ -144,7 +144,7 @@ private:
     auto shutdownAlpaca() -> void;
     auto sendAlpacaRequest(const std::string& method, const std::string& endpoint, const std::string& params = "") -> std::optional<std::string>;
     auto parseAlpacaResponse(const std::string& response) -> std::optional<std::string>;
-    
+
     // Utility methods
     auto setError(const std::string& error) -> void;
     auto validateConnection() -> bool;

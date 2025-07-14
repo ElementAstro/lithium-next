@@ -69,7 +69,7 @@ bool HardwareInterface::shutdown() {
 
 std::vector<std::string> HardwareInterface::discoverDevices() {
     std::vector<std::string> devices;
-    
+
     if (connectionType_ == ConnectionType::ALPACA_REST) {
         // Discover Alpaca devices
         try {
@@ -80,7 +80,7 @@ std::vector<std::string> HardwareInterface::discoverDevices() {
             spdlog::error("Failed to discover Alpaca devices: {}", e.what());
         }
     }
-    
+
 #ifdef _WIN32
     if (connectionType_ == ConnectionType::COM_DRIVER) {
         // Discover COM devices
@@ -92,7 +92,7 @@ std::vector<std::string> HardwareInterface::discoverDevices() {
         }
     }
 #endif
-    
+
     return devices;
 }
 
@@ -102,10 +102,10 @@ bool HardwareInterface::connect(const ConnectionSettings& settings) {
             spdlog::warn("Already connected to a telescope");
             return true;
         }
-        
+
         currentSettings_ = settings;
         connectionType_ = settings.type;
-        
+
         bool success = false;
         if (connectionType_ == ConnectionType::ALPACA_REST) {
             success = connectAlpaca(settings);
@@ -115,13 +115,13 @@ bool HardwareInterface::connect(const ConnectionSettings& settings) {
             success = connectCOM(settings);
         }
 #endif
-        
+
         if (success) {
             connected_ = true;
             deviceName_ = settings.deviceName;
             spdlog::info("Connected to telescope: {}", deviceName_);
         }
-        
+
         return success;
     } catch (const std::exception& e) {
         spdlog::error("Failed to connect to telescope: {}", e.what());
@@ -135,7 +135,7 @@ bool HardwareInterface::disconnect() {
         if (!connected_) {
             return true;
         }
-        
+
         bool success = false;
         if (connectionType_ == ConnectionType::ALPACA_REST) {
             success = disconnectAlpaca();
@@ -145,11 +145,11 @@ bool HardwareInterface::disconnect() {
             success = disconnectCOM();
         }
 #endif
-        
+
         connected_ = false;
         deviceName_.clear();
         telescopeInfo_.reset();
-        
+
         spdlog::info("Disconnected from telescope");
         return success;
     } catch (const std::exception& e) {
@@ -168,7 +168,7 @@ std::optional<AlignmentMode> HardwareInterface::getAlignmentMode() const {
             setLastError("Not connected to telescope");
             return std::nullopt;
         }
-        
+
         if (connectionType_ == ConnectionType::ALPACA_REST) {
             auto response = sendAlpacaRequest("GET", "alignmentmode");
             if (response) {
@@ -183,7 +183,7 @@ std::optional<AlignmentMode> HardwareInterface::getAlignmentMode() const {
                 }
             }
         }
-        
+
         setLastError("Failed to get alignment mode");
         return std::nullopt;
     } catch (const std::exception& e) {
@@ -198,7 +198,7 @@ bool HardwareInterface::setAlignmentMode(AlignmentMode mode) {
             setLastError("Not connected to telescope");
             return false;
         }
-        
+
         if (connectionType_ == ConnectionType::ALPACA_REST) {
             std::string params = "AlignmentMode=" + std::to_string(static_cast<int>(mode));
             auto response = sendAlpacaRequest("PUT", "alignmentmode", params);
@@ -214,7 +214,7 @@ bool HardwareInterface::setAlignmentMode(AlignmentMode mode) {
                 }
             }
         }
-        
+
         setLastError("Failed to set alignment mode");
         return false;
     } catch (const std::exception& e) {
@@ -230,14 +230,14 @@ bool HardwareInterface::addAlignmentPoint(const EquatorialCoordinates& measured,
             setLastError("Not connected to telescope");
             return false;
         }
-        
+
         if (connectionType_ == ConnectionType::ALPACA_REST) {
             std::stringstream params;
-            params << "MeasuredRA=" << measured.ra 
+            params << "MeasuredRA=" << measured.ra
                    << "&MeasuredDec=" << measured.dec
                    << "&TargetRA=" << target.ra
                    << "&TargetDec=" << target.dec;
-            
+
             auto response = sendAlpacaRequest("PUT", "addalignmentpoint", params.str());
             if (response) {
                 try {
@@ -251,7 +251,7 @@ bool HardwareInterface::addAlignmentPoint(const EquatorialCoordinates& measured,
                 }
             }
         }
-        
+
         setLastError("Failed to add alignment point");
         return false;
     } catch (const std::exception& e) {
@@ -266,7 +266,7 @@ bool HardwareInterface::clearAlignment() {
             setLastError("Not connected to telescope");
             return false;
         }
-        
+
         if (connectionType_ == ConnectionType::ALPACA_REST) {
             auto response = sendAlpacaRequest("PUT", "clearalignment");
             if (response) {
@@ -281,7 +281,7 @@ bool HardwareInterface::clearAlignment() {
                 }
             }
         }
-        
+
         setLastError("Failed to clear alignment");
         return false;
     } catch (const std::exception& e) {
@@ -296,7 +296,7 @@ std::optional<int> HardwareInterface::getAlignmentPointCount() const {
             setLastError("Not connected to telescope");
             return std::nullopt;
         }
-        
+
         if (connectionType_ == ConnectionType::ALPACA_REST) {
             auto response = sendAlpacaRequest("GET", "alignmentpointcount");
             if (response) {
@@ -310,7 +310,7 @@ std::optional<int> HardwareInterface::getAlignmentPointCount() const {
                 }
             }
         }
-        
+
         setLastError("Failed to get alignment point count");
         return std::nullopt;
     } catch (const std::exception& e) {
@@ -327,7 +327,7 @@ bool HardwareInterface::connectAlpaca(const ConnectionSettings& settings) {
     try {
         // Simple connection test without complex client creation
         // In a real implementation, this would use a proper Alpaca client
-        
+
         // Test connection with a simple request
         auto response = sendAlpacaRequest("GET", "connected");
         if (response) {
@@ -350,7 +350,7 @@ bool HardwareInterface::connectAlpaca(const ConnectionSettings& settings) {
                 return false;
             }
         }
-        
+
         return false;
     } catch (const std::exception& e) {
         spdlog::error("Alpaca connection failed: {}", e.what());
@@ -391,8 +391,8 @@ bool HardwareInterface::disconnectCOM() {
 }
 #endif
 
-std::optional<std::string> HardwareInterface::sendAlpacaRequest(const std::string& method, 
-                                                               const std::string& endpoint, 
+std::optional<std::string> HardwareInterface::sendAlpacaRequest(const std::string& method,
+                                                               const std::string& endpoint,
                                                                const std::string& params) const {
     try {
         // This is a simplified mock implementation
@@ -400,12 +400,12 @@ std::optional<std::string> HardwareInterface::sendAlpacaRequest(const std::strin
         std::stringstream url;
         url << "http://" << currentSettings_.host << ":" << currentSettings_.port
             << "/api/v1/telescope/" << currentSettings_.deviceNumber << "/" << endpoint;
-        
+
         // Mock response generation based on endpoint
         nlohmann::json mockResponse;
         mockResponse["ErrorNumber"] = 0;
         mockResponse["ErrorMessage"] = "";
-        
+
         if (endpoint == "alignmentmode") {
             mockResponse["Value"] = static_cast<int>(AlignmentMode::UNKNOWN);
         } else if (endpoint == "alignmentpointcount") {
@@ -413,7 +413,7 @@ std::optional<std::string> HardwareInterface::sendAlpacaRequest(const std::strin
         } else if (endpoint == "connected") {
             mockResponse["Value"] = true;
         }
-        
+
         return mockResponse.dump();
     } catch (const std::exception& e) {
         spdlog::error("Alpaca request failed: {}", e.what());

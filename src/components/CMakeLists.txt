@@ -12,8 +12,8 @@
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(lithium_components 
-    VERSION 1.0.0 
+project(lithium_components
+    VERSION 1.0.0
     DESCRIPTION "Lithium core component management system"
     LANGUAGES C CXX
 )
@@ -36,7 +36,7 @@ set(COMPONENT_CORE_SOURCES
     tracker.cpp
     version.cpp
     manager.cpp
-    
+
     # Component system headers
     dependency.hpp
     loader.hpp
@@ -140,7 +140,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wconversion>
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wsign-conversion>
-    
+
     # MSVC optimizations
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<CXX_COMPILER_ID:MSVC>:/permissive->

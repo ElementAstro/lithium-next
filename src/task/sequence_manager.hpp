@@ -81,12 +81,12 @@ private:
 struct SequenceOptions {
     bool validateOnLoad = true;                  ///< Validate sequences when loading
     bool autoGenerateMissingTargets = false;     ///< Generate targets that are referenced but missing
-    ExposureSequence::SerializationFormat defaultFormat = 
+    ExposureSequence::SerializationFormat defaultFormat =
         ExposureSequence::SerializationFormat::PRETTY_JSON;  ///< Default serialization format
     std::string templateDirectory;               ///< Directory for sequence templates
-    ExposureSequence::SchedulingStrategy schedulingStrategy = 
+    ExposureSequence::SchedulingStrategy schedulingStrategy =
         ExposureSequence::SchedulingStrategy::Dependencies;  ///< Default scheduling strategy
-    ExposureSequence::RecoveryStrategy recoveryStrategy = 
+    ExposureSequence::RecoveryStrategy recoveryStrategy =
         ExposureSequence::RecoveryStrategy::Retry;           ///< Default recovery strategy
     size_t maxConcurrentTargets = 1;             ///< Maximum concurrent targets
     std::chrono::seconds defaultTaskTimeout{30}; ///< Default timeout for tasks
@@ -114,7 +114,7 @@ struct SequenceResult {
 /**
  * @class SequenceManager
  * @brief Central manager for task sequences.
- * 
+ *
  * This class provides a unified interface for creating, loading, validating,
  * and executing task sequences. It integrates the TaskGenerator and ExposureSequence
  * components to provide a seamless workflow.
@@ -201,7 +201,7 @@ public:
      * @param errorMessage Output parameter for error message.
      * @return True if valid, false otherwise with error message.
      */
-    bool validateSequenceFile(const std::string& filename, 
+    bool validateSequenceFile(const std::string& filename,
                               std::string& errorMessage) const;
 
     /**
@@ -210,7 +210,7 @@ public:
      * @param errorMessage Output parameter for error message.
      * @return True if valid, false otherwise with error message.
      */
-    bool validateSequenceJson(const json& data, 
+    bool validateSequenceJson(const json& data,
                               std::string& errorMessage) const;
 
     // Execution and control
@@ -231,7 +231,7 @@ public:
      * @return The execution result, or std::nullopt if timeout.
      */
     std::optional<SequenceResult> waitForCompletion(
-        std::shared_ptr<ExposureSequence> sequence, 
+        std::shared_ptr<ExposureSequence> sequence,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
 
     /**
@@ -239,7 +239,7 @@ public:
      * @param sequence The sequence to stop.
      * @param graceful Whether to stop gracefully (default: true).
      */
-    void stopExecution(std::shared_ptr<ExposureSequence> sequence, 
+    void stopExecution(std::shared_ptr<ExposureSequence> sequence,
                       bool graceful = true);
 
     /**

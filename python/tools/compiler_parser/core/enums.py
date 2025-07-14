@@ -9,13 +9,14 @@ from enum import Enum, auto
 
 class CompilerType(Enum):
     """Enumeration of supported compiler types."""
+
     GCC = auto()
     CLANG = auto()
     MSVC = auto()
     CMAKE = auto()
-    
+
     @classmethod
-    def from_string(cls, compiler_name: str) -> 'CompilerType':
+    def from_string(cls, compiler_name: str) -> "CompilerType":
         """Convert string compiler name to enum value."""
         name = compiler_name.upper()
         if name in cls.__members__:
@@ -25,12 +26,13 @@ class CompilerType(Enum):
 
 class OutputFormat(Enum):
     """Enumeration of supported output formats."""
+
     JSON = auto()
     CSV = auto()
     XML = auto()
-    
+
     @classmethod
-    def from_string(cls, format_name: str) -> 'OutputFormat':
+    def from_string(cls, format_name: str) -> "OutputFormat":
         """Convert string format name to enum value."""
         name = format_name.upper()
         if name in cls.__members__:
@@ -40,18 +42,15 @@ class OutputFormat(Enum):
 
 class MessageSeverity(Enum):
     """Enumeration of message severity levels."""
+
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
-    
+
     @classmethod
-    def from_string(cls, severity: str) -> 'MessageSeverity':
+    def from_string(cls, severity: str) -> "MessageSeverity":
         """Convert string severity to enum value."""
-        mapping = {
-            "error": cls.ERROR,
-            "warning": cls.WARNING,
-            "info": cls.INFO
-        }
+        mapping = {"error": cls.ERROR, "warning": cls.WARNING, "info": cls.INFO}
         normalized = severity.lower()
         if normalized in mapping:
             return mapping[normalized]

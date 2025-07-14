@@ -41,7 +41,7 @@ ASCOMSwitchController::~ASCOMSwitchController() {
 
 auto ASCOMSwitchController::initialize() -> bool {
     std::lock_guard<std::mutex> lock(controller_mutex_);
-    
+
     if (initialized_.load()) {
         spdlog::warn("Switch controller already initialized");
         return true;
@@ -73,7 +73,7 @@ auto ASCOMSwitchController::initialize() -> bool {
 
 auto ASCOMSwitchController::destroy() -> bool {
     std::lock_guard<std::mutex> lock(controller_mutex_);
-    
+
     if (!initialized_.load()) {
         return true;
     }
@@ -84,7 +84,7 @@ auto ASCOMSwitchController::destroy() -> bool {
         disconnect();
         cleanupComponents();
         initialized_.store(false);
-        
+
         spdlog::info("ASCOM Switch Controller destroyed successfully");
         return true;
 
@@ -97,7 +97,7 @@ auto ASCOMSwitchController::destroy() -> bool {
 
 auto ASCOMSwitchController::connect(const std::string &deviceName, int timeout, int maxRetry) -> bool {
     std::lock_guard<std::mutex> lock(controller_mutex_);
-    
+
     if (!initialized_.load()) {
         setLastError("Controller not initialized");
         return false;
@@ -141,7 +141,7 @@ auto ASCOMSwitchController::connect(const std::string &deviceName, int timeout, 
 
 auto ASCOMSwitchController::disconnect() -> bool {
     std::lock_guard<std::mutex> lock(controller_mutex_);
-    
+
     if (!connected_.load()) {
         return true;
     }
@@ -184,7 +184,7 @@ auto ASCOMSwitchController::scan() -> std::vector<std::string> {
             spdlog::info("Found {} ASCOM switch devices", devices.size());
             return devices;
         }
-        
+
         setLastError("Hardware interface not available");
         return {};
 
@@ -215,7 +215,7 @@ auto ASCOMSwitchController::addSwitch(const SwitchInfo& switchInfo) -> bool {
             logOperation("addSwitch", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -238,7 +238,7 @@ auto ASCOMSwitchController::removeSwitch(uint32_t index) -> bool {
             logOperation("removeSwitch", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -261,7 +261,7 @@ auto ASCOMSwitchController::removeSwitch(const std::string& name) -> bool {
             logOperation("removeSwitch", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -277,7 +277,7 @@ auto ASCOMSwitchController::getSwitchCount() -> uint32_t {
         if (switch_manager_) {
             return switch_manager_->getSwitchCount();
         }
-        
+
         setLastError("Switch manager not available");
         return 0;
 
@@ -292,7 +292,7 @@ auto ASCOMSwitchController::getSwitchInfo(uint32_t index) -> std::optional<Switc
         if (switch_manager_) {
             return switch_manager_->getSwitchInfo(index);
         }
-        
+
         setLastError("Switch manager not available");
         return std::nullopt;
 
@@ -307,7 +307,7 @@ auto ASCOMSwitchController::getSwitchInfo(const std::string& name) -> std::optio
         if (switch_manager_) {
             return switch_manager_->getSwitchInfo(name);
         }
-        
+
         setLastError("Switch manager not available");
         return std::nullopt;
 
@@ -322,7 +322,7 @@ auto ASCOMSwitchController::getSwitchIndex(const std::string& name) -> std::opti
         if (switch_manager_) {
             return switch_manager_->getSwitchIndex(name);
         }
-        
+
         setLastError("Switch manager not available");
         return std::nullopt;
 
@@ -337,7 +337,7 @@ auto ASCOMSwitchController::getAllSwitches() -> std::vector<SwitchInfo> {
         if (switch_manager_) {
             return switch_manager_->getAllSwitches();
         }
-        
+
         setLastError("Switch manager not available");
         return {};
 
@@ -363,7 +363,7 @@ auto ASCOMSwitchController::setSwitchState(uint32_t index, SwitchState state) ->
             logOperation("setSwitchState", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -386,7 +386,7 @@ auto ASCOMSwitchController::setSwitchState(const std::string& name, SwitchState 
             logOperation("setSwitchState", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -402,7 +402,7 @@ auto ASCOMSwitchController::getSwitchState(uint32_t index) -> std::optional<Swit
         if (switch_manager_) {
             return switch_manager_->getSwitchState(index);
         }
-        
+
         setLastError("Switch manager not available");
         return std::nullopt;
 
@@ -417,7 +417,7 @@ auto ASCOMSwitchController::getSwitchState(const std::string& name) -> std::opti
         if (switch_manager_) {
             return switch_manager_->getSwitchState(name);
         }
-        
+
         setLastError("Switch manager not available");
         return std::nullopt;
 
@@ -439,7 +439,7 @@ auto ASCOMSwitchController::toggleSwitch(uint32_t index) -> bool {
             logOperation("toggleSwitch", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -462,7 +462,7 @@ auto ASCOMSwitchController::toggleSwitch(const std::string& name) -> bool {
             logOperation("toggleSwitch", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -485,7 +485,7 @@ auto ASCOMSwitchController::setAllSwitches(SwitchState state) -> bool {
             logOperation("setAllSwitches", result);
             return result;
         }
-        
+
         setLastError("Switch manager not available");
         return false;
 
@@ -502,7 +502,7 @@ auto ASCOMSwitchController::setAllSwitches(SwitchState state) -> bool {
 
 auto ASCOMSwitchController::validateConfiguration() const -> bool {
     // Basic validation logic
-    return hardware_interface_ && switch_manager_ && group_manager_ && 
+    return hardware_interface_ && switch_manager_ && group_manager_ &&
            timer_manager_ && power_manager_ && state_manager_;
 }
 

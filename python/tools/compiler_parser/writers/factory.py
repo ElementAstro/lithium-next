@@ -15,13 +15,13 @@ from .xml_writer import XmlWriter
 
 class WriterFactory:
     """Factory for creating appropriate output writer instances."""
-    
+
     @staticmethod
     def create_writer(format_type: Union[OutputFormat, str]) -> OutputWriter:
         """Create and return the appropriate writer for the given output format."""
         if isinstance(format_type, str):
             format_type = OutputFormat.from_string(format_type)
-            
+
         match format_type:
             case OutputFormat.JSON:
                 return JsonWriter()

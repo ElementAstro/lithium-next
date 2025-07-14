@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 #!/usr/bin/env python3
 """
 Enhanced exception types for the Pacman Package Manager.
@@ -18,6 +19,7 @@ from .pacman_types import CommandOutput
 @dataclass(frozen=True, slots=True)
 class ErrorContext:
     """Context information for debugging errors."""
+
     timestamp: float = field(default_factory=time.time)
     working_directory: Optional[Path] = None
     environment_vars: dict[str, str] = field(default_factory=dict)
@@ -27,11 +29,13 @@ class ErrorContext:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
-            'timestamp': self.timestamp,
-            'working_directory': str(self.working_directory) if self.working_directory else None,
-            'environment_vars': self.environment_vars,
-            'system_info': self.system_info,
-            'additional_data': self.additional_data
+            "timestamp": self.timestamp,
+            "working_directory": (
+                str(self.working_directory) if self.working_directory else None
+            ),
+            "environment_vars": self.environment_vars,
+            "system_info": self.system_info,
+            "additional_data": self.additional_data,
         }
 
 
@@ -49,7 +53,7 @@ class PacmanError(Exception):
         error_code: Optional[str] = None,
         context: Optional[ErrorContext] = None,
         original_error: Optional[Exception] = None,
-        **extra_context: Any
+        **extra_context: Any,
     ):
         super().__init__(message)
         self.error_code = error_code or self.__class__.__name__.upper()
@@ -64,12 +68,12 @@ class PacmanError(Exception):
     def to_dict(self) -> dict[str, Any]:
         """Convert exception to structured dictionary."""
         return {
-            'error_type': self.__class__.__name__,
-            'message': str(self),
-            'error_code': self.error_code,
-            'context': self.context.to_dict(),
-            'original_error': str(self.original_error) if self.original_error else None,
-            'extra_context': self.extra_context
+            "error_type": self.__class__.__name__,
+            "message": str(self),
+            "error_code": self.error_code,
+            "context": self.context.to_dict(),
+            "original_error": str(self.original_error) if self.original_error else None,
+            "extra_context": self.extra_context,
         }
 
     def __repr__(self) -> str:
@@ -78,6 +82,7 @@ class PacmanError(Exception):
 
 class OperationError(PacmanError):
     """Raised for general operational failures in pacman manager."""
+
     pass
 
 
@@ -93,7 +98,7 @@ class CommandError(PacmanError):
         command: Optional[list[str]] = None,
         stdout: Optional[CommandOutput] = None,
         duration: Optional[float] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.return_code = return_code
         self.stderr = stderr
@@ -113,7 +118,7 @@ class CommandError(PacmanError):
             stderr=str(stderr),
             stdout=str(stdout) if stdout else None,
             duration=duration,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -125,7 +130,7 @@ class PackageNotFoundError(PacmanError):
         package_name: str,
         repository: Optional[str] = None,
         searched_repositories: Optional[list[str]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.package_name = package_name
         self.repository = repository
@@ -143,7 +148,7 @@ class PackageNotFoundError(PacmanError):
             package_name=package_name,
             repository=repository,
             searched_repositories=searched_repositories,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -156,7 +161,7 @@ class ConfigError(PacmanError):
         config_path: Optional[Path] = None,
         config_section: Optional[str] = None,
         invalid_option: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.config_path = config_path
         self.config_section = config_section
@@ -168,7 +173,7 @@ class ConfigError(PacmanError):
             config_path=str(config_path) if config_path else None,
             config_section=config_section,
             invalid_option=invalid_option,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -181,7 +186,7 @@ class DependencyError(PacmanError):
         package_name: Optional[str] = None,
         missing_dependencies: Optional[list[str]] = None,
         conflicting_packages: Optional[list[str]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.package_name = package_name
         self.missing_dependencies = missing_dependencies or []
@@ -193,7 +198,7 @@ class DependencyError(PacmanError):
             package_name=package_name,
             missing_dependencies=missing_dependencies,
             conflicting_packages=conflicting_packages,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -205,7 +210,7 @@ class PermissionError(PacmanError):
         message: str,
         required_permission: Optional[str] = None,
         operation: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.required_permission = required_permission
         self.operation = operation
@@ -215,7 +220,7 @@ class PermissionError(PacmanError):
             error_code="PERMISSION_DENIED",
             required_permission=required_permission,
             operation=operation,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -228,7 +233,7 @@ class NetworkError(PacmanError):
         url: Optional[str] = None,
         status_code: Optional[int] = None,
         timeout: Optional[float] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.url = url
         self.status_code = status_code
@@ -240,7 +245,7 @@ class NetworkError(PacmanError):
             url=url,
             status_code=status_code,
             timeout=timeout,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -252,7 +257,7 @@ class CacheError(PacmanError):
         message: str,
         cache_path: Optional[Path] = None,
         operation: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.cache_path = cache_path
         self.operation = operation
@@ -262,7 +267,7 @@ class CacheError(PacmanError):
             error_code="CACHE_ERROR",
             cache_path=str(cache_path) if cache_path else None,
             operation=operation,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -275,7 +280,7 @@ class ValidationError(PacmanError):
         field_name: Optional[str] = None,
         invalid_value: Any = None,
         expected_type: Optional[type] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.field_name = field_name
         self.invalid_value = invalid_value
@@ -285,10 +290,9 @@ class ValidationError(PacmanError):
             message,
             error_code="VALIDATION_ERROR",
             field_name=field_name,
-            invalid_value=str(
-                invalid_value) if invalid_value is not None else None,
+            invalid_value=str(invalid_value) if invalid_value is not None else None,
             expected_type=expected_type.__name__ if expected_type else None,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -300,7 +304,7 @@ class PluginError(PacmanError):
         message: str,
         plugin_name: Optional[str] = None,
         plugin_version: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self.plugin_name = plugin_name
         self.plugin_version = plugin_version
@@ -310,21 +314,21 @@ class PluginError(PacmanError):
             error_code="PLUGIN_ERROR",
             plugin_name=plugin_name,
             plugin_version=plugin_version,
-            **kwargs
+            **kwargs,
         )
 
 
 # Exception hierarchy for easier catching
-DatabaseError = type('DatabaseError', (PacmanError,), {})
-RepositoryError = type('RepositoryError', (PacmanError,), {})
-SignatureError = type('SignatureError', (PacmanError,), {})
-LockError = type('LockError', (PacmanError,), {})
+DatabaseError = type("DatabaseError", (PacmanError,), {})
+RepositoryError = type("RepositoryError", (PacmanError,), {})
+SignatureError = type("SignatureError", (PacmanError,), {})
+LockError = type("LockError", (PacmanError,), {})
 
 
 def create_error_context(
     working_dir: Optional[Path] = None,
     env_vars: Optional[dict[str, str]] = None,
-    **extra: Any
+    **extra: Any,
 ) -> ErrorContext:
     """Create an error context with current system information."""
     import os
@@ -334,12 +338,12 @@ def create_error_context(
         working_directory=working_dir or Path.cwd(),
         environment_vars=env_vars or dict(os.environ),
         system_info={
-            'platform': platform.platform(),
-            'python_version': platform.python_version(),
-            'architecture': platform.architecture(),
-            'processor': platform.processor(),
+            "platform": platform.platform(),
+            "python_version": platform.python_version(),
+            "architecture": platform.architecture(),
+            "processor": platform.processor(),
         },
-        additional_data=extra
+        additional_data=extra,
     )
 
 
@@ -347,7 +351,6 @@ __all__ = [
     "OperationError",
     # Base exception
     "PacmanError",
-
     # Core exceptions
     "CommandError",
     "PackageNotFoundError",
@@ -358,15 +361,13 @@ __all__ = [
     "CacheError",
     "ValidationError",
     "PluginError",
-
     # Specialized exceptions
     "OperationError",
     "DatabaseError",
     "RepositoryError",
     "SignatureError",
     "LockError",
-
     # Utilities
     "ErrorContext",
-    "create_error_context"
+    "create_error_context",
 ]

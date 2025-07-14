@@ -148,7 +148,7 @@ public:
      * @param format The serialization format to use.
      * @throws std::runtime_error If the file cannot be written.
      */
-    void saveSequence(const std::string& filename, 
+    void saveSequence(const std::string& filename,
                       SerializationFormat format = SerializationFormat::PRETTY_JSON) const;
 
     /**
@@ -158,7 +158,7 @@ public:
      * @throws std::runtime_error If the file cannot be read or contains invalid data.
      */
     void loadSequence(const std::string& filename, bool detectFormat = true);
-    
+
     /**
      * @brief Exports the sequence to a specific format.
      * @param format The target format for export.
@@ -172,7 +172,7 @@ public:
      * @return True if valid, false otherwise.
      */
     bool validateSequenceFile(const std::string& filename) const;
-    
+
     /**
      * @brief Validates a sequence JSON against the schema.
      * @param data The JSON data to validate.

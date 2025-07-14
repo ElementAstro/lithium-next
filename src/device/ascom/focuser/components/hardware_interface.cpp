@@ -42,7 +42,7 @@ HardwareInterface::HardwareInterface(const std::string& name)
 HardwareInterface::~HardwareInterface() {
     spdlog::info("HardwareInterface destructor called");
     disconnect();
-    
+
 #ifdef _WIN32
     cleanupCOM();
 #endif
@@ -77,13 +77,13 @@ auto HardwareInterface::destroy() -> bool {
 
 auto HardwareInterface::connect(const ConnectionInfo& info) -> bool {
     std::lock_guard<std::mutex> lock(interface_mutex_);
-    
+
     spdlog::info("Connecting to ASCOM focuser device: {}", info.deviceName);
 
     connection_info_ = info;
 
     bool result = false;
-    
+
     if (info.type == ConnectionType::ALPACA_REST) {
         result = connectToAlpacaDevice(info.host, info.port, info.deviceNumber);
     }
@@ -107,7 +107,7 @@ auto HardwareInterface::connect(const ConnectionInfo& info) -> bool {
 
 auto HardwareInterface::disconnect() -> bool {
     std::lock_guard<std::mutex> lock(interface_mutex_);
-    
+
     if (!connected_.load()) {
         return true;
     }
@@ -115,7 +115,7 @@ auto HardwareInterface::disconnect() -> bool {
     spdlog::info("Disconnecting from ASCOM focuser device");
 
     bool result = true;
-    
+
     if (connection_info_.type == ConnectionType::ALPACA_REST) {
         result = disconnectFromAlpacaDevice();
     }
@@ -127,7 +127,7 @@ auto HardwareInterface::disconnect() -> bool {
 
     connected_.store(false);
     setState(ASCOMFocuserState::IDLE);
-    
+
     return result;
 }
 
@@ -495,7 +495,7 @@ auto HardwareInterface::connectToAlpacaDevice(const std::string& host, int port,
     spdlog::info("Connecting to Alpaca focuser device at {}:{} device {}", host, port, deviceNumber);
 
     alpaca_client_ = std::make_unique<AlpacaClient>(host, port);
-    
+
     // Test connection
     auto response = sendAlpacaRequest("GET", "connected");
     if (response) {
@@ -558,9 +558,9 @@ auto HardwareInterface::setError(const std::string& error) -> void {
         std::lock_guard<std::mutex> lock(interface_mutex_);
         last_error_ = error;
     }
-    
+
     spdlog::error("HardwareInterface error: {}", error);
-    
+
     if (error_callback_) {
         error_callback_(error);
     }
@@ -568,7 +568,7 @@ auto HardwareInterface::setError(const std::string& error) -> void {
 
 auto HardwareInterface::setState(ASCOMFocuserState newState) -> void {
     ASCOMFocuserState oldState = state_.exchange(newState);
-    
+
     if (oldState != newState && state_change_callback_) {
         state_change_callback_(newState);
     }
@@ -590,10 +590,10 @@ auto HardwareInterface::executeAlpacaRequest(const std::string& method, const st
     if (!alpaca_client_) {
         return std::nullopt;
     }
-    
+
     // TODO: Implement actual HTTP request using alpaca_client_
     spdlog::debug("Executing Alpaca request: {} {}", method, url);
-    
+
     return std::nullopt;
 }
 

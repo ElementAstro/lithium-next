@@ -8,8 +8,4 @@ from .formatter import ConsoleFormatterWidget
 from .processor import CompilerProcessorWidget
 from .main_widget import CompilerParserWidget
 
-__all__ = [
-    'ConsoleFormatterWidget',
-    'CompilerProcessorWidget',
-    'CompilerParserWidget'
-]
+__all__ = ["ConsoleFormatterWidget", "CompilerProcessorWidget", "CompilerParserWidget"]

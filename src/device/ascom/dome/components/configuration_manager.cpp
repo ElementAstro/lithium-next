@@ -32,45 +32,45 @@ ConfigurationManager::~ConfigurationManager() {
 
 auto ConfigurationManager::loadConfiguration(const std::string& config_path) -> bool {
     spdlog::info("Loading configuration from: {}", config_path);
-    
+
     std::ifstream file(config_path);
     if (!file.is_open()) {
         spdlog::error("Failed to open configuration file: {}", config_path);
         return false;
     }
-    
+
     std::stringstream buffer;
     buffer << file.rdbuf();
     file.close();
-    
+
     if (parseConfigFile(buffer.str())) {
         current_config_path_ = config_path;
         has_unsaved_changes_ = false;
         spdlog::info("Configuration loaded successfully");
         return true;
     }
-    
+
     return false;
 }
 
 auto ConfigurationManager::saveConfiguration(const std::string& config_path) -> bool {
     spdlog::info("Saving configuration to: {}", config_path);
-    
+
     std::string config_content = generateConfigFile();
-    
+
     // Create directory if it doesn't exist
     std::filesystem::path path(config_path);
     std::filesystem::create_directories(path.parent_path());
-    
+
     std::ofstream file(config_path);
     if (!file.is_open()) {
         spdlog::error("Failed to create configuration file: {}", config_path);
         return false;
     }
-    
+
     file << config_content;
     file.close();
-    
+
     current_config_path_ = config_path;
     has_unsaved_changes_ = false;
     spdlog::info("Configuration saved successfully");
@@ -91,18 +91,18 @@ auto ConfigurationManager::setValue(const std::string& section, const std::strin
         spdlog::error("Invalid value for {}.{}", section, key);
         return false;
     }
-    
+
     if (!hasSection(section)) {
         addSection(section);
     }
-    
+
     config_sections_[section].values[key] = value;
     has_unsaved_changes_ = true;
-    
+
     if (change_callback_) {
         change_callback_(section, key, value);
     }
-    
+
     spdlog::debug("Set {}.{} = {}", section, key, convertToString(value));
     return true;
 }
@@ -111,13 +111,13 @@ auto ConfigurationManager::getValue(const std::string& section, const std::strin
     if (!hasSection(section)) {
         return std::nullopt;
     }
-    
+
     auto& section_values = config_sections_[section].values;
     auto it = section_values.find(key);
     if (it != section_values.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
@@ -129,7 +129,7 @@ auto ConfigurationManager::removeValue(const std::string& section, const std::st
     if (!hasSection(section)) {
         return false;
     }
-    
+
     auto& section_values = config_sections_[section].values;
     auto it = section_values.find(key);
     if (it != section_values.end()) {
@@ -138,7 +138,7 @@ auto ConfigurationManager::removeValue(const std::string& section, const std::st
         spdlog::debug("Removed {}.{}", section, key);
         return true;
     }
-    
+
     return false;
 }
 
@@ -245,7 +245,7 @@ auto ConfigurationManager::initializeDefaultConfiguration() -> void {
     setValue("connection", "alpaca_device_number", 0);
     setValue("connection", "connection_timeout", 30);
     setValue("connection", "max_retries", 3);
-    
+
     // Dome settings
     addSection("dome", "Dome physical parameters");
     setValue("dome", "diameter", 3.0);
@@ -254,7 +254,7 @@ auto ConfigurationManager::initializeDefaultConfiguration() -> void {
     setValue("dome", "slit_height", 1.5);
     setValue("dome", "park_position", 0.0);
     setValue("dome", "home_position", 0.0);
-    
+
     // Movement settings
     addSection("movement", "Dome movement parameters");
     setValue("movement", "default_speed", 5.0);
@@ -264,7 +264,7 @@ auto ConfigurationManager::initializeDefaultConfiguration() -> void {
     setValue("movement", "movement_timeout", 300);
     setValue("movement", "backlash_compensation", 0.0);
     setValue("movement", "backlash_enabled", false);
-    
+
     // Telescope coordination
     addSection("telescope", "Telescope coordination settings");
     setValue("telescope", "radius_from_center", 0.0);
@@ -274,7 +274,7 @@ auto ConfigurationManager::initializeDefaultConfiguration() -> void {
     setValue("telescope", "following_tolerance", 1.0);
     setValue("telescope", "following_delay", 1000);
     setValue("telescope", "auto_following", false);
-    
+
     // Weather safety
     addSection("weather", "Weather safety parameters");
     setValue("weather", "safety_enabled", true);
@@ -283,7 +283,7 @@ auto ConfigurationManager::initializeDefaultConfiguration() -> void {
     setValue("weather", "min_temperature", -20.0);
     setValue("weather", "max_temperature", 50.0);
     setValue("weather", "max_humidity", 95.0);
-    
+
     // Logging
     addSection("logging", "Logging configuration");
     setValue("logging", "log_level", std::string("info"));
@@ -297,17 +297,17 @@ auto ConfigurationManager::parseConfigFile(const std::string& content) -> bool {
     std::istringstream stream(content);
     std::string line;
     std::string current_section;
-    
+
     while (std::getline(stream, line)) {
         // Remove whitespace
         line.erase(0, line.find_first_not_of(" \t"));
         line.erase(line.find_last_not_of(" \t") + 1);
-        
+
         // Skip empty lines and comments
         if (line.empty() || line[0] == '#' || line[0] == ';') {
             continue;
         }
-        
+
         // Section header
         if (line[0] == '[' && line.back() == ']') {
             current_section = line.substr(1, line.length() - 2);
@@ -316,17 +316,17 @@ auto ConfigurationManager::parseConfigFile(const std::string& content) -> bool {
             }
             continue;
         }
-        
+
         // Key-value pair
         size_t eq_pos = line.find('=');
         if (eq_pos != std::string::npos && !current_section.empty()) {
             std::string key = line.substr(0, eq_pos);
             std::string value_str = line.substr(eq_pos + 1);
-            
+
             // Remove whitespace
             key.erase(key.find_last_not_of(" \t") + 1);
             value_str.erase(0, value_str.find_first_not_of(" \t"));
-            
+
             // Try to parse value
             auto value = parseFromString(value_str, "auto");
             if (value) {
@@ -334,7 +334,7 @@ auto ConfigurationManager::parseConfigFile(const std::string& content) -> bool {
             }
         }
     }
-    
+
     return true;
 }
 
@@ -342,19 +342,19 @@ auto ConfigurationManager::generateConfigFile() -> std::string {
     std::stringstream ss;
     ss << "# ASCOM Dome Configuration File\n";
     ss << "# Generated by Lithium-Next\n\n";
-    
+
     for (const auto& [section_name, section] : config_sections_) {
         ss << "[" << section_name << "]\n";
         if (!section.description.empty()) {
             ss << "# " << section.description << "\n";
         }
-        
+
         for (const auto& [key, value] : section.values) {
             ss << key << " = " << convertToString(value) << "\n";
         }
         ss << "\n";
     }
-    
+
     return ss.str();
 }
 
@@ -386,7 +386,7 @@ auto ConfigurationManager::parseFromString(const std::string& str, const std::st
     if (str == "true" || str == "false") {
         return str == "true";
     }
-    
+
     // Try integer
     try {
         size_t pos;
@@ -395,7 +395,7 @@ auto ConfigurationManager::parseFromString(const std::string& str, const std::st
             return int_val;
         }
     } catch (...) {}
-    
+
     // Try double
     try {
         size_t pos;
@@ -404,7 +404,7 @@ auto ConfigurationManager::parseFromString(const std::string& str, const std::st
             return double_val;
         }
     } catch (...) {}
-    
+
     // Default to string
     return str;
 }
@@ -435,7 +435,7 @@ auto ConfigurationManager::validateConfiguration() -> std::vector<std::string> {
     return {};
 }
 
-auto ConfigurationManager::setValidator(const std::string& section, const std::string& key, 
+auto ConfigurationManager::setValidator(const std::string& section, const std::string& key,
                                        std::function<bool(const ConfigValue&)> validator) -> bool {
     validators_[section][key] = validator;
     return true;

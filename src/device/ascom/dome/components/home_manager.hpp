@@ -27,7 +27,7 @@ class AzimuthManager;
 
 /**
  * @brief Home Manager Component
- * 
+ *
  * Manages dome homing operations including finding home position,
  * setting home position, and managing home-related safety operations.
  */
@@ -70,24 +70,24 @@ public:
 private:
     std::shared_ptr<HardwareInterface> hardware_interface_;
     std::shared_ptr<AzimuthManager> azimuth_manager_;
-    
+
     std::atomic<bool> is_homed_{false};
     std::atomic<bool> is_homing_{false};
     std::atomic<bool> has_home_sensor_{false};
     std::atomic<bool> requires_homing_{true};
-    
+
     std::optional<double> home_position_;
     std::chrono::steady_clock::time_point last_home_time_;
-    
+
     int homing_timeout_ms_{30000};  // 30 seconds
     double homing_speed_{5.0};      // degrees per second
-    
+
     HomeCallback home_callback_;
     StatusCallback status_callback_;
-    
+
     std::unique_ptr<std::thread> homing_thread_;
     std::atomic<bool> abort_homing_{false};
-    
+
     // === Internal Methods ===
     void performHomingSequence();
     void notifyHomeComplete(bool success, double azimuth);

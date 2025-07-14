@@ -72,12 +72,12 @@ def create_self_signed_cert(options: CertificateOptions) -> CertificateResult:
 def create_csr(options: CertificateOptions) -> CSRResult:
     """Creates a Certificate Signing Request (CSR)."""
     key = create_key(options.key_size)
-    
+
     # Simplified builder logic for CSR
     name_attributes = [x509.NameAttribute(x509.NameOID.COMMON_NAME, options.hostname)]
     # Add other attributes from options...
     subject = x509.Name(name_attributes)
-    
+
     csr_builder = x509.CertificateSigningRequestBuilder().subject_name(subject)
     csr = csr_builder.sign(key, hashes.SHA256())
 
@@ -105,7 +105,7 @@ def sign_certificate(options: SignOptions) -> Path:
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.timezone.utc))  # Fixed
         .not_valid_after(
-            datetime.datetime.now(datetime.timezone.utc) + 
+            datetime.datetime.now(datetime.timezone.utc) +
             datetime.timedelta(days=options.valid_days)  # Fixed
         )
     )
@@ -120,7 +120,7 @@ def sign_certificate(options: SignOptions) -> Path:
     )
 
     cert = builder.sign(ca_key, hashes.SHA256())
-    
+
     common_name = csr.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
     cert_path = options.output_dir / f"{common_name}.crt"
     save_certificate(cert, cert_path)
@@ -285,7 +285,7 @@ def renew_cert(cert_path: Path, key_path: Path, valid_days: int = 365) -> Path:
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.timezone.utc))  # Fixed
         .not_valid_after(
-            datetime.datetime.now(datetime.timezone.utc) + 
+            datetime.datetime.now(datetime.timezone.utc) +
             datetime.timedelta(days=valid_days)  # Fixed
         )
     )
@@ -293,7 +293,7 @@ def renew_cert(cert_path: Path, key_path: Path, valid_days: int = 365) -> Path:
         new_builder = new_builder.add_extension(extension.value, extension.critical)
 
     new_cert = new_builder.sign(key, hashes.SHA256())
-    
+
     common_name = cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
     new_cert_path = cert_path.parent / f"{common_name}_renewed.crt"
     save_certificate(new_cert, new_cert_path)
@@ -305,4 +305,3 @@ def create_certificate_chain(cert_paths: List[Path], output_path: Path) -> Path:
     """Creates a certificate chain file."""
     create_certificate_chain_file(cert_paths, output_path)
     return output_path
-

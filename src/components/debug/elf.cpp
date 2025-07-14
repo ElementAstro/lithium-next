@@ -743,21 +743,21 @@ public:
     auto parse() -> bool {
         auto timer = atom::utils::StopWatcher();
         timer.start();
-        
+
         spdlog::info("Starting optimized parsing of ELF file: {}", filePath_);
-        
+
         bool result = false;
         if (config_.enableMemoryMapping) {
             result = parseWithMemoryMapping();
         } else {
             result = parseWithBuffering();
         }
-        
+
         timer.stop();
         metrics_->parseTime.store(static_cast<uint64_t>(timer.elapsedMilliseconds() * 1000000));
-        
+
         if (result) {
-            spdlog::info("Successfully parsed ELF file: {} in {}ns", 
+            spdlog::info("Successfully parsed ELF file: {} in {}ns",
                         filePath_, metrics_->parseTime.load());
             if (config_.enablePrefetching) {
                 prefetchCommonData();
@@ -765,7 +765,7 @@ public:
         } else {
             spdlog::error("Failed to parse ELF file: {}", filePath_);
         }
-        
+
         return result;
     }
 
@@ -784,66 +784,66 @@ public:
         return elfHeader_;
     }
 
-    [[nodiscard]] auto getProgramHeaders() const noexcept 
+    [[nodiscard]] auto getProgramHeaders() const noexcept
         -> std::span<const ProgramHeader> {
         return programHeaders_;
     }
 
-    [[nodiscard]] auto getSectionHeaders() const noexcept 
+    [[nodiscard]] auto getSectionHeaders() const noexcept
         -> std::span<const SectionHeader> {
         return sectionHeaders_;
     }
 
-    [[nodiscard]] auto getSymbolTable() const noexcept 
+    [[nodiscard]] auto getSymbolTable() const noexcept
         -> std::span<const Symbol> {
         return symbolTable_;
     }
 
-    [[nodiscard]] auto findSymbolByName(std::string_view name) const 
+    [[nodiscard]] auto findSymbolByName(std::string_view name) const
         -> std::optional<Symbol> {
         if (config_.enableSymbolCaching) {
-            if (auto it = symbolNameCache_.find(std::string(name)); 
+            if (auto it = symbolNameCache_.find(std::string(name));
                 it != symbolNameCache_.end()) {
                 metrics_->cacheHits.fetch_add(1);
                 return it->second;
             }
         }
-        
+
         metrics_->cacheMisses.fetch_add(1);
-        
+
         auto symbols = getSymbolTable();
-        auto result = std::ranges::find_if(symbols, 
+        auto result = std::ranges::find_if(symbols,
             [name](const auto& symbol) { return symbol.name == name; });
-        
+
         if (result != symbols.end()) {
             if (config_.enableSymbolCaching) {
                 symbolNameCache_[std::string(name)] = *result;
             }
             return *result;
         }
-        
+
         return std::nullopt;
     }
 
-    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const 
+    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const
         -> std::optional<Symbol> {
         if (config_.enableSymbolCaching) {
-            if (auto it = symbolAddressCache_.find(address); 
+            if (auto it = symbolAddressCache_.find(address);
                 it != symbolAddressCache_.end()) {
                 metrics_->cacheHits.fetch_add(1);
                 return it->second;
             }
         }
-        
+
         metrics_->cacheMisses.fetch_add(1);
-        
+
         auto symbols = getSymbolTable();
         if (symbolsSortedByAddress_) {
             auto it = std::lower_bound(symbols.begin(), symbols.end(), address,
                 [](const Symbol& sym, uint64_t addr) {
                     return sym.value < addr;
                 });
-            
+
             if (it != symbols.end() && it->value == address) {
                 if (config_.enableSymbolCaching) {
                     symbolAddressCache_[address] = *it;
@@ -851,9 +851,9 @@ public:
                 return *it;
             }
         } else {
-            auto result = std::ranges::find_if(symbols, 
+            auto result = std::ranges::find_if(symbols,
                 [address](const auto& symbol) { return symbol.value == address; });
-            
+
             if (result != symbols.end()) {
                 if (config_.enableSymbolCaching) {
                     symbolAddressCache_[address] = *result;
@@ -861,15 +861,15 @@ public:
                 return *result;
             }
         }
-        
+
         return std::nullopt;
     }
 
-    [[nodiscard]] auto getSymbolsInRange(uint64_t start, uint64_t end) const 
+    [[nodiscard]] auto getSymbolsInRange(uint64_t start, uint64_t end) const
         -> std::vector<Symbol> {
         std::vector<Symbol> result;
         auto symbols = getSymbolTable();
-        
+
         if (config_.enableParallelProcessing && symbols.size() > 1000) {
             std::vector<Symbol> temp;
             std::copy_if(std::execution::par_unseq,
@@ -885,37 +885,37 @@ public:
                                    return sym.value >= start && sym.value < end;
                                });
         }
-        
+
         return result;
     }
 
-    [[nodiscard]] auto getSectionsByType(uint32_t type) const 
+    [[nodiscard]] auto getSectionsByType(uint32_t type) const
         -> std::vector<SectionHeader> {
-        if (auto it = sectionTypeCache_.find(type); 
+        if (auto it = sectionTypeCache_.find(type);
             it != sectionTypeCache_.end()) {
             metrics_->cacheHits.fetch_add(1);
             return it->second;
         }
-        
+
         metrics_->cacheMisses.fetch_add(1);
-        
+
         std::vector<SectionHeader> result;
         auto sections = getSectionHeaders();
-        
+
         std::ranges::copy_if(sections, std::back_inserter(result),
                            [type](const SectionHeader& section) {
                                return section.type == type;
                            });
-        
+
         sectionTypeCache_[type] = result;
         return result;
     }
 
-    [[nodiscard]] auto batchFindSymbols(const std::vector<std::string>& names) const 
+    [[nodiscard]] auto batchFindSymbols(const std::vector<std::string>& names) const
         -> std::vector<std::optional<Symbol>> {
         std::vector<std::optional<Symbol>> results;
         results.reserve(names.size());
-        
+
         if (config_.enableParallelProcessing && names.size() > 10) {
             results.resize(names.size());
             std::transform(std::execution::par_unseq,
@@ -930,7 +930,7 @@ public:
                                      return findSymbolByName(name);
                                  });
         }
-        
+
         return results;
     }
 
@@ -938,7 +938,7 @@ public:
         if (!config_.enablePrefetching || !mmappedData_) {
             return;
         }
-        
+
         for (uint64_t addr : addresses) {
             if (addr < fileSize_) {
                 volatile auto dummy = mmappedData_[addr];
@@ -949,17 +949,17 @@ public:
 
     void optimizeMemoryLayout() {
         if (!symbolsSortedByAddress_) {
-            std::ranges::sort(symbolTable_, 
+            std::ranges::sort(symbolTable_,
                             [](const Symbol& a, const Symbol& b) {
                                 return a.value < b.value;
                             });
             symbolsSortedByAddress_ = true;
         }
-        
+
         symbolTable_.shrink_to_fit();
         sectionHeaders_.shrink_to_fit();
         programHeaders_.shrink_to_fit();
-        
+
         spdlog::info("Memory layout optimized for better cache performance");
     }
 
@@ -969,23 +969,23 @@ public:
         }
 
         auto futures = std::vector<std::future<bool>>{};
-        
+
         futures.emplace_back(std::async(std::launch::async, [this]() {
             return validateElfHeader();
         }));
-        
+
         futures.emplace_back(std::async(std::launch::async, [this]() {
             return validateSectionHeaders();
         }));
-        
+
         futures.emplace_back(std::async(std::launch::async, [this]() {
             return validateProgramHeaders();
         }));
-        
+
         bool result = std::ranges::all_of(futures, [](auto& future) {
             return future.get();
         });
-        
+
         validated_ = result;
         return result;
     }
@@ -1004,31 +1004,31 @@ public:
 private:
     std::string filePath_;
     OptimizationConfig config_;
-    
+
     uint8_t* mmappedData_ = nullptr;
     size_t fileSize_ = 0;
-    
+
 #ifdef LITHIUM_OPTIMIZED_ELF_UNIX
     int fileDescriptor_ = -1;
 #elif defined(LITHIUM_OPTIMIZED_ELF_WINDOWS)
     HANDLE fileHandle_ = INVALID_HANDLE_VALUE;
     HANDLE fileMappingHandle_ = nullptr;
 #endif
-    
+
     std::vector<uint8_t> fileContent_;
-    
+
     std::optional<ElfHeader> elfHeader_;
     std::vector<ProgramHeader> programHeaders_;
     std::vector<SectionHeader> sectionHeaders_;
     std::vector<Symbol> symbolTable_;
-    
+
     mutable std::unordered_map<std::string, Symbol> symbolNameCache_;
     mutable std::unordered_map<uint64_t, Symbol> symbolAddressCache_;
     mutable std::unordered_map<uint32_t, std::vector<SectionHeader>> sectionTypeCache_;
-    
+
     mutable bool validated_ = false;
     bool symbolsSortedByAddress_ = false;
-    
+
     PerformanceMetrics* metrics_;
 
     void initializeResources() {
@@ -1044,7 +1044,7 @@ private:
             munmap(mmappedData_, fileSize_);
             mmappedData_ = nullptr;
         }
-        
+
         if (fileDescriptor_ >= 0) {
             close(fileDescriptor_);
             fileDescriptor_ = -1;
@@ -1054,12 +1054,12 @@ private:
             UnmapViewOfFile(mmappedData_);
             mmappedData_ = nullptr;
         }
-        
+
         if (fileMappingHandle_) {
             CloseHandle(fileMappingHandle_);
             fileMappingHandle_ = nullptr;
         }
-        
+
         if (fileHandle_ != INVALID_HANDLE_VALUE) {
             CloseHandle(fileHandle_);
             fileHandle_ = INVALID_HANDLE_VALUE;
@@ -1074,52 +1074,52 @@ private:
             spdlog::error("Failed to open file: {}", filePath_);
             return false;
         }
-        
+
         struct stat fileInfo;
         if (fstat(fileDescriptor_, &fileInfo) < 0) {
             spdlog::error("Failed to get file info: {}", filePath_);
             return false;
         }
-        
+
         fileSize_ = fileInfo.st_size;
         mmappedData_ = static_cast<uint8_t*>(
             mmap(nullptr, fileSize_, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0));
-        
+
         if (mmappedData_ == MAP_FAILED) {
             spdlog::error("Failed to memory map file: {}", filePath_);
             return parseWithBuffering();
         }
-        
+
         madvise(mmappedData_, fileSize_, MADV_SEQUENTIAL);
-        
+
 #elif defined(LITHIUM_OPTIMIZED_ELF_WINDOWS)
-        fileHandle_ = CreateFileA(filePath_.c_str(), GENERIC_READ, FILE_SHARE_READ, 
+        fileHandle_ = CreateFileA(filePath_.c_str(), GENERIC_READ, FILE_SHARE_READ,
                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (fileHandle_ == INVALID_HANDLE_VALUE) {
             spdlog::error("Failed to open file: {}", filePath_);
             return false;
         }
-        
+
         LARGE_INTEGER fileSize;
         if (!GetFileSizeEx(fileHandle_, &fileSize)) {
             spdlog::error("Failed to get file size: {}", filePath_);
             CloseHandle(fileHandle_);
             return false;
         }
-        
+
         fileSize_ = fileSize.QuadPart;
-        
-        fileMappingHandle_ = CreateFileMappingA(fileHandle_, nullptr, PAGE_READONLY, 
+
+        fileMappingHandle_ = CreateFileMappingA(fileHandle_, nullptr, PAGE_READONLY,
                                               fileSize.HighPart, fileSize.LowPart, nullptr);
         if (fileMappingHandle_ == nullptr) {
             spdlog::error("Failed to create file mapping: {}", filePath_);
             CloseHandle(fileHandle_);
             return false;
         }
-        
+
         mmappedData_ = static_cast<uint8_t*>(
             MapViewOfFile(fileMappingHandle_, FILE_MAP_READ, 0, 0, fileSize_));
-        
+
         if (mmappedData_ == nullptr) {
             spdlog::error("Failed to map view of file: {}", filePath_);
             CloseHandle(fileMappingHandle_);
@@ -1130,7 +1130,7 @@ private:
         spdlog::warn("Memory mapping not supported on this platform, using buffered I/O");
         return parseWithBuffering();
 #endif
-        
+
         return parseElfStructures();
     }
 
@@ -1147,16 +1147,16 @@ private:
 
         fileContent_.resize(fileSize_);
         file.read(reinterpret_cast<char*>(fileContent_.data()), fileSize_);
-        
+
         return parseElfStructures();
     }
 
     auto parseElfStructures() -> bool {
         const uint8_t* data = mmappedData_ ? mmappedData_ : fileContent_.data();
-        
-        return parseElfHeader(data) && 
+
+        return parseElfHeader(data) &&
                parseProgramHeaders(data) &&
-               parseSectionHeaders(data) && 
+               parseSectionHeaders(data) &&
                parseSymbolTable(data);
     }
 
@@ -1166,14 +1166,14 @@ private:
         }
 
         const auto* ehdr = reinterpret_cast<const Elf64_Ehdr*>(data);
-        
+
         if (ehdr->e_ident[EI_MAG0] != ELFMAG0 ||
             ehdr->e_ident[EI_MAG1] != ELFMAG1 ||
             ehdr->e_ident[EI_MAG2] != ELFMAG2 ||
             ehdr->e_ident[EI_MAG3] != ELFMAG3) {
             return false;
         }
-        
+
         elfHeader_ = ElfHeader{
             .type = ehdr->e_type,
             .machine = ehdr->e_machine,
@@ -1189,18 +1189,18 @@ private:
             .shnum = ehdr->e_shnum,
             .shstrndx = ehdr->e_shstrndx
         };
-        
+
         return true;
     }
 
     auto parseProgramHeaders(const uint8_t* data) -> bool {
         if (!elfHeader_) return false;
-        
+
         const auto* phdr = reinterpret_cast<const Elf64_Phdr*>(
             data + elfHeader_->phoff);
-            
+
         programHeaders_.reserve(elfHeader_->phnum);
-        
+
         for (uint16_t i = 0; i < elfHeader_->phnum; ++i) {
             programHeaders_.emplace_back(ProgramHeader{
                 .type = phdr[i].p_type,
@@ -1213,20 +1213,20 @@ private:
                 .align = phdr[i].p_align
             });
         }
-        
+
         return true;
     }
 
     auto parseSectionHeaders(const uint8_t* data) -> bool {
         if (!elfHeader_) return false;
-        
+
         const auto* shdr = reinterpret_cast<const Elf64_Shdr*>(
             data + elfHeader_->shoff);
         const auto* strtab = reinterpret_cast<const char*>(
             data + shdr[elfHeader_->shstrndx].sh_offset);
-            
+
         sectionHeaders_.reserve(elfHeader_->shnum);
-        
+
         for (uint16_t i = 0; i < elfHeader_->shnum; ++i) {
             sectionHeaders_.emplace_back(SectionHeader{
                 .name = std::string(strtab + shdr[i].sh_name),
@@ -1241,7 +1241,7 @@ private:
                 .entsize = shdr[i].sh_entsize
             });
         }
-        
+
         return true;
     }
 
@@ -1250,7 +1250,7 @@ private:
             [](const auto& section) { return section.type == SHT_SYMTAB; });
 
         if (symtabSection == sectionHeaders_.end()) {
-            return true; 
+            return true;
         }
 
         const auto* symtab = reinterpret_cast<const Elf64_Sym*>(
@@ -1280,47 +1280,47 @@ private:
         if (!config_.enablePrefetching || !mmappedData_) {
             return;
         }
-        
+
         for (const auto& symbol : symbolTable_) {
             if (symbol.value < fileSize_) {
                 volatile auto dummy = mmappedData_[symbol.value];
                 (void)dummy;
             }
         }
-        
+
         spdlog::debug("Prefetched common data for improved performance");
     }
 
     auto validateElfHeader() const -> bool {
         if (!elfHeader_) return false;
-        
+
         const uint8_t* data = mmappedData_ ? mmappedData_ : fileContent_.data();
         const auto* ident = reinterpret_cast<const unsigned char*>(data);
-        
-        return ident[EI_MAG0] == ELFMAG0 && 
+
+        return ident[EI_MAG0] == ELFMAG0 &&
                ident[EI_MAG1] == ELFMAG1 &&
-               ident[EI_MAG2] == ELFMAG2 && 
+               ident[EI_MAG2] == ELFMAG2 &&
                ident[EI_MAG3] == ELFMAG3;
     }
 
     auto validateSectionHeaders() const -> bool {
         if (!elfHeader_) return false;
-        
-        const auto totalSize = elfHeader_->shoff + 
+
+        const auto totalSize = elfHeader_->shoff +
                               (elfHeader_->shnum * elfHeader_->shentsize);
         return totalSize <= fileSize_;
     }
 
     auto validateProgramHeaders() const -> bool {
         if (!elfHeader_) return false;
-        
-        const auto totalSize = elfHeader_->phoff + 
+
+        const auto totalSize = elfHeader_->phoff +
                               (elfHeader_->phnum * elfHeader_->phentsize);
         return totalSize <= fileSize_;
     }
 };
 
-OptimizedElfParser::OptimizedElfParser(std::string_view file, 
+OptimizedElfParser::OptimizedElfParser(std::string_view file,
                                        const OptimizationConfig& config)
     : pImpl_(std::make_unique<Impl>(file, config, &metrics_)),
       config_(config) {
@@ -1332,7 +1332,7 @@ OptimizedElfParser::OptimizedElfParser(std::string_view file)
     : OptimizedElfParser(file, OptimizationConfig{}) {
 }
 
-OptimizedElfParser::OptimizedElfParser(OptimizedElfParser&& other) noexcept 
+OptimizedElfParser::OptimizedElfParser(OptimizedElfParser&& other) noexcept
     : pImpl_(std::move(other.pImpl_)), config_(std::move(other.config_)) {
 }
 
@@ -1358,42 +1358,42 @@ auto OptimizedElfParser::getElfHeader() const -> std::optional<ElfHeader> {
     return pImpl_->getElfHeader();
 }
 
-auto OptimizedElfParser::getProgramHeaders() const noexcept 
+auto OptimizedElfParser::getProgramHeaders() const noexcept
     -> std::span<const ProgramHeader> {
     return pImpl_->getProgramHeaders();
 }
 
-auto OptimizedElfParser::getSectionHeaders() const noexcept 
+auto OptimizedElfParser::getSectionHeaders() const noexcept
     -> std::span<const SectionHeader> {
     return pImpl_->getSectionHeaders();
 }
 
-auto OptimizedElfParser::getSymbolTable() const noexcept 
+auto OptimizedElfParser::getSymbolTable() const noexcept
     -> std::span<const Symbol> {
     return pImpl_->getSymbolTable();
 }
 
-auto OptimizedElfParser::findSymbolByName(std::string_view name) const 
+auto OptimizedElfParser::findSymbolByName(std::string_view name) const
     -> std::optional<Symbol> {
     return pImpl_->findSymbolByName(name);
 }
 
-auto OptimizedElfParser::findSymbolByAddress(uint64_t address) const 
+auto OptimizedElfParser::findSymbolByAddress(uint64_t address) const
     -> std::optional<Symbol> {
     return pImpl_->findSymbolByAddress(address);
 }
 
-auto OptimizedElfParser::getSymbolsInRange(uint64_t start, uint64_t end) const 
+auto OptimizedElfParser::getSymbolsInRange(uint64_t start, uint64_t end) const
     -> std::vector<Symbol> {
     return pImpl_->getSymbolsInRange(start, end);
 }
 
-auto OptimizedElfParser::getSectionsByType(uint32_t type) const 
+auto OptimizedElfParser::getSectionsByType(uint32_t type) const
     -> std::vector<SectionHeader> {
     return pImpl_->getSectionsByType(type);
 }
 
-auto OptimizedElfParser::batchFindSymbols(const std::vector<std::string>& names) const 
+auto OptimizedElfParser::batchFindSymbols(const std::vector<std::string>& names) const
     -> std::vector<std::optional<Symbol>> {
     return pImpl_->batchFindSymbols(names);
 }
@@ -1434,7 +1434,7 @@ auto OptimizedElfParser::getMemoryUsage() const -> size_t {
 
 auto OptimizedElfParser::exportSymbols(std::string_view format) const -> std::string {
     const auto symbols = getSymbolTable();
-    
+
     if (format == "json") {
         std::string result = "[\n";
         for (size_t i = 0; i < symbols.size(); ++i) {
@@ -1451,7 +1451,7 @@ auto OptimizedElfParser::exportSymbols(std::string_view format) const -> std::st
         result += "]";
         return result;
     }
-    
+
     return "Unsupported format";
 }
 
@@ -1464,7 +1464,7 @@ void OptimizedElfParser::setupMemoryPools() {
     memoryPool_ = std::make_unique<MemoryPool>();
     bufferResource_ = std::make_unique<std::pmr::monotonic_buffer_resource>(
         config_.cacheSize, std::pmr::get_default_resource());
-    
+
     if (config_.enableSymbolCaching) {
         symbolCache_ = std::make_unique<SymbolCache>(bufferResource_.get());
         addressCache_ = std::make_unique<AddressCache>(bufferResource_.get());
@@ -1487,7 +1487,7 @@ void OptimizedElfParser::warmupCaches() {
 } // namespace optimized
 
 #ifdef __linux__
-EnhancedElfParser::EnhancedElfParser(std::string_view file, bool useOptimized) 
+EnhancedElfParser::EnhancedElfParser(std::string_view file, bool useOptimized)
     : filePath_(file), useOptimized_(useOptimized) {
     if (useOptimized_) {
         optimizedParser_ = std::make_unique<optimized::OptimizedElfParser>(file);
@@ -1532,15 +1532,15 @@ auto EnhancedElfParser::comparePerformance() -> void {
     if (!useOptimized_) {
         return;
     }
-    
+
     spdlog::info("Enhanced ELF Parser performance comparison for: {}", filePath_);
     auto metrics = optimizedParser_->getMetrics();
     spdlog::info("Parse time: {}ms", metrics.parseTime.load() / 1000000.0);
     spdlog::info("Cache hits: {}", metrics.cacheHits.load());
     spdlog::info("Cache misses: {}", metrics.cacheMisses.load());
-    
+
     if (metrics.cacheHits.load() + metrics.cacheMisses.load() > 0) {
-        double hitRate = static_cast<double>(metrics.cacheHits.load()) / 
+        double hitRate = static_cast<double>(metrics.cacheHits.load()) /
                        (metrics.cacheHits.load() + metrics.cacheMisses.load()) * 100.0;
         spdlog::info("Cache hit rate: {:.2f}%", hitRate);
     }

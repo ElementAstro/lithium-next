@@ -34,7 +34,7 @@ class HardwareInterface;
 
 /**
  * @brief Switch Manager Component
- * 
+ *
  * This component handles all switch-related operations including
  * state management, validation, and coordination with hardware.
  */

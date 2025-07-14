@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class XmlWriter:
     """Writer for XML output format."""
-    
+
     def write(self, compiler_output: CompilerOutput, output_path: Path) -> None:
         """Write compiler output to an XML file."""
         root = ET.Element("CompilerOutput")
@@ -23,8 +23,10 @@ class XmlWriter:
         metadata = ET.SubElement(root, "Metadata")
         ET.SubElement(metadata, "Compiler").text = compiler_output.compiler.name
         ET.SubElement(metadata, "Version").text = compiler_output.version
-        ET.SubElement(metadata, "MessageCount").text = str(len(compiler_output.messages))
-        
+        ET.SubElement(metadata, "MessageCount").text = str(
+            len(compiler_output.messages)
+        )
+
         # Add messages
         messages_elem = ET.SubElement(root, "Messages")
         for msg in compiler_output.messages:
@@ -32,7 +34,7 @@ class XmlWriter:
             for key, value in msg.to_dict().items():
                 if value is not None:  # Skip None values
                     ET.SubElement(msg_elem, key).text = str(value)
-                    
+
         # Write XML to file
         tree = ET.ElementTree(root)
         tree.write(output_path, encoding="utf-8", xml_declaration=True)

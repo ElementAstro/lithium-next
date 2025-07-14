@@ -37,7 +37,7 @@ protected:
     // Create a simple target for testing
     std::unique_ptr<Target> createTestTarget(const std::string& name, int taskCount) {
         auto target = std::make_unique<Target>(name, std::chrono::seconds(1), 1);
-        
+
         for (int i = 0; i < taskCount; ++i) {
             auto task = std::make_unique<Task>(
                 "TestTask" + std::to_string(i),
@@ -45,10 +45,10 @@ protected:
                 [](const json& params) {
                     // Simple task that just logs
                 });
-            
+
             target->addTask(std::move(task));
         }
-        
+
         return target;
     }
 
@@ -64,11 +64,11 @@ TEST_F(SequenceManagerTest, CreateSequence) {
 // Test adding targets to sequence
 TEST_F(SequenceManagerTest, AddTargets) {
     auto sequence = manager->createSequence("TestSequence");
-    
+
     // Add targets
     sequence->addTarget(createTestTarget("Target1", 2));
     sequence->addTarget(createTestTarget("Target2", 3));
-    
+
     // Verify targets added
     auto targetNames = sequence->getTargetNames();
     ASSERT_EQ(targetNames.size(), 2);
@@ -106,19 +106,19 @@ TEST_F(SequenceManagerTest, CreateFromTemplate) {
         .category = "Test",
         .version = "1.0.0"
     };
-    
+
     manager->registerTaskTemplate("TestTemplate", testTemplate);
-    
+
     // Create from template
     json params = {
         {"targetName", "TemplateTarget"},
         {"value", 42}
     };
-    
+
     // This will throw if template processing fails
     auto sequence = manager->createSequenceFromTemplate("TestTemplate", params);
     ASSERT_NE(sequence, nullptr);
-    
+
     // Verify template was applied
     auto targetNames = sequence->getTargetNames();
     ASSERT_EQ(targetNames.size(), 1);
@@ -143,7 +143,7 @@ TEST_F(SequenceManagerTest, ValidateSequence) {
             }
         ]
     })");
-    
+
     // Invalid sequence JSON (missing name)
     json invalidJson = json::parse(R"({
         "targets": [
@@ -159,7 +159,7 @@ TEST_F(SequenceManagerTest, ValidateSequence) {
             }
         ]
     })");
-    
+
     // Validate
     std::string errorMsg;
     EXPECT_TRUE(manager->validateSequenceJson(validJson, errorMsg));
@@ -171,9 +171,9 @@ TEST_F(SequenceManagerTest, ValidateSequence) {
 TEST_F(SequenceManagerTest, ExceptionHandling) {
     // Create a sequence with a task that throws an exception
     auto sequence = manager->createSequence("ErrorSequence");
-    
+
     auto target = std::make_unique<Target>("ErrorTarget", std::chrono::seconds(1), 0);
-    
+
     auto task = std::make_unique<Task>(
         "ErrorTask",
         "error_test",
@@ -183,13 +183,13 @@ TEST_F(SequenceManagerTest, ExceptionHandling) {
                 "ErrorTask",
                 "Testing exception handling");
         });
-    
+
     target->addTask(std::move(task));
     sequence->addTarget(std::move(target));
-    
+
     // Execute and expect exception
     auto result = manager->executeSequence(sequence, false);
-    
+
     ASSERT_TRUE(result.has_value());
     EXPECT_FALSE(result->success);
     EXPECT_EQ(result->completedTargets.size(), 0);

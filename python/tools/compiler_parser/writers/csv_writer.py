@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class CsvWriter:
     """Writer for CSV output format."""
-    
+
     def write(self, compiler_output: CompilerOutput, output_path: Path) -> None:
         """Write compiler output to a CSV file."""
         # Prepare flattened data for CSV export
@@ -26,11 +26,13 @@ class CsvWriter:
             msg_dict.setdefault("column", None)
             msg_dict.setdefault("code", None)
             data.append(msg_dict)
-            
-        fieldnames = ['file', 'line', 'column', 'severity', 'code', 'message']
-        
-        with output_path.open('w', newline='', encoding="utf-8") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+
+        fieldnames = ["file", "line", "column", "severity", "code", "message"]
+
+        with output_path.open("w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.DictWriter(
+                csvfile, fieldnames=fieldnames, extrasaction="ignore"
+            )
             writer.writeheader()
             writer.writerows(data)
         logger.info(f"CSV output written to {output_path}")

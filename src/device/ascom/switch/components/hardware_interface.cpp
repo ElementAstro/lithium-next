@@ -189,7 +189,7 @@ auto HardwareInterface::getSwitchCount() -> uint32_t {
 
 auto HardwareInterface::getSwitchInfo(uint32_t index) -> std::optional<ASCOMSwitchInfo> {
     std::lock_guard<std::mutex> lock(switches_mutex_);
-    
+
     if (index >= switches_.size()) {
         return std::nullopt;
     }
@@ -434,38 +434,38 @@ auto HardwareInterface::updateSwitchInfo() -> bool {
         // Get information for each switch
         std::lock_guard<std::mutex> lock(switches_mutex_);
         switches_.clear();
-        
+
         for (uint32_t i = 0; i < switch_count_; ++i) {
             ASCOMSwitchInfo info;
-            
+
             // Get switch name
             auto nameResponse = sendAlpacaRequest("GET", "getswitchname", "Id=" + std::to_string(i));
             if (nameResponse) {
                 // TODO: Parse JSON response
                 info.name = "Switch " + std::to_string(i);  // Placeholder
             }
-            
+
             // Get switch description
             auto descResponse = sendAlpacaRequest("GET", "getswitchdescription", "Id=" + std::to_string(i));
             if (descResponse) {
                 // TODO: Parse JSON response
                 info.description = "Switch " + std::to_string(i) + " description";  // Placeholder
             }
-            
+
             // Get switch state
             auto stateResponse = sendAlpacaRequest("GET", "getswitch", "Id=" + std::to_string(i));
             if (stateResponse) {
                 // TODO: Parse JSON response
                 info.state = false;  // Placeholder
             }
-            
+
             // Get other properties
             info.can_write = true;  // Most switches are writable
             info.min_value = 0.0;
             info.max_value = 1.0;
             info.step_value = 1.0;
             info.value = info.state ? 1.0 : 0.0;
-            
+
             switches_.push_back(info);
         }
     }
@@ -510,7 +510,7 @@ auto HardwareInterface::stopPolling() -> void {
 
 auto HardwareInterface::pollingLoop() -> void {
     spdlog::debug("Hardware interface polling loop started");
-    
+
     while (!stop_polling_.load()) {
         if (isConnected()) {
             updateSwitchInfo();
@@ -520,7 +520,7 @@ auto HardwareInterface::pollingLoop() -> void {
         polling_cv_.wait_for(lock, std::chrono::milliseconds(polling_interval_ms_.load()),
                            [this] { return stop_polling_.load(); });
     }
-    
+
     spdlog::debug("Hardware interface polling loop stopped");
 }
 

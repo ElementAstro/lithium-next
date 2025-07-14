@@ -23,12 +23,10 @@ type RepositoryDict = dict[RepositoryName, list[PackageName]]
 type SearchResults = list[tuple[PackageName, PackageVersion, str]]
 
 # Literal types for constrained values
-type PackageAction = Literal["install",
-                             "remove", "upgrade", "downgrade", "search"]
+type PackageAction = Literal["install", "remove", "upgrade", "downgrade", "search"]
 type SortOrder = Literal["name", "version", "size", "date", "repository"]
 type LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-type CommandStatus = Literal["pending",
-                             "running", "completed", "failed", "cancelled"]
+type CommandStatus = Literal["pending", "running", "completed", "failed", "cancelled"]
 
 # Union types for flexibility
 type PathLike = Union[str, Path]
@@ -40,6 +38,7 @@ type CommandOutput = Union[str, bytes]
 
 class CommandOptions(TypedDict, total=False):
     """Options for package management commands."""
+
     force: bool
     no_deps: bool
     as_deps: bool
@@ -56,6 +55,7 @@ class CommandOptions(TypedDict, total=False):
 
 class SearchFilter(TypedDict, total=False):
     """Filters for package search operations."""
+
     repository: RepositoryName | None
     installed_only: bool
     outdated_only: bool
@@ -68,6 +68,7 @@ class SearchFilter(TypedDict, total=False):
 
 class CacheConfig(TypedDict, total=False):
     """Configuration for package cache."""
+
     max_size: int
     ttl_seconds: int
     use_disk_cache: bool
@@ -77,6 +78,7 @@ class CacheConfig(TypedDict, total=False):
 
 class RetryConfig(TypedDict, total=False):
     """Configuration for retry mechanisms."""
+
     max_attempts: int
     backoff_factor: float
     retry_on_errors: list[type[Exception]]
@@ -99,16 +101,17 @@ type AsyncPluginHook[T] = Callable[..., Awaitable[T]]
 @dataclass(frozen=True, slots=True)
 class CommandPattern:
     """Pattern for matching commands in pattern matching."""
+
     action: PackageAction
     target: PackageIdentifier | None = None
     options: CommandOptions | None = None
 
     def matches(self, other: CommandPattern) -> bool:
         """Check if this pattern matches another."""
-        return (
-            self.action == other.action and
-            (self.target is None or self.target == other.target)
+        return self.action == other.action and (
+            self.target is None or self.target == other.target
         )
+
 
 # Result types for operations
 
@@ -116,6 +119,7 @@ class CommandPattern:
 @dataclass(frozen=True, slots=True)
 class OperationResult[T]:
     """Generic result type for operations."""
+
     success: bool
     data: T | None = None
     error: Exception | None = None
@@ -140,6 +144,7 @@ type AsyncResult[T] = Awaitable[OperationResult[T]]
 @dataclass(frozen=True, slots=True)
 class PackageEvent:
     """Event data for package operations."""
+
     event_type: str
     package_name: PackageName
     timestamp: float
@@ -154,6 +159,7 @@ type AsyncEventHandler = Callable[[PackageEvent], Awaitable[None]]
 
 class ManagerConfig(TypedDict, total=False):
     """Configuration for PacmanManager."""
+
     config_path: PathLike | None
     use_sudo: bool
     parallel_downloads: int
@@ -171,7 +177,6 @@ __all__ = [
     "PackageVersion",
     "RepositoryName",
     "CacheKey",
-
     # Type aliases
     "PackageDict",
     "RepositoryDict",
@@ -179,39 +184,32 @@ __all__ = [
     "PathLike",
     "PackageIdentifier",
     "CommandOutput",
-
     # Literal types
     "PackageAction",
     "SortOrder",
     "LogLevel",
     "CommandStatus",
-
     # TypedDict classes
     "CommandOptions",
     "SearchFilter",
     "CacheConfig",
     "RetryConfig",
     "ManagerConfig",
-
     # Callback types
     "ProgressCallback",
     "AsyncProgressCallback",
     "ErrorHandler",
     "AsyncErrorHandler",
-
     # Plugin types
     "PluginHook",
     "AsyncPluginHook",
-
     # Data classes
     "CommandPattern",
     "OperationResult",
     "PackageEvent",
-
     # Event types
     "EventHandler",
     "AsyncEventHandler",
-
     # Async types
     "AsyncResult",
 ]

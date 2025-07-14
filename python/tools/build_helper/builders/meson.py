@@ -59,12 +59,10 @@ class MesonBuilder(BuildHelperBase):
                 logger.debug(f"Detected Meson: {version}")
                 return version
             else:
-                logger.warning(
-                    f"Failed to determine Meson version: {result.error}")
+                logger.warning(f"Failed to determine Meson version: {result.error}")
                 return ""
         except Exception as e:
-            logger.warning(
-                f"Failed to determine Meson version due to exception: {e}")
+            logger.warning(f"Failed to determine Meson version due to exception: {e}")
             return ""
 
     async def configure(self) -> BuildResult:
@@ -81,7 +79,9 @@ class MesonBuilder(BuildHelperBase):
             str(self.source_dir),
             f"--buildtype={self.build_type}",
             f"--prefix={self.install_prefix}",
-        ] + (self.options or [])  # Ensure options is not None
+        ] + (
+            self.options or []
+        )  # Ensure options is not None
 
         if self.verbose:
             meson_args.append("--verbose")
@@ -141,12 +141,7 @@ class MesonBuilder(BuildHelperBase):
         logger.info(f"Installing project to {self.install_prefix}")
 
         # Fixed: Pass as a list instead of separate arguments
-        result = await self.run_command([
-            "meson",
-            "install",
-            "-C",
-            str(self.build_dir)
-        ])
+        result = await self.run_command(["meson", "install", "-C", str(self.build_dir)])
 
         if result.success:
             self.status = BuildStatus.COMPLETED
@@ -163,13 +158,7 @@ class MesonBuilder(BuildHelperBase):
         self.status = BuildStatus.TESTING
         logger.info("Running tests with Meson")
 
-        test_cmd = [
-            "meson",
-            "test",
-            "-C",
-            str(self.build_dir),
-            "--print-errorlogs"
-        ]
+        test_cmd = ["meson", "test", "-C", str(self.build_dir), "--print-errorlogs"]
 
         if self.verbose:
             test_cmd.append("-v")

@@ -185,7 +185,8 @@ Examples:
             print("Available compilers:")
             for name, compiler in compilers.items():
                 print(
-                    f"  {name}: {compiler.config.command} (version: {compiler.config.version})")
+                    f"  {name}: {compiler.config.command} (version: {compiler.config.version})"
+                )
             print(f"Default compiler: {compiler_manager.default_compiler}")
         else:
             print("No supported compilers found.")
@@ -193,13 +194,14 @@ Examples:
 
     # Parse C++ version
     from .core_types import CppVersion
+
     cpp_version = CppVersion.resolve_version(args.cpp_version)
 
     # Prepare compile options
     compile_options_dict = {}
 
     if args.include_paths:
-        compile_options_dict['include_paths'] = args.include_paths
+        compile_options_dict["include_paths"] = args.include_paths
 
     if args.defines:
         defines = {}
@@ -209,52 +211,52 @@ Examples:
                 defines[name] = value
             else:
                 defines[define] = None
-        compile_options_dict['defines'] = defines
+        compile_options_dict["defines"] = defines
 
     if args.warnings:
-        compile_options_dict['warnings'] = args.warnings
+        compile_options_dict["warnings"] = args.warnings
 
     if args.optimization:
-        compile_options_dict['optimization'] = args.optimization
+        compile_options_dict["optimization"] = args.optimization
 
     if args.debug:
-        compile_options_dict['debug'] = True
+        compile_options_dict["debug"] = True
 
     if args.pic:
-        compile_options_dict['position_independent'] = True
+        compile_options_dict["position_independent"] = True
 
     if args.stdlib:
-        compile_options_dict['standard_library'] = args.stdlib
+        compile_options_dict["standard_library"] = args.stdlib
 
     if args.sanitizers:
-        compile_options_dict['sanitizers'] = args.sanitizers
+        compile_options_dict["sanitizers"] = args.sanitizers
 
     if args.compile_flags:
-        compile_options_dict['extra_flags'] = args.compile_flags
+        compile_options_dict["extra_flags"] = args.compile_flags
 
     # Prepare link options
     link_options_dict = {}
 
     if args.library_paths:
-        link_options_dict['library_paths'] = args.library_paths
+        link_options_dict["library_paths"] = args.library_paths
 
     if args.libraries:
-        link_options_dict['libraries'] = args.libraries
+        link_options_dict["libraries"] = args.libraries
 
     if args.shared:
-        link_options_dict['shared'] = True
+        link_options_dict["shared"] = True
 
     if args.static:
-        link_options_dict['static'] = True
+        link_options_dict["static"] = True
 
     if args.strip:
-        link_options_dict['strip_symbols'] = True
+        link_options_dict["strip_symbols"] = True
 
     if args.map_file:
-        link_options_dict['map_file'] = args.map_file
+        link_options_dict["map_file"] = args.map_file
 
     if args.link_flags:
-        link_options_dict['extra_flags'] = args.link_flags
+        link_options_dict["extra_flags"] = args.link_flags
 
     # Load configuration from file if provided
     if args.config:
@@ -262,13 +264,13 @@ Examples:
             config = load_json(args.config)
 
             # Update compile options
-            if 'compile_options' in config:
-                for key, value in config['compile_options'].items():
+            if "compile_options" in config:
+                for key, value in config["compile_options"].items():
                     compile_options_dict[key] = value
 
             # Update link options
-            if 'link_options' in config:
-                for key, value in config['link_options'].items():
+            if "link_options" in config:
+                for key, value in config["link_options"].items():
                     link_options_dict[key] = value
 
             # General options can override specific ones
@@ -288,13 +290,13 @@ Examples:
 
     # Combine extra flags if provided
     if args.flags:
-        if 'extra_flags' not in compile_options_dict:
-            compile_options_dict['extra_flags'] = []
-        compile_options_dict['extra_flags'].extend(args.flags)
+        if "extra_flags" not in compile_options_dict:
+            compile_options_dict["extra_flags"] = []
+        compile_options_dict["extra_flags"].extend(args.flags)
 
-        if 'extra_flags' not in link_options_dict:
-            link_options_dict['extra_flags'] = []
-        link_options_dict['extra_flags'].extend(args.flags)
+        if "extra_flags" not in link_options_dict:
+            link_options_dict["extra_flags"] = []
+        link_options_dict["extra_flags"].extend(args.flags)
 
     # Create proper instances
     compile_options = CompileOptions(**compile_options_dict)

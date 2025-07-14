@@ -18,7 +18,7 @@ from .manager import PacmanManager
 from .exceptions import PacmanError
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class PacmanContext:
@@ -27,7 +27,9 @@ class PacmanContext:
     Provides transaction-like behavior for package operations.
     """
 
-    def __init__(self, config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs):
+    def __init__(
+        self, config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs
+    ):
         """Initialize the context with configuration."""
         self.config_path = config_path
         self.use_sudo = use_sudo
@@ -38,7 +40,9 @@ class PacmanContext:
     def __enter__(self) -> PacmanManager:
         """Enter the context and create manager instance."""
         try:
-            self._manager = PacmanManager({"config_path": self.config_path, "use_sudo": self.use_sudo})
+            self._manager = PacmanManager(
+                {"config_path": self.config_path, "use_sudo": self.use_sudo}
+            )
             logger.debug("Entered PacmanContext")
             return self._manager
         except Exception as e:
@@ -48,8 +52,7 @@ class PacmanContext:
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         """Exit the context with cleanup."""
         if exc_type is not None:
-            logger.error(
-                f"Exception in PacmanContext: {exc_type.__name__}: {exc_val}")
+            logger.error(f"Exception in PacmanContext: {exc_type.__name__}: {exc_val}")
 
         # Cleanup
         if self._manager:
@@ -60,7 +63,7 @@ class PacmanContext:
 
     def _cleanup_manager(self) -> None:
         """Clean up manager resources."""
-        if self._manager and hasattr(self._manager, '_executor'):
+        if self._manager and hasattr(self._manager, "_executor"):
             try:
                 self._manager._executor.shutdown(wait=True)
             except AttributeError:
@@ -73,7 +76,9 @@ class AsyncPacmanContext:
     Async context manager for pacman operations.
     """
 
-    def __init__(self, config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs):
+    def __init__(
+        self, config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs
+    ):
         """Initialize the async context with configuration."""
         self.config_path = config_path
         self.use_sudo = use_sudo
@@ -84,7 +89,9 @@ class AsyncPacmanContext:
         """Enter the async context and create manager instance."""
         try:
             # For now, use regular manager - async manager will be implemented separately
-            self._manager = PacmanManager({"config_path": self.config_path, "use_sudo": self.use_sudo})
+            self._manager = PacmanManager(
+                {"config_path": self.config_path, "use_sudo": self.use_sudo}
+            )
             logger.debug("Entered AsyncPacmanContext")
             return self._manager
         except Exception as e:
@@ -95,7 +102,8 @@ class AsyncPacmanContext:
         """Exit the async context with cleanup."""
         if exc_type is not None:
             logger.error(
-                f"Exception in AsyncPacmanContext: {exc_type.__name__}: {exc_val}")
+                f"Exception in AsyncPacmanContext: {exc_type.__name__}: {exc_val}"
+            )
 
         # Cleanup
         if self._manager:
@@ -106,7 +114,7 @@ class AsyncPacmanContext:
 
     async def _cleanup_manager(self) -> None:
         """Clean up async manager resources."""
-        if self._manager and hasattr(self._manager, '_executor'):
+        if self._manager and hasattr(self._manager, "_executor"):
             try:
                 self._manager._executor.shutdown(wait=True)
             except AttributeError:
@@ -115,7 +123,9 @@ class AsyncPacmanContext:
 
 
 @contextlib.contextmanager
-def temp_config(manager: PacmanManager, **config_overrides) -> Generator[PacmanManager, None, None]:
+def temp_config(
+    manager: PacmanManager, **config_overrides
+) -> Generator[PacmanManager, None, None]:
     """
     Temporarily modify manager configuration within a context.
     """
@@ -150,12 +160,16 @@ def suppressed_output(manager: PacmanManager) -> Generator[PacmanManager, None, 
 
 
 # Convenience functions
-def pacman_context(config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs) -> PacmanContext:
+def pacman_context(
+    config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs
+) -> PacmanContext:
     """Create a PacmanContext with optional configuration."""
     return PacmanContext(config_path, use_sudo, **kwargs)
 
 
-def async_pacman_context(config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs) -> AsyncPacmanContext:
+def async_pacman_context(
+    config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs
+) -> AsyncPacmanContext:
     """Create an AsyncPacmanContext with optional configuration."""
     return AsyncPacmanContext(config_path, use_sudo, **kwargs)
 

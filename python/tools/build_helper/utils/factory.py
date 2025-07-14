@@ -77,40 +77,42 @@ class BuilderFactory:
             ConfigurationError: If the specified builder type is not supported.
         """
         builder_key = builder_type.lower()
-        
+
         if builder_key not in cls._BUILDERS:
-            available = ', '.join(cls._BUILDERS.keys())
+            available = ", ".join(cls._BUILDERS.keys())
             raise ConfigurationError(
                 f"Unsupported builder type: {builder_type}. Available builders: {available}",
-                context=ErrorContext(working_directory=Path(source_dir))
+                context=ErrorContext(working_directory=Path(source_dir)),
             )
 
         builder_class = cls._BUILDERS[builder_key]
-        
+
         try:
-            logger.info(f"Creating {builder_type.upper()} builder for source directory: {source_dir}")
-            
+            logger.info(
+                f"Creating {builder_type.upper()} builder for source directory: {source_dir}"
+            )
+
             # Create builder instance
             builder = builder_class(
-                source_dir=source_dir,
-                build_dir=build_dir,
-                **kwargs
+                source_dir=source_dir, build_dir=build_dir, **kwargs
             )
-            
+
             logger.debug(f"Successfully created {builder_class.__name__} instance")
             return builder
-            
+
         except Exception as e:
             raise ConfigurationError(
                 f"Failed to create {builder_type} builder: {e}",
                 context=ErrorContext(
                     working_directory=Path(source_dir),
-                    additional_info={"builder_type": builder_type}
-                )
+                    additional_info={"builder_type": builder_type},
+                ),
             )
 
     @classmethod
-    def create_from_options(cls, builder_type: str, options: BuildOptions) -> BuildHelperBase:
+    def create_from_options(
+        cls, builder_type: str, options: BuildOptions
+    ) -> BuildHelperBase:
         """
         Create a builder instance from BuildOptions.
 
@@ -131,27 +133,33 @@ class BuilderFactory:
 
         # Add builder-specific options
         if builder_type.lower() == "cmake":
-            builder_kwargs.update({
-                "generator": options.get("generator", "Ninja"),
-                "build_type": options.build_type,
-                "cmake_options": options.options,
-            })
+            builder_kwargs.update(
+                {
+                    "generator": options.get("generator", "Ninja"),
+                    "build_type": options.build_type,
+                    "cmake_options": options.options,
+                }
+            )
         elif builder_type.lower() == "meson":
-            builder_kwargs.update({
-                "build_type": options.get("meson_build_type", options.build_type),
-                "meson_options": options.options,
-            })
+            builder_kwargs.update(
+                {
+                    "build_type": options.get("meson_build_type", options.build_type),
+                    "meson_options": options.options,
+                }
+            )
         elif builder_type.lower() == "bazel":
-            builder_kwargs.update({
-                "build_mode": options.get("bazel_mode", "dbg"),
-                "bazel_options": options.options,
-            })
+            builder_kwargs.update(
+                {
+                    "build_mode": options.get("bazel_mode", "dbg"),
+                    "bazel_options": options.options,
+                }
+            )
 
         return cls.create_builder(
             builder_type=builder_type,
             source_dir=options.source_dir,
             build_dir=options.build_dir,
-            **builder_kwargs
+            **builder_kwargs,
         )
 
     @classmethod
@@ -167,25 +175,29 @@ class BuilderFactory:
             Detected build system name or None if none detected.
         """
         search_path = Path(source_dir)
-        
+
         if not search_path.exists():
             logger.warning(f"Source directory does not exist: {search_path}")
             return None
 
         detected_systems = []
-        
+
         for build_system, patterns in cls._BUILD_FILE_PATTERNS.items():
             for pattern in patterns:
                 # Check for exact file matches
                 if (search_path / pattern).exists():
                     detected_systems.append(build_system)
-                    logger.debug(f"Detected {build_system} build system (found {pattern})")
+                    logger.debug(
+                        f"Detected {build_system} build system (found {pattern})"
+                    )
                     break
-                
+
                 # Check for directory matches
                 if (search_path / pattern).is_dir():
                     detected_systems.append(build_system)
-                    logger.debug(f"Detected {build_system} build system (found {pattern}/ directory)")
+                    logger.debug(
+                        f"Detected {build_system} build system (found {pattern}/ directory)"
+                    )
                     break
 
         if not detected_systems:
@@ -199,19 +211,20 @@ class BuilderFactory:
             preference_order = ["bazel", "meson", "cmake"]
             for preferred in preference_order:
                 if preferred in detected_systems:
-                    logger.info(f"Multiple build systems detected, preferring: {preferred}")
+                    logger.info(
+                        f"Multiple build systems detected, preferring: {preferred}"
+                    )
                     return preferred
-            
+
             # Fallback to first detected
-            logger.warning(f"Multiple build systems detected: {detected_systems}, using {detected_systems[0]}")
+            logger.warning(
+                f"Multiple build systems detected: {detected_systems}, using {detected_systems[0]}"
+            )
             return detected_systems[0]
 
     @classmethod
     def create_auto_detected(
-        cls,
-        source_dir: Union[Path, str],
-        build_dir: Union[Path, str],
-        **kwargs: Any
+        cls, source_dir: Union[Path, str], build_dir: Union[Path, str], **kwargs: Any
     ) -> BuildHelperBase:
         """
         Create a builder instance by auto-detecting the build system.
@@ -228,7 +241,7 @@ class BuilderFactory:
             ConfigurationError: If no build system could be detected.
         """
         detected_system = cls.detect_build_system(source_dir)
-        
+
         if detected_system is None:
             raise ConfigurationError(
                 f"No supported build system detected in {source_dir}",
@@ -236,20 +249,22 @@ class BuilderFactory:
                     working_directory=Path(source_dir),
                     additional_info={
                         "supported_patterns": cls._BUILD_FILE_PATTERNS,
-                        "available_builders": list(cls._BUILDERS.keys())
-                    }
-                )
+                        "available_builders": list(cls._BUILDERS.keys()),
+                    },
+                ),
             )
 
         return cls.create_builder(
             builder_type=detected_system,
             source_dir=source_dir,
             build_dir=build_dir,
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
-    def validate_builder_requirements(cls, builder_type: str, source_dir: Union[Path, str]) -> List[str]:
+    def validate_builder_requirements(
+        cls, builder_type: str, source_dir: Union[Path, str]
+    ) -> List[str]:
         """
         Validate that requirements for a specific builder type are met.
 
@@ -262,7 +277,7 @@ class BuilderFactory:
         """
         errors = []
         source_path = Path(source_dir)
-        
+
         if not source_path.exists():
             errors.append(f"Source directory does not exist: {source_path}")
             return errors
@@ -276,21 +291,23 @@ class BuilderFactory:
         if builder_key in cls._BUILD_FILE_PATTERNS:
             patterns = cls._BUILD_FILE_PATTERNS[builder_key]
             found_any = False
-            
+
             for pattern in patterns:
                 if (source_path / pattern).exists():
                     found_any = True
                     break
-            
+
             if not found_any:
-                errors.append(f"No {builder_type} build files found. Expected one of: {patterns}")
+                errors.append(
+                    f"No {builder_type} build files found. Expected one of: {patterns}"
+                )
 
         # Additional builder-specific validations
         if builder_key == "cmake":
             cmake_file = source_path / "CMakeLists.txt"
             if cmake_file.exists():
                 try:
-                    content = cmake_file.read_text(encoding='utf-8')
+                    content = cmake_file.read_text(encoding="utf-8")
                     if not content.strip():
                         errors.append("CMakeLists.txt is empty")
                     elif "cmake_minimum_required" not in content.lower():
@@ -312,16 +329,20 @@ class BuilderFactory:
             Dictionary containing builder information.
         """
         builder_key = builder_type.lower()
-        
+
         if builder_key not in cls._BUILDERS:
             return {"error": f"Unknown builder type: {builder_type}"}
 
         builder_class = cls._BUILDERS[builder_key]
-        
+
         return {
             "name": builder_type,
             "class": builder_class.__name__,
             "module": builder_class.__module__,
             "file_patterns": cls._BUILD_FILE_PATTERNS.get(builder_key, []),
-            "description": builder_class.__doc__.split('\n')[0] if builder_class.__doc__ else "No description available"
+            "description": (
+                builder_class.__doc__.split("\n")[0]
+                if builder_class.__doc__
+                else "No description available"
+            ),
         }

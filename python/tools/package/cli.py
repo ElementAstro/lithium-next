@@ -6,7 +6,7 @@
 
 @details      This module provides comprehensive functionality for Python package management,
               supporting both command-line usage and programmatic API access via pybind11.
-              
+
               The module handles package installation, upgrades, uninstallation, dependency
               analysis, security checks, and virtual environment management.
 
@@ -24,10 +24,10 @@
                 python package_manager.py --batch-install <requirements_file>
                 python package_manager.py --compare <package1> <package2>
                 python package_manager.py --info <package_name>
-              
+
               Python API usage:
                 from package_manager import PackageManager
-                
+
                 pm = PackageManager()
                 pm.install_package("requests")
                 pm.check_security("flask")
@@ -37,7 +37,7 @@
               - `requests` Python library
               - `packaging` Python library
               - Optional dependencies installed as needed
-              
+
 @version      2.0
 @date         2025-06-09
 """
@@ -48,6 +48,7 @@ import sys
 
 from package_manager import PackageManager
 from common import DependencyError, PackageOperationError, VersionError
+
 
 def main():
     """
@@ -67,72 +68,121 @@ Examples:
   python package_manager.py --security-check
   python package_manager.py --batch-install requirements.txt
   python package_manager.py --compare requests flask
-        """
+        """,
     )
 
     # Basic package operations
-    parser.add_argument("--check", metavar="PACKAGE",
-                        help="Check if a specific package is installed")
-    parser.add_argument("--install", metavar="PACKAGE",
-                        help="Install a specific package")
-    parser.add_argument("--version", metavar="VERSION",
-                        help="Specify the version of the package to install")
-    parser.add_argument("--upgrade", metavar="PACKAGE",
-                        help="Upgrade a specific package to the latest version")
-    parser.add_argument("--uninstall", metavar="PACKAGE",
-                        help="Uninstall a specific package")
+    parser.add_argument(
+        "--check", metavar="PACKAGE", help="Check if a specific package is installed"
+    )
+    parser.add_argument(
+        "--install", metavar="PACKAGE", help="Install a specific package"
+    )
+    parser.add_argument(
+        "--version",
+        metavar="VERSION",
+        help="Specify the version of the package to install",
+    )
+    parser.add_argument(
+        "--upgrade",
+        metavar="PACKAGE",
+        help="Upgrade a specific package to the latest version",
+    )
+    parser.add_argument(
+        "--uninstall", metavar="PACKAGE", help="Uninstall a specific package"
+    )
 
     # Package listing and requirements
-    parser.add_argument("--list-installed", action="store_true",
-                        help="List all installed packages")
-    parser.add_argument("--freeze", metavar="FILE", nargs="?",
-                        const="requirements.txt", help="Generate a requirements.txt file")
-    parser.add_argument("--with-hashes", action="store_true",
-                        help="Include hashes in requirements.txt (use with --freeze)")
+    parser.add_argument(
+        "--list-installed", action="store_true", help="List all installed packages"
+    )
+    parser.add_argument(
+        "--freeze",
+        metavar="FILE",
+        nargs="?",
+        const="requirements.txt",
+        help="Generate a requirements.txt file",
+    )
+    parser.add_argument(
+        "--with-hashes",
+        action="store_true",
+        help="Include hashes in requirements.txt (use with --freeze)",
+    )
 
     # Advanced features
-    parser.add_argument("--search", metavar="TERM",
-                        help="Search for packages on PyPI")
-    parser.add_argument("--deps", metavar="PACKAGE",
-                        help="Show dependencies of a package")
-    parser.add_argument("--create-venv", metavar="PATH",
-                        help="Create a new virtual environment")
-    parser.add_argument("--python-version", metavar="VERSION",
-                        help="Python version for virtual environment (use with --create-venv)")
-    parser.add_argument("--security-check", metavar="PACKAGE", nargs="?", const="all",
-                        help="Check for security vulnerabilities")
-    parser.add_argument("--batch-install", metavar="FILE",
-                        help="Install packages from a requirements file")
-    parser.add_argument("--compare", nargs=2, metavar=("PACKAGE1", "PACKAGE2"),
-                        help="Compare two packages")
-    parser.add_argument("--info", metavar="PACKAGE",
-                        help="Show detailed information about a package")
-    parser.add_argument("--validate", metavar="PACKAGE",
-                        help="Validate a package (security, license, etc.)")
+    parser.add_argument("--search", metavar="TERM", help="Search for packages on PyPI")
+    parser.add_argument(
+        "--deps", metavar="PACKAGE", help="Show dependencies of a package"
+    )
+    parser.add_argument(
+        "--create-venv", metavar="PATH", help="Create a new virtual environment"
+    )
+    parser.add_argument(
+        "--python-version",
+        metavar="VERSION",
+        help="Python version for virtual environment (use with --create-venv)",
+    )
+    parser.add_argument(
+        "--security-check",
+        metavar="PACKAGE",
+        nargs="?",
+        const="all",
+        help="Check for security vulnerabilities",
+    )
+    parser.add_argument(
+        "--batch-install",
+        metavar="FILE",
+        help="Install packages from a requirements file",
+    )
+    parser.add_argument(
+        "--compare",
+        nargs=2,
+        metavar=("PACKAGE1", "PACKAGE2"),
+        help="Compare two packages",
+    )
+    parser.add_argument(
+        "--info", metavar="PACKAGE", help="Show detailed information about a package"
+    )
+    parser.add_argument(
+        "--validate",
+        metavar="PACKAGE",
+        help="Validate a package (security, license, etc.)",
+    )
 
     # Output format options
-    parser.add_argument("--json", action="store_true",
-                        help="Output in JSON format when applicable")
-    parser.add_argument("--markdown", action="store_true",
-                        help="Output in Markdown format when applicable")
-    parser.add_argument("--table", action="store_true",
-                        help="Output as a rich text table when applicable")
+    parser.add_argument(
+        "--json", action="store_true", help="Output in JSON format when applicable"
+    )
+    parser.add_argument(
+        "--markdown",
+        action="store_true",
+        help="Output in Markdown format when applicable",
+    )
+    parser.add_argument(
+        "--table",
+        action="store_true",
+        help="Output as a rich text table when applicable",
+    )
 
     # Configuration options
-    parser.add_argument("--verbose", action="store_true",
-                        help="Enable verbose output")
-    parser.add_argument("--timeout", type=int, default=30,
-                        help="Timeout in seconds for network operations")
-    parser.add_argument("--cache-dir", metavar="DIR",
-                        help="Directory to use for caching package information")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=30,
+        help="Timeout in seconds for network operations",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        metavar="DIR",
+        help="Directory to use for caching package information",
+    )
 
     args = parser.parse_args()
 
     # Initialize PackageManager
     pm = PackageManager(
-        verbose=args.verbose,
-        timeout=args.timeout,
-        cache_dir=args.cache_dir
+        verbose=args.verbose, timeout=args.timeout, cache_dir=args.cache_dir
     )
 
     # Determine output format
@@ -148,7 +198,9 @@ Examples:
     try:
         if args.check:
             if pm.is_package_installed(args.check):
-                print(f"Package '{args.check}' is installed, version: {pm.get_installed_version(args.check)}")
+                print(
+                    f"Package '{args.check}' is installed, version: {pm.get_installed_version(args.check)}"
+                )
             else:
                 print(f"Package '{args.check}' is not installed.")
 
@@ -173,8 +225,7 @@ Examples:
 
         elif args.freeze is not None:
             content = pm.generate_requirements(
-                args.freeze,
-                include_hashes=args.with_hashes
+                args.freeze, include_hashes=args.with_hashes
             )
             if args.freeze == "-":
                 print(content)
@@ -190,7 +241,7 @@ Examples:
                     print(f"Found {len(results)} packages matching '{args.search}':")
                     for pkg in results:
                         print(f"{pkg['name']} ({pkg['version']})")
-                        if pkg['description']:
+                        if pkg["description"]:
                             print(f"  {pkg['description']}")
                         print()
 
@@ -203,8 +254,7 @@ Examples:
 
         elif args.create_venv:
             success = pm.create_virtual_env(
-                args.create_venv,
-                python_version=args.python_version
+                args.create_venv, python_version=args.python_version
             )
             if success:
                 print(f"Virtual environment created at {args.create_venv}")
@@ -221,7 +271,8 @@ Examples:
                     print(f"Found {len(vulns)} vulnerabilities:")
                     for vuln in vulns:
                         print(
-                            f"- {vuln['package_name']} {vuln['vulnerable_version']}: {vuln['advisory']}")
+                            f"- {vuln['package_name']} {vuln['vulnerable_version']}: {vuln['advisory']}"
+                        )
 
         elif args.batch_install:
             pm.batch_install(args.batch_install)
@@ -236,28 +287,26 @@ Examples:
                 print(f"Comparison between {pkg1} and {pkg2}:")
                 print(f"\n{pkg1}:")
                 print(f"  Version: {comparison['package1']['version']}")
-                print(
-                    f"  Latest version: {comparison['package1']['latest_version']}")
+                print(f"  Latest version: {comparison['package1']['latest_version']}")
                 print(f"  License: {comparison['package1']['license']}")
                 print(f"  Summary: {comparison['package1']['summary']}")
 
                 print(f"\n{pkg2}:")
                 print(f"  Version: {comparison['package2']['version']}")
-                print(
-                    f"  Latest version: {comparison['package2']['latest_version']}")
+                print(f"  Latest version: {comparison['package2']['latest_version']}")
                 print(f"  License: {comparison['package2']['license']}")
                 print(f"  Summary: {comparison['package2']['summary']}")
 
                 print("\nCommon dependencies:")
-                for dep in comparison['common']['dependencies']:
+                for dep in comparison["common"]["dependencies"]:
                     print(f"  - {dep}")
 
                 print(f"\nUnique dependencies in {pkg1}:")
-                for dep in comparison['package1']['unique_dependencies']:
+                for dep in comparison["package1"]["unique_dependencies"]:
                     print(f"  - {dep}")
 
                 print(f"\nUnique dependencies in {pkg2}:")
-                for dep in comparison['package2']['unique_dependencies']:
+                for dep in comparison["package2"]["unique_dependencies"]:
                     print(f"  - {dep}")
 
         elif args.info:
@@ -265,17 +314,17 @@ Examples:
             if args.json:
                 # Convert dataclass to dict for JSON serialization
                 info_dict = {
-                    'name': info.name,
-                    'version': info.version,
-                    'latest_version': info.latest_version,
-                    'summary': info.summary,
-                    'homepage': info.homepage,
-                    'author': info.author,
-                    'author_email': info.author_email,
-                    'license': info.license,
-                    'requires': info.requires,
-                    'required_by': info.required_by,
-                    'location': info.location
+                    "name": info.name,
+                    "version": info.version,
+                    "latest_version": info.latest_version,
+                    "summary": info.summary,
+                    "homepage": info.homepage,
+                    "author": info.author,
+                    "author_email": info.author_email,
+                    "license": info.license,
+                    "requires": info.requires,
+                    "required_by": info.required_by,
+                    "location": info.location,
                 }
                 print(json.dumps(info_dict, indent=2))
             else:
@@ -309,21 +358,21 @@ Examples:
             else:
                 print(f"Validation results for {validation['name']}:")
                 print(f"  Installed: {validation['is_installed']}")
-                if validation['is_installed']:
+                if validation["is_installed"]:
                     print(f"  Version: {validation['version']}")
 
-                if 'info' in validation:
+                if "info" in validation:
                     print(f"  License: {validation['info']['license']}")
-                    print(
-                        f"  Dependencies: {validation['info']['dependencies_count']}")
+                    print(f"  Dependencies: {validation['info']['dependencies_count']}")
 
-                if 'security' in validation:
+                if "security" in validation:
                     print(
-                        f"  Security vulnerabilities: {validation['security']['vulnerability_count']}")
+                        f"  Security vulnerabilities: {validation['security']['vulnerability_count']}"
+                    )
 
-                if validation['issues']:
+                if validation["issues"]:
                     print("\nIssues found:")
-                    for issue in validation['issues']:
+                    for issue in validation["issues"]:
                         print(f"  - {issue}")
                 else:
                     print("\nNo issues found! Package looks good.")
@@ -336,6 +385,7 @@ Examples:
         print(f"Error: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 
@@ -350,13 +400,14 @@ def export_package_manager():
     """
     try:
         import pybind11
+
         # When the C++ code includes this module, the export will be available
         return {
-            'PackageManager': PackageManager,
-            'OutputFormat': PackageManager.OutputFormat,
-            'DependencyError': DependencyError,
-            'PackageOperationError': PackageOperationError,
-            'VersionError': VersionError
+            "PackageManager": PackageManager,
+            "OutputFormat": PackageManager.OutputFormat,
+            "DependencyError": DependencyError,
+            "PackageOperationError": PackageOperationError,
+            "VersionError": VersionError,
         }
     except ImportError:
         # pybind11 not available, just continue without exporting

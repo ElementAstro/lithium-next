@@ -28,10 +28,10 @@ auto BacklashCompensator::initialize() -> bool {
         config_.backlashSteps = 0;
         config_.direction = MovementDirection::NONE;
         config_.algorithm = BacklashAlgorithm::SIMPLE;
-        
+
         // Reset statistics
         resetBacklashStats();
-        
+
         return true;
     } catch (const std::exception& e) {
         return false;
@@ -51,15 +51,15 @@ auto BacklashCompensator::getBacklashConfig() -> BacklashConfig {
 
 auto BacklashCompensator::setBacklashConfig(const BacklashConfig& config) -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     // Validate configuration
     if (config.backlashSteps < 0 || config.backlashSteps > 10000) {
         return false;
     }
-    
+
     config_ = config;
     compensation_enabled_ = config.enabled;
-    
+
     return true;
 }
 
@@ -67,7 +67,7 @@ auto BacklashCompensator::enableBacklashCompensation(bool enable) -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
     config_.enabled = enable;
     compensation_enabled_ = enable;
-    
+
     return true;
 }
 
@@ -78,13 +78,13 @@ auto BacklashCompensator::isBacklashCompensationEnabled() -> bool {
 
 auto BacklashCompensator::setBacklashSteps(int steps) -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (steps < 0 || steps > 10000) {
         return false;
     }
-    
+
     config_.backlashSteps = steps;
-    
+
     return true;
 }
 
@@ -96,7 +96,7 @@ auto BacklashCompensator::getBacklashSteps() -> int {
 auto BacklashCompensator::setBacklashDirection(MovementDirection direction) -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
     config_.direction = direction;
-    
+
     return true;
 }
 
@@ -107,16 +107,16 @@ auto BacklashCompensator::getBacklashDirection() -> MovementDirection {
 
 auto BacklashCompensator::calculateBacklashCompensation(int targetPosition, MovementDirection direction) -> int {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (!config_.enabled || config_.backlashSteps == 0) {
         return 0;
     }
-    
+
     // Check if direction change requires compensation
-    if (last_direction_ != MovementDirection::NONE && 
-        last_direction_ != direction && 
+    if (last_direction_ != MovementDirection::NONE &&
+        last_direction_ != direction &&
         direction != MovementDirection::NONE) {
-        
+
         // Direction change detected, apply compensation
         switch (config_.algorithm) {
             case BacklashAlgorithm::SIMPLE:
@@ -127,7 +127,7 @@ auto BacklashCompensator::calculateBacklashCompensation(int targetPosition, Move
                 return calculateDynamicCompensation(direction);
         }
     }
-    
+
     return 0;
 }
 
@@ -135,30 +135,30 @@ auto BacklashCompensator::applyBacklashCompensation(int steps, MovementDirection
     if (!compensation_enabled_ || steps == 0) {
         return true;
     }
-    
+
     std::lock_guard<std::mutex> lock(compensation_mutex_);
     compensation_active_ = true;
-    
+
     try {
         // Apply compensation movement
         bool success = movement_->moveRelative(steps);
-        
+
         if (success) {
             // Update statistics
             updateBacklashStats(steps, direction);
-            
+
             // Update backlash position
             backlash_position_ += steps;
-            
+
             // Record compensation
             recordCompensation(steps, direction, success);
-            
+
             // Notify callback
             if (compensation_callback_) {
                 compensation_callback_(steps, direction, success);
             }
         }
-        
+
         compensation_active_ = false;
         return success;
     } catch (const std::exception& e) {
@@ -209,15 +209,15 @@ auto BacklashCompensator::getCompensationHistory() -> std::vector<BacklashCompen
 auto BacklashCompensator::getCompensationHistory(std::chrono::seconds duration) -> std::vector<BacklashCompensation> {
     std::lock_guard<std::mutex> lock(history_mutex_);
     std::vector<BacklashCompensation> recent_history;
-    
+
     auto cutoff_time = std::chrono::steady_clock::now() - duration;
-    
+
     for (const auto& compensation : compensation_history_) {
         if (compensation.timestamp >= cutoff_time) {
             recent_history.push_back(compensation);
         }
     }
-    
+
     return recent_history;
 }
 
@@ -269,21 +269,21 @@ auto BacklashCompensator::calculateSimpleCompensation(MovementDirection directio
     if (config_.direction == MovementDirection::NONE || config_.direction == direction) {
         return config_.backlashSteps;
     }
-    
+
     return 0;
 }
 
 auto BacklashCompensator::calculateAdaptiveCompensation(MovementDirection direction) -> int {
     // Adaptive compensation based on historical data
     std::lock_guard<std::mutex> lock(stats_mutex_);
-    
+
     if (stats_.totalCompensations == 0) {
         return config_.backlashSteps;
     }
-    
+
     // Use success rate to adjust compensation
     double success_rate = static_cast<double>(stats_.successfulCompensations) / stats_.totalCompensations;
-    
+
     if (success_rate > 0.95) {
         // High success rate, might be over-compensating
         return static_cast<int>(config_.backlashSteps * 0.9);
@@ -291,7 +291,7 @@ auto BacklashCompensator::calculateAdaptiveCompensation(MovementDirection direct
         // Low success rate, might be under-compensating
         return static_cast<int>(config_.backlashSteps * 1.1);
     }
-    
+
     return config_.backlashSteps;
 }
 
@@ -303,25 +303,25 @@ auto BacklashCompensator::calculateDynamicCompensation(MovementDirection directi
 
 auto BacklashCompensator::updateBacklashStats(int steps, MovementDirection direction) -> void {
     std::lock_guard<std::mutex> lock(stats_mutex_);
-    
+
     stats_.totalCompensations++;
     stats_.totalCompensationSteps += std::abs(steps);
     stats_.lastCompensationTime = std::chrono::steady_clock::now();
-    
+
     if (direction == MovementDirection::INWARD) {
         stats_.inwardCompensations++;
     } else if (direction == MovementDirection::OUTWARD) {
         stats_.outwardCompensations++;
     }
-    
+
     // Calculate average compensation
-    stats_.averageCompensation = 
+    stats_.averageCompensation =
         static_cast<double>(stats_.totalCompensationSteps) / stats_.totalCompensations;
 }
 
 auto BacklashCompensator::recordCompensation(int steps, MovementDirection direction, bool success) -> void {
     std::lock_guard<std::mutex> lock(history_mutex_);
-    
+
     BacklashCompensation compensation{
         .timestamp = std::chrono::steady_clock::now(),
         .steps = steps,
@@ -329,14 +329,14 @@ auto BacklashCompensator::recordCompensation(int steps, MovementDirection direct
         .success = success,
         .position = backlash_position_
     };
-    
+
     compensation_history_.push_back(compensation);
-    
+
     // Limit history size
     if (compensation_history_.size() > MAX_HISTORY_SIZE) {
         compensation_history_.erase(compensation_history_.begin());
     }
-    
+
     // Update success count
     if (success) {
         std::lock_guard<std::mutex> stats_lock(stats_mutex_);
@@ -371,19 +371,19 @@ auto BacklashCompensator::validateCompensationSteps(int steps) -> int {
 }
 
 auto BacklashCompensator::isDirectionChangeRequired(MovementDirection newDirection) -> bool {
-    return last_direction_ != MovementDirection::NONE && 
-           last_direction_ != newDirection && 
+    return last_direction_ != MovementDirection::NONE &&
+           last_direction_ != newDirection &&
            newDirection != MovementDirection::NONE;
 }
 
 auto BacklashCompensator::calculateOptimalBacklash() -> int {
     // Calculate optimal backlash based on historical data
     std::lock_guard<std::mutex> lock(stats_mutex_);
-    
+
     if (stats_.totalCompensations == 0) {
         return config_.backlashSteps;
     }
-    
+
     // Simple optimization: use average compensation
     return static_cast<int>(stats_.averageCompensation);
 }

@@ -11,32 +11,39 @@ from __future__ import annotations
 
 from .base import BuildHelperBase
 from .models import (
-    BuildStatus, BuildResult, BuildOptions, 
-    BuildMetrics, BuildSession, BuildOptionsProtocol
+    BuildStatus,
+    BuildResult,
+    BuildOptions,
+    BuildMetrics,
+    BuildSession,
+    BuildOptionsProtocol,
 )
 from .errors import (
-    BuildSystemError, ConfigurationError, BuildError,
-    TestError, InstallationError, DependencyError,
-    ErrorContext, handle_build_error
+    BuildSystemError,
+    ConfigurationError,
+    BuildError,
+    TestError,
+    InstallationError,
+    DependencyError,
+    ErrorContext,
+    handle_build_error,
 )
 
 __all__ = [
     # Base classes
     "BuildHelperBase",
-    
     # Data models
-    "BuildStatus", 
-    "BuildResult", 
+    "BuildStatus",
+    "BuildResult",
     "BuildOptions",
     "BuildOptionsProtocol",
     "BuildMetrics",
     "BuildSession",
-    
     # Error handling
-    "BuildSystemError", 
-    "ConfigurationError", 
+    "BuildSystemError",
+    "ConfigurationError",
     "BuildError",
-    "TestError", 
+    "TestError",
     "InstallationError",
     "DependencyError",
     "ErrorContext",

@@ -110,4 +110,3 @@ CMakeFiles/foo.dir/clean:
 CMakeFiles/foo.dir/depend:
 	cd /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
 .PHONY : CMakeFiles/foo.dir/depend
-

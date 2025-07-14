@@ -60,13 +60,13 @@ void setupLogFile() {
     char filename[100];
     std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", localTime);
     std::filesystem::path logFilePath = logsFolder / filename;
-    
+
     // Initialize spdlog with file and console sinks
     lithium::logging::LoggerConfig config;
     config.log_file_path = logFilePath.string();
     config.async = true;
     lithium::logging::LogConfig::initialize(config);
-    
+
     // Set up crash handler using spdlog
     auto logger = spdlog::get("lithium");
     if (!logger) {
@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
         if (program.get<std::string>("log-file")) {
             // Additional log file is handled by spdlog configuration
             auto logger = lithium::logging::LogConfig::getLogger("lithium");
-            LITHIUM_LOG_INFO(logger, "Additional log file specified: {}", 
+            LITHIUM_LOG_INFO(logger, "Additional log file specified: {}",
                            program.get<std::string>("log-file").value());
         }
 

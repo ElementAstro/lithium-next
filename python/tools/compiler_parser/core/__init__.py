@@ -9,9 +9,9 @@ from .enums import CompilerType, OutputFormat, MessageSeverity
 from .data_structures import CompilerMessage, CompilerOutput
 
 __all__ = [
-    'CompilerType',
-    'OutputFormat', 
-    'MessageSeverity',
-    'CompilerMessage',
-    'CompilerOutput'
+    "CompilerType",
+    "OutputFormat",
+    "MessageSeverity",
+    "CompilerMessage",
+    "CompilerOutput",
 ]

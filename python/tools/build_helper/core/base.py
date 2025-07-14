@@ -14,7 +14,16 @@ import time
 import resource
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union, Callable, Awaitable, AsyncContextManager
+from typing import (
+    Dict,
+    List,
+    Any,
+    Optional,
+    Union,
+    Callable,
+    Awaitable,
+    AsyncContextManager,
+)
 from contextlib import asynccontextmanager
 
 from loguru import logger
@@ -56,8 +65,8 @@ class BuildHelperBase(ABC):
         self.source_dir = Path(source_dir).resolve()
         self.build_dir = Path(build_dir).resolve()
         self.install_prefix = (
-            Path(install_prefix).resolve() 
-            if install_prefix 
+            Path(install_prefix).resolve()
+            if install_prefix
             else self.build_dir / "install"
         )
 
@@ -86,8 +95,8 @@ class BuildHelperBase(ABC):
                 "build_dir": str(self.build_dir),
                 "install_prefix": str(self.install_prefix),
                 "parallel": self.parallel,
-                "verbose": self.verbose
-            }
+                "verbose": self.verbose,
+            },
         )
 
     def _load_cache(self) -> None:
@@ -97,7 +106,7 @@ class BuildHelperBase(ABC):
             return
 
         try:
-            cache_data = self.cache_file.read_text(encoding='utf-8')
+            cache_data = self.cache_file.read_text(encoding="utf-8")
             self._cache = json.loads(cache_data)
             logger.debug(f"Loaded build cache from {self.cache_file}")
         except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
@@ -109,7 +118,7 @@ class BuildHelperBase(ABC):
         try:
             self.cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_data = json.dumps(self._cache, indent=2, ensure_ascii=False)
-            self.cache_file.write_text(cache_data, encoding='utf-8')
+            self.cache_file.write_text(cache_data, encoding="utf-8")
             logger.debug(f"Saved build cache to {self.cache_file}")
         except (OSError, UnicodeEncodeError) as e:
             logger.warning(f"Failed to save build cache: {e}")
@@ -147,14 +156,13 @@ class BuildHelperBase(ABC):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
-                cwd=self.build_dir
+                cwd=self.build_dir,
             )
 
             # Wait for process completion with timeout
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=3600  # 1 hour timeout
+                    process.communicate(), timeout=3600  # 1 hour timeout
                 )
             except asyncio.TimeoutError:
                 process.kill()
@@ -164,8 +172,8 @@ class BuildHelperBase(ABC):
                     context=ErrorContext(
                         command=cmd_str,
                         working_directory=self.build_dir,
-                        environment_vars=self.env_vars
-                    )
+                        environment_vars=self.env_vars,
+                    ),
                 )
 
             exit_code = process.returncode or 0
@@ -176,10 +184,14 @@ class BuildHelperBase(ABC):
             memory_usage = None
             cpu_time = None
             if start_resources and end_resources:
-                memory_usage = int(end_resources.get("max_memory_kb", 0) * 1024)  # Convert to bytes
+                memory_usage = int(
+                    end_resources.get("max_memory_kb", 0) * 1024
+                )  # Convert to bytes
                 cpu_time = (
-                    end_resources.get("user_time", 0) - start_resources.get("user_time", 0) +
-                    end_resources.get("system_time", 0) - start_resources.get("system_time", 0)
+                    end_resources.get("user_time", 0)
+                    - start_resources.get("user_time", 0)
+                    + end_resources.get("system_time", 0)
+                    - start_resources.get("system_time", 0)
                 )
 
             success = exit_code == 0
@@ -187,12 +199,12 @@ class BuildHelperBase(ABC):
 
             build_result = BuildResult(
                 success=success,
-                output=stdout.decode('utf-8', errors='replace').strip(),
-                error=stderr.decode('utf-8', errors='replace').strip(),
+                output=stdout.decode("utf-8", errors="replace").strip(),
+                error=stderr.decode("utf-8", errors="replace").strip(),
                 exit_code=exit_code,
                 execution_time=execution_time,
                 memory_usage=memory_usage,
-                cpu_time=cpu_time
+                cpu_time=cpu_time,
             )
 
             # Enhanced logging
@@ -216,19 +228,23 @@ class BuildHelperBase(ABC):
                 command=cmd_str,
                 working_directory=self.build_dir,
                 environment_vars=self.env_vars,
-                execution_time=time.time() - start_time
+                execution_time=time.time() - start_time,
             )
-            raise handle_build_error("_default_run_command_async", e, context=error_context)
+            raise handle_build_error(
+                "_default_run_command_async", e, context=error_context
+            )
 
         except Exception as e:
             error_context = ErrorContext(
                 command=cmd_str,
                 working_directory=self.build_dir,
                 environment_vars=self.env_vars,
-                execution_time=time.time() - start_time
+                execution_time=time.time() - start_time,
             )
             self.status = BuildStatus.FAILED
-            raise handle_build_error("_default_run_command_async", e, context=error_context)
+            raise handle_build_error(
+                "_default_run_command_async", e, context=error_context
+            )
 
     async def clean(self) -> BuildResult:
         """Clean build directory with improved error handling and preservation of important files."""
@@ -333,7 +349,7 @@ class BuildHelperBase(ABC):
             options=options.options,
             env_vars=options.env_vars,
             verbose=options.verbose,
-            parallel=options.parallel
+            parallel=options.parallel,
         )
 
     # Abstract methods that must be implemented by subclasses
@@ -369,41 +385,41 @@ class BuildHelperBase(ABC):
         run_tests: bool = True,
         install_after_build: bool = False,
         generate_docs: bool = False,
-        target: str = ""
+        target: str = "",
     ) -> List[BuildResult]:
         """
         Execute a complete build workflow with configurable steps.
-        
+
         Args:
             clean_first: Whether to clean before building
             run_tests: Whether to run tests after building
             install_after_build: Whether to install after building
             generate_docs: Whether to generate documentation
             target: Specific build target
-            
+
         Returns:
             List of BuildResult objects for each step
         """
         results: List[BuildResult] = []
-        
+
         try:
             if clean_first:
                 results.append(await self.clean())
-                
+
             results.append(await self.configure())
             results.append(await self.build(target))
-            
+
             if run_tests:
                 results.append(await self.test())
-                
+
             if generate_docs:
                 results.append(await self.generate_docs())
-                
+
             if install_after_build:
                 results.append(await self.install())
-                
+
         except BuildError as e:
             logger.error(f"Build workflow failed: {e}")
             raise
-            
+
         return results

@@ -19,22 +19,28 @@ import time
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from typing import (
-    Any, AsyncContextManager, ContextManager, Dict, Generator,
+    Any,
+    AsyncContextManager,
+    ContextManager,
+    Dict,
+    Generator,
     # Keep Union for PathLike if not imported from core_types directly
-    List, Optional, AsyncGenerator, Union
+    List,
+    Optional,
+    AsyncGenerator,
+    Union,
 )
 
 import aiofiles
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from .core_types import (
-    CommandResult, CompilerException, PathLike
-)
+from .core_types import CommandResult, CompilerException, PathLike
 
 
 class FileOperationError(CompilerException):
     """Exception raised for file operation errors."""
+
     pass
 
 
@@ -42,8 +48,9 @@ class ConfigurationManager:
     """Enhanced configuration management with validation and async support."""
 
     def __init__(self, config_dir: Optional[PathLike] = None) -> None:
-        self.config_dir = Path(
-            config_dir) if config_dir else Path.home() / ".compiler_helper"
+        self.config_dir = (
+            Path(config_dir) if config_dir else Path.home() / ".compiler_helper"
+        )
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
     async def load_json_async(self, file_path: PathLike) -> Dict[str, Any]:
@@ -65,11 +72,11 @@ class ConfigurationManager:
             raise FileOperationError(
                 f"JSON file not found: {path}",
                 error_code="FILE_NOT_FOUND",
-                file_path=str(path)
+                file_path=str(path),
             )
 
         try:
-            async with aiofiles.open(path, 'r', encoding='utf-8') as f:
+            async with aiofiles.open(path, "r", encoding="utf-8") as f:
                 content = await f.read()
                 return json.loads(content)
         except json.JSONDecodeError as e:
@@ -77,14 +84,14 @@ class ConfigurationManager:
                 f"Invalid JSON in file {path}: {e}",
                 error_code="INVALID_JSON",
                 file_path=str(path),
-                json_error=str(e)
+                json_error=str(e),
             ) from e
         except OSError as e:
             raise FileOperationError(
                 f"Failed to read file {path}: {e}",
                 error_code="FILE_READ_ERROR",
                 file_path=str(path),
-                os_error=str(e)
+                os_error=str(e),
             ) from e
 
     def load_json(self, file_path: PathLike) -> Dict[str, Any]:
@@ -103,25 +110,25 @@ class ConfigurationManager:
             raise FileOperationError(
                 f"JSON file not found: {path}",
                 error_code="FILE_NOT_FOUND",
-                file_path=str(path)
+                file_path=str(path),
             )
 
         try:
-            with path.open('r', encoding='utf-8') as f:
+            with path.open("r", encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
             raise FileOperationError(
                 f"Invalid JSON in file {path}: {e}",
                 error_code="INVALID_JSON",
                 file_path=str(path),
-                json_error=str(e)
+                json_error=str(e),
             ) from e
         except OSError as e:
             raise FileOperationError(
                 f"Failed to read file {path}: {e}",
                 error_code="FILE_READ_ERROR",
                 file_path=str(path),
-                os_error=str(e)
+                os_error=str(e),
             ) from e
 
     async def save_json_async(
@@ -129,7 +136,7 @@ class ConfigurationManager:
         file_path: PathLike,
         data: Dict[str, Any],
         indent: int = 2,
-        backup: bool = True
+        backup: bool = True,
     ) -> None:
         """
         Asynchronously save data to a JSON file with backup support.
@@ -151,7 +158,7 @@ class ConfigurationManager:
 
         try:
             content = json.dumps(data, indent=indent, ensure_ascii=False)
-            async with aiofiles.open(path, 'w', encoding='utf-8') as f:
+            async with aiofiles.open(path, "w", encoding="utf-8") as f:
                 await f.write(content)
 
             logger.debug(f"JSON data saved to {path}")
@@ -161,7 +168,7 @@ class ConfigurationManager:
                 f"Failed to save JSON to {path}: {e}",
                 error_code="FILE_WRITE_ERROR",
                 file_path=str(path),
-                error=str(e)
+                error=str(e),
             ) from e
 
     def save_json(
@@ -169,7 +176,7 @@ class ConfigurationManager:
         file_path: PathLike,
         data: Dict[str, Any],
         indent: int = 2,
-        backup: bool = True
+        backup: bool = True,
     ) -> None:
         """
         Synchronously save data to a JSON file with backup support.
@@ -190,7 +197,7 @@ class ConfigurationManager:
             logger.debug(f"Created backup: {backup_path}")
 
         try:
-            with path.open('w', encoding='utf-8') as f:
+            with path.open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=indent, ensure_ascii=False)
 
             logger.debug(f"JSON data saved to {path}")
@@ -200,13 +207,11 @@ class ConfigurationManager:
                 f"Failed to save JSON to {path}: {e}",
                 error_code="FILE_WRITE_ERROR",
                 file_path=str(path),
-                error=str(e)
+                error=str(e),
             ) from e
 
     def load_config_with_model(
-        self,
-        file_path: PathLike,
-        model_class: type[BaseModel]
+        self, file_path: PathLike, model_class: type[BaseModel]
     ) -> BaseModel:
         """
         Load and validate configuration using a Pydantic model.
@@ -231,7 +236,7 @@ class ConfigurationManager:
                 f"Invalid configuration in {file_path}: {e}",
                 error_code="INVALID_CONFIGURATION",
                 file_path=str(file_path),
-                validation_errors=e.errors()
+                validation_errors=e.errors(),
             ) from e
 
 
@@ -249,7 +254,7 @@ class SystemInfo:
             "python_version": platform.python_version(),
             "platform": platform.platform(),
             "release": platform.release(),
-            "version": platform.version()
+            "version": platform.version(),
         }
 
     @staticmethod
@@ -262,11 +267,12 @@ class SystemInfo:
         """Get basic memory information (if available)."""
         try:
             import psutil
+
             memory = psutil.virtual_memory()
             return {
                 "total": memory.total,
                 "available": memory.available,
-                "percent_used": memory.percent
+                "percent_used": memory.percent,
             }
         except ImportError:
             logger.debug("psutil not available, memory info unavailable")
@@ -304,14 +310,19 @@ class SystemInfo:
     def get_environment_info() -> Dict[str, str]:
         """Get relevant environment variables."""
         relevant_vars = [
-            'PATH', 'CC', 'CXX', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS',
-            'PKG_CONFIG_PATH', 'CMAKE_PREFIX_PATH', 'MSVC_VERSION'
+            "PATH",
+            "CC",
+            "CXX",
+            "CFLAGS",
+            "CXXFLAGS",
+            "LDFLAGS",
+            "PKG_CONFIG_PATH",
+            "CMAKE_PREFIX_PATH",
+            "MSVC_VERSION",
         ]
 
         return {
-            var: os.environ.get(var, "")
-            for var in relevant_vars
-            if var in os.environ
+            var: os.environ.get(var, "") for var in relevant_vars if var in os.environ
         }
 
 
@@ -365,11 +376,7 @@ class FileManager:
         return dir_path
 
     @staticmethod
-    def safe_copy(
-        src: PathLike,
-        dst: PathLike,
-        preserve_metadata: bool = True
-    ) -> None:
+    def safe_copy(src: PathLike, dst: PathLike, preserve_metadata: bool = True) -> None:
         """
         Safely copy a file with error handling.
 
@@ -385,7 +392,7 @@ class FileManager:
             raise FileOperationError(
                 f"Source file does not exist: {src_path}",
                 error_code="SOURCE_NOT_FOUND",
-                source=str(src_path)
+                source=str(src_path),
             )
 
         try:
@@ -404,7 +411,7 @@ class FileManager:
                 error_code="COPY_FAILED",
                 source=str(src_path),
                 destination=str(dst_path),
-                os_error=str(e)
+                os_error=str(e),
             ) from e
 
     @staticmethod
@@ -432,9 +439,9 @@ class FileManager:
             "is_symlink": file_path.is_symlink(),
             "size": stat.st_size,
             "modified_time": stat.st_mtime,
-            "created_time": getattr(stat, 'st_birthtime', stat.st_ctime),
+            "created_time": getattr(stat, "st_birthtime", stat.st_ctime),
             "permissions": oct(stat.st_mode)[-3:],
-            "is_executable": os.access(file_path, os.X_OK)
+            "is_executable": os.access(file_path, os.X_OK),
         }
 
 
@@ -447,7 +454,7 @@ class ProcessManager:
         timeout: Optional[float] = None,
         cwd: Optional[PathLike] = None,
         env: Optional[Dict[str, str]] = None,
-        input_data: Optional[bytes] = None
+        input_data: Optional[bytes] = None,
     ) -> CommandResult:
         """
         Run a command asynchronously with enhanced error handling.
@@ -469,8 +476,8 @@ class ProcessManager:
             extra={
                 "command": command,
                 "timeout": timeout,
-                "cwd": str(cwd) if cwd else None
-            }
+                "cwd": str(cwd) if cwd else None,
+            },
         )
 
         try:
@@ -486,14 +493,13 @@ class ProcessManager:
                 stderr=asyncio.subprocess.PIPE,
                 stdin=asyncio.subprocess.PIPE if input_data else None,
                 cwd=cwd,
-                env=final_env
+                env=final_env,
             )
 
             # Execute with timeout
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(input=input_data),
-                    timeout=timeout
+                    process.communicate(input=input_data), timeout=timeout
                 )
             except asyncio.TimeoutError:
                 process.kill()
@@ -505,7 +511,7 @@ class ProcessManager:
                     stderr=f"Command timed out after {timeout}s",
                     return_code=-1,
                     command=command,
-                    execution_time=execution_time
+                    execution_time=execution_time,
                 )
 
             execution_time = time.time() - start_time
@@ -513,23 +519,19 @@ class ProcessManager:
 
             result = CommandResult(
                 success=success,
-                stdout=stdout.decode('utf-8', errors='replace').strip(),
-                stderr=stderr.decode('utf-8', errors='replace').strip(),
+                stdout=stdout.decode("utf-8", errors="replace").strip(),
+                stderr=stderr.decode("utf-8", errors="replace").strip(),
                 return_code=process.returncode or 0,
                 command=command,
-                execution_time=execution_time
+                execution_time=execution_time,
             )
 
             if success:
-                logger.debug(
-                    f"Command completed successfully in {execution_time:.2f}s")
+                logger.debug(f"Command completed successfully in {execution_time:.2f}s")
             else:
                 logger.error(
                     f"Command failed with code {result.return_code} in {execution_time:.2f}s",
-                    extra={
-                        "command": ' '.join(command),
-                        "stderr": result.stderr
-                    }
+                    extra={"command": " ".join(command), "stderr": result.stderr},
                 )
 
             return result
@@ -540,7 +542,7 @@ class ProcessManager:
                 stderr=f"Command not found: {command[0]}",
                 return_code=-1,
                 command=command,
-                execution_time=time.time() - start_time
+                execution_time=time.time() - start_time,
             )
         except Exception as e:
             return CommandResult(
@@ -548,7 +550,7 @@ class ProcessManager:
                 stderr=f"Unexpected error: {e}",
                 return_code=-1,
                 command=command,
-                execution_time=time.time() - start_time
+                execution_time=time.time() - start_time,
             )
 
     @staticmethod
@@ -557,7 +559,7 @@ class ProcessManager:
         timeout: Optional[float] = None,
         cwd: Optional[PathLike] = None,
         env: Optional[Dict[str, str]] = None,
-        input_data: Optional[bytes] = None
+        input_data: Optional[bytes] = None,
     ) -> CommandResult:
         """
         Run a command synchronously.
@@ -591,7 +593,7 @@ class ProcessManager:
                 timeout=timeout,
                 cwd=cwd,
                 env=final_env,
-                text=False  # Keep as bytes for proper encoding handling
+                text=False,  # Keep as bytes for proper encoding handling
             )
 
             execution_time = time.time() - start_time
@@ -599,23 +601,19 @@ class ProcessManager:
 
             cmd_result = CommandResult(
                 success=success,
-                stdout=result.stdout.decode('utf-8', errors='replace').strip(),
-                stderr=result.stderr.decode('utf-8', errors='replace').strip(),
+                stdout=result.stdout.decode("utf-8", errors="replace").strip(),
+                stderr=result.stderr.decode("utf-8", errors="replace").strip(),
                 return_code=result.returncode,
                 command=command,
-                execution_time=execution_time
+                execution_time=execution_time,
             )
 
             if success:
-                logger.debug(
-                    f"Command completed successfully in {execution_time:.2f}s")
+                logger.debug(f"Command completed successfully in {execution_time:.2f}s")
             else:
                 logger.error(
                     f"Command failed with code {cmd_result.return_code} in {execution_time:.2f}s",
-                    extra={
-                        "command": ' '.join(command),
-                        "stderr": cmd_result.stderr
-                    }
+                    extra={"command": " ".join(command), "stderr": cmd_result.stderr},
                 )
 
             return cmd_result
@@ -626,7 +624,7 @@ class ProcessManager:
                 stderr=f"Command timed out after {timeout}s",
                 return_code=-1,
                 command=command,
-                execution_time=time.time() - start_time
+                execution_time=time.time() - start_time,
             )
         except FileNotFoundError:
             return CommandResult(
@@ -634,7 +632,7 @@ class ProcessManager:
                 stderr=f"Command not found: {command[0]}",
                 return_code=-1,
                 command=command,
-                execution_time=time.time() - start_time
+                execution_time=time.time() - start_time,
             )
         except Exception as e:
             return CommandResult(
@@ -642,7 +640,7 @@ class ProcessManager:
                 stderr=f"Unexpected error: {e}",
                 return_code=-1,
                 command=command,
-                execution_time=time.time() - start_time
+                execution_time=time.time() - start_time,
             )
 
 
@@ -653,11 +651,7 @@ def load_json(file_path: PathLike) -> Dict[str, Any]:
     return config_manager.load_json(file_path)
 
 
-def save_json(
-    file_path: PathLike,
-    data: Dict[str, Any],
-    indent: int = 2
-) -> None:
+def save_json(file_path: PathLike, data: Dict[str, Any], indent: int = 2) -> None:
     """Save JSON file using the default configuration manager."""
     config_manager = ConfigurationManager()
     config_manager.save_json(file_path, data, indent)

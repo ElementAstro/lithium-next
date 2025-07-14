@@ -20,8 +20,11 @@ import aiofiles
 from loguru import logger
 
 from .core_types import (
-    CompilationResult, CompileOptions, LinkOptions,
-    CppVersion, PathLike
+    CompilationResult,
+    CompileOptions,
+    LinkOptions,
+    CppVersion,
+    PathLike,
 )
 from .compiler_manager import CompilerManager
 from .compiler import EnhancedCompiler as Compiler
@@ -31,6 +34,7 @@ from .utils import FileManager, ProcessManager
 @dataclass
 class BuildCacheEntry:
     """Represents a cached build entry."""
+
     file_hash: str
     dependencies: Set[str] = field(default_factory=set)
     object_file: Optional[str] = None
@@ -41,7 +45,7 @@ class BuildCacheEntry:
             "file_hash": self.file_hash,
             "dependencies": list(self.dependencies),
             "object_file": self.object_file,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
     @classmethod
@@ -50,13 +54,14 @@ class BuildCacheEntry:
             file_hash=data["file_hash"],
             dependencies=set(data.get("dependencies", [])),
             object_file=data.get("object_file"),
-            timestamp=data.get("timestamp", time.time())
+            timestamp=data.get("timestamp", time.time()),
         )
 
 
 @dataclass
 class BuildMetrics:
     """Build performance metrics."""
+
     total_files: int = 0
     compiled_files: int = 0
     cached_files: int = 0
@@ -73,7 +78,7 @@ class BuildMetrics:
             "total_time": self.total_time,
             "compile_time": self.compile_time,
             "link_time": self.link_time,
-            "cache_hit_rate": self.cache_hit_rate
+            "cache_hit_rate": self.cache_hit_rate,
         }
 
 
@@ -96,7 +101,7 @@ class BuildManager:
         build_dir: Optional[PathLike] = None,
         parallel: bool = True,
         max_workers: Optional[int] = None,
-        cache_enabled: bool = True
+        cache_enabled: bool = True,
     ) -> None:
         """Initialize the build manager."""
         self.compiler_manager = compiler_manager or CompilerManager()
@@ -133,7 +138,7 @@ class BuildManager:
         compile_options: Optional[CompileOptions] = None,
         link_options: Optional[LinkOptions] = None,
         incremental: bool = True,
-        force_rebuild: bool = False
+        force_rebuild: bool = False,
     ) -> CompilationResult:
         """
         Build source files asynchronously.
@@ -167,8 +172,8 @@ class BuildManager:
                 "source_count": len(source_paths),
                 "output_file": str(output_path),
                 "cpp_version": cpp_version.value,
-                "incremental": incremental
-            }
+                "incremental": incremental,
+            },
         )
 
         try:
@@ -185,8 +190,11 @@ class BuildManager:
 
             # Determine what needs to be compiled
             compilation_plan = await self._create_compilation_plan(
-                source_paths, compiler, cpp_version, obj_dir,
-                incremental and not force_rebuild
+                source_paths,
+                compiler,
+                cpp_version,
+                obj_dir,
+                incremental and not force_rebuild,
             )
 
             metrics.total_files = len(source_paths)
@@ -202,13 +210,17 @@ class BuildManager:
                     compile_results = await self._compile_parallel_async(
                         compilation_plan.to_compile,
                         compilation_plan.object_files,
-                        compiler, cpp_version, compile_options
+                        compiler,
+                        cpp_version,
+                        compile_options,
                     )
                 else:
                     compile_results = await self._compile_sequential_async(
                         compilation_plan.to_compile,
                         compilation_plan.object_files,
-                        compiler, cpp_version, compile_options
+                        compiler,
+                        cpp_version,
+                        compile_options,
                     )
 
                 # Check for compilation errors
@@ -238,7 +250,7 @@ class BuildManager:
                     success=False,
                     errors=link_result.errors,
                     warnings=link_result.warnings,
-                    duration_ms=(time.time() - start_time) * 1000
+                    duration_ms=(time.time() - start_time) * 1000,
                 )
 
             # Update cache
@@ -248,7 +260,11 @@ class BuildManager:
 
             # Calculate metrics
             metrics.total_time = time.time() - start_time
-            metrics.cache_hit_rate = metrics.cached_files / metrics.total_files if metrics.total_files > 0 else 0.0
+            metrics.cache_hit_rate = (
+                metrics.cached_files / metrics.total_files
+                if metrics.total_files > 0
+                else 0.0
+            )
 
             # Aggregate warnings
             all_warnings = []
@@ -262,8 +278,8 @@ class BuildManager:
                     "compiled": metrics.compiled_files,
                     "cached": metrics.cached_files,
                     "cache_hit_rate": f"{metrics.cache_hit_rate:.1%}",
-                    "metrics": metrics.to_dict()
-                }
+                    "metrics": metrics.to_dict(),
+                },
             )
 
             return CompilationResult(
@@ -271,16 +287,15 @@ class BuildManager:
                 output_file=output_path,
                 duration_ms=metrics.total_time * 1000,
                 warnings=all_warnings,
-                artifacts=[output_path] + list(compilation_plan.all_objects.values()) # Return Path objects
+                artifacts=[output_path]
+                + list(compilation_plan.all_objects.values()),  # Return Path objects
             )
 
         except Exception as e:
             duration = (time.time() - start_time) * 1000.0
             logger.error(f"Build failed with exception: {e}")
             return CompilationResult(
-                success=False,
-                duration_ms=duration,
-                errors=[f"Build exception: {e}"]
+                success=False, duration_ms=duration, errors=[f"Build exception: {e}"]
             )
 
     def build(
@@ -292,19 +307,26 @@ class BuildManager:
         compile_options: Optional[CompileOptions] = None,
         link_options: Optional[LinkOptions] = None,
         incremental: bool = True,
-        force_rebuild: bool = False
+        force_rebuild: bool = False,
     ) -> CompilationResult:
         """Build source files synchronously."""
         return asyncio.run(
             self.build_async(
-                source_files, output_file, compiler_name, cpp_version,
-                compile_options, link_options, incremental, force_rebuild
+                source_files,
+                output_file,
+                compiler_name,
+                cpp_version,
+                compile_options,
+                link_options,
+                incremental,
+                force_rebuild,
             )
         )
 
     @dataclass
     class CompilationPlan:
         """Plan for what needs to be compiled."""
+
         to_compile: List[Path]
         object_files: Dict[Path, Path]
         all_objects: Dict[Path, Path]
@@ -315,7 +337,7 @@ class BuildManager:
         compiler: Compiler,
         cpp_version: CppVersion,
         obj_dir: Path,
-        incremental: bool
+        incremental: bool,
     ) -> CompilationPlan:
         """Create a plan for what needs to be compiled."""
         to_compile = []
@@ -340,9 +362,7 @@ class BuildManager:
                 object_files[source_file] = obj_file
 
         return self.CompilationPlan(
-            to_compile=to_compile,
-            object_files=object_files,
-            all_objects=all_objects
+            to_compile=to_compile, object_files=object_files, all_objects=all_objects
         )
 
     async def _needs_rebuild_async(self, source_file: Path, obj_file: Path) -> bool:
@@ -363,8 +383,10 @@ class BuildManager:
                     dep_file = Path(dep_path)
                     if dep_file.exists():
                         dep_hash = await self._calculate_file_hash_async(dep_file)
-                        if (dep_path in self.dependency_cache and
-                            self.dependency_cache[dep_path].file_hash != dep_hash):
+                        if (
+                            dep_path in self.dependency_cache
+                            and self.dependency_cache[dep_path].file_hash != dep_hash
+                        ):
                             return True
                 return False
 
@@ -376,7 +398,7 @@ class BuildManager:
         object_files: Dict[Path, Path],
         compiler: Compiler,
         cpp_version: CppVersion,
-        options: CompileOptions
+        options: CompileOptions,
     ) -> List[CompilationResult]:
         """Compile files in parallel asynchronously."""
         logger.debug(f"Starting parallel compilation of {len(source_files)} files")
@@ -390,7 +412,9 @@ class BuildManager:
 
         # Create compilation tasks
         tasks = [
-            asyncio.create_task(compile_single(source_file), name=f"compile_{source_file.name}")
+            asyncio.create_task(
+                compile_single(source_file), name=f"compile_{source_file.name}"
+            )
             for source_file in source_files
         ]
 
@@ -402,10 +426,11 @@ class BuildManager:
         for source_file, result in zip(source_files, results):
             if isinstance(result, Exception):
                 logger.error(f"Compilation task failed for {source_file}: {result}")
-                compile_results.append(CompilationResult(
-                    success=False,
-                    errors=[f"Compilation failed: {result}"]
-                ))
+                compile_results.append(
+                    CompilationResult(
+                        success=False, errors=[f"Compilation failed: {result}"]
+                    )
+                )
             else:
                 compile_results.append(result)
 
@@ -417,7 +442,7 @@ class BuildManager:
         object_files: Dict[Path, Path],
         compiler: Compiler,
         cpp_version: CppVersion,
-        options: CompileOptions
+        options: CompileOptions,
     ) -> List[CompilationResult]:
         """Compile files sequentially asynchronously."""
         logger.debug(f"Starting sequential compilation of {len(source_files)} files")
@@ -452,10 +477,12 @@ class BuildManager:
         dependencies = set()
 
         try:
-            async with aiofiles.open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            async with aiofiles.open(
+                file_path, "r", encoding="utf-8", errors="ignore"
+            ) as f:
                 async for line in f:
                     line = line.strip()
-                    if line.startswith('#include'):
+                    if line.startswith("#include"):
                         match = re.search(r'#include\s+["<](.*?)[">]', line)
                         if match:
                             include_file = match.group(1)
@@ -475,7 +502,7 @@ class BuildManager:
                 cache_entry = BuildCacheEntry(
                     file_hash=file_hash,
                     dependencies=dependencies,
-                    timestamp=time.time()
+                    timestamp=time.time(),
                 )
 
                 self.dependency_cache[str(source_file.resolve())] = cache_entry
@@ -490,11 +517,10 @@ class BuildManager:
 
         try:
             cache_data = {
-                path: entry.to_dict()
-                for path, entry in self.dependency_cache.items()
+                path: entry.to_dict() for path, entry in self.dependency_cache.items()
             }
 
-            async with aiofiles.open(self.cache_file, 'w') as f:
+            async with aiofiles.open(self.cache_file, "w") as f:
                 await f.write(json.dumps(cache_data, indent=2))
 
             logger.debug(f"Saved build cache with {len(cache_data)} entries")
@@ -508,7 +534,7 @@ class BuildManager:
             return
 
         try:
-            with open(self.cache_file, 'r') as f:
+            with open(self.cache_file, "r") as f:
                 cache_data = json.load(f)
 
             self.dependency_cache = {
@@ -516,7 +542,9 @@ class BuildManager:
                 for path, data in cache_data.items()
             }
 
-            logger.debug(f"Loaded build cache with {len(self.dependency_cache)} entries")
+            logger.debug(
+                f"Loaded build cache with {len(self.dependency_cache)} entries"
+            )
 
         except Exception as e:
             logger.warning(f"Failed to load build cache: {e}")
@@ -527,6 +555,7 @@ class BuildManager:
         try:
             if aggressive and self.build_dir.exists():
                 import shutil
+
                 shutil.rmtree(self.build_dir)
                 self.build_dir.mkdir(parents=True, exist_ok=True)
                 logger.info(f"Aggressively cleaned build directory: {self.build_dir}")
@@ -552,5 +581,5 @@ class BuildManager:
             "build_dir": str(self.build_dir),
             "cache_enabled": self.cache_enabled,
             "parallel": self.parallel,
-            "max_workers": self.max_workers
+            "max_workers": self.max_workers,
         }

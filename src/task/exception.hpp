@@ -45,25 +45,25 @@ public:
      */
     TaskException(const std::string& message, TaskErrorSeverity severity = TaskErrorSeverity::Error)
         : msg_(message), severity_(severity), timestamp_(std::chrono::system_clock::now()) {}
-        
+
     /**
      * @brief Get the error message.
      * @return The error message.
      */
     const char* what() const noexcept override { return msg_.c_str(); }
-    
+
     /**
      * @brief Get the error severity.
      * @return The error severity.
      */
     TaskErrorSeverity getSeverity() const noexcept { return severity_; }
-    
+
     /**
      * @brief Get the error timestamp.
      * @return The error timestamp.
      */
     std::chrono::system_clock::time_point getTimestamp() const noexcept { return timestamp_; }
-    
+
     /**
      * @brief Convert severity to string.
      * @return String representation of the severity.
@@ -98,25 +98,25 @@ public:
      * @param taskName The name of the task that timed out.
      * @param timeout The timeout duration.
      */
-    TaskTimeoutException(const std::string& message, 
+    TaskTimeoutException(const std::string& message,
                          const std::string& taskName,
                          std::chrono::seconds timeout)
-        : TaskException(message, TaskErrorSeverity::Error), 
+        : TaskException(message, TaskErrorSeverity::Error),
           taskName_(taskName),
           timeout_(timeout) {}
-          
+
     /**
      * @brief Get the name of the task that timed out.
      * @return The task name.
      */
     const std::string& getTaskName() const noexcept { return taskName_; }
-    
+
     /**
      * @brief Get the timeout duration.
      * @return The timeout duration.
      */
     std::chrono::seconds getTimeout() const noexcept { return timeout_; }
-    
+
 private:
     std::string taskName_;         ///< Name of the task that timed out
     std::chrono::seconds timeout_; ///< The timeout duration
@@ -140,19 +140,19 @@ public:
         : TaskException(message, TaskErrorSeverity::Error),
           paramName_(paramName),
           taskName_(taskName) {}
-          
+
     /**
      * @brief Get the name of the invalid parameter.
      * @return The parameter name.
      */
     const std::string& getParamName() const noexcept { return paramName_; }
-    
+
     /**
      * @brief Get the name of the task with the invalid parameter.
      * @return The task name.
      */
     const std::string& getTaskName() const noexcept { return taskName_; }
-    
+
 private:
     std::string paramName_;  ///< Name of the invalid parameter
     std::string taskName_;   ///< Name of the task with the invalid parameter
@@ -176,19 +176,19 @@ public:
         : TaskException(message, TaskErrorSeverity::Error),
           taskName_(taskName),
           dependencyNames_(dependencyNames) {}
-          
+
     /**
      * @brief Get the name of the task with the dependency error.
      * @return The task name.
      */
     const std::string& getTaskName() const noexcept { return taskName_; }
-    
+
     /**
      * @brief Get the names of the dependencies causing the error.
      * @return The dependency names.
      */
     const std::vector<std::string>& getDependencyNames() const noexcept { return dependencyNames_; }
-    
+
 private:
     std::string taskName_;                     ///< Name of the task with the dependency error
     std::vector<std::string> dependencyNames_; ///< Names of the dependencies causing the error
@@ -212,19 +212,19 @@ public:
         : TaskException(message, TaskErrorSeverity::Error),
           taskName_(taskName),
           errorDetails_(errorDetails) {}
-          
+
     /**
      * @brief Get the name of the task with the execution error.
      * @return The task name.
      */
     const std::string& getTaskName() const noexcept { return taskName_; }
-    
+
     /**
      * @brief Get additional error details.
      * @return The error details.
      */
     const std::string& getErrorDetails() const noexcept { return errorDetails_; }
-    
+
 private:
     std::string taskName_;      ///< Name of the task with the execution error
     std::string errorDetails_;  ///< Additional error details

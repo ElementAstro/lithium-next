@@ -17,16 +17,16 @@ namespace lithium {
 class IDevice {
 public:
     virtual ~IDevice() = default;
-    
+
     // Basic device operations
     virtual bool connect(const std::string& address = "", int timeout = 30000, int retry = 1) = 0;
     virtual bool disconnect() = 0;
     virtual bool isConnected() const = 0;
-    
+
     // Device identification
     virtual std::string getName() const = 0;
     virtual std::string getType() const = 0;
-    
+
     // Status
     virtual bool isHealthy() const { return isConnected(); }
 };

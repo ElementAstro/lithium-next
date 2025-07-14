@@ -27,7 +27,7 @@ namespace lithium::device::ascom::telescope {
 
 /**
  * @brief Modular ASCOM Telescope Controller
- * 
+ *
  * This controller implements the AtomTelescope interface using the modular
  * component architecture, providing a clean separation of concerns and
  * improved maintainability.
@@ -153,7 +153,7 @@ private:
 
     // Helper methods
     void logError(const std::string& operation, const std::string& error) const;
-    bool validateParameters(const std::string& operation, 
+    bool validateParameters(const std::string& operation,
                            std::function<bool()> validator) const;
 };
 

@@ -24,16 +24,16 @@ auto PositionManager::initialize() -> bool {
         if (!syncPositionFromHardware()) {
             return false;
         }
-        
+
         // Initialize position limits
         position_limits_.minPosition = hardware_->getMinPosition();
         position_limits_.maxPosition = hardware_->getMaxPosition();
         position_limits_.enforceHardLimits = true;
         position_limits_.enforceStepLimits = true;
-        
+
         // Reset statistics
         resetPositionStats();
-        
+
         return true;
     } catch (const std::exception& e) {
         return false;
@@ -62,29 +62,29 @@ auto PositionManager::isPositionValid() -> bool {
 
 auto PositionManager::setCurrentPosition(int position) -> bool {
     std::lock_guard<std::mutex> lock(position_mutex_);
-    
+
     if (!isPositionInLimits(position)) {
         return false;
     }
-    
+
     current_position_ = position;
     position_valid_ = true;
-    
+
     updatePositionStats(position);
     notifyPositionChanged(position);
-    
+
     return true;
 }
 
 auto PositionManager::setTargetPosition(int position) -> bool {
     std::lock_guard<std::mutex> lock(position_mutex_);
-    
+
     if (!isPositionInLimits(position)) {
         return false;
     }
-    
+
     target_position_ = position;
-    
+
     return true;
 }
 
@@ -107,25 +107,25 @@ auto PositionManager::getPositionLimits() -> PositionLimits {
 
 auto PositionManager::setPositionLimits(const PositionLimits& limits) -> bool {
     std::lock_guard<std::mutex> lock(position_mutex_);
-    
+
     // Validate limits
     if (limits.minPosition >= limits.maxPosition) {
         return false;
     }
-    
+
     if (limits.maxStepSize <= 0) {
         return false;
     }
-    
+
     position_limits_ = limits;
-    
+
     // Check if current position is still valid
     if (!isPositionInLimits(current_position_)) {
         // Clamp to limits
         current_position_ = std::clamp(current_position_, limits.minPosition, limits.maxPosition);
         notifyPositionChanged(current_position_);
     }
-    
+
     return true;
 }
 
@@ -137,17 +137,17 @@ auto PositionManager::getPositionOffset() -> int {
 auto PositionManager::setPositionOffset(int offset) -> bool {
     std::lock_guard<std::mutex> lock(position_mutex_);
     position_offset_ = offset;
-    
+
     // Recalculate effective position
     int effective_position = current_position_ + offset;
-    
+
     // Validate the effective position is within limits
     if (!isPositionInLimits(effective_position)) {
         return false;
     }
-    
+
     notifyPositionChanged(effective_position);
-    
+
     return true;
 }
 
@@ -193,15 +193,15 @@ auto PositionManager::getPositionHistory() -> std::vector<PositionReading> {
 auto PositionManager::getPositionHistory(std::chrono::seconds duration) -> std::vector<PositionReading> {
     std::lock_guard<std::mutex> lock(history_mutex_);
     std::vector<PositionReading> recent_history;
-    
+
     auto cutoff_time = std::chrono::steady_clock::now() - duration;
-    
+
     for (const auto& reading : position_history_) {
         if (reading.timestamp >= cutoff_time) {
             recent_history.push_back(reading);
         }
     }
-    
+
     return recent_history;
 }
 
@@ -267,18 +267,18 @@ auto PositionManager::isPositionInLimits(int position) -> bool {
     if (!position_limits_.enforceHardLimits) {
         return true;
     }
-    
-    return position >= position_limits_.minPosition && 
+
+    return position >= position_limits_.minPosition &&
            position <= position_limits_.maxPosition;
 }
 
 auto PositionManager::updatePositionStats(int position) -> void {
     std::lock_guard<std::mutex> lock(stats_mutex_);
-    
+
     position_stats_.totalMoves++;
     position_stats_.currentPosition = position;
     position_stats_.lastUpdateTime = std::chrono::steady_clock::now();
-    
+
     // Update min/max positions
     if (position_stats_.totalMoves == 1) {
         position_stats_.minPosition = position;
@@ -287,15 +287,15 @@ auto PositionManager::updatePositionStats(int position) -> void {
         position_stats_.minPosition = std::min(position_stats_.minPosition, position);
         position_stats_.maxPosition = std::max(position_stats_.maxPosition, position);
     }
-    
+
     // Calculate average position
-    position_stats_.averagePosition = 
-        (position_stats_.averagePosition * (position_stats_.totalMoves - 1) + position) / 
+    position_stats_.averagePosition =
+        (position_stats_.averagePosition * (position_stats_.totalMoves - 1) + position) /
         position_stats_.totalMoves;
-    
+
     // Update position range
     position_stats_.positionRange = position_stats_.maxPosition - position_stats_.minPosition;
-    
+
     // Calculate drift from target
     if (target_position_ != 0) {
         position_stats_.drift = position - target_position_;
@@ -304,7 +304,7 @@ auto PositionManager::updatePositionStats(int position) -> void {
 
 auto PositionManager::addPositionReading(int position, bool isTarget) -> void {
     std::lock_guard<std::mutex> lock(history_mutex_);
-    
+
     PositionReading reading{
         .timestamp = std::chrono::steady_clock::now(),
         .position = position,
@@ -312,9 +312,9 @@ auto PositionManager::addPositionReading(int position, bool isTarget) -> void {
         .accuracy = calculateAccuracy(position),
         .drift = position - target_position_
     };
-    
+
     position_history_.push_back(reading);
-    
+
     // Limit history size
     if (position_history_.size() > MAX_HISTORY_SIZE) {
         position_history_.erase(position_history_.begin());
@@ -325,10 +325,10 @@ auto PositionManager::calculateAccuracy(int position) -> double {
     if (target_position_ == 0) {
         return 100.0; // Perfect accuracy if no target set
     }
-    
+
     int error = std::abs(position - target_position_);
     double accuracy = 100.0 - (static_cast<double>(error) / std::max(1, target_position_)) * 100.0;
-    
+
     return std::max(0.0, accuracy);
 }
 
@@ -340,7 +340,7 @@ auto PositionManager::notifyPositionChanged(int position) -> void {
             // Log error but continue
         }
     }
-    
+
     // Add to history
     addPositionReading(position, false);
 }
@@ -366,7 +366,7 @@ auto PositionManager::notifyPositionAlert(int position, const std::string& messa
 }
 
 auto PositionManager::validatePositionLimits(const PositionLimits& limits) -> bool {
-    return limits.minPosition < limits.maxPosition && 
+    return limits.minPosition < limits.maxPosition &&
            limits.maxStepSize > 0 &&
            limits.minStepSize >= 0;
 }
@@ -375,19 +375,19 @@ auto PositionManager::enforcePositionLimits(int& position) -> bool {
     if (!position_limits_.enforceHardLimits) {
         return true;
     }
-    
+
     if (position < position_limits_.minPosition) {
         position = position_limits_.minPosition;
         notifyLimitReached(position, "minimum");
         return false;
     }
-    
+
     if (position > position_limits_.maxPosition) {
         position = position_limits_.maxPosition;
         notifyLimitReached(position, "maximum");
         return false;
     }
-    
+
     return true;
 }
 

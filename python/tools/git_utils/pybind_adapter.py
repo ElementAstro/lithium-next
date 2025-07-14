@@ -9,6 +9,7 @@ from loguru import logger
 from .git_utils import GitUtils
 from .models import StatusInfo, AheadBehindInfo
 
+
 class GitUtilsPyBindAdapter:
     """
     Adapter class to expose GitUtils functionality to C++ via pybind11.
@@ -79,7 +80,7 @@ class GitUtilsPyBindAdapter:
                     branch=branch,
                     is_clean=not bool(result.output),
                     ahead_behind=ahead_behind,
-                    files=files
+                    files=files,
                 )
                 return json.dumps(status_info.__dict__, default=lambda o: o.__dict__)
             else:

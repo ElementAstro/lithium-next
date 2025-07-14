@@ -18,7 +18,7 @@ from loguru import logger
 from .pacman_types import PackageName, CacheConfig
 from .models import PackageInfo
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Serializable(Protocol):
@@ -58,18 +58,18 @@ class CacheEntry(Generic[T]):
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         # Handle serialization based on value type
-        if hasattr(self.value, 'to_dict') and callable(getattr(self.value, 'to_dict')):
+        if hasattr(self.value, "to_dict") and callable(getattr(self.value, "to_dict")):
             value_data = self.value.to_dict()  # type: ignore
         else:
             value_data = self.value
 
         return {
-            'key': self.key,
-            'value': value_data,
-            'created_at': self.created_at,
-            'ttl': self.ttl,
-            'access_count': self.access_count,
-            'last_accessed': self.last_accessed
+            "key": self.key,
+            "value": value_data,
+            "created_at": self.created_at,
+            "ttl": self.ttl,
+            "access_count": self.access_count,
+            "last_accessed": self.last_accessed,
         }
 
 
@@ -144,8 +144,7 @@ class LRUCache(Generic[T]):
         """Remove expired entries and return count removed."""
         with self._lock:
             expired_keys = [
-                key for key, entry in self._cache.items()
-                if entry.is_expired
+                key for key, entry in self._cache.items() if entry.is_expired
             ]
 
             for key in expired_keys:
@@ -168,12 +167,12 @@ class LRUCache(Generic[T]):
     def stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         return {
-            'size': self.size,
-            'max_size': self.max_size,
-            'hits': self._hits,
-            'misses': self._misses,
-            'hit_rate': self.hit_rate,
-            'total_requests': self._hits + self._misses
+            "size": self.size,
+            "max_size": self.max_size,
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": self.hit_rate,
+            "total_requests": self._hits + self._misses,
         }
 
 
@@ -184,19 +183,21 @@ class PackageCache:
 
     def __init__(self, config: CacheConfig | None = None):
         self.config = config or {}
-        self.max_size = self.config.get('max_size', 10000)
-        self.ttl = self.config.get('ttl_seconds', 3600)
-        self.use_disk_cache = self.config.get('use_disk_cache', True)
-        self.cache_dir = Path(self.config.get(
-            'cache_directory', Path.home() / '.cache' / 'pacman_manager'))
+        self.max_size = self.config.get("max_size", 10000)
+        self.ttl = self.config.get("ttl_seconds", 3600)
+        self.use_disk_cache = self.config.get("use_disk_cache", True)
+        self.cache_dir = Path(
+            self.config.get(
+                "cache_directory", Path.home() / ".cache" / "pacman_manager"
+            )
+        )
 
         # Create cache directory
         if self.use_disk_cache:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # In-memory cache
-        self._memory_cache: LRUCache[PackageInfo] = LRUCache(
-            self.max_size, self.ttl)
+        self._memory_cache: LRUCache[PackageInfo] = LRUCache(self.max_size, self.ttl)
         self._lock = threading.RLock()
 
         # Load from disk if enabled
@@ -285,15 +286,15 @@ class PackageCache:
         if self.use_disk_cache:
             cache_files = list(self.cache_dir.glob("*.cache"))
             disk_stats = {
-                'disk_files': len(cache_files),
-                'disk_size_bytes': sum(f.stat().st_size for f in cache_files)
+                "disk_files": len(cache_files),
+                "disk_size_bytes": sum(f.stat().st_size for f in cache_files),
             }
 
         return {
             **memory_stats,
             **disk_stats,
-            'ttl_seconds': self.ttl,
-            'use_disk_cache': self.use_disk_cache
+            "ttl_seconds": self.ttl,
+            "use_disk_cache": self.use_disk_cache,
         }
 
     def _get_from_disk(self, key: str) -> Optional[PackageInfo]:
@@ -304,19 +305,19 @@ class PackageCache:
             return None
 
         try:
-            with open(cache_file, 'rb') as f:
+            with open(cache_file, "rb") as f:
                 entry_data = pickle.load(f)
 
             # Check if expired
-            if time.time() - entry_data['created_at'] > entry_data['ttl']:
+            if time.time() - entry_data["created_at"] > entry_data["ttl"]:
                 cache_file.unlink()
                 return None
 
             # Reconstruct PackageInfo
-            if isinstance(entry_data['value'], dict):
-                return PackageInfo.from_dict(entry_data['value'])
+            if isinstance(entry_data["value"], dict):
+                return PackageInfo.from_dict(entry_data["value"])
 
-            return entry_data['value']
+            return entry_data["value"]
 
         except (OSError, pickle.UnpicklingError, KeyError) as e:
             logger.warning(f"Failed to load cache file {cache_file}: {e}")
@@ -331,14 +332,14 @@ class PackageCache:
         cache_file = self.cache_dir / f"{self._safe_filename(key)}.cache"
 
         entry_data = {
-            'key': key,
-            'value': value.to_dict(),
-            'created_at': time.time(),
-            'ttl': self.ttl
+            "key": key,
+            "value": value.to_dict(),
+            "created_at": time.time(),
+            "ttl": self.ttl,
         }
 
         try:
-            with open(cache_file, 'wb') as f:
+            with open(cache_file, "wb") as f:
                 pickle.dump(entry_data, f)
         except OSError as e:
             logger.warning(f"Failed to write cache file {cache_file}: {e}")
@@ -360,10 +361,10 @@ class PackageCache:
 
         for cache_file in self.cache_dir.glob("*.cache"):
             try:
-                with open(cache_file, 'rb') as f:
+                with open(cache_file, "rb") as f:
                     entry_data = pickle.load(f)
 
-                if current_time - entry_data['created_at'] > entry_data['ttl']:
+                if current_time - entry_data["created_at"] > entry_data["ttl"]:
                     cache_file.unlink()
                     cleaned_count += 1
 
@@ -385,15 +386,14 @@ class PackageCache:
         loaded_count = 0
         for cache_file in self.cache_dir.glob("*.cache"):
             try:
-                with open(cache_file, 'rb') as f:
+                with open(cache_file, "rb") as f:
                     entry_data = pickle.load(f)
 
                 # Check if not expired
-                if time.time() - entry_data['created_at'] <= entry_data['ttl']:
-                    if isinstance(entry_data['value'], dict):
-                        package_info = PackageInfo.from_dict(
-                            entry_data['value'])
-                        self._memory_cache.put(entry_data['key'], package_info)
+                if time.time() - entry_data["created_at"] <= entry_data["ttl"]:
+                    if isinstance(entry_data["value"], dict):
+                        package_info = PackageInfo.from_dict(entry_data["value"])
+                        self._memory_cache.put(entry_data["key"], package_info)
                         loaded_count += 1
                 else:
                     # Remove expired file
@@ -412,7 +412,7 @@ class PackageCache:
     def _safe_filename(self, key: str) -> str:
         """Convert cache key to safe filename."""
         # Replace problematic characters
-        safe_key = key.replace(':', '_').replace('/', '_').replace('\\', '_')
+        safe_key = key.replace(":", "_").replace("/", "_").replace("\\", "_")
         # Limit length
         if len(safe_key) > 100:
             safe_key = safe_key[:100]

@@ -36,29 +36,61 @@ from pathlib import Path
 
 # Core exceptions with enhanced context
 from .exceptions import (
-    GitException, GitCommandError, GitRepositoryNotFound,
-    GitBranchError, GitMergeConflict, GitRebaseConflictError, 
-    GitCherryPickError, GitRemoteError, GitTagError, GitStashError,
-    GitConfigError, GitErrorContext, create_git_error_context
+    GitException,
+    GitCommandError,
+    GitRepositoryNotFound,
+    GitBranchError,
+    GitMergeConflict,
+    GitRebaseConflictError,
+    GitCherryPickError,
+    GitRemoteError,
+    GitTagError,
+    GitStashError,
+    GitConfigError,
+    GitErrorContext,
+    create_git_error_context,
 )
 
 # Enhanced data models with modern Python features
 from .models import (
-    GitResult, GitOutputFormat, CommitInfo, StatusInfo, FileStatus, 
-    AheadBehindInfo, BranchInfo, RemoteInfo, TagInfo,
-    GitStatusCode, GitOperation, BranchType, ResetMode, MergeStrategy,
-    CommitSHA, BranchName, TagName, RemoteName, FilePath, CommitMessage,
-    GitCommandResult
+    GitResult,
+    GitOutputFormat,
+    CommitInfo,
+    StatusInfo,
+    FileStatus,
+    AheadBehindInfo,
+    BranchInfo,
+    RemoteInfo,
+    TagInfo,
+    GitStatusCode,
+    GitOperation,
+    BranchType,
+    ResetMode,
+    MergeStrategy,
+    CommitSHA,
+    BranchName,
+    TagName,
+    RemoteName,
+    FilePath,
+    CommitMessage,
+    GitCommandResult,
 )
 
 # Enhanced utilities with performance optimizations
 from .utils import (
-    change_directory, async_change_directory, ensure_path, 
-    validate_repository, is_git_repository,
-    performance_monitor, async_performance_monitor,
-    retry_on_failure, async_retry_on_failure,
-    validate_git_reference, sanitize_commit_message,
-    get_git_version, GitRepositoryProtocol
+    change_directory,
+    async_change_directory,
+    ensure_path,
+    validate_repository,
+    is_git_repository,
+    performance_monitor,
+    async_performance_monitor,
+    retry_on_failure,
+    async_retry_on_failure,
+    validate_git_reference,
+    sanitize_commit_message,
+    get_git_version,
+    GitRepositoryProtocol,
 )
 
 # Enhanced main Git utilities class
@@ -67,6 +99,7 @@ from .git_utils import GitUtils, GitConfig
 # PyBind adapter for C++ integration
 try:
     from .pybind_adapter import GitUtilsPyBindAdapter
+
     PYBIND_AVAILABLE = True
 except ImportError:
     PYBIND_AVAILABLE = False
@@ -78,72 +111,66 @@ __license__ = "GPL-3.0-or-later"
 
 __all__ = [
     # Core classes
-    'GitUtils',
-    'GitConfig',
-    
+    "GitUtils",
+    "GitConfig",
     # PyBind adapter (if available)
-    'GitUtilsPyBindAdapter',
-    'PYBIND_AVAILABLE',
-    
+    "GitUtilsPyBindAdapter",
+    "PYBIND_AVAILABLE",
     # Enhanced exceptions
-    'GitException',
-    'GitCommandError',
-    'GitRepositoryNotFound',
-    'GitBranchError',
-    'GitMergeConflict',
-    'GitRebaseConflictError',
-    'GitCherryPickError',
-    'GitRemoteError',
-    'GitTagError',
-    'GitStashError',
-    'GitConfigError',
-    'GitErrorContext',
-    'create_git_error_context',
-    
+    "GitException",
+    "GitCommandError",
+    "GitRepositoryNotFound",
+    "GitBranchError",
+    "GitMergeConflict",
+    "GitRebaseConflictError",
+    "GitCherryPickError",
+    "GitRemoteError",
+    "GitTagError",
+    "GitStashError",
+    "GitConfigError",
+    "GitErrorContext",
+    "create_git_error_context",
     # Enhanced data models
-    'GitResult',
-    'GitOutputFormat',
-    'CommitInfo',
-    'StatusInfo',
-    'FileStatus',
-    'AheadBehindInfo',
-    'BranchInfo',
-    'RemoteInfo',
-    'TagInfo',
-    'GitStatusCode',
-    'GitOperation',
-    'BranchType',
-    'ResetMode',
-    'MergeStrategy',
-    'GitCommandResult',
-    
+    "GitResult",
+    "GitOutputFormat",
+    "CommitInfo",
+    "StatusInfo",
+    "FileStatus",
+    "AheadBehindInfo",
+    "BranchInfo",
+    "RemoteInfo",
+    "TagInfo",
+    "GitStatusCode",
+    "GitOperation",
+    "BranchType",
+    "ResetMode",
+    "MergeStrategy",
+    "GitCommandResult",
     # Type aliases
-    'CommitSHA',
-    'BranchName',
-    'TagName',
-    'RemoteName',
-    'FilePath',
-    'CommitMessage',
-    
+    "CommitSHA",
+    "BranchName",
+    "TagName",
+    "RemoteName",
+    "FilePath",
+    "CommitMessage",
     # Enhanced utilities
-    'change_directory',
-    'async_change_directory',
-    'ensure_path',
-    'validate_repository',
-    'is_git_repository',
-    'performance_monitor',
-    'async_performance_monitor',
-    'retry_on_failure',
-    'async_retry_on_failure',
-    'validate_git_reference',
-    'sanitize_commit_message',
-    'get_git_version',
-    'GitRepositoryProtocol',
-    
+    "change_directory",
+    "async_change_directory",
+    "ensure_path",
+    "validate_repository",
+    "is_git_repository",
+    "performance_monitor",
+    "async_performance_monitor",
+    "retry_on_failure",
+    "async_retry_on_failure",
+    "validate_git_reference",
+    "sanitize_commit_message",
+    "get_git_version",
+    "GitRepositoryProtocol",
     # Metadata
-    '__version__',
-    '__author__',
-    '__license__',
+    "__version__",
+    "__author__",
+    "__license__",
 ]
 
 
@@ -151,30 +178,31 @@ __all__ = [
 def quick_status(repo_dir: str = ".") -> StatusInfo:
     """
     Quick status check with enhanced information.
-    
+
     Args:
         repo_dir: Repository directory path.
-        
+
     Returns:
         StatusInfo: Enhanced status information.
     """
     with GitUtils(repo_dir) as git:
         result = git.view_status(porcelain=True)
-        return result.data if result.data else StatusInfo(
-            branch=BranchName("unknown"),
-            is_clean=True
+        return (
+            result.data
+            if result.data
+            else StatusInfo(branch=BranchName("unknown"), is_clean=True)
         )
 
 
 def quick_clone(repo_url: str, target_dir: str, **options) -> bool:
     """
     Quick repository cloning with sensible defaults.
-    
+
     Args:
         repo_url: Repository URL to clone.
         target_dir: Target directory for cloning.
         **options: Additional clone options.
-        
+
     Returns:
         bool: True if clone was successful.
     """
@@ -189,12 +217,12 @@ def quick_clone(repo_url: str, target_dir: str, **options) -> bool:
 async def async_quick_clone(repo_url: str, target_dir: str, **options) -> bool:
     """
     Quick asynchronous repository cloning.
-    
+
     Args:
         repo_url: Repository URL to clone.
         target_dir: Target directory for cloning.
         **options: Additional clone options.
-        
+
     Returns:
         bool: True if clone was successful.
     """
@@ -209,10 +237,10 @@ async def async_quick_clone(repo_url: str, target_dir: str, **options) -> bool:
 def is_git_repo(path: str = ".") -> bool:
     """
     Quick check if a directory is a Git repository.
-    
+
     Args:
         path: Directory path to check.
-        
+
     Returns:
         bool: True if the directory is a Git repository.
     """

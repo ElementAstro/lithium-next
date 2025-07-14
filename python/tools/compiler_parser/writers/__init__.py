@@ -10,10 +10,4 @@ from .csv_writer import CsvWriter
 from .xml_writer import XmlWriter
 from .factory import WriterFactory
 
-__all__ = [
-    'OutputWriter',
-    'JsonWriter',
-    'CsvWriter',
-    'XmlWriter',
-    'WriterFactory'
-]
+__all__ = ["OutputWriter", "JsonWriter", "CsvWriter", "XmlWriter", "WriterFactory"]

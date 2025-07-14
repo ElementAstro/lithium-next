@@ -101,10 +101,11 @@ class CertificateAPI:
         try:
             p_cert_path = Path(cert_path)
             p_key_path = Path(key_path)
-            p_export_path = Path(export_path) if export_path else p_cert_path.with_suffix(".pfx")
+            p_export_path = (
+                Path(export_path) if export_path else p_cert_path.with_suffix(".pfx")
+            )
 
             export_to_pkcs12_file(p_cert_path, p_key_path, password, p_export_path)
             return {"pfx_path": str(p_export_path), "success": True}
         except Exception as e:
             return self._handle_exception(e, "PKCS#12 export")
-

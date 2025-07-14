@@ -20,7 +20,13 @@ import datetime
 import contextlib
 import urllib.parse
 
-from common import DependencyError, PackageOperationError, VersionError, OutputFormat, PackageInfo
+from common import (
+    DependencyError,
+    PackageOperationError,
+    VersionError,
+    OutputFormat,
+    PackageInfo,
+)
 
 # Third-party dependencies - handled with dynamic imports to make them optional
 OPTIONAL_DEPENDENCIES = {
@@ -31,6 +37,7 @@ OPTIONAL_DEPENDENCIES = {
     "pipdeptree": "Dependency tree analysis",
     "virtualenv": "Virtual environment management",
 }
+
 
 class PackageManager:
     """
@@ -175,10 +182,16 @@ class PackageManager:
                     error_msg += f": {result.stderr.strip()}"
                 raise PackageOperationError(error_msg)
 
-            stdout = result.stdout.decode('utf-8').strip() if hasattr(
-                result, 'stdout') and result.stdout else ""
-            stderr = result.stderr.decode('utf-8').strip() if hasattr(
-                result, 'stderr') and result.stderr else ""
+            stdout = (
+                result.stdout.decode("utf-8").strip()
+                if hasattr(result, "stdout") and result.stdout
+                else ""
+            )
+            stderr = (
+                result.stderr.decode("utf-8").strip()
+                if hasattr(result, "stderr") and result.stderr
+                else ""
+            )
 
             return result.returncode, stdout, stderr
 
@@ -324,7 +337,7 @@ class PackageManager:
             required_by = []
 
             for line in output.splitlines():
-                if line.startswith('Required-by:'):
+                if line.startswith("Required-by:"):
                     required_by_section = True
                     value = line[len("Required-by:") :].strip()
                     if value and value != "none":
@@ -1038,6 +1051,7 @@ class PackageManager:
 
         return validation
 
+
 def export_package_manager():
     """
     Export functions for use with pybind11 for C++ integration.
@@ -1047,15 +1061,22 @@ def export_package_manager():
     """
     try:
         import pybind11
-        from common import OutputFormat, PackageInfo, DependencyError, PackageOperationError, VersionError
+        from common import (
+            OutputFormat,
+            PackageInfo,
+            DependencyError,
+            PackageOperationError,
+            VersionError,
+        )
+
         # When the C++ code includes this module, the export will be available
         return {
-            'PackageManager': PackageManager,
-            'OutputFormat': OutputFormat,
-            'PackageInfo': PackageInfo,
-            'DependencyError': DependencyError,
-            'PackageOperationError': PackageOperationError,
-            'VersionError': VersionError
+            "PackageManager": PackageManager,
+            "OutputFormat": OutputFormat,
+            "PackageInfo": PackageInfo,
+            "DependencyError": DependencyError,
+            "PackageOperationError": PackageOperationError,
+            "VersionError": VersionError,
         }
     except ImportError:
         # pybind11 not available, just continue without exporting

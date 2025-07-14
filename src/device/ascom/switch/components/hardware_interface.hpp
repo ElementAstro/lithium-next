@@ -56,7 +56,7 @@ struct ASCOMSwitchInfo {
 
 /**
  * @brief Hardware Interface Component for ASCOM Switch
- * 
+ *
  * This component encapsulates all hardware communication details,
  * providing a clean interface for the controller to interact with
  * physical switch devices.
@@ -137,14 +137,14 @@ private:
     std::atomic<bool> connected_{false};
     std::atomic<bool> initialized_{false};
     ConnectionType connection_type_{ConnectionType::ALPACA_REST};
-    
+
     // Device information
     std::string device_name_;
     std::string driver_info_;
     std::string driver_version_;
     std::string client_id_{"Lithium-Next"};
     int interface_version_{2};
-    
+
     // Alpaca connection details
     std::string alpaca_host_{"localhost"};
     int alpaca_port_{11111};
@@ -202,7 +202,7 @@ private:
     auto parseAlpacaResponse(const std::string& response) -> std::optional<std::string>;
 
 #ifdef _WIN32
-    auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr, 
+    auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr,
                         int param_count = 0) -> std::optional<VARIANT>;
     auto getCOMProperty(const std::string& property) -> std::optional<VARIANT>;
     auto setCOMProperty(const std::string& property, const VARIANT& value) -> bool;
@@ -241,7 +241,7 @@ public:
 
 class CommunicationException : public HardwareInterfaceException {
 public:
-    explicit CommunicationException(const std::string& message) 
+    explicit CommunicationException(const std::string& message)
         : HardwareInterfaceException("Communication error: " + message) {}
 };
 

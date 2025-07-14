@@ -12,7 +12,4 @@ from __future__ import annotations
 from .config import BuildConfig
 from .factory import BuilderFactory
 
-__all__ = [
-    "BuildConfig", 
-    "BuilderFactory"
-]
+__all__ = ["BuildConfig", "BuilderFactory"]

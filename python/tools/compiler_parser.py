@@ -24,7 +24,7 @@ from .compiler_parser import (
     CompilerParserWidget,
     parse_compiler_output,
     parse_compiler_file,
-    main_cli
+    main_cli,
 )
 
 # Configure logging
@@ -35,14 +35,14 @@ logger = logging.getLogger(__name__)
 
 # Re-export the classes and functions to maintain backward compatibility
 __all__ = [
-    'CompilerType',
-    'OutputFormat',
-    'MessageSeverity',
-    'CompilerMessage',
-    'CompilerOutput',
-    'parse_compiler_output',
-    'parse_compiler_file',
-    'main'
+    "CompilerType",
+    "OutputFormat",
+    "MessageSeverity",
+    "CompilerMessage",
+    "CompilerOutput",
+    "parse_compiler_output",
+    "parse_compiler_file",
+    "main",
 ]
 
 # For backward compatibility, create aliases for the original class names
@@ -51,6 +51,7 @@ ParserFactory = CompilerParserWidget
 WriterFactory = CompilerParserWidget
 CompilerOutputProcessor = CompilerParserWidget
 ConsoleFormatter = CompilerParserWidget
+
 
 # Main function for backward compatibility
 def main():

@@ -57,7 +57,7 @@ struct GroupValidationResult {
 
 /**
  * @brief Group Manager Component
- * 
+ *
  * This component handles switch grouping functionality including
  * exclusive groups, group operations, and group state management.
  */

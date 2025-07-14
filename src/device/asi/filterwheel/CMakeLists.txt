@@ -27,7 +27,7 @@ set_target_properties(lithium_device_asi_filterwheel PROPERTIES
 )
 
 # Find and link ASI SDK
-find_library(ASI_FILTERWHEEL_LIBRARY 
+find_library(ASI_FILTERWHEEL_LIBRARY
     NAMES ASICamera2 libASICamera2 ASIEFW libASIEFW
     PATHS
         /usr/local/lib
@@ -35,7 +35,7 @@ find_library(ASI_FILTERWHEEL_LIBRARY
         ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/lib
     DOC "ASI Filterwheel SDK library"
 )
-find_library(ASI_EFW_LIBRARY 
+find_library(ASI_EFW_LIBRARY
     NAMES EFW_filter libEFW_filter
     PATHS
         /usr/local/lib

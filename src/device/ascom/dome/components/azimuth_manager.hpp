@@ -26,7 +26,7 @@ class HardwareInterface;
 
 /**
  * @brief Azimuth Management Component for ASCOM Dome
- * 
+ *
  * This component manages dome azimuth positioning, rotation, and movement
  * operations with support for speed control, backlash compensation, and
  * precise positioning.
@@ -99,7 +99,7 @@ public:
     // === Callback Support ===
     using PositionCallback = std::function<void(double)>;
     using MovementCallback = std::function<void(bool)>;
-    
+
     auto setPositionCallback(PositionCallback callback) -> void;
     auto setMovementCallback(MovementCallback callback) -> void;
 

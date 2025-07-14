@@ -18,6 +18,7 @@ HashType = Literal["sha256", "sha512", "md5"]
 
 class UpdateStatus(str, Enum):
     """Status codes for the update process."""
+
     IDLE = "idle"
     CHECKING = "checking"
     UP_TO_DATE = "up_to_date"
@@ -32,27 +33,33 @@ class UpdateStatus(str, Enum):
     FAILED = "failed"
     ROLLED_BACK = "rolled_back"
 
+
 # --- Exceptions ---
 
 
 class UpdaterError(Exception):
     """Base exception for all updater errors."""
+
     pass
 
 
 class NetworkError(UpdaterError):
     """For network-related errors."""
+
     pass
 
 
 class VerificationError(UpdaterError):
     """For verification failures."""
+
     pass
 
 
 class InstallationError(UpdaterError):
     """For installation failures."""
+
     pass
+
 
 # --- Protocols and Interfaces ---
 
@@ -60,12 +67,14 @@ class InstallationError(UpdaterError):
 class ProgressCallback(Protocol):
     """Protocol for progress callback functions."""
 
-    async def __call__(self, status: UpdateStatus,
-                       progress: float, message: str) -> None: ...
+    async def __call__(
+        self, status: UpdateStatus, progress: float, message: str
+    ) -> None: ...
 
 
 class UpdateInfo(BaseModel):
     """Structured information about an available update."""
+
     version: str
     download_url: HttpUrl
     file_hash: Optional[str] = None
@@ -76,36 +85,43 @@ class UpdateInfo(BaseModel):
 class UpdateStrategy(Protocol):
     """Protocol for defining update-checking strategies."""
 
-    async def check_for_updates(
-        self, current_version: str) -> Optional[UpdateInfo]: ...
+    async def check_for_updates(self, current_version: str) -> Optional[UpdateInfo]: ...
 
 
 class PackageHandler(Protocol):
     """Protocol for handling different types of update packages."""
 
-    async def extract(self, archive_path: Path, extract_to: Path,
-                      progress_callback: Optional[ProgressCallback]) -> None: ...
+    async def extract(
+        self,
+        archive_path: Path,
+        extract_to: Path,
+        progress_callback: Optional[ProgressCallback],
+    ) -> None: ...
+
 
 # --- Configuration Model ---
 
 
 class UpdaterConfig(BaseModel):
     """Configuration for the AutoUpdater, validated by Pydantic."""
+
     strategy: UpdateStrategy
     package_handler: PackageHandler
     install_dir: DirectoryPath
     current_version: str
-    temp_dir: Path = Field(default_factory=lambda: Path(
-        tempfile.gettempdir()) / "auto_updater_temp")
-    backup_dir: Path = Field(default_factory=lambda: Path(
-        tempfile.gettempdir()) / "auto_updater_backup")
+    temp_dir: Path = Field(
+        default_factory=lambda: Path(tempfile.gettempdir()) / "auto_updater_temp"
+    )
+    backup_dir: Path = Field(
+        default_factory=lambda: Path(tempfile.gettempdir()) / "auto_updater_backup"
+    )
     progress_callback: Optional[ProgressCallback] = None
     custom_hooks: Dict[str, Callable[[], Any]] = Field(default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True
 
-    @validator('install_dir', 'temp_dir', 'backup_dir', pre=True)
+    @validator("install_dir", "temp_dir", "backup_dir", pre=True)
     def _ensure_path(cls, v: Any) -> Path:
         return Path(v).resolve()
 

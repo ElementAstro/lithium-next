@@ -24,7 +24,7 @@ namespace lithium::ascom::dome::components {
 
 /**
  * @brief ASCOM Alpaca REST API Client for Dome Control
- * 
+ *
  * This class provides a REST client interface for communicating with
  * ASCOM Alpaca-compliant dome devices over HTTP/HTTPS.
  */

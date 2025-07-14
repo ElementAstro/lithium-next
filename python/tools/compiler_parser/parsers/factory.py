@@ -16,13 +16,13 @@ from .cmake import CMakeParser
 
 class ParserFactory:
     """Factory for creating appropriate compiler output parser instances."""
-    
+
     @staticmethod
     def create_parser(compiler_type: Union[CompilerType, str]) -> CompilerOutputParser:
         """Create and return the appropriate parser for the given compiler type."""
         if isinstance(compiler_type, str):
             compiler_type = CompilerType.from_string(compiler_type)
-            
+
         match compiler_type:
             case CompilerType.GCC:
                 return GccClangParser(CompilerType.GCC)

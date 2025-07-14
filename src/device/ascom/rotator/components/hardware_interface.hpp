@@ -82,7 +82,7 @@ struct RotatorCapabilities {
 
 /**
  * @brief Hardware Interface for ASCOM Rotator
- * 
+ *
  * This component handles low-level communication with ASCOM rotator devices,
  * supporting both Windows COM drivers and cross-platform Alpaca REST API.
  * It provides a clean interface that abstracts the underlying protocol.
@@ -97,7 +97,7 @@ public:
     auto destroy() -> bool;
 
     // Connection management
-    auto connect(const std::string& deviceIdentifier, 
+    auto connect(const std::string& deviceIdentifier,
                 ConnectionType type = ConnectionType::ALPACA_REST) -> bool;
     auto disconnect() -> bool;
     auto isConnected() const -> bool;
@@ -105,7 +105,7 @@ public:
 
     // Device discovery
     auto scanDevices() -> std::vector<std::string>;
-    auto discoverAlpacaDevices(const std::string& host = "localhost", 
+    auto discoverAlpacaDevices(const std::string& host = "localhost",
                               int port = 11111) -> std::vector<ASCOMDeviceInfo>;
 
     // Device information
@@ -116,7 +116,7 @@ public:
     // Low-level property access
     auto getProperty(const std::string& propertyName) -> std::optional<std::string>;
     auto setProperty(const std::string& propertyName, const std::string& value) -> bool;
-    auto invokeMethod(const std::string& methodName, 
+    auto invokeMethod(const std::string& methodName,
                      const std::vector<std::string>& parameters = {}) -> std::optional<std::string>;
 
     // Connection configuration
@@ -178,7 +178,7 @@ private:
     auto setLastError(const std::string& error) -> void;
 
 #ifdef _WIN32
-    auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr, 
+    auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr,
                         int param_count = 0) -> std::optional<VARIANT>;
     auto getCOMProperty(const std::string& property) -> std::optional<VARIANT>;
     auto setCOMProperty(const std::string& property, const VARIANT& value) -> bool;

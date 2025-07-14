@@ -39,7 +39,7 @@ int main() {
 
         // Create hardware interface
         auto hardware = std::make_shared<HardwareInterface>(io_context);
-        
+
         // Initialize hardware interface
         if (!hardware->initialize()) {
             spdlog::error("Failed to initialize hardware interface");
@@ -107,11 +107,11 @@ int main() {
 
         // Example 4: Add alignment points
         spdlog::info("=== Adding Alignment Points ===");
-        
+
         // First alignment point: Vega (approximate coordinates)
         ::EquatorialCoordinates vega_target = {18.615, 38.784}; // RA: 18h 36m 56s, DEC: +38° 47' 01"
         ::EquatorialCoordinates vega_measured = {18.616, 38.785}; // Slightly offset measured position
-        
+
         if (alignmentManager->addAlignmentPoint(vega_measured, vega_target)) {
             spdlog::info("Successfully added Vega alignment point");
         } else {
@@ -121,7 +121,7 @@ int main() {
         // Second alignment point: Altair (approximate coordinates)
         ::EquatorialCoordinates altair_target = {19.846, 8.868}; // RA: 19h 50m 47s, DEC: +08° 52' 06"
         ::EquatorialCoordinates altair_measured = {19.847, 8.869}; // Slightly offset measured position
-        
+
         if (alignmentManager->addAlignmentPoint(altair_measured, altair_target)) {
             spdlog::info("Successfully added Altair alignment point");
         } else {
@@ -136,11 +136,11 @@ int main() {
 
         // Example 5: Test coordinate validation
         spdlog::info("=== Testing Coordinate Validation ===");
-        
+
         // Invalid RA (negative)
         ::EquatorialCoordinates invalid_coords = {-1.0, 45.0};
         ::EquatorialCoordinates valid_coords = {12.0, 45.0};
-        
+
         if (!alignmentManager->addAlignmentPoint(invalid_coords, valid_coords)) {
             spdlog::info("Correctly rejected invalid RA coordinate: {}", alignmentManager->getLastError());
         }
@@ -155,7 +155,7 @@ int main() {
         spdlog::info("=== Clearing Alignment ===");
         if (alignmentManager->clearAlignment()) {
             spdlog::info("Successfully cleared all alignment points");
-            
+
             // Verify clearing worked
             pointCount = alignmentManager->getAlignmentPointCount();
             if (pointCount >= 0) {

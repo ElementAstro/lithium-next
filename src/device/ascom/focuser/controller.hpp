@@ -67,7 +67,7 @@ public:
     // =========================================================================
     // AtomDriver Interface Implementation
     // =========================================================================
-    
+
     auto initialize() -> bool override;
     auto destroy() -> bool override;
     auto connect(const std::string &deviceName, int timeout = 5000, int maxRetry = 3) -> bool override;
@@ -78,7 +78,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Movement Control
     // =========================================================================
-    
+
     auto isMoving() const -> bool override;
     auto moveSteps(int steps) -> bool override;
     auto moveToPosition(int position) -> bool override;
@@ -92,7 +92,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Speed Control
     // =========================================================================
-    
+
     auto getSpeed() -> std::optional<double> override;
     auto setSpeed(double speed) -> bool override;
     auto getMaxSpeed() -> int override;
@@ -101,7 +101,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Direction Control
     // =========================================================================
-    
+
     auto getDirection() -> std::optional<FocusDirection> override;
     auto setDirection(FocusDirection direction) -> bool override;
     auto isReversed() -> std::optional<bool> override;
@@ -110,7 +110,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Limits Control
     // =========================================================================
-    
+
     auto getMaxLimit() -> std::optional<int> override;
     auto setMaxLimit(int maxLimit) -> bool override;
     auto getMinLimit() -> std::optional<int> override;
@@ -119,7 +119,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Temperature
     // =========================================================================
-    
+
     auto getExternalTemperature() -> std::optional<double> override;
     auto getChipTemperature() -> std::optional<double> override;
     auto hasTemperatureSensor() -> bool override;
@@ -130,7 +130,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Backlash Compensation
     // =========================================================================
-    
+
     auto getBacklash() -> int override;
     auto setBacklash(int backlash) -> bool override;
     auto enableBacklashCompensation(bool enable) -> bool override;
@@ -139,7 +139,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Auto Focus
     // =========================================================================
-    
+
     auto startAutoFocus() -> bool override;
     auto stopAutoFocus() -> bool override;
     auto isAutoFocusing() -> bool override;
@@ -148,7 +148,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Presets
     // =========================================================================
-    
+
     auto savePreset(int slot, int position) -> bool override;
     auto loadPreset(int slot) -> bool override;
     auto getPreset(int slot) -> std::optional<int> override;
@@ -157,7 +157,7 @@ public:
     // =========================================================================
     // AtomFocuser Interface Implementation - Statistics
     // =========================================================================
-    
+
     auto getTotalSteps() -> uint64_t override;
     auto resetTotalSteps() -> bool override;
     auto getLastMoveSteps() -> int override;
@@ -388,53 +388,53 @@ private:
     std::atomic<bool> connected_{false};
     std::atomic<bool> debug_mode_{false};
     std::atomic<bool> auto_focus_active_{false};
-    
+
     // Configuration
     std::string device_name_;
     std::string client_id_{"Lithium-Next"};
-    
+
     // Synchronization
     mutable std::mutex controller_mutex_;
     std::condition_variable state_change_cv_;
-    
+
     // Private methods
     auto initializeComponents() -> bool;
     auto destroyComponents() -> bool;
     auto setupComponentCallbacks() -> void;
     auto validateComponentStates() -> bool;
-    
+
     // Component interaction helpers
     auto coordinateMovement(int targetPosition) -> bool;
     auto handleTemperatureCompensation() -> void;
     auto handleBacklashCompensation(int startPosition, int targetPosition) -> bool;
     auto updateFocuserCapabilities() -> void;
-    
+
     // Event handling
     auto onPositionChanged(int position) -> void;
     auto onTemperatureChanged(double temperature) -> void;
     auto onMovementComplete(bool success, int finalPosition, const std::string& message) -> void;
     auto onPropertyChanged(const std::string& name, const std::string& value) -> void;
-    
+
     // Utility methods
     auto parseDeviceString(const std::string& deviceName) -> std::tuple<std::string, int, int>;
     auto buildStatusString() -> std::string;
     auto validateConfiguration() -> bool;
     auto logComponentStatus() -> void;
-    
+
     // Auto-focus implementation
     auto performAutoFocus() -> bool;
     auto findOptimalFocusPosition() -> std::optional<int>;
     auto measureFocusQuality(int position) -> double;
-    
+
     // Calibration helpers
     auto calibrateBacklash() -> bool;
     auto calibrateTemperatureCompensation() -> bool;
     auto calibrateMovementLimits() -> bool;
-    
+
     // Error handling
     auto handleComponentError(const std::string& component, const std::string& error) -> void;
     auto recoverFromError() -> bool;
-    
+
     // Performance monitoring
     struct PerformanceMetrics {
         std::chrono::steady_clock::time_point last_move_time;
@@ -444,7 +444,7 @@ private:
         int failed_moves{0};
         double success_rate{0.0};
     } performance_metrics_;
-    
+
     auto updatePerformanceMetrics(bool success, std::chrono::milliseconds duration) -> void;
     auto getPerformanceReport() -> std::string;
 };

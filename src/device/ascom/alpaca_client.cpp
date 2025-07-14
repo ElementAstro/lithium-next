@@ -391,7 +391,7 @@ boost::asio::awaitable<std::expected<AlpacaResponse, AlpacaError>> OptimizedAlpa
 
             if (alpaca_response.data.is_object()) {
                 if (alpaca_response.data.contains("ServerTransactionID")) {
-                    alpaca_response.server_transaction_id = 
+                    alpaca_response.server_transaction_id =
                         alpaca_response.data["ServerTransactionID"];
                 }
             }
@@ -510,14 +510,14 @@ boost::asio::awaitable<std::expected<void, AlpacaError>> OptimizedAlpacaClient::
     std::string_view property, const T& value) {
     nlohmann::json params = build_transaction_params();
     params[std::string(property)] = value;
-    
+
     auto response =
         co_await perform_request(boost::beast::http::verb::put, property, params);
 
     if (!response) {
         co_return std::unexpected(response.error());
     }
-    
+
     co_return std::expected<void, AlpacaError>{};
 }
 
@@ -696,7 +696,7 @@ boost::asio::awaitable<std::expected<void, AlpacaError>> DeviceClient<DeviceType
     nlohmann::json params = build_transaction_params();
     params["Duration"] = duration;
     params["Light"] = light;
-    
+
     auto result = co_await perform_request(boost::beast::http::verb::put, "startexposure", params);
     if (!result) {
         co_return std::unexpected(result.error());
@@ -741,7 +741,7 @@ boost::asio::awaitable<std::expected<void, AlpacaError>> DeviceClient<DeviceType
     nlohmann::json params = build_transaction_params();
     params["RightAscension"] = ra;
     params["Declination"] = dec;
-    
+
     auto result = co_await perform_request(boost::beast::http::verb::put, "slewtocoordinates", params);
     if (!result) {
         co_return std::unexpected(result.error());

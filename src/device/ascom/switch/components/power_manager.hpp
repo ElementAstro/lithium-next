@@ -58,7 +58,7 @@ struct PowerLimit {
 
 /**
  * @brief Power Manager Component
- * 
+ *
  * This component handles power consumption monitoring, limits,
  * and power-related safety features for switch devices.
  */
@@ -211,21 +211,21 @@ private:
     auto updateTotalPowerConsumption() -> void;
     auto updateEnergyConsumption() -> void;
     auto addPowerHistoryEntry(double power) -> void;
-    
+
     auto validatePowerData(const PowerData& data) -> bool;
     auto validatePowerLimit(double limit) -> bool;
     auto setLastError(const std::string& error) const -> void;
-    
+
     // Safety checks
     auto checkPowerThresholds() -> void;
     auto executePowerLimitActions() -> void;
     auto executeEmergencyShutdown(const std::string& reason) -> void;
-    
+
     // Notification helpers
     auto notifyPowerLimitExceeded(double currentPower, double limit) -> void;
     auto notifyPowerWarning(double currentPower, double threshold) -> void;
     auto notifyEmergencyShutdown(const std::string& reason) -> void;
-    
+
     // Utility methods
     auto findPowerDataByName(const std::string& name) -> std::optional<uint32_t>;
     auto ensurePowerDataExists(uint32_t index) -> bool;

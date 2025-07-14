@@ -48,18 +48,36 @@ class NginxManagerCLI:
             "-v", "--verbose", action="store_true", help="Enable verbose output."
         )
 
-        subparsers = parser.add_subparsers(dest="command", help="Commands", required=True)
+        subparsers = parser.add_subparsers(
+            dest="command", help="Commands", required=True
+        )
 
         # Service management commands
-        for action in ["install", "start", "stop", "reload", "restart", "status", "version", "check", "health"]:
+        for action in [
+            "install",
+            "start",
+            "stop",
+            "reload",
+            "restart",
+            "status",
+            "version",
+            "check",
+            "health",
+        ]:
             subparsers.add_parser(action, help=f"{action.capitalize()} Nginx.")
 
         # Backup and Restore
-        backup_parser = subparsers.add_parser("backup", help="Backup Nginx configuration.")
+        backup_parser = subparsers.add_parser(
+            "backup", help="Backup Nginx configuration."
+        )
         backup_parser.add_argument("--name", help="Custom name for the backup file.")
         subparsers.add_parser("list-backups", help="List available backups.")
-        restore_parser = subparsers.add_parser("restore", help="Restore Nginx configuration.")
-        restore_parser.add_argument("--backup", help="Path to the backup file to restore.")
+        restore_parser = subparsers.add_parser(
+            "restore", help="Restore Nginx configuration."
+        )
+        restore_parser.add_argument(
+            "--backup", help="Path to the backup file to restore."
+        )
 
         # Virtual Host Management
         vhost_parser = subparsers.add_parser("vhost", help="Manage virtual hosts.")
@@ -77,7 +95,9 @@ class NginxManagerCLI:
         )
 
         for action in ["enable", "disable"]:
-            parser = vhost_sp.add_parser(action, help=f"{action.capitalize()} a virtual host.")
+            parser = vhost_sp.add_parser(
+                action, help=f"{action.capitalize()} a virtual host."
+            )
             parser.add_argument("server_name", help="The server name of the vhost.")
 
         vhost_sp.add_parser("list", help="List all virtual hosts.")
@@ -133,7 +153,7 @@ class NginxManagerCLI:
 
             logger.debug("Command executed successfully.")
             return 0
-            
+
         except NginxError as e:
             logger.error(f"Nginx operation failed: {e}")
             print(f"Error: {e}", file=sys.stderr)
@@ -165,6 +185,7 @@ class NginxManagerCLI:
                 root_dir=getattr(args, "root", None),
                 template=getattr(args, "template", "basic"),
             )
+
 
 def main() -> int:
     """

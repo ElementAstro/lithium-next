@@ -33,7 +33,6 @@ __all__ = [
     "AutoUpdater",
     "AutoUpdaterSync",
     "AsyncAutoUpdater",
-
     # Types
     "UpdaterConfig",
     "UpdateStatus",

@@ -11,36 +11,36 @@ function(lithium_find_package)
     set(oneValueArgs NAME VERSION)
     set(multiValueArgs COMPONENTS)
     cmake_parse_arguments(LITHIUM_PKG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    
+
     if(LITHIUM_PKG_REQUIRED)
         set(REQUIRED_FLAG REQUIRED)
     else()
         set(REQUIRED_FLAG "")
     endif()
-    
+
     if(LITHIUM_PKG_QUIET)
         set(QUIET_FLAG QUIET)
     else()
         set(QUIET_FLAG "")
     endif()
-    
+
     # Try to find the package
     if(LITHIUM_PKG_VERSION)
         find_package(${LITHIUM_PKG_NAME} ${LITHIUM_PKG_VERSION} ${REQUIRED_FLAG} ${QUIET_FLAG} COMPONENTS ${LITHIUM_PKG_COMPONENTS})
     else()
         find_package(${LITHIUM_PKG_NAME} ${REQUIRED_FLAG} ${QUIET_FLAG} COMPONENTS ${LITHIUM_PKG_COMPONENTS})
     endif()
-    
+
     # Store package info for optimization
     if(${LITHIUM_PKG_NAME}_FOUND)
         message(STATUS "Found ${LITHIUM_PKG_NAME}: ${${LITHIUM_PKG_NAME}_VERSION}")
-        
+
         # Get current list of found packages
         get_property(CURRENT_PACKAGES CACHE LITHIUM_FOUND_PACKAGES PROPERTY VALUE)
         if(NOT CURRENT_PACKAGES)
             set(CURRENT_PACKAGES "")
         endif()
-        
+
         # Check if package is already in the list to avoid duplicates
         list(FIND CURRENT_PACKAGES ${LITHIUM_PKG_NAME} PACKAGE_INDEX)
         if(PACKAGE_INDEX EQUAL -1)
@@ -54,7 +54,7 @@ endfunction()
 function(lithium_setup_compiler_optimizations target)
     # Enable modern C++ features
     target_compile_features(${target} PRIVATE cxx_std_23)
-    
+
     # Compiler-specific optimizations
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(${target} PRIVATE
@@ -63,10 +63,10 @@ function(lithium_setup_compiler_optimizations target)
             $<$<CONFIG:Debug>:-Og -g3 -fno-inline>
             $<$<CONFIG:RelWithDebInfo>:-O2 -g -DNDEBUG>
             $<$<CONFIG:MinSizeRel>:-Os -DNDEBUG>
-            
+
             # Warning flags
             -Wall -Wextra -Wpedantic
-            
+
             # Performance optimizations
             -fno-omit-frame-pointer
             -ffast-math
@@ -78,22 +78,22 @@ function(lithium_setup_compiler_optimizations target)
             -floop-nest-optimize
             -ftree-loop-distribution
             -ftree-vectorize
-            
+
             # Architecture-specific optimizations
             -msse4.2
             -mavx
             -mavx2
-            
+
             # Modern C++23 features
             -fcoroutines
             -fconcepts
-            
+
             # Security hardening
             -fstack-protector-strong
             -D_FORTIFY_SOURCE=2
             -fPIE
         )
-        
+
         # Clang-specific optimizations
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             target_compile_options(${target} PRIVATE
@@ -101,7 +101,7 @@ function(lithium_setup_compiler_optimizations target)
                 -fvectorize
             )
         endif()
-        
+
         # Link-time optimizations
         target_link_options(${target} PRIVATE
             $<$<CONFIG:Release>:-flto=auto -fuse-linker-plugin -Wl,--gc-sections -Wl,--as-needed>
@@ -110,7 +110,7 @@ function(lithium_setup_compiler_optimizations target)
             -Wl,-z,now
             -Wl,-z,noexecstack
         )
-        
+
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         target_compile_options(${target} PRIVATE
             $<$<CONFIG:Release>:/O2 /DNDEBUG /GL /arch:AVX2>
@@ -122,12 +122,12 @@ function(lithium_setup_compiler_optimizations target)
             /Oi
             /std:c++latest
         )
-        
+
         target_link_options(${target} PRIVATE
             $<$<CONFIG:Release>:/LTCG /OPT:REF /OPT:ICF>
         )
     endif()
-    
+
     # Enable IPO/LTO for release builds
     if(CMAKE_BUILD_TYPE MATCHES "Release")
         set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -137,7 +137,7 @@ endfunction()
 # Function to setup target with common properties
 function(lithium_setup_target target)
     lithium_setup_compiler_optimizations(${target})
-    
+
     # Common properties
     set_target_properties(${target} PROPERTIES
         CXX_STANDARD 23
@@ -147,7 +147,7 @@ function(lithium_setup_target target)
         VISIBILITY_INLINES_HIDDEN ON
         CXX_VISIBILITY_PRESET hidden
     )
-    
+
     # Platform-specific settings
     if(WIN32)
         target_compile_definitions(${target} PRIVATE
@@ -156,7 +156,7 @@ function(lithium_setup_target target)
             _CRT_SECURE_NO_WARNINGS
         )
     endif()
-    
+
     if(UNIX AND NOT APPLE)
         target_compile_definitions(${target} PRIVATE
             _GNU_SOURCE
@@ -184,7 +184,7 @@ function(lithium_add_pch target)
             <unordered_map>
             <unordered_set>
             <vector>
-            
+
             # Third-party headers
             <spdlog/spdlog.h>
             <nlohmann/json.hpp>
@@ -199,25 +199,25 @@ macro(lithium_setup_dependencies)
     if(UNIX AND NOT APPLE)
         find_package(PkgConfig QUIET)
     endif()
-    
+
     # Core dependencies
     lithium_find_package(NAME Threads REQUIRED)
     lithium_find_package(NAME spdlog REQUIRED)
-    
+
     # Optional performance libraries
     lithium_find_package(NAME TBB QUIET)
     if(TBB_FOUND)
         message(STATUS "Intel TBB found - enabling parallel algorithms")
         add_compile_definitions(LITHIUM_USE_TBB)
     endif()
-    
+
     # OpenMP for parallel computing
     lithium_find_package(NAME OpenMP QUIET)
     if(OpenMP_FOUND AND OpenMP_CXX_FOUND)
         message(STATUS "OpenMP found - enabling parallel computing")
         add_compile_definitions(LITHIUM_USE_OPENMP)
     endif()
-    
+
     # Memory allocator optimization
     lithium_find_package(NAME jemalloc QUIET)
     if(jemalloc_FOUND)
@@ -232,23 +232,23 @@ function(lithium_print_optimization_summary)
     message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
     message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
     message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
-    
+
     if(CMAKE_BUILD_TYPE MATCHES "Release")
         message(STATUS "IPO/LTO: ${LITHIUM_IPO_ENABLED}")
     endif()
-    
+
     if(USE_PRECOMPILED_HEADERS)
         message(STATUS "Precompiled Headers: Enabled")
     endif()
-    
+
     if(CMAKE_UNITY_BUILD)
         message(STATUS "Unity Builds: Enabled (batch size: ${CMAKE_UNITY_BUILD_BATCH_SIZE})")
     endif()
-    
+
     if(CCACHE_PROGRAM)
         message(STATUS "ccache: ${CCACHE_PROGRAM}")
     endif()
-    
+
     # Clean up and display found packages
     get_property(FOUND_PACKAGES CACHE LITHIUM_FOUND_PACKAGES PROPERTY VALUE)
     if(FOUND_PACKAGES)
@@ -260,7 +260,7 @@ function(lithium_print_optimization_summary)
     else()
         message(STATUS "Found Packages: None")
     endif()
-    
+
     message(STATUS "==========================================")
 endfunction()
 
@@ -272,7 +272,7 @@ function(lithium_setup_profiling_and_benchmarks)
         if(benchmark_FOUND)
             message(STATUS "Google Benchmark found - enabling performance benchmarks")
             add_compile_definitions(LITHIUM_BENCHMARKS_ENABLED)
-            
+
             # Benchmark-specific optimizations for release builds
             if(CMAKE_BUILD_TYPE MATCHES "Release")
                 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -290,29 +290,29 @@ function(lithium_setup_profiling_and_benchmarks)
             message(WARNING "Google Benchmark not found - benchmarks disabled")
         endif()
     endif()
-    
+
     # Configure profiling
     if(ENABLE_PROFILING)
         # Enable profiling symbols even in release builds
         add_compile_options(-g -fno-omit-frame-pointer)
         add_compile_definitions(LITHIUM_PROFILING_ENABLED)
-        
+
         # Find profiling tools
         find_program(PERF_EXECUTABLE NAMES perf)
         if(PERF_EXECUTABLE)
             message(STATUS "perf found: ${PERF_EXECUTABLE}")
         endif()
-        
+
         find_program(VALGRIND_EXECUTABLE NAMES valgrind)
         if(VALGRIND_EXECUTABLE)
             message(STATUS "Valgrind found: ${VALGRIND_EXECUTABLE}")
         endif()
     endif()
-    
+
     # Configure memory profiling
     if(ENABLE_MEMORY_PROFILING)
         add_compile_options(
-            -fno-builtin-malloc -fno-builtin-calloc 
+            -fno-builtin-malloc -fno-builtin-calloc
             -fno-builtin-realloc -fno-builtin-free
         )
         add_compile_definitions(LITHIUM_MEMORY_PROFILING_ENABLED)
@@ -324,13 +324,13 @@ function(lithium_add_performance_test test_name)
     if(ENABLE_BENCHMARKS AND benchmark_FOUND)
         add_executable(${test_name} ${ARGN})
         target_link_libraries(${test_name} benchmark::benchmark)
-        
+
         # Apply performance optimizations
         lithium_setup_compiler_optimizations(${test_name})
-        
+
         # Add to test suite
         add_test(NAME ${test_name} COMMAND ${test_name})
-        
+
         message(STATUS "Added performance test: ${test_name}")
     else()
         message(STATUS "Skipping performance test ${test_name} - benchmarks not enabled")
@@ -340,11 +340,11 @@ endfunction()
 # Function to check and set compiler version requirements
 function(lithium_check_compiler_version)
     include(CheckCXXCompilerFlag)
-    
+
     # Check C++ standard support
     check_cxx_compiler_flag(-std=c++23 HAS_CXX23_FLAG)
     check_cxx_compiler_flag(-std=c++20 HAS_CXX20_FLAG)
-    
+
     if(HAS_CXX23_FLAG)
         set(CMAKE_CXX_STANDARD 23 PARENT_SCOPE)
         message(STATUS "Using C++23")
@@ -354,7 +354,7 @@ function(lithium_check_compiler_version)
     else()
         message(FATAL_ERROR "C++20 standard is required!")
     endif()
-    
+
     # Check GCC version
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         execute_process(
@@ -374,7 +374,7 @@ function(lithium_check_compiler_version)
         else()
             message(STATUS "Using g++ version ${GCC_VERSION}")
         endif()
-        
+
     # Check Clang version
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         execute_process(
@@ -398,7 +398,7 @@ function(lithium_check_compiler_version)
         else()
             message(STATUS "Using Clang version ${CLANG_VERSION}")
         endif()
-        
+
     # Check MSVC version
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.28)
@@ -407,10 +407,10 @@ function(lithium_check_compiler_version)
             message(STATUS "Using MSVC version ${CMAKE_CXX_COMPILER_VERSION}")
         endif()
     endif()
-    
+
     # Set C standard
     set(CMAKE_C_STANDARD 17 PARENT_SCOPE)
-    
+
     # Apple-specific settings
     if(APPLE)
         check_cxx_compiler_flag(-stdlib=libc++ HAS_LIBCXX_FLAG)
@@ -428,12 +428,12 @@ function(lithium_configure_build_system)
         set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the build type." FORCE)
         set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
     endif()
-    
-    # Set global properties  
+
+    # Set global properties
     set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
     set(CMAKE_CXX_EXTENSIONS OFF PARENT_SCOPE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON PARENT_SCOPE)
-    
+
     # Enable ccache if available
     if(ENABLE_CCACHE)
         find_program(CCACHE_PROGRAM ccache)
@@ -443,7 +443,7 @@ function(lithium_configure_build_system)
             set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM} PARENT_SCOPE)
         endif()
     endif()
-    
+
     # Parallel build optimization
     include(ProcessorCount)
     ProcessorCount(N)
@@ -451,21 +451,21 @@ function(lithium_configure_build_system)
         set(CMAKE_BUILD_PARALLEL_LEVEL ${N} PARENT_SCOPE)
         message(STATUS "Parallel build with ${N} cores")
     endif()
-    
+
     # Unity builds
     if(ENABLE_UNITY_BUILD)
         set(CMAKE_UNITY_BUILD ON PARENT_SCOPE)
         set(CMAKE_UNITY_BUILD_BATCH_SIZE 8 PARENT_SCOPE)
         message(STATUS "Unity builds enabled")
     endif()
-    
+
     # Ninja generator optimizations
     if(CMAKE_GENERATOR STREQUAL "Ninja")
         set(CMAKE_JOB_POOLS compile=8 link=2 PARENT_SCOPE)
         set(CMAKE_JOB_POOL_COMPILE compile PARENT_SCOPE)
         set(CMAKE_JOB_POOL_LINK link PARENT_SCOPE)
     endif()
-    
+
     # IPO/LTO configuration
     include(CheckIPOSupported)
     check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)

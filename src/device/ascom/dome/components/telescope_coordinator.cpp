@@ -97,32 +97,32 @@ auto TelescopeCoordinator::getTelescopePosition() -> std::optional<std::pair<dou
 auto TelescopeCoordinator::calculateDomeAzimuth(double telescopeAz, double telescopeAlt) -> double {
     // Apply geometric offset calculation
     double geometricOffset = calculateGeometricOffset(telescopeAz, telescopeAlt);
-    
+
     // Apply configured offsets
     double correctedAz = telescopeAz + telescope_params_.azimuth_offset + geometricOffset;
-    
+
     // Normalize to 0-360 range
     while (correctedAz < 0.0) correctedAz += 360.0;
     while (correctedAz >= 360.0) correctedAz -= 360.0;
-    
+
     return correctedAz;
 }
 
 auto TelescopeCoordinator::calculateSlitPosition(double telescopeAz, double telescopeAlt) -> std::pair<double, double> {
     // Calculate the position of the telescope in the dome coordinate system
     double domeAz = calculateDomeAzimuth(telescopeAz, telescopeAlt);
-    
+
     // Calculate altitude correction for dome geometry
     double altitudeCorrection = telescope_params_.altitude_offset;
     if (telescope_params_.radius_from_center > 0) {
         // Apply geometric correction for off-center telescope
-        altitudeCorrection += std::atan(telescope_params_.radius_from_center / 
-                                       (telescope_params_.height_offset + 
+        altitudeCorrection += std::atan(telescope_params_.radius_from_center /
+                                       (telescope_params_.height_offset +
                                         telescope_params_.radius_from_center * std::tan(telescopeAlt * M_PI / 180.0))) * 180.0 / M_PI;
     }
-    
+
     double correctedAlt = telescopeAlt + altitudeCorrection;
-    
+
     return std::make_pair(domeAz, correctedAlt);
 }
 
@@ -138,12 +138,12 @@ auto TelescopeCoordinator::isTelescopeInSlit() -> bool {
 
     double telescopeAz = telescope_azimuth_.load();
     double requiredDomeAz = calculateDomeAzimuth(telescopeAz, telescope_altitude_.load());
-    
+
     double offset = std::abs(*currentAz - requiredDomeAz);
     if (offset > 180.0) {
         offset = 360.0 - offset;
     }
-    
+
     return offset <= following_tolerance_.load();
 }
 
@@ -159,13 +159,13 @@ auto TelescopeCoordinator::getSlitOffset() -> double {
 
     double telescopeAz = telescope_azimuth_.load();
     double requiredDomeAz = calculateDomeAzimuth(telescopeAz, telescope_altitude_.load());
-    
+
     double offset = *currentAz - requiredDomeAz;
-    
+
     // Normalize to [-180, 180]
     while (offset > 180.0) offset -= 360.0;
     while (offset < -180.0) offset += 360.0;
-    
+
     return offset;
 }
 
@@ -211,9 +211,9 @@ auto TelescopeCoordinator::startAutomaticFollowing() -> bool {
 
     is_automatic_following_.store(true);
     stop_following_.store(false);
-    
+
     following_thread_ = std::make_unique<std::thread>(&TelescopeCoordinator::followingLoop, this);
-    
+
     spdlog::info("Started automatic telescope following");
     return true;
 }
@@ -225,14 +225,14 @@ auto TelescopeCoordinator::stopAutomaticFollowing() -> bool {
 
     stop_following_.store(true);
     is_automatic_following_.store(false);
-    
+
     if (following_thread_ && following_thread_->joinable()) {
         following_thread_->join();
     }
     following_thread_.reset();
-    
+
     followTelescope(false);
-    
+
     spdlog::info("Stopped automatic telescope following");
     return true;
 }
@@ -273,23 +273,23 @@ auto TelescopeCoordinator::followingLoop() -> void {
     while (!stop_following_.load()) {
         if (is_following_.load()) {
             updateFollowingStatus();
-            
+
             // Check if dome needs to move to follow telescope
             if (!isTelescopeInSlit()) {
                 double telescopeAz = telescope_azimuth_.load();
                 double telescopeAlt = telescope_altitude_.load();
                 double requiredDomeAz = calculateDomeAzimuth(telescopeAz, telescopeAlt);
-                
+
                 if (azimuth_manager_) {
                     azimuth_manager_->moveToAzimuth(requiredDomeAz);
                 }
-                
+
                 if (following_callback_) {
                     following_callback_(true, "Following telescope movement");
                 }
             }
         }
-        
+
         std::this_thread::sleep_for(std::chrono::milliseconds(following_delay_));
     }
 }
@@ -299,12 +299,12 @@ auto TelescopeCoordinator::calculateGeometricOffset(double telescopeAz, double t
     if (telescope_params_.radius_from_center == 0.0) {
         return 0.0;
     }
-    
+
     // Calculate the geometric offset due to telescope being off-center
     double altRad = telescopeAlt * M_PI / 180.0;
     double offset = std::atan2(telescope_params_.radius_from_center * std::sin(altRad),
                               telescope_params_.height_offset + telescope_params_.radius_from_center * std::cos(altRad));
-    
+
     return offset * 180.0 / M_PI;
 }
 

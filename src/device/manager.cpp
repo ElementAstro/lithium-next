@@ -19,31 +19,31 @@ public:
     std::unordered_map<std::string, std::vector<std::shared_ptr<AtomDriver>>> devices;
     std::unordered_map<std::string, std::shared_ptr<AtomDriver>> primaryDevices;
     mutable std::shared_mutex mtx;
-    
+
     // Enhanced features
     std::unordered_map<std::string, DeviceHealth> device_health;
     std::unordered_map<std::string, DeviceMetrics> device_metrics;
     std::unordered_map<std::string, int> device_priorities;
     std::unordered_map<std::string, std::vector<std::string>> device_groups;
     std::unordered_map<std::string, std::vector<std::string>> device_warnings;
-    
+
     // Connection pool
     ConnectionPoolConfig pool_config;
     bool connection_pooling_enabled{false};
     std::atomic<size_t> active_connections{0};
     std::atomic<size_t> idle_connections{0};
-    
+
     // Health monitoring
     std::atomic<bool> health_monitoring_enabled{false};
     std::chrono::seconds health_check_interval{60};
     std::thread health_monitor_thread;
     std::atomic<bool> health_monitor_running{false};
     DeviceHealthCallback health_callback;
-    
+
     // Performance monitoring
     std::atomic<bool> performance_monitoring_enabled{false};
     DeviceMetricsCallback metrics_callback;
-    
+
     // Operation management
     DeviceOperationCallback operation_callback;
     std::atomic<std::chrono::milliseconds> global_timeout{5000};
@@ -51,15 +51,15 @@ public:
     std::atomic<size_t> current_operations{0};
     std::condition_variable operation_cv;
     std::mutex operation_mtx;
-    
+
     // System statistics
     std::chrono::system_clock::time_point start_time;
     std::atomic<uint64_t> total_operations{0};
     std::atomic<uint64_t> successful_operations{0};
     std::atomic<uint64_t> failed_operations{0};
-    
+
     Impl() : start_time(std::chrono::system_clock::now()) {}
-    
+
     ~Impl() {
         health_monitor_running = false;
         if (health_monitor_thread.joinable()) {
@@ -77,7 +77,7 @@ public:
         }
         return nullptr;
     }
-    
+
     void updateDeviceHealth(const std::string& name, const DeviceHealth& health) {
         std::unique_lock lock(mtx);
         device_health[name] = health;
@@ -85,7 +85,7 @@ public:
             health_callback(name, health);
         }
     }
-    
+
     void updateDeviceMetrics(const std::string& name, const DeviceMetrics& metrics) {
         std::unique_lock lock(mtx);
         device_metrics[name] = metrics;
@@ -93,7 +93,7 @@ public:
             metrics_callback(name, metrics);
         }
     }
-    
+
     void startHealthMonitoring() {
         if (health_monitoring_enabled && !health_monitor_running) {
             health_monitor_running = true;
@@ -105,14 +105,14 @@ public:
             });
         }
     }
-    
+
     void stopHealthMonitoring() {
         health_monitor_running = false;
         if (health_monitor_thread.joinable()) {
             health_monitor_thread.join();
         }
     }
-    
+
     void runHealthCheck() {
         std::shared_lock lock(mtx);
         for (const auto& [type, deviceList] : devices) {
@@ -123,29 +123,29 @@ public:
             }
         }
     }
-    
+
     void checkDeviceHealth(const std::string& name) {
         auto device = findDeviceByName(name);
         if (!device) return;
-        
+
         DeviceHealth health;
         health.last_check = std::chrono::system_clock::now();
-        
+
         // Calculate health metrics
         auto metrics_it = device_metrics.find(name);
         if (metrics_it != device_metrics.end()) {
             const auto& metrics = metrics_it->second;
-            health.error_rate = metrics.total_operations > 0 ? 
+            health.error_rate = metrics.total_operations > 0 ?
                 static_cast<float>(metrics.failed_operations) / metrics.total_operations : 0.0f;
             health.response_time = static_cast<float>(metrics.avg_response_time.count());
             health.operations_count = static_cast<uint32_t>(metrics.total_operations);
             health.errors_count = static_cast<uint32_t>(metrics.failed_operations);
         }
-        
+
         // Overall health calculation
         health.connection_quality = device->isConnected() ? 1.0f : 0.0f;
         health.overall_health = (health.connection_quality + (1.0f - health.error_rate)) / 2.0f;
-        
+
         updateDeviceHealth(name, health);
     }
 };
@@ -491,10 +491,10 @@ void DeviceManager::resetDevice(const std::string& name) {
     if (!device) {
         THROW_DEVICE_NOT_FOUND("Device not found");
     }
-    
+
     // Reset device state
     device->setState(DeviceState::UNKNOWN);
-    
+
     // Clear health and metrics
     {
         std::unique_lock mlock(pimpl->mtx);
@@ -502,7 +502,7 @@ void DeviceManager::resetDevice(const std::string& name) {
         pimpl->device_metrics.erase(name);
         pimpl->device_warnings.erase(name);
     }
-    
+
     spdlog::info("Reset device {}", name);
 }
 
@@ -510,7 +510,7 @@ void DeviceManager::resetDevice(const std::string& name) {
 void DeviceManager::configureConnectionPool(const ConnectionPoolConfig& config) {
     std::unique_lock lock(pimpl->mtx);
     pimpl->pool_config = config;
-    spdlog::info("Configured connection pool: max={}, min={}, timeout={}s", 
+    spdlog::info("Configured connection pool: max={}, min={}, timeout={}s",
                 config.max_connections, config.min_connections, config.connection_timeout.count());
 }
 
@@ -567,13 +567,13 @@ void DeviceManager::setHealthCallback(DeviceHealthCallback callback) {
 std::vector<std::string> DeviceManager::getUnhealthyDevices() const {
     std::shared_lock lock(pimpl->mtx);
     std::vector<std::string> unhealthy;
-    
+
     for (const auto& [name, health] : pimpl->device_health) {
         if (health.overall_health < 0.5f) {
             unhealthy.push_back(name);
         }
     }
-    
+
     return unhealthy;
 }
 
@@ -624,7 +624,7 @@ std::chrono::milliseconds DeviceManager::getGlobalTimeout() const {
 void DeviceManager::executeBatchOperation(const std::vector<std::string>& device_names,
                                         std::function<bool(std::shared_ptr<AtomDriver>)> operation) {
     std::shared_lock lock(pimpl->mtx);
-    
+
     for (const auto& name : device_names) {
         auto device = pimpl->findDeviceByName(name);
         if (device) {
@@ -648,7 +648,7 @@ void DeviceManager::executeBatchOperationAsync(const std::vector<std::string>& d
                                              std::function<void(const std::vector<std::pair<std::string, bool>>&)> callback) {
     auto future = std::async(std::launch::async, [this, device_names, operation, callback]() {
         std::vector<std::pair<std::string, bool>> results;
-        
+
         for (const auto& name : device_names) {
             std::shared_lock lock(pimpl->mtx);
             auto device = pimpl->findDeviceByName(name);
@@ -664,7 +664,7 @@ void DeviceManager::executeBatchOperationAsync(const std::vector<std::string>& d
                 results.emplace_back(name, false);
             }
         }
-        
+
         if (callback) {
             callback(results);
         }
@@ -687,19 +687,19 @@ int DeviceManager::getDevicePriority(const std::string& name) const {
 std::vector<std::string> DeviceManager::getDevicesByPriority() const {
     std::shared_lock lock(pimpl->mtx);
     std::vector<std::pair<std::string, int>> device_priority_pairs;
-    
+
     for (const auto& [name, priority] : pimpl->device_priorities) {
         device_priority_pairs.emplace_back(name, priority);
     }
-    
+
     std::sort(device_priority_pairs.begin(), device_priority_pairs.end(),
               [](const auto& a, const auto& b) { return a.second > b.second; });
-    
+
     std::vector<std::string> result;
     for (const auto& pair : device_priority_pairs) {
         result.push_back(pair.first);
     }
-    
+
     return result;
 }
 
@@ -755,7 +755,7 @@ void DeviceManager::executeGroupOperation(const std::string& group_name,
 DeviceManager::SystemStats DeviceManager::getSystemStats() const {
     std::shared_lock lock(pimpl->mtx);
     SystemStats stats;
-    
+
     // Count devices
     for (const auto& [type, devices] : pimpl->devices) {
         stats.total_devices += devices.size();
@@ -765,7 +765,7 @@ DeviceManager::SystemStats DeviceManager::getSystemStats() const {
             }
         }
     }
-    
+
     // Count healthy devices and calculate average health
     float total_health = 0.0f;
     for (const auto& [name, health] : pimpl->device_health) {
@@ -774,30 +774,30 @@ DeviceManager::SystemStats DeviceManager::getSystemStats() const {
         }
         total_health += health.overall_health;
     }
-    
+
     if (!pimpl->device_health.empty()) {
         stats.average_health = total_health / pimpl->device_health.size();
     }
-    
+
     // Calculate uptime
     auto now = std::chrono::system_clock::now();
     auto uptime = std::chrono::duration_cast<std::chrono::seconds>(now - pimpl->start_time);
     stats.uptime = uptime;
-    
+
     // Operation statistics
     stats.total_operations = pimpl->total_operations;
     stats.successful_operations = pimpl->successful_operations;
     stats.failed_operations = pimpl->failed_operations;
-    
+
     return stats;
 }
 
 // Diagnostics and maintenance
 void DeviceManager::runDiagnostics() {
     std::shared_lock lock(pimpl->mtx);
-    
+
     spdlog::info("Running system diagnostics...");
-    
+
     for (const auto& [type, devices] : pimpl->devices) {
         for (const auto& device : devices) {
             if (device) {
@@ -805,9 +805,9 @@ void DeviceManager::runDiagnostics() {
             }
         }
     }
-    
+
     auto stats = getSystemStats();
-    spdlog::info("Diagnostics complete. Total devices: {}, Connected: {}, Healthy: {}", 
+    spdlog::info("Diagnostics complete. Total devices: {}, Connected: {}, Healthy: {}",
                 stats.total_devices, stats.connected_devices, stats.healthy_devices);
 }
 
@@ -818,30 +818,30 @@ void DeviceManager::runDeviceDiagnostics(const std::string& name) {
         spdlog::warn("Device {} not found for diagnostics", name);
         return;
     }
-    
+
     std::vector<std::string> warnings;
-    
+
     // Check connection
     if (!device->isConnected()) {
         warnings.push_back("Device is not connected");
     }
-    
+
     // Check health
     auto health = getDeviceHealthDetails(name);
     if (health.overall_health < 0.5f) {
         warnings.push_back("Device health is poor");
     }
-    
+
     if (health.error_rate > 0.1f) {
         warnings.push_back("High error rate detected");
     }
-    
+
     // Store warnings
     {
         std::unique_lock mlock(pimpl->mtx);
         pimpl->device_warnings[name] = warnings;
     }
-    
+
     if (!warnings.empty()) {
         spdlog::warn("Device {} has {} warnings", name, warnings.size());
     }
@@ -866,7 +866,7 @@ void DeviceManager::saveDeviceConfiguration(const std::string& name, const std::
     if (!device) {
         THROW_DEVICE_NOT_FOUND("Device not found");
     }
-    
+
     // Implementation would save device configuration to file
     device->saveConfig();
     spdlog::info("Saved configuration for device {} to {}", name, config_path);
@@ -878,7 +878,7 @@ void DeviceManager::loadDeviceConfiguration(const std::string& name, const std::
     if (!device) {
         THROW_DEVICE_NOT_FOUND("Device not found");
     }
-    
+
     // Implementation would load device configuration from file
     device->loadConfig();
     spdlog::info("Loaded configuration for device {} from {}", name, config_path);

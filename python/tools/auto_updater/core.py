@@ -25,12 +25,16 @@ class AutoUpdater:
         # Convert dictionary config to UpdaterConfig
         if isinstance(config_dict, dict):
             # Process paths in the config
-            if 'install_dir' in config_dict and isinstance(config_dict['install_dir'], str):
-                config_dict['install_dir'] = Path(config_dict['install_dir'])
-            if 'temp_dir' in config_dict and isinstance(config_dict['temp_dir'], str):
-                config_dict['temp_dir'] = Path(config_dict['temp_dir'])
-            if 'backup_dir' in config_dict and isinstance(config_dict['backup_dir'], str):
-                config_dict['backup_dir'] = Path(config_dict['backup_dir'])
+            if "install_dir" in config_dict and isinstance(
+                config_dict["install_dir"], str
+            ):
+                config_dict["install_dir"] = Path(config_dict["install_dir"])
+            if "temp_dir" in config_dict and isinstance(config_dict["temp_dir"], str):
+                config_dict["temp_dir"] = Path(config_dict["temp_dir"])
+            if "backup_dir" in config_dict and isinstance(
+                config_dict["backup_dir"], str
+            ):
+                config_dict["backup_dir"] = Path(config_dict["backup_dir"])
 
             self.config = UpdaterConfig(**config_dict)
         else:

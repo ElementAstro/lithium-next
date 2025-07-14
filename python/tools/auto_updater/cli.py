@@ -128,7 +128,7 @@ def main() -> int:
             # Ensure download_path is a Path object
             if not isinstance(download_path, Path):
                 download_path = Path(download_path)
-                
+
             verified = updater.verify_update(download_path)
             if verified:
                 print("Update verification successful")
@@ -142,7 +142,8 @@ def main() -> int:
             success = updater.update()
             if success and updater.update_info:
                 print(
-                    f"Update to version {updater.update_info.version} completed successfully")
+                    f"Update to version {updater.update_info.version} completed successfully"
+                )
                 return 0
             else:
                 print("No updates installed")

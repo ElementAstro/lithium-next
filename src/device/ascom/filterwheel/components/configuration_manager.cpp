@@ -31,19 +31,19 @@ ConfigurationManager::~ConfigurationManager() {
 
 auto ConfigurationManager::initialize(const std::string& config_path) -> bool {
     spdlog::info("Initializing ASCOM FilterWheel Configuration Manager");
-    
+
     try {
         config_path_ = config_path.empty() ? "/device/ascom/filterwheel" : config_path;
         profiles_path_ = config_path_ + "/profiles";
         settings_path_ = config_path_ + "/settings";
         backups_path_ = config_path_ + "/backups";
-        
+
         // Initialize default configuration and profile
         createDefaultConfiguration();
-        
+
         spdlog::info("ASCOM FilterWheel Configuration Manager initialized successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         setError("Configuration initialization failed: " + std::string(e.what()));
         spdlog::error("Configuration initialization failed: {}", e.what());
@@ -53,11 +53,11 @@ auto ConfigurationManager::initialize(const std::string& config_path) -> bool {
 
 auto ConfigurationManager::shutdown() -> void {
     spdlog::info("Shutting down Configuration Manager");
-    
+
     std::lock_guard<std::mutex> lock1(config_mutex_);
     std::lock_guard<std::mutex> lock2(profiles_mutex_);
     std::lock_guard<std::mutex> lock3(settings_mutex_);
-    
+
     filter_configs_.clear();
     profiles_.clear();
     settings_.clear();
@@ -66,79 +66,79 @@ auto ConfigurationManager::shutdown() -> void {
 
 auto ConfigurationManager::getFilterConfiguration(int slot) -> std::optional<FilterConfiguration> {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (!validateSlot(slot)) {
         setError("Invalid filter slot: " + std::to_string(slot));
         return std::nullopt;
     }
-    
+
     auto it = filter_configs_.find(slot);
     if (it != filter_configs_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
 auto ConfigurationManager::setFilterConfiguration(int slot, const FilterConfiguration& config) -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (!validateSlot(slot)) {
         setError("Invalid filter slot: " + std::to_string(slot));
         return false;
     }
-    
+
     auto validation = validateFilterConfiguration(config);
     if (!validation.is_valid) {
         setError("Invalid filter configuration: " + (validation.errors.empty() ? "Unknown error" : validation.errors[0]));
         return false;
     }
-    
+
     filter_configs_[slot] = config;
     notifyConfigurationChange(slot, config);
-    
+
     spdlog::debug("Filter configuration set for slot {}: {}", slot, config.name);
     return true;
 }
 
 auto ConfigurationManager::getAllFilterConfigurations() -> std::vector<FilterConfiguration> {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     std::vector<FilterConfiguration> configs;
     configs.reserve(filter_configs_.size());
-    
+
     for (const auto& [slot, config] : filter_configs_) {
         configs.push_back(config);
     }
-    
+
     return configs;
 }
 
 auto ConfigurationManager::validateFilterConfiguration(const FilterConfiguration& config) -> ConfigValidation {
     ConfigValidation result;
     result.is_valid = true;
-    
+
     // Basic validation
     if (config.name.empty()) {
         result.errors.push_back("Filter name cannot be empty");
         result.is_valid = false;
     }
-    
+
     if (config.slot < 0 || config.slot > 255) {
         result.errors.push_back("Filter slot must be between 0 and 255");
         result.is_valid = false;
     }
-    
+
     // Wavelength validation
     if (config.wavelength < 0) {
         result.warnings.push_back("Negative wavelength specified");
     }
-    
+
     // Bandwidth validation
     if (config.bandwidth < 0) {
         result.warnings.push_back("Negative bandwidth specified");
     }
-    
+
     return result;
 }
 
@@ -177,26 +177,26 @@ auto ConfigurationManager::setFocusOffset(int slot, double offset) -> bool {
 
 auto ConfigurationManager::findFilterByName(const std::string& name) -> std::optional<int> {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     for (const auto& [slot, config] : filter_configs_) {
         if (config.name == name) {
             return slot;
         }
     }
-    
+
     return std::nullopt;
 }
 
 auto ConfigurationManager::findFiltersByType(const std::string& type) -> std::vector<int> {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     std::vector<int> slots;
     for (const auto& [slot, config] : filter_configs_) {
         if (config.type == type) {
             slots.push_back(slot);
         }
     }
-    
+
     return slots;
 }
 
@@ -222,23 +222,23 @@ auto ConfigurationManager::setFilterInfo(int slot, const FilterInfo& info) -> bo
 
 auto ConfigurationManager::createProfile(const std::string& name, const std::string& description) -> bool {
     std::lock_guard<std::mutex> lock(profiles_mutex_);
-    
+
     if (!validateProfileName(name)) {
         setError("Invalid profile name: " + name);
         return false;
     }
-    
+
     if (profiles_.find(name) != profiles_.end()) {
         setError("Profile already exists: " + name);
         return false;
     }
-    
+
     FilterProfile profile;
     profile.name = name;
     profile.description = description;
     profile.created = std::chrono::system_clock::now();
     profile.modified = profile.created;
-    
+
     // Copy current filter configurations
     {
         std::lock_guard<std::mutex> config_lock(config_mutex_);
@@ -246,7 +246,7 @@ auto ConfigurationManager::createProfile(const std::string& name, const std::str
             profile.filters.push_back(config);
         }
     }
-    
+
     profiles_[name] = profile;
     spdlog::debug("Created profile: {}", name);
     return true;
@@ -254,85 +254,85 @@ auto ConfigurationManager::createProfile(const std::string& name, const std::str
 
 auto ConfigurationManager::loadProfile(const std::string& name) -> bool {
     std::lock_guard<std::mutex> profiles_lock(profiles_mutex_);
-    
+
     auto it = profiles_.find(name);
     if (it == profiles_.end()) {
         setError("Profile not found: " + name);
         return false;
     }
-    
+
     // Load filters from profile
     {
         std::lock_guard<std::mutex> config_lock(config_mutex_);
         filter_configs_.clear();
-        
+
         for (const auto& config : it->second.filters) {
             filter_configs_[config.slot] = config;
         }
     }
-    
+
     current_profile_name_ = name;
     notifyProfileChange(name);
-    
+
     spdlog::debug("Loaded profile: {}", name);
     return true;
 }
 
 auto ConfigurationManager::saveProfile(const std::string& name) -> bool {
     std::lock_guard<std::mutex> profiles_lock(profiles_mutex_);
-    
+
     auto it = profiles_.find(name);
     if (it == profiles_.end()) {
         setError("Profile not found: " + name);
         return false;
     }
-    
+
     // Update profile with current filter configurations
     {
         std::lock_guard<std::mutex> config_lock(config_mutex_);
         it->second.filters.clear();
-        
+
         for (const auto& [slot, config] : filter_configs_) {
             it->second.filters.push_back(config);
         }
     }
-    
+
     it->second.modified = std::chrono::system_clock::now();
-    
+
     spdlog::debug("Saved profile: {}", name);
     return true;
 }
 
 auto ConfigurationManager::deleteProfile(const std::string& name) -> bool {
     std::lock_guard<std::mutex> lock(profiles_mutex_);
-    
+
     if (name == "Default") {
         setError("Cannot delete default profile");
         return false;
     }
-    
+
     auto erased = profiles_.erase(name);
     if (erased == 0) {
         setError("Profile not found: " + name);
         return false;
     }
-    
+
     if (current_profile_name_ == name) {
         current_profile_name_ = "Default";
     }
-    
+
     spdlog::debug("Deleted profile: {}", name);
     return true;
 }
 
 auto ConfigurationManager::getCurrentProfile() -> std::optional<FilterProfile> {
     std::lock_guard<std::mutex> lock(profiles_mutex_);
-    
+
     auto it = profiles_.find(current_profile_name_);
     if (it != profiles_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
@@ -342,43 +342,43 @@ auto ConfigurationManager::setCurrentProfile(const std::string& name) -> bool {
 
 auto ConfigurationManager::getAvailableProfiles() -> std::vector<std::string> {
     std::lock_guard<std::mutex> lock(profiles_mutex_);
-    
+
     std::vector<std::string> names;
     names.reserve(profiles_.size());
-    
+
     for (const auto& [name, profile] : profiles_) {
         names.push_back(name);
     }
-    
+
     return names;
 }
 
 auto ConfigurationManager::getProfileInfo(const std::string& name) -> std::optional<FilterProfile> {
     std::lock_guard<std::mutex> lock(profiles_mutex_);
-    
+
     auto it = profiles_.find(name);
     if (it != profiles_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
 // Settings management
 auto ConfigurationManager::getSetting(const std::string& key) -> std::optional<std::string> {
     std::lock_guard<std::mutex> lock(settings_mutex_);
-    
+
     auto it = settings_.find(key);
     if (it != settings_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
 auto ConfigurationManager::setSetting(const std::string& key, const std::string& value) -> bool {
     std::lock_guard<std::mutex> lock(settings_mutex_);
-    
+
     settings_[key] = value;
     spdlog::debug("Setting '{}' = '{}'", key, value);
     return true;
@@ -456,14 +456,14 @@ auto ConfigurationManager::validateProfileName(const std::string& name) -> bool 
 
 auto ConfigurationManager::createDefaultConfiguration() -> void {
     spdlog::debug("Creating default filter wheel configuration");
-    
+
     // Create default profile
     FilterProfile default_profile;
     default_profile.name = "Default";
     default_profile.description = "Default filter wheel configuration";
     default_profile.created = std::chrono::system_clock::now();
     default_profile.modified = default_profile.created;
-    
+
     // Create default filter configurations (8 filters)
     for (int i = 0; i < 8; ++i) {
         FilterConfiguration config;
@@ -474,14 +474,14 @@ auto ConfigurationManager::createDefaultConfiguration() -> void {
         config.bandwidth = 0.0;
         config.focus_offset = 0.0;
         config.description = "Default filter slot " + std::to_string(i + 1);
-        
+
         default_profile.filters.push_back(config);
         filter_configs_[i] = config;
     }
-    
+
     profiles_["Default"] = default_profile;
     current_profile_name_ = "Default";
-    
+
     spdlog::debug("Default configuration created with {} filters", default_profile.filters.size());
 }
 
@@ -513,9 +513,9 @@ auto ConfigurationManager::importProfiles(const std::string& directory) -> std::
 auto ConfigurationManager::validateAllConfigurations() -> ConfigValidation {
     ConfigValidation result;
     result.is_valid = true;
-    
+
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     for (const auto& [slot, config] : filter_configs_) {
         auto validation = validateFilterConfiguration(config);
         if (!validation.is_valid) {
@@ -528,7 +528,7 @@ auto ConfigurationManager::validateAllConfigurations() -> ConfigValidation {
             result.warnings.push_back("Slot " + std::to_string(slot) + ": " + warning);
         }
     }
-    
+
     return result;
 }
 
@@ -541,9 +541,9 @@ auto ConfigurationManager::repairConfiguration() -> bool {
 auto ConfigurationManager::getConfigurationStatus() -> std::string {
     std::lock_guard<std::mutex> config_lock(config_mutex_);
     std::lock_guard<std::mutex> profile_lock(profiles_mutex_);
-    
-    return "Configurations: " + std::to_string(filter_configs_.size()) + 
-           ", Profiles: " + std::to_string(profiles_.size()) + 
+
+    return "Configurations: " + std::to_string(filter_configs_.size()) +
+           ", Profiles: " + std::to_string(profiles_.size()) +
            ", Current: " + current_profile_name_;
 }
 
@@ -636,12 +636,12 @@ auto ConfigurationManager::ensureDirectoriesExist() -> bool {
 
 auto ConfigurationManager::updateFilterField(int slot, std::function<void(FilterConfiguration&)> updater) -> bool {
     std::lock_guard<std::mutex> lock(config_mutex_);
-    
+
     if (!validateSlot(slot)) {
         setError("Invalid filter slot: " + std::to_string(slot));
         return false;
     }
-    
+
     auto it = filter_configs_.find(slot);
     if (it != filter_configs_.end()) {
         updater(it->second);

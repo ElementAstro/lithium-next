@@ -27,7 +27,7 @@ namespace lithium::device::ascom::telescope::components {
 
 ParkingManager::ParkingManager(std::shared_ptr<HardwareInterface> hardware)
     : hardware_(hardware) {
-    
+
     auto logger = spdlog::get("telescope_parking");
     if (logger) {
         logger->info("ParkingManager initialized");
@@ -81,13 +81,13 @@ bool ParkingManager::park() {
     try {
         auto logger = spdlog::get("telescope_parking");
         if (logger) logger->info("Starting park operation");
-        
+
         bool result = hardware_->park();
-        
+
         if (result) {
             clearError();
             if (logger) logger->info("Park operation completed successfully");
-            
+
             // Wait for park to complete and verify
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             if (isParked()) {
@@ -99,7 +99,7 @@ bool ParkingManager::park() {
             setLastError("Park operation failed");
             if (logger) logger->error("Park operation failed");
         }
-        
+
         return result;
     } catch (const std::exception& e) {
         setLastError("Exception during park operation: " + std::string(e.what()));
@@ -125,13 +125,13 @@ bool ParkingManager::unpark() {
     try {
         auto logger = spdlog::get("telescope_parking");
         if (logger) logger->info("Starting unpark operation");
-        
+
         bool result = hardware_->unpark();
-        
+
         if (result) {
             clearError();
             if (logger) logger->info("Unpark operation completed successfully");
-            
+
             // Wait for unpark to complete and verify
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             if (!isParked()) {
@@ -143,7 +143,7 @@ bool ParkingManager::unpark() {
             setLastError("Unpark operation failed");
             if (logger) logger->error("Unpark operation failed");
         }
-        
+
         return result;
     } catch (const std::exception& e) {
         setLastError("Exception during unpark operation: " + std::string(e.what()));
@@ -182,11 +182,11 @@ std::optional<EquatorialCoordinates> ParkingManager::getParkPosition() const {
         EquatorialCoordinates position;
         position.ra = 0.0;   // Hours
         position.dec = 0.0;  // Degrees
-        
+
         auto logger = spdlog::get("telescope_parking");
-        if (logger) logger->debug("Retrieved park position: RA={:.6f}, Dec={:.6f}", 
+        if (logger) logger->debug("Retrieved park position: RA={:.6f}, Dec={:.6f}",
                                   position.ra, position.dec);
-        
+
         return position;
     } catch (const std::exception& e) {
         setLastError("Failed to get park position: " + std::string(e.what()));
@@ -220,14 +220,14 @@ bool ParkingManager::setParkPosition(double ra, double dec) {
     try {
         auto logger = spdlog::get("telescope_parking");
         if (logger) logger->info("Setting park position to RA: {:.6f}h, DEC: {:.6f}°", ra, dec);
-        
+
         // Implementation would set park position in hardware
         // For now, just simulate success
-        
+
         clearError();
         if (logger) logger->info("Park position set successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         setLastError("Failed to set park position: " + std::string(e.what()));
         auto logger = spdlog::get("telescope_parking");
@@ -251,7 +251,7 @@ bool ParkingManager::isAtPark() const {
         // Implementation would check if current position matches park position
         // For now, assume if parked then at park position
         return true;
-        
+
     } catch (const std::exception& e) {
         setLastError("Failed to check if at park position: " + std::string(e.what()));
         auto logger = spdlog::get("telescope_parking");

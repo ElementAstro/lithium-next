@@ -24,7 +24,7 @@ namespace lithium::device::ascom::telescope::components {
 
 TrackingManager::TrackingManager(std::shared_ptr<HardwareInterface> hardware)
     : hardware_(hardware) {
-    
+
     auto logger = spdlog::get("telescope_tracking");
     if (logger) {
         logger->info("TrackingManager initialized");
@@ -63,7 +63,7 @@ bool TrackingManager::setTracking(bool enable) {
     try {
         auto logger = spdlog::get("telescope_tracking");
         if (logger) logger->info("Setting tracking to: {}", enable ? "enabled" : "disabled");
-        
+
         bool result = hardware_->setTracking(enable);
         if (result) {
             clearError();
@@ -73,7 +73,7 @@ bool TrackingManager::setTracking(bool enable) {
             if (logger) logger->error("Failed to set tracking to {}", enable);
         }
         return result;
-        
+
     } catch (const std::exception& e) {
         setLastError("Exception setting tracking: " + std::string(e.what()));
         auto logger = spdlog::get("telescope_tracking");
@@ -92,9 +92,9 @@ std::optional<TrackMode> TrackingManager::getTrackingRate() const {
         // Implementation would get tracking rate from hardware
         // For now, return sidereal as default
         TrackMode mode = TrackMode::SIDEREAL;
-        
+
         return mode;
-        
+
     } catch (const std::exception& e) {
         setLastError("Failed to get tracking rate: " + std::string(e.what()));
         auto logger = spdlog::get("telescope_tracking");
@@ -112,14 +112,14 @@ bool TrackingManager::setTrackingRate(TrackMode rate) {
     try {
         auto logger = spdlog::get("telescope_tracking");
         if (logger) logger->info("Setting tracking rate to: {}", static_cast<int>(rate));
-        
+
         // Implementation would set tracking rate in hardware
         // For now, just simulate success
-        
+
         clearError();
         if (logger) logger->info("Tracking rate set successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         setLastError("Exception setting tracking rate: " + std::string(e.what()));
         auto logger = spdlog::get("telescope_tracking");
@@ -142,9 +142,9 @@ MotionRates TrackingManager::getTrackingRates() const {
         rates.guideRateEW = 0.5;  // arcsec/sec
         rates.slewRateRA = 3.0;   // degrees/sec
         rates.slewRateDEC = 3.0;  // degrees/sec
-        
+
         return rates;
-        
+
     } catch (const std::exception& e) {
         setLastError("Failed to get tracking rates: " + std::string(e.what()));
         auto logger = spdlog::get("telescope_tracking");
@@ -162,17 +162,17 @@ bool TrackingManager::setTrackingRates(const MotionRates& rates) {
     try {
         auto logger = spdlog::get("telescope_tracking");
         if (logger) {
-            logger->info("Setting tracking rates: GuideNS={:.6f} arcsec/sec, GuideEW={:.6f} arcsec/sec, SlewRA={:.6f} deg/sec, SlewDEC={:.6f} deg/sec", 
+            logger->info("Setting tracking rates: GuideNS={:.6f} arcsec/sec, GuideEW={:.6f} arcsec/sec, SlewRA={:.6f} deg/sec, SlewDEC={:.6f} deg/sec",
                          rates.guideRateNS, rates.guideRateEW, rates.slewRateRA, rates.slewRateDEC);
         }
-        
+
         // Implementation would set custom tracking rates in hardware
         // For now, just simulate success
-        
+
         clearError();
         if (logger) logger->info("Tracking rates set successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         setLastError("Exception setting tracking rates: " + std::string(e.what()));
         auto logger = spdlog::get("telescope_tracking");

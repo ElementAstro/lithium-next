@@ -11,7 +11,7 @@ from ..core.data_structures import CompilerOutput
 
 class OutputWriter(Protocol):
     """Protocol defining interface for output writers."""
-    
+
     def write(self, compiler_output: CompilerOutput, output_path: Path) -> None:
         """Write the compiler output to the specified path."""
         ...

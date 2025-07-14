@@ -38,7 +38,7 @@ setup(
             "flake8>=5.0.0",
         ],
         "test": [
-            "pytest>=7.0.0", 
+            "pytest>=7.0.0",
             "pytest-asyncio>=0.20.0",
             "pytest-cov>=4.0.0",
         ],

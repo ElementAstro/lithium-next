@@ -147,7 +147,7 @@ auto HardwareInterface::disconnect() -> bool {
     if (connection_type_ == ConnectionType::COM_DRIVER) {
         // Disconnect COM interface
         success = setCOMProperty("Connected", "false");
-        
+
         if (com_interface_) {
             com_interface_->Release();
             com_interface_ = nullptr;
@@ -157,7 +157,7 @@ auto HardwareInterface::disconnect() -> bool {
 
     is_connected_.store(false);
     connection_type_ = ConnectionType::NONE;
-    
+
     spdlog::info("ASCOM Hardware Interface disconnected");
     return success;
 }
@@ -418,7 +418,7 @@ auto HardwareInterface::getInterfaceVersion() -> std::optional<int> {
 
 auto HardwareInterface::setClientID(const std::string& client_id) -> bool {
     client_id_ = client_id;
-    
+
     if (is_connected_.load()) {
         // Update client ID on connected device if supported
         if (connection_type_ == ConnectionType::COM_DRIVER) {
@@ -427,14 +427,14 @@ auto HardwareInterface::setClientID(const std::string& client_id) -> bool {
 #endif
         }
     }
-    
+
     return true;
 }
 
 auto HardwareInterface::connectToCOM(const std::string& prog_id) -> bool {
 #ifdef _WIN32
     spdlog::info("Connecting to COM filterwheel driver: {}", prog_id);
-    
+
     // Implementation would use COM helper
     // For now, just set connected state
     is_connected_.store(true);
@@ -449,11 +449,11 @@ auto HardwareInterface::connectToCOM(const std::string& prog_id) -> bool {
 
 auto HardwareInterface::connectToAlpaca(const std::string& host, int port, int device_number) -> bool {
     spdlog::info("Connecting to Alpaca filterwheel at {}:{} device {}", host, port, device_number);
-    
+
     alpaca_host_ = host;
     alpaca_port_ = port;
     alpaca_device_number_ = device_number;
-    
+
     // Test connection
     auto response = sendAlpacaRequest("GET", "connected");
     if (response) {
@@ -462,7 +462,7 @@ auto HardwareInterface::connectToAlpaca(const std::string& host, int port, int d
         device_info_.type = ConnectionType::ALPACA_REST;
         return true;
     }
-    
+
     return false;
 }
 
@@ -594,12 +594,12 @@ auto HardwareInterface::shutdownAlpaca() -> void {
 auto HardwareInterface::sendAlpacaRequest(const std::string& method, const std::string& endpoint, const std::string& params) -> std::optional<std::string> {
     // TODO: Implement HTTP client for Alpaca REST API
     spdlog::debug("Sending Alpaca request: {} {} {}", method, endpoint, params);
-    
+
     // Placeholder implementation
     if (endpoint == "connected" && method == "GET") {
         return "true";
     }
-    
+
     return std::nullopt;
 }
 

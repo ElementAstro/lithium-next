@@ -33,7 +33,7 @@ namespace lithium::device::ascom::telescope {
 // ASCOMTelescopeMain Implementation
 // =========================================================================
 
-ASCOMTelescopeMain::ASCOMTelescopeMain() 
+ASCOMTelescopeMain::ASCOMTelescopeMain()
     : state_(TelescopeState::DISCONNECTED) {
     spdlog::info("ASCOMTelescopeMain created");
 }
@@ -45,9 +45,9 @@ ASCOMTelescopeMain::~ASCOMTelescopeMain() {
 
 bool ASCOMTelescopeMain::initialize() {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     spdlog::info("Initializing ASCOM Telescope Main");
-    
+
     try {
         // Initialize components will be called when needed
         // For now, just mark as ready for connection
@@ -61,17 +61,17 @@ bool ASCOMTelescopeMain::initialize() {
 
 bool ASCOMTelescopeMain::shutdown() {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     spdlog::info("Shutting down ASCOM Telescope Main");
-    
+
     // Disconnect if connected
     if (state_ != TelescopeState::DISCONNECTED) {
         disconnect();
     }
-    
+
     // Shutdown components
     shutdownComponents();
-    
+
     setState(TelescopeState::DISCONNECTED);
     spdlog::info("ASCOM Telescope Main shutdown complete");
     return true;
@@ -79,25 +79,25 @@ bool ASCOMTelescopeMain::shutdown() {
 
 bool ASCOMTelescopeMain::connect(const std::string& deviceName, int timeout, int maxRetry) {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     if (state_ != TelescopeState::DISCONNECTED) {
         setLastError("Telescope is already connected");
         return false;
     }
-    
+
     spdlog::info("Connecting to telescope device: {}", deviceName);
-    
+
     try {
         // Initialize components if not already done
         if (!initializeComponents()) {
             setLastError("Failed to initialize telescope components");
             return false;
         }
-        
+
         // Prepare connection settings
         components::HardwareInterface::ConnectionSettings settings;
         settings.deviceName = deviceName;
-        
+
         // Determine connection type based on device name
         if (deviceName.find("://") != std::string::npos) {
             settings.type = components::ConnectionType::ALPACA_REST;
@@ -117,12 +117,12 @@ bool ASCOMTelescopeMain::connect(const std::string& deviceName, int timeout, int
             settings.type = components::ConnectionType::COM_DRIVER;
             settings.progId = deviceName;
         }
-        
+
         // Attempt connection with retry logic
         bool connected = false;
         for (int attempt = 0; attempt < maxRetry && !connected; ++attempt) {
             spdlog::info("Connection attempt {} of {}", attempt + 1, maxRetry);
-            
+
             if (hardware_->connect(settings)) {
                 connected = true;
                 setState(TelescopeState::CONNECTED);
@@ -134,16 +134,16 @@ bool ASCOMTelescopeMain::connect(const std::string& deviceName, int timeout, int
                 }
             }
         }
-        
+
         if (!connected) {
             setLastError("Failed to connect after " + std::to_string(maxRetry) + " attempts");
             return false;
         }
-        
+
         // Transition to idle state
         setState(TelescopeState::IDLE);
         return true;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Connection error: ") + e.what());
         return false;
@@ -152,28 +152,28 @@ bool ASCOMTelescopeMain::connect(const std::string& deviceName, int timeout, int
 
 bool ASCOMTelescopeMain::disconnect() {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     if (state_ == TelescopeState::DISCONNECTED) {
         return true;
     }
-    
+
     spdlog::info("Disconnecting from telescope");
-    
+
     try {
         // Stop any ongoing operations
         if (motion_ && motion_->isMoving()) {
             motion_->emergencyStop();
         }
-        
+
         // Disconnect hardware
         if (hardware_ && hardware_->isConnected()) {
             hardware_->disconnect();
         }
-        
+
         setState(TelescopeState::DISCONNECTED);
         spdlog::info("Successfully disconnected from telescope");
         return true;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Disconnection error: ") + e.what());
         return false;
@@ -182,9 +182,9 @@ bool ASCOMTelescopeMain::disconnect() {
 
 std::vector<std::string> ASCOMTelescopeMain::scanDevices() {
     spdlog::info("Scanning for telescope devices");
-    
+
     std::vector<std::string> devices;
-    
+
     try {
         // Initialize hardware interface if needed for scanning
         if (!hardware_) {
@@ -198,10 +198,10 @@ std::vector<std::string> ASCOMTelescopeMain::scanDevices() {
         } else if (hardware_->isInitialized()) {
             devices = hardware_->discoverDevices();
         }
-        
+
         spdlog::info("Found {} telescope devices", devices.size());
         return devices;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Device scan error: ") + e.what());
         return {};
@@ -224,7 +224,7 @@ std::optional<EquatorialCoordinates> ASCOMTelescopeMain::getCurrentRADEC() {
     if (!validateConnection()) {
         return std::nullopt;
     }
-    
+
     try {
         return coordinates_->getRADECJNow();
     } catch (const std::exception& e) {
@@ -237,7 +237,7 @@ std::optional<HorizontalCoordinates> ASCOMTelescopeMain::getCurrentAZALT() {
     if (!validateConnection()) {
         return std::nullopt;
     }
-    
+
     try {
         return coordinates_->getAZALT();
     } catch (const std::exception& e) {
@@ -250,23 +250,23 @@ bool ASCOMTelescopeMain::slewToRADEC(double ra, double dec, bool enableTracking)
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         setState(TelescopeState::SLEWING);
-        
+
         bool success = motion_->slewToRADEC(ra, dec, true); // Always async for main interface
-        
+
         if (success && enableTracking) {
             // Enable tracking after slew starts
             tracking_->setTracking(true);
         }
-        
+
         if (!success) {
             setState(TelescopeState::IDLE);
         }
-        
+
         return success;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to slew to RA/DEC: ") + e.what());
         setState(TelescopeState::ERROR);
@@ -278,18 +278,18 @@ bool ASCOMTelescopeMain::slewToAZALT(double az, double alt) {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         setState(TelescopeState::SLEWING);
-        
+
         bool success = motion_->slewToAZALT(az, alt, true); // Always async
-        
+
         if (!success) {
             setState(TelescopeState::IDLE);
         }
-        
+
         return success;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to slew to AZ/ALT: ") + e.what());
         setState(TelescopeState::ERROR);
@@ -301,11 +301,11 @@ bool ASCOMTelescopeMain::syncToRADEC(double ra, double dec) {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         // Use hardware interface directly for sync operations
         return hardware_->syncToCoordinates(ra, dec);
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to sync to RA/DEC: ") + e.what());
         return false;
@@ -320,7 +320,7 @@ bool ASCOMTelescopeMain::isSlewing() {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return motion_->isSlewing();
     } catch (const std::exception& e) {
@@ -333,14 +333,14 @@ bool ASCOMTelescopeMain::abortSlew() {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         bool success = motion_->abortSlew();
         if (success) {
             setState(TelescopeState::IDLE);
         }
         return success;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to abort slew: ") + e.what());
         return false;
@@ -351,14 +351,14 @@ bool ASCOMTelescopeMain::emergencyStop() {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         bool success = motion_->emergencyStop();
         if (success) {
             setState(TelescopeState::IDLE);
         }
         return success;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to perform emergency stop: ") + e.what());
         return false;
@@ -369,7 +369,7 @@ bool ASCOMTelescopeMain::startDirectionalMove(const std::string& direction, doub
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return motion_->startDirectionalMove(direction, rate);
     } catch (const std::exception& e) {
@@ -382,7 +382,7 @@ bool ASCOMTelescopeMain::stopDirectionalMove(const std::string& direction) {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return motion_->stopDirectionalMove(direction);
     } catch (const std::exception& e) {
@@ -399,7 +399,7 @@ bool ASCOMTelescopeMain::isTracking() {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return tracking_->isTracking();
     } catch (const std::exception& e) {
@@ -412,7 +412,7 @@ bool ASCOMTelescopeMain::setTracking(bool enable) {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         bool success = tracking_->setTracking(enable);
         if (success && enable) {
@@ -421,7 +421,7 @@ bool ASCOMTelescopeMain::setTracking(bool enable) {
             setState(TelescopeState::IDLE);
         }
         return success;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to set tracking: ") + e.what());
         return false;
@@ -432,7 +432,7 @@ std::optional<TrackMode> ASCOMTelescopeMain::getTrackingRate() {
     if (!validateConnection()) {
         return std::nullopt;
     }
-    
+
     try {
         return tracking_->getTrackingRate();
     } catch (const std::exception& e) {
@@ -445,7 +445,7 @@ bool ASCOMTelescopeMain::setTrackingRate(TrackMode rate) {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return tracking_->setTrackingRate(rate);
     } catch (const std::exception& e) {
@@ -462,7 +462,7 @@ bool ASCOMTelescopeMain::isParked() {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return parking_->isParked();
     } catch (const std::exception& e) {
@@ -475,19 +475,19 @@ bool ASCOMTelescopeMain::park() {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         setState(TelescopeState::PARKING);
-        
+
         bool success = parking_->park();
         if (success) {
             setState(TelescopeState::PARKED);
         } else {
             setState(TelescopeState::IDLE);
         }
-        
+
         return success;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to park telescope: ") + e.what());
         setState(TelescopeState::ERROR);
@@ -499,15 +499,15 @@ bool ASCOMTelescopeMain::unpark() {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         bool success = parking_->unpark();
         if (success) {
             setState(TelescopeState::IDLE);
         }
-        
+
         return success;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to unpark telescope: ") + e.what());
         return false;
@@ -518,7 +518,7 @@ bool ASCOMTelescopeMain::setParkPosition(double ra, double dec) {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return parking_->setParkPosition(ra, dec);
     } catch (const std::exception& e) {
@@ -535,7 +535,7 @@ bool ASCOMTelescopeMain::guidePulse(const std::string& direction, int duration) 
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return guide_->guidePulse(direction, duration);
     } catch (const std::exception& e) {
@@ -548,7 +548,7 @@ bool ASCOMTelescopeMain::guideRADEC(double ra_ms, double dec_ms) {
     if (!validateConnection()) {
         return false;
     }
-    
+
     try {
         return guide_->guideRADEC(ra_ms, dec_ms);
     } catch (const std::exception& e) {
@@ -565,20 +565,20 @@ std::optional<TelescopeParameters> ASCOMTelescopeMain::getTelescopeInfo() {
     if (!validateConnection()) {
         return std::nullopt;
     }
-    
+
     try {
         auto hwInfo = hardware_->getTelescopeInfo();
         if (!hwInfo) {
             return std::nullopt;
         }
-        
+
         TelescopeParameters params;
         params.aperture = hwInfo->aperture;
         params.focal_length = hwInfo->focalLength;
         // Add other parameter mappings as needed
-        
+
         return params;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to get telescope info: ") + e.what());
         return std::nullopt;
@@ -615,12 +615,12 @@ bool ASCOMTelescopeMain::validateConnection() const {
         setLastError("Telescope is not connected");
         return false;
     }
-    
+
     if (!hardware_ || !hardware_->isConnected()) {
         setLastError("Hardware interface is not connected");
         return false;
     }
-    
+
     return true;
 }
 
@@ -628,13 +628,13 @@ bool ASCOMTelescopeMain::initializeComponents() {
     try {
         // Create io_context for hardware interface
         static boost::asio::io_context io_context;
-        
+
         // Initialize hardware interface
         hardware_ = std::make_shared<components::HardwareInterface>(io_context);
         if (!hardware_->initialize()) {
             return false;
         }
-        
+
         // Initialize other components
         motion_ = std::make_shared<components::MotionController>(hardware_);
         coordinates_ = std::make_shared<components::CoordinateManager>(hardware_);
@@ -642,15 +642,15 @@ bool ASCOMTelescopeMain::initializeComponents() {
         tracking_ = std::make_shared<components::TrackingManager>(hardware_);
         parking_ = std::make_shared<components::ParkingManager>(hardware_);
         alignment_ = std::make_shared<components::AlignmentManager>(hardware_);
-        
+
         // Initialize components that need initialization
         if (!motion_->initialize()) {
             return false;
         }
-        
+
         spdlog::info("All telescope components initialized successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         setLastError(std::string("Failed to initialize components: ") + e.what());
         return false;
@@ -662,11 +662,11 @@ void ASCOMTelescopeMain::shutdownComponents() {
         if (motion_) {
             motion_->shutdown();
         }
-        
+
         if (hardware_) {
             hardware_->shutdown();
         }
-        
+
         // Reset all component pointers
         alignment_.reset();
         parking_.reset();
@@ -675,9 +675,9 @@ void ASCOMTelescopeMain::shutdownComponents() {
         coordinates_.reset();
         motion_.reset();
         hardware_.reset();
-        
+
         spdlog::info("All telescope components shut down successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("Error during component shutdown: {}", e.what());
     }

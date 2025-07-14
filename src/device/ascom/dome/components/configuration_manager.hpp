@@ -75,7 +75,7 @@ public:
 
     // === Validation ===
     auto validateConfiguration() -> std::vector<std::string>;
-    auto setValidator(const std::string& section, const std::string& key, 
+    auto setValidator(const std::string& section, const std::string& key,
                      std::function<bool(const ConfigValue&)> validator) -> bool;
 
     // === Default Configuration ===

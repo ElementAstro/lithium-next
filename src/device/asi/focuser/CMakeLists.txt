@@ -25,7 +25,7 @@ set_target_properties(lithium_device_asi_focuser PROPERTIES
 )
 
 # Find and link ASI SDK
-find_library(ASI_FOCUSER_LIBRARY 
+find_library(ASI_FOCUSER_LIBRARY
     NAMES ASICamera2 libASICamera2 ASIEAF libASIEAF
     PATHS
         /usr/local/lib

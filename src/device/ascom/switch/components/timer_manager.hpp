@@ -51,7 +51,7 @@ struct TimerEntry {
 
 /**
  * @brief Timer Manager Component
- * 
+ *
  * This component handles all timer-related functionality for switches
  * including delayed operations, automatic shutoffs, and scheduled tasks.
  */
@@ -173,21 +173,21 @@ private:
     auto stopTimerThread() -> void;
     auto timerLoop() -> void;
     auto processExpiredTimers() -> void;
-    
+
     auto createTimerEntry(uint32_t index, uint32_t durationMs, SwitchState targetState, SwitchState restoreState) -> TimerEntry;
     auto addTimer(uint32_t index, const TimerEntry& timer) -> bool;
     auto removeTimer(uint32_t index) -> bool;
     auto findTimerByName(const std::string& name) -> std::optional<uint32_t>;
-    
+
     auto validateTimerDuration(uint32_t durationMs) -> bool;
     auto validateSwitchIndex(uint32_t index) -> bool;
     auto setLastError(const std::string& error) const -> void;
-    
+
     // Notification helpers
     auto notifyTimerExpired(uint32_t index, bool restored) -> void;
     auto notifyTimerStarted(uint32_t index, uint32_t durationMs) -> void;
     auto notifyTimerCancelled(uint32_t index, uint32_t remainingMs) -> void;
-    
+
     // Timer execution
     auto executeTimerAction(const TimerEntry& timer) -> bool;
     auto restoreSwitchState(uint32_t index, SwitchState state) -> bool;

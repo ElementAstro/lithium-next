@@ -41,13 +41,13 @@ auto ASCOMTelescopeController::initialize() -> bool {
     try {
         telescope_ = std::make_unique<ASCOMTelescopeMain>();
         bool success = telescope_->initialize();
-        
+
         if (success) {
             spdlog::info("ASCOM Telescope Controller initialized successfully");
         } else {
             logError("initialize", telescope_->getLastError());
         }
-        
+
         return success;
     } catch (const std::exception& e) {
         logError("initialize", e.what());
@@ -60,16 +60,16 @@ auto ASCOMTelescopeController::destroy() -> bool {
         if (!telescope_) {
             return true;
         }
-        
+
         bool success = telescope_->shutdown();
         telescope_.reset();
-        
+
         if (success) {
             spdlog::info("ASCOM Telescope Controller destroyed successfully");
         } else {
             spdlog::error("Failed to destroy ASCOM Telescope Controller");
         }
-        
+
         return success;
     } catch (const std::exception& e) {
         logError("destroy", e.what());
@@ -82,7 +82,7 @@ auto ASCOMTelescopeController::connect(const std::string& deviceName, int timeou
         logError("connect", "Telescope not initialized");
         return false;
     }
-    
+
     try {
         return telescope_->connect(deviceName, timeout, maxRetry);
     } catch (const std::exception& e) {
@@ -95,7 +95,7 @@ auto ASCOMTelescopeController::disconnect() -> bool {
     if (!telescope_) {
         return true;
     }
-    
+
     try {
         return telescope_->disconnect();
     } catch (const std::exception& e) {
@@ -109,7 +109,7 @@ auto ASCOMTelescopeController::scan() -> std::vector<std::string> {
         logError("scan", "Telescope not initialized");
         return {};
     }
-    
+
     try {
         return telescope_->scanDevices();
     } catch (const std::exception& e) {
@@ -122,7 +122,7 @@ auto ASCOMTelescopeController::isConnected() const -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->isConnected();
     } catch (const std::exception& e) {
@@ -138,7 +138,7 @@ auto ASCOMTelescopeController::getTelescopeInfo() -> std::optional<TelescopePara
     if (!telescope_) {
         return std::nullopt;
     }
-    
+
     try {
         return telescope_->getTelescopeInfo();
     } catch (const std::exception& e) {
@@ -176,7 +176,7 @@ auto ASCOMTelescopeController::getTrackRate() -> std::optional<TrackMode> {
     if (!telescope_) {
         return std::nullopt;
     }
-    
+
     try {
         return telescope_->getTrackingRate();
     } catch (const std::exception& e) {
@@ -189,7 +189,7 @@ auto ASCOMTelescopeController::setTrackRate(TrackMode rate) -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->setTrackingRate(rate);
     } catch (const std::exception& e) {
@@ -202,7 +202,7 @@ auto ASCOMTelescopeController::isTrackingEnabled() -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->isTracking();
     } catch (const std::exception& e) {
@@ -215,7 +215,7 @@ auto ASCOMTelescopeController::enableTracking(bool enable) -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->setTracking(enable);
     } catch (const std::exception& e) {
@@ -245,7 +245,7 @@ auto ASCOMTelescopeController::abortMotion() -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->abortSlew();
     } catch (const std::exception& e) {
@@ -258,7 +258,7 @@ auto ASCOMTelescopeController::getStatus() -> std::optional<std::string> {
     if (!telescope_) {
         return "Disconnected";
     }
-    
+
     try {
         switch (telescope_->getState()) {
             case TelescopeState::DISCONNECTED: return "Disconnected";
@@ -282,7 +282,7 @@ auto ASCOMTelescopeController::emergencyStop() -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->emergencyStop();
     } catch (const std::exception& e) {
@@ -295,7 +295,7 @@ auto ASCOMTelescopeController::isMoving() -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->isSlewing();
     } catch (const std::exception& e) {
@@ -325,7 +325,7 @@ auto ASCOMTelescopeController::setParkPosition(double ra, double dec) -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->setParkPosition(ra, dec);
     } catch (const std::exception& e) {
@@ -338,7 +338,7 @@ auto ASCOMTelescopeController::isParked() -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->isParked();
     } catch (const std::exception& e) {
@@ -351,7 +351,7 @@ auto ASCOMTelescopeController::park() -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->park();
     } catch (const std::exception& e) {
@@ -364,7 +364,7 @@ auto ASCOMTelescopeController::unpark() -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->unpark();
     } catch (const std::exception& e) {
@@ -450,12 +450,12 @@ auto ASCOMTelescopeController::startMotion(MotionNS ns_direction, MotionEW ew_di
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         // Convert motion directions to strings
         std::string ns_dir = (ns_direction == MotionNS::MOTION_NORTH) ? "N" : "S";
         std::string ew_dir = (ew_direction == MotionEW::MOTION_EAST) ? "E" : "W";
-        
+
         // Start movements with default rate
         bool success = true;
         if (ns_direction != MotionNS::MOTION_STOP) {
@@ -464,7 +464,7 @@ auto ASCOMTelescopeController::startMotion(MotionNS ns_direction, MotionEW ew_di
         if (ew_direction != MotionEW::MOTION_STOP) {
             success &= telescope_->startDirectionalMove(ew_dir, 1.0);
         }
-        
+
         return success;
     } catch (const std::exception& e) {
         logError("startMotion", e.what());
@@ -476,17 +476,17 @@ auto ASCOMTelescopeController::stopMotion(MotionNS ns_direction, MotionEW ew_dir
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         // Convert motion directions to strings
         std::string ns_dir = (ns_direction == MotionNS::MOTION_NORTH) ? "N" : "S";
         std::string ew_dir = (ew_direction == MotionEW::MOTION_EAST) ? "E" : "W";
-        
+
         // Stop movements
         bool success = true;
         success &= telescope_->stopDirectionalMove(ns_dir);
         success &= telescope_->stopDirectionalMove(ew_dir);
-        
+
         return success;
     } catch (const std::exception& e) {
         logError("stopMotion", e.what());
@@ -502,7 +502,7 @@ auto ASCOMTelescopeController::guideNS(int direction, int duration) -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         std::string dir = (direction > 0) ? "N" : "S";
         return telescope_->guidePulse(dir, duration);
@@ -516,7 +516,7 @@ auto ASCOMTelescopeController::guideEW(int direction, int duration) -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         std::string dir = (direction > 0) ? "E" : "W";
         return telescope_->guidePulse(dir, duration);
@@ -530,7 +530,7 @@ auto ASCOMTelescopeController::guidePulse(double ra_ms, double dec_ms) -> bool {
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->guideRADEC(ra_ms, dec_ms);
     } catch (const std::exception& e) {
@@ -575,7 +575,7 @@ auto ASCOMTelescopeController::slewToRADECJNow(double raHours, double decDegrees
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->slewToRADEC(raHours, decDegrees, enableTracking);
     } catch (const std::exception& e) {
@@ -588,7 +588,7 @@ auto ASCOMTelescopeController::syncToRADECJNow(double raHours, double decDegrees
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->syncToRADEC(raHours, decDegrees);
     } catch (const std::exception& e) {
@@ -601,7 +601,7 @@ auto ASCOMTelescopeController::getAZALT() -> std::optional<HorizontalCoordinates
     if (!telescope_) {
         return std::nullopt;
     }
-    
+
     try {
         return telescope_->getCurrentAZALT();
     } catch (const std::exception& e) {
@@ -618,7 +618,7 @@ auto ASCOMTelescopeController::slewToAZALT(double azDegrees, double altDegrees) 
     if (!telescope_) {
         return false;
     }
-    
+
     try {
         return telescope_->slewToAZALT(azDegrees, altDegrees);
     } catch (const std::exception& e) {
@@ -711,7 +711,7 @@ std::optional<EquatorialCoordinates> ASCOMTelescopeController::getCurrentRADEC()
     if (!telescope_) {
         return std::nullopt;
     }
-    
+
     try {
         return telescope_->getCurrentRADEC();
     } catch (const std::exception& e) {
@@ -724,7 +724,7 @@ void ASCOMTelescopeController::logError(const std::string& operation, const std:
     spdlog::error("ASCOM Telescope Controller [{}]: {}", operation, error);
 }
 
-bool ASCOMTelescopeController::validateParameters(const std::string& operation, 
+bool ASCOMTelescopeController::validateParameters(const std::string& operation,
                                                 std::function<bool()> validator) const {
     try {
         return validator();

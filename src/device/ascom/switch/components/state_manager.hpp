@@ -62,7 +62,7 @@ struct DeviceConfiguration {
 
 /**
  * @brief State Manager Component
- * 
+ *
  * This component handles state persistence, configuration management,
  * and device state restoration functionality.
  */
@@ -222,28 +222,28 @@ private:
     auto startAutoSaveThread() -> bool;
     auto stopAutoSaveThread() -> void;
     auto autoSaveLoop() -> void;
-    
+
     auto collectCurrentState() -> DeviceConfiguration;
     auto applyConfiguration(const DeviceConfiguration& config) -> bool;
     auto validateConfigurationData(const DeviceConfiguration& config) -> bool;
-    
+
     auto ensureDirectoryExists(const std::string& directory) -> bool;
     auto generateBackupName() -> std::string;
     auto parseConfigurationFile(const std::string& filename) -> std::optional<DeviceConfiguration>;
     auto writeConfigurationFile(const std::string& filename, const DeviceConfiguration& config) -> bool;
-    
+
     auto setLastError(const std::string& error) const -> void;
     auto logOperation(const std::string& operation, bool success) -> void;
-    
+
     // JSON serialization helpers
     auto configToJson(const DeviceConfiguration& config) -> std::string;
     auto jsonToConfig(const std::string& json) -> std::optional<DeviceConfiguration>;
-    
+
     // Notification helpers
     auto notifyStateChange(bool saved, const std::string& filename) -> void;
     auto notifyBackup(const std::string& backupName, bool success) -> void;
     auto notifyEmergency(bool active) -> void;
-    
+
     // Utility methods
     auto getFullPath(const std::string& filename) -> std::string;
     auto getBackupPath(const std::string& backupName) -> std::string;

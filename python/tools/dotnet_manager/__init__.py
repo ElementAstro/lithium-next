@@ -22,16 +22,25 @@ from __future__ import annotations
 
 # Import enhanced models with new exception classes
 from .models import (
-    DotNetVersion, HashAlgorithm, SystemInfo, DownloadResult, InstallationResult,
-    DotNetManagerError, UnsupportedPlatformError, RegistryAccessError,
-    DownloadError, ChecksumError, InstallationError, VersionComparable
+    DotNetVersion,
+    HashAlgorithm,
+    SystemInfo,
+    DownloadResult,
+    InstallationResult,
+    DotNetManagerError,
+    UnsupportedPlatformError,
+    RegistryAccessError,
+    DownloadError,
+    ChecksumError,
+    InstallationError,
+    VersionComparable,
 )
 
 # Platform-specific imports (Windows-only components)
 try:
     # Import enhanced manager (Windows-specific)
     from .manager import DotNetManager
-    
+
     # Import enhanced API functions (Windows-specific)
     from .api import (
         get_system_info,
@@ -46,8 +55,9 @@ try:
         uninstall_dotnet,
         get_latest_known_version,
         get_version_info,
-        download_and_install_version
+        download_and_install_version,
     )
+
     _PLATFORM_IMPORTS_AVAILABLE = True
 except ImportError:
     # On non-Windows platforms, these imports will fail
@@ -74,25 +84,21 @@ __author__ = "Max Qian <astro_air@126.com>"
 __all__ = [
     # Core Manager
     "DotNetManager",
-    
     # Models and Data Classes
     "DotNetVersion",
-    "HashAlgorithm", 
+    "HashAlgorithm",
     "SystemInfo",
     "DownloadResult",
     "InstallationResult",
-    
     # Exception Classes
     "DotNetManagerError",
-    "UnsupportedPlatformError", 
+    "UnsupportedPlatformError",
     "RegistryAccessError",
     "DownloadError",
     "ChecksumError",
     "InstallationError",
-    
     # Protocols
     "VersionComparable",
-    
     # API Functions - System Information
     "get_system_info",
     "check_dotnet_installed",
@@ -100,10 +106,9 @@ __all__ = [
     "list_available_dotnets",
     "get_latest_known_version",
     "get_version_info",
-    
     # API Functions - Download and Install
     "download_file",
-    "download_file_async", 
+    "download_file_async",
     "verify_checksum",
     "verify_checksum_async",
     "install_software",

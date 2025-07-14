@@ -18,7 +18,9 @@ class SyncProgressCallback:
     def __init__(self, sync_callback: Callable[[str, float, str], None]):
         self._sync_callback = sync_callback
 
-    async def __call__(self, status: UpdateStatus, progress: float, message: str) -> None:
+    async def __call__(
+        self, status: UpdateStatus, progress: float, message: str
+    ) -> None:
         self._sync_callback(status.value, progress, message)
 
 
@@ -47,16 +49,15 @@ class AutoUpdaterSync:
             package_handler=ZipPackageHandler(),
             install_dir=Path(config["install_dir"]),
             current_version=config["current_version"],
-            temp_dir=Path(config.get("temp_dir", Path(
-                config["install_dir"]) / "temp")),
-            backup_dir=Path(config.get("backup_dir", Path(
-                config["install_dir"]) / "backup")),
-            custom_hooks=config.get("custom_hooks", {})
+            temp_dir=Path(config.get("temp_dir", Path(config["install_dir"]) / "temp")),
+            backup_dir=Path(
+                config.get("backup_dir", Path(config["install_dir"]) / "backup")
+            ),
+            custom_hooks=config.get("custom_hooks", {}),
         )
 
         if progress_callback:
-            updater_config.progress_callback = SyncProgressCallback(
-                progress_callback)
+            updater_config.progress_callback = SyncProgressCallback(progress_callback)
 
         self.updater = AutoUpdater(updater_config)
         # 修复：asyncio.current_tasks 并不存在，应该用 asyncio.all_tasks
@@ -149,6 +150,7 @@ def run_updater(config: Dict[str, Any], in_thread: bool = False) -> bool:
         # This is a simplified approach; for robust threading with asyncio, consider
         # asyncio.run_coroutine_threadsafe or a dedicated event loop in the thread.
         import threading
+
         thread = threading.Thread(target=lambda: updater.update())
         thread.daemon = True
         thread.start()

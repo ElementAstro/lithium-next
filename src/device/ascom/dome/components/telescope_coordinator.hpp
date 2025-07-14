@@ -76,7 +76,7 @@ private:
     std::atomic<double> telescope_azimuth_{0.0};
     std::atomic<double> telescope_altitude_{0.0};
     std::atomic<double> following_tolerance_{1.0}; // degrees
-    
+
     TelescopeParameters telescope_params_;
     int following_delay_{1000}; // milliseconds
 

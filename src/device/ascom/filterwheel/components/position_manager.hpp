@@ -110,37 +110,37 @@ public:
 
 private:
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // Position state
     std::atomic<int> current_position_{0};
     std::atomic<int> target_position_{0};
     std::atomic<MovementStatus> movement_status_{MovementStatus::IDLE};
     std::atomic<bool> is_moving_{false};
-    
+
     // Configuration
     int movement_timeout_ms_{30000};
     int retry_count_{3};
     int filter_count_{0};
-    
+
     // Statistics
     std::atomic<uint64_t> total_moves_{0};
     std::chrono::steady_clock::time_point last_move_start_;
     std::chrono::milliseconds last_move_duration_{0};
     std::vector<std::chrono::milliseconds> move_times_;
-    
+
     // Threading
     std::unique_ptr<std::thread> monitoring_thread_;
     std::atomic<bool> stop_monitoring_{false};
     std::mutex position_mutex_;
-    
+
     // Callbacks
     MovementCallback movement_callback_;
     PositionChangeCallback position_change_callback_;
-    
+
     // Error handling
     std::string last_error_;
     std::mutex error_mutex_;
-    
+
     // Internal methods
     auto startMovement(int position) -> bool;
     auto finishMovement(bool success, const std::string& message = "") -> void;
@@ -150,12 +150,12 @@ private:
     auto setError(const std::string& error) -> void;
     auto notifyMovementComplete(int position, bool success, const std::string& message) -> void;
     auto notifyPositionChange(int old_position, int new_position) -> void;
-    
+
     // Movement implementation
     auto performMove(int position, int attempt = 1) -> bool;
     auto verifyPosition(int expected_position) -> bool;
     auto estimateMovementTime(int from_position, int to_position) -> std::chrono::milliseconds;
-    
+
     // Statistics helpers
     auto updateMoveStatistics(std::chrono::milliseconds duration) -> void;
     auto calculateAverageTime() -> std::chrono::milliseconds;

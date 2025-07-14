@@ -15,22 +15,30 @@ from pydantic import BaseModel, ValidationError
 
 # Use relative imports as the directory is a package
 from .utils import (
-    ConfigurationManager, FileManager, ProcessManager, SystemInfo,
-    FileOperationError, load_json, save_json
+    ConfigurationManager,
+    FileManager,
+    ProcessManager,
+    SystemInfo,
+    FileOperationError,
+    load_json,
+    save_json,
 )
 
 
 # --- Fixtures ---
+
 
 @pytest.fixture
 def process_manager():
     """Fixture for a ProcessManager instance."""
     return ProcessManager()
 
+
 @pytest.fixture
 def file_manager():
     """Fixture for a FileManager instance."""
     return FileManager()
+
 
 @pytest.fixture
 def config_manager(tmp_path):
@@ -38,22 +46,22 @@ def config_manager(tmp_path):
     config_dir = tmp_path / "config"
     return ConfigurationManager(config_dir=config_dir)
 
+
 @pytest.fixture
 def mock_subprocess_run(mocker):
     """Fixture to mock subprocess.run."""
-    mock_run = mocker.patch('subprocess.run')
+    mock_run = mocker.patch("subprocess.run")
     # Default successful result
     mock_run.return_value = MagicMock(
-        returncode=0,
-        stdout=b"mock stdout",
-        stderr=b"mock stderr"
+        returncode=0, stdout=b"mock stdout", stderr=b"mock stderr"
     )
     return mock_run
+
 
 @pytest.fixture
 def mock_asyncio_subprocess_exec(mocker):
     """Fixture to mock asyncio.create_subprocess_exec."""
-    mock_exec = mocker.patch('asyncio.create_subprocess_exec', new_callable=AsyncMock)
+    mock_exec = mocker.patch("asyncio.create_subprocess_exec", new_callable=AsyncMock)
     # Default successful process mock
     mock_process = AsyncMock()
     mock_process.returncode = 0
@@ -63,6 +71,7 @@ def mock_asyncio_subprocess_exec(mocker):
 
 
 # --- Tests for ProcessManager ---
+
 
 @pytest.mark.asyncio
 async def test_run_command_async_success(process_manager, mock_asyncio_subprocess_exec):
@@ -76,9 +85,11 @@ async def test_run_command_async_success(process_manager, mock_asyncio_subproces
         stderr=asyncio.subprocess.PIPE,
         stdin=None,
         cwd=None,
-        env=os.environ.copy() # Check default env is used
+        env=os.environ.copy(),  # Check default env is used
     )
-    mock_asyncio_subprocess_exec.return_value.communicate.assert_called_once_with(input=None)
+    mock_asyncio_subprocess_exec.return_value.communicate.assert_called_once_with(
+        input=None
+    )
 
     assert result.success is True
     assert result.return_code == 0
@@ -95,7 +106,10 @@ async def test_run_command_async_failure(process_manager, mock_asyncio_subproces
     """Test asynchronous command execution failure."""
     command = ["false"]
     mock_asyncio_subprocess_exec.return_value.returncode = 1
-    mock_asyncio_subprocess_exec.return_value.communicate.return_value = (b"", b"mock error output")
+    mock_asyncio_subprocess_exec.return_value.communicate.return_value = (
+        b"",
+        b"mock error output",
+    )
 
     result = await process_manager.run_command_async(command)
 
@@ -112,7 +126,9 @@ async def test_run_command_async_failure(process_manager, mock_asyncio_subproces
 async def test_run_command_async_timeout(process_manager, mock_asyncio_subprocess_exec):
     """Test asynchronous command timeout."""
     command = ["sleep", "10"]
-    mock_asyncio_subprocess_exec.return_value.communicate.side_effect = asyncio.TimeoutError
+    mock_asyncio_subprocess_exec.return_value.communicate.side_effect = (
+        asyncio.TimeoutError
+    )
 
     result = await process_manager.run_command_async(command, timeout=1)
 
@@ -120,7 +136,9 @@ async def test_run_command_async_timeout(process_manager, mock_asyncio_subproces
     mock_asyncio_subprocess_exec.return_value.wait.assert_called_once()
 
     assert result.success is False
-    assert result.return_code == -1 # Or whatever the killed process returns, but -1 is a safe mock
+    assert (
+        result.return_code == -1
+    )  # Or whatever the killed process returns, but -1 is a safe mock
     assert "Command timed out after 1s" in result.stderr
     assert result.command == command
     assert result.execution_time > 0
@@ -128,7 +146,9 @@ async def test_run_command_async_timeout(process_manager, mock_asyncio_subproces
 
 
 @pytest.mark.asyncio
-async def test_run_command_async_command_not_found(process_manager, mock_asyncio_subprocess_exec):
+async def test_run_command_async_command_not_found(
+    process_manager, mock_asyncio_subprocess_exec
+):
     """Test asynchronous command not found error."""
     command = ["non_existent_command"]
     mock_asyncio_subprocess_exec.side_effect = FileNotFoundError
@@ -144,7 +164,9 @@ async def test_run_command_async_command_not_found(process_manager, mock_asyncio
 
 
 @pytest.mark.asyncio
-async def test_run_command_async_unexpected_exception(process_manager, mock_asyncio_subprocess_exec):
+async def test_run_command_async_unexpected_exception(
+    process_manager, mock_asyncio_subprocess_exec
+):
     """Test asynchronous command execution with an unexpected exception."""
     command = ["echo", "hello"]
     mock_asyncio_subprocess_exec.side_effect = Exception("Something went wrong")
@@ -160,7 +182,9 @@ async def test_run_command_async_unexpected_exception(process_manager, mock_asyn
 
 
 @pytest.mark.asyncio
-async def test_run_command_async_with_cwd(process_manager, mock_asyncio_subprocess_exec, tmp_path):
+async def test_run_command_async_with_cwd(
+    process_manager, mock_asyncio_subprocess_exec, tmp_path
+):
     """Test asynchronous command execution with a specified working directory."""
     command = ["ls"]
     cwd = tmp_path / "test_dir"
@@ -173,13 +197,15 @@ async def test_run_command_async_with_cwd(process_manager, mock_asyncio_subproce
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         stdin=None,
-        cwd=str(cwd), # cwd is passed as string
-        env=os.environ.copy()
+        cwd=str(cwd),  # cwd is passed as string
+        env=os.environ.copy(),
     )
 
 
 @pytest.mark.asyncio
-async def test_run_command_async_with_env(process_manager, mock_asyncio_subprocess_exec):
+async def test_run_command_async_with_env(
+    process_manager, mock_asyncio_subprocess_exec
+):
     """Test asynchronous command execution with custom environment variables."""
     command = ["printenv", "MY_VAR"]
     custom_env = {"MY_VAR": "my_value"}
@@ -195,12 +221,14 @@ async def test_run_command_async_with_env(process_manager, mock_asyncio_subproce
         stderr=asyncio.subprocess.PIPE,
         stdin=None,
         cwd=None,
-        env=expected_env
+        env=expected_env,
     )
 
 
 @pytest.mark.asyncio
-async def test_run_command_async_with_input(process_manager, mock_asyncio_subprocess_exec):
+async def test_run_command_async_with_input(
+    process_manager, mock_asyncio_subprocess_exec
+):
     """Test asynchronous command execution with input data."""
     command = ["cat"]
     input_data = b"input data"
@@ -211,11 +239,13 @@ async def test_run_command_async_with_input(process_manager, mock_asyncio_subpro
         *command,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        stdin=asyncio.subprocess.PIPE, # stdin should be PIPE
+        stdin=asyncio.subprocess.PIPE,  # stdin should be PIPE
         cwd=None,
-        env=os.environ.copy()
+        env=os.environ.copy(),
     )
-    mock_asyncio_subprocess_exec.return_value.communicate.assert_called_once_with(input=input_data)
+    mock_asyncio_subprocess_exec.return_value.communicate.assert_called_once_with(
+        input=input_data
+    )
 
 
 def test_run_command_sync_success(process_manager, mock_subprocess_run):
@@ -230,8 +260,8 @@ def test_run_command_sync_success(process_manager, mock_subprocess_run):
         input=None,
         timeout=None,
         cwd=None,
-        env=os.environ.copy(), # Check default env is used
-        text=False # Should be False as per implementation
+        env=os.environ.copy(),  # Check default env is used
+        text=False,  # Should be False as per implementation
     )
 
     assert result.success is True
@@ -322,9 +352,9 @@ def test_run_command_sync_with_cwd(process_manager, mock_subprocess_run, tmp_pat
         stderr=subprocess.PIPE,
         input=None,
         timeout=None,
-        cwd=str(cwd), # cwd is passed as string
+        cwd=str(cwd),  # cwd is passed as string
         env=os.environ.copy(),
-        text=False
+        text=False,
     )
 
 
@@ -346,7 +376,7 @@ def test_run_command_sync_with_env(process_manager, mock_subprocess_run):
         timeout=None,
         cwd=None,
         env=expected_env,
-        text=False
+        text=False,
     )
 
 
@@ -361,14 +391,16 @@ def test_run_command_sync_with_input(process_manager, mock_subprocess_run):
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        input=input_data, # input data is passed directly
+        input=input_data,  # input data is passed directly
         timeout=None,
         cwd=None,
         env=os.environ.copy(),
-        text=False
+        text=False,
     )
 
+
 # --- Tests for FileManager ---
+
 
 def test_temporary_directory_context_manager(file_manager):
     """Test synchronous temporary_directory context manager."""
@@ -387,7 +419,9 @@ def test_temporary_directory_context_manager(file_manager):
     assert not temp_dir_path.exists()
     # Check that the number of items in the temp dir is back to normal (approx)
     # This is not a perfect check due to other processes, but gives some confidence
-    assert len(os.listdir(tempfile.gettempdir())) <= initial_temp_dir_count + 1 # Allow for slight variations
+    assert (
+        len(os.listdir(tempfile.gettempdir())) <= initial_temp_dir_count + 1
+    )  # Allow for slight variations
 
 
 @pytest.mark.asyncio
@@ -418,7 +452,7 @@ def test_ensure_directory_exists(file_manager, tmp_path):
     returned_path = file_manager.ensure_directory(existing_dir)
 
     assert returned_path == existing_dir
-    assert returned_path.is_dir() # Still exists
+    assert returned_path.is_dir()  # Still exists
     # Check permissions if needed, but default is usually fine
 
 
@@ -431,7 +465,7 @@ def test_ensure_directory_creates_new(file_manager, tmp_path):
 
     assert returned_path == new_dir
     assert returned_path.is_dir()
-    assert new_dir.parent.is_dir() # Parent should also be created
+    assert new_dir.parent.is_dir()  # Parent should also be created
 
 
 def test_safe_copy_success(file_manager, tmp_path):
@@ -447,7 +481,7 @@ def test_safe_copy_success(file_manager, tmp_path):
 
     assert dst_file.exists()
     assert dst_file.read_text() == "hello world"
-    assert dst_file.parent.is_dir() # Destination directory should be created
+    assert dst_file.parent.is_dir()  # Destination directory should be created
 
 
 def test_safe_copy_source_not_found(file_manager, tmp_path):
@@ -464,7 +498,7 @@ def test_safe_copy_source_not_found(file_manager, tmp_path):
     assert excinfo.value.error_code == "SOURCE_NOT_FOUND"
     # Fix: Access context dictionary
     assert excinfo.value.context["source"] == str(src_file)
-    assert not dst_file.exists() # Destination should not be created
+    assert not dst_file.exists()  # Destination should not be created
 
 
 def test_safe_copy_os_error(file_manager, tmp_path, mocker):
@@ -474,7 +508,7 @@ def test_safe_copy_os_error(file_manager, tmp_path, mocker):
     dst_file = tmp_path / "dest" / "copied_source.txt"
 
     # Mock shutil.copy2 to raise an OSError
-    mocker.patch('shutil.copy2', side_effect=OSError("Mock copy error"))
+    mocker.patch("shutil.copy2", side_effect=OSError("Mock copy error"))
 
     with pytest.raises(FileOperationError) as excinfo:
         file_manager.safe_copy(src_file, dst_file)
@@ -493,7 +527,7 @@ def test_get_file_info_exists(file_manager, tmp_path):
     """Test get_file_info for an existing file."""
     test_file = tmp_path / "info_test.txt"
     test_file.write_text("some content")
-    os.chmod(test_file, 0o755) # Make it executable for the test
+    os.chmod(test_file, 0o755)  # Make it executable for the test
 
     info = file_manager.get_file_info(test_file)
 
@@ -515,7 +549,7 @@ def test_get_file_info_not_exists(file_manager, tmp_path):
     info = file_manager.get_file_info(test_file)
 
     assert info["exists"] is False
-    assert len(info) == 1 # Only 'exists' key should be present
+    assert len(info) == 1  # Only 'exists' key should be present
 
 
 def test_get_file_info_directory(file_manager, tmp_path):
@@ -531,10 +565,11 @@ def test_get_file_info_directory(file_manager, tmp_path):
     # Other fields like size, times, permissions might vary or be zero depending on OS/FS
     assert "size" in info
     assert "permissions" in info
-    assert "is_executable" in info # Directories can be executable (searchable)
+    assert "is_executable" in info  # Directories can be executable (searchable)
 
 
 # --- Tests for ConfigurationManager ---
+
 
 @pytest.mark.asyncio
 async def test_load_json_async_success(config_manager, tmp_path):
@@ -585,7 +620,7 @@ async def test_load_json_async_os_error(config_manager, tmp_path, mocker):
     json_file.write_text("{}")
 
     # Mock aiofiles.open to raise an OSError
-    mocker.patch('aiofiles.open', side_effect=OSError("Mock read error"))
+    mocker.patch("aiofiles.open", side_effect=OSError("Mock read error"))
 
     with pytest.raises(FileOperationError) as excinfo:
         await config_manager.load_json_async(json_file)
@@ -643,7 +678,7 @@ def test_load_json_sync_os_error(config_manager, tmp_path, mocker):
     json_file.write_text("{}")
 
     # Mock Path.open to raise an OSError
-    mocker.patch.object(Path, 'open', side_effect=OSError("Mock read error sync"))
+    mocker.patch.object(Path, "open", side_effect=OSError("Mock read error sync"))
 
     with pytest.raises(FileOperationError) as excinfo:
         config_manager.load_json(json_file)
@@ -669,7 +704,7 @@ async def test_save_json_async_success(config_manager, tmp_path):
     assert json_file.exists()
     loaded_data = json.loads(json_file.read_text())
     assert loaded_data == json_data
-    assert json_file.parent.is_dir() # Directory should be created
+    assert json_file.parent.is_dir()  # Directory should be created
 
 
 @pytest.mark.asyncio
@@ -699,7 +734,7 @@ async def test_save_json_async_os_error(config_manager, tmp_path, mocker):
     json_data = {"data": "to_save"}
 
     # Mock aiofiles.open to raise an OSError
-    mocker.patch('aiofiles.open', side_effect=OSError("Mock write error"))
+    mocker.patch("aiofiles.open", side_effect=OSError("Mock write error"))
 
     with pytest.raises(FileOperationError) as excinfo:
         await config_manager.save_json_async(json_file, json_data)
@@ -724,7 +759,7 @@ def test_save_json_sync_success(config_manager, tmp_path):
     assert json_file.exists()
     loaded_data = json.loads(json_file.read_text())
     assert loaded_data == json_data
-    assert json_file.parent.is_dir() # Directory should be created
+    assert json_file.parent.is_dir()  # Directory should be created
 
 
 def test_save_json_sync_with_backup(config_manager, tmp_path):
@@ -752,7 +787,7 @@ def test_save_json_sync_os_error(config_manager, tmp_path, mocker):
     json_data = {"data": "to_save"}
 
     # Mock Path.open to raise an OSError
-    mocker.patch.object(Path, 'open', side_effect=OSError("Mock write error sync"))
+    mocker.patch.object(Path, "open", side_effect=OSError("Mock write error sync"))
 
     with pytest.raises(FileOperationError) as excinfo:
         config_manager.save_json(json_file, json_data)
@@ -767,6 +802,7 @@ def test_save_json_sync_os_error(config_manager, tmp_path, mocker):
 
 def test_load_config_with_model_success(config_manager, tmp_path):
     """Test loading and validating config with a Pydantic model."""
+
     class TestModel(BaseModel):
         name: str
         value: int
@@ -784,6 +820,7 @@ def test_load_config_with_model_success(config_manager, tmp_path):
 
 def test_load_config_with_model_validation_error(config_manager, tmp_path):
     """Test loading config with a Pydantic model when validation fails."""
+
     class TestModel(BaseModel):
         name: str
         value: int
@@ -806,6 +843,7 @@ def test_load_config_with_model_validation_error(config_manager, tmp_path):
 
 def test_load_config_with_model_file_not_found(config_manager, tmp_path):
     """Test loading config with a Pydantic model when file is not found."""
+
     class TestModel(BaseModel):
         name: str
 
@@ -822,17 +860,18 @@ def test_load_config_with_model_file_not_found(config_manager, tmp_path):
 
 # --- Tests for SystemInfo ---
 
+
 def test_get_platform_info(mocker):
     """Test get_platform_info."""
     # Mock platform functions to return predictable values
-    mocker.patch('platform.system', return_value='MockOS')
-    mocker.patch('platform.machine', return_value='MockMachine')
-    mocker.patch('platform.architecture', return_value=('64bit', 'ELF'))
-    mocker.patch('platform.processor', return_value='MockProcessor')
-    mocker.patch('platform.python_version', return_value='3.9.7')
-    mocker.patch('platform.platform', return_value='MockPlatform-1.0')
-    mocker.patch('platform.release', return_value='1.0')
-    mocker.patch('platform.version', return_value='#1 MockVersion')
+    mocker.patch("platform.system", return_value="MockOS")
+    mocker.patch("platform.machine", return_value="MockMachine")
+    mocker.patch("platform.architecture", return_value=("64bit", "ELF"))
+    mocker.patch("platform.processor", return_value="MockProcessor")
+    mocker.patch("platform.python_version", return_value="3.9.7")
+    mocker.patch("platform.platform", return_value="MockPlatform-1.0")
+    mocker.patch("platform.release", return_value="1.0")
+    mocker.patch("platform.version", return_value="#1 MockVersion")
 
     info = SystemInfo.get_platform_info()
 
@@ -844,109 +883,113 @@ def test_get_platform_info(mocker):
         "python_version": "3.9.7",
         "platform": "MockPlatform-1.0",
         "release": "1.0",
-        "version": "#1 MockVersion"
+        "version": "#1 MockVersion",
     }
 
 
 def test_get_cpu_count(mocker):
     """Test get_cpu_count."""
-    mocker.patch('os.cpu_count', return_value=8)
+    mocker.patch("os.cpu_count", return_value=8)
     assert SystemInfo.get_cpu_count() == 8
 
-    mocker.patch('os.cpu_count', return_value=None)
-    assert SystemInfo.get_cpu_count() == 1 # Fallback to 1
+    mocker.patch("os.cpu_count", return_value=None)
+    assert SystemInfo.get_cpu_count() == 1  # Fallback to 1
 
 
 def test_get_memory_info_available(mocker):
     """Test get_memory_info when psutil is available."""
     mock_psutil = MagicMock()
     mock_psutil.virtual_memory.return_value = MagicMock(
-        total=16 * 1024**3, # 16GB
-        available=8 * 1024**3, # 8GB
-        percent=50.0
+        total=16 * 1024**3, available=8 * 1024**3, percent=50.0  # 16GB  # 8GB
     )
-    mocker.patch('sys.modules["psutil"]', mock_psutil) # Simulate psutil being imported
+    mocker.patch('sys.modules["psutil"]', mock_psutil)  # Simulate psutil being imported
 
     info = SystemInfo.get_memory_info()
 
     assert info == {
         "total": 16 * 1024**3,
         "available": 8 * 1024**3,
-        "percent_used": 50.0
+        "percent_used": 50.0,
     }
 
 
 def test_get_memory_info_not_available(mocker):
     """Test get_memory_info when psutil is not available."""
     # Simulate psutil not being importable
-    mocker.patch('builtins.__import__', side_effect=ImportError("No module named 'psutil'"))
+    mocker.patch(
+        "builtins.__import__", side_effect=ImportError("No module named 'psutil'")
+    )
 
     info = SystemInfo.get_memory_info()
 
-    assert info == {} # Should return empty dict
+    assert info == {}  # Should return empty dict
 
 
 def test_find_executable_in_path(mocker):
     """Test find_executable when executable is in system PATH."""
-    mocker.patch('shutil.which', return_value='/usr/bin/mock_exe')
-    mocker.patch('pathlib.Path.is_file', return_value=True) # Mock Path methods too
-    mocker.patch('os.access', return_value=True)
+    mocker.patch("shutil.which", return_value="/usr/bin/mock_exe")
+    mocker.patch("pathlib.Path.is_file", return_value=True)  # Mock Path methods too
+    mocker.patch("os.access", return_value=True)
 
     found_path = SystemInfo.find_executable("mock_exe")
 
-    assert found_path == Path('/usr/bin/mock_exe')
-    mocker.patch('shutil.which').assert_called_once_with("mock_exe")
+    assert found_path == Path("/usr/bin/mock_exe")
+    mocker.patch("shutil.which").assert_called_once_with("mock_exe")
 
 
 def test_find_executable_in_additional_paths(mocker, tmp_path):
     """Test find_executable when executable is in additional paths."""
-    mocker.patch('shutil.which', return_value=None) # Not in PATH
+    mocker.patch("shutil.which", return_value=None)  # Not in PATH
 
     additional_path = tmp_path / "custom_bin"
     additional_path.mkdir()
     exe_path = additional_path / "custom_exe"
-    exe_path.touch() # Create the dummy file
+    exe_path.touch()  # Create the dummy file
 
     # Mock Path methods for the additional path check
-    mocker.patch.object(Path, 'is_dir', return_value=True)
-    mocker.patch.object(Path, 'is_file', return_value=True)
-    mocker.patch('os.access', return_value=True)
+    mocker.patch.object(Path, "is_dir", return_value=True)
+    mocker.patch.object(Path, "is_file", return_value=True)
+    mocker.patch("os.access", return_value=True)
 
     found_path = SystemInfo.find_executable("custom_exe", paths=[str(additional_path)])
 
     assert found_path == exe_path
-    mocker.patch('shutil.which').assert_called_once_with("custom_exe")
+    mocker.patch("shutil.which").assert_called_once_with("custom_exe")
     # Check Path.is_dir and os.access were called for the additional path
 
 
 def test_find_executable_not_found(mocker, tmp_path):
     """Test find_executable when executable is not found anywhere."""
-    mocker.patch('shutil.which', return_value=None)
-    mocker.patch.object(Path, 'is_dir', return_value=False) # Simulate additional path is not a dir
+    mocker.patch("shutil.which", return_value=None)
+    mocker.patch.object(
+        Path, "is_dir", return_value=False
+    )  # Simulate additional path is not a dir
 
-    found_path = SystemInfo.find_executable("non_existent_exe", paths=[str(tmp_path / "fake_bin")])
+    found_path = SystemInfo.find_executable(
+        "non_existent_exe", paths=[str(tmp_path / "fake_bin")]
+    )
 
     assert found_path is None
-    mocker.patch('shutil.which').assert_called_once_with("non_existent_exe")
+    mocker.patch("shutil.which").assert_called_once_with("non_existent_exe")
 
 
 def test_get_environment_info(mocker):
     """Test get_environment_info."""
     # Mock os.environ
     mock_environ = {
-        'PATH': '/bin:/usr/bin',
-        'CC': 'gcc',
-        'CXX': 'g++',
-        'MY_CUSTOM_VAR': 'ignore_me' # Should be ignored
+        "PATH": "/bin:/usr/bin",
+        "CC": "gcc",
+        "CXX": "g++",
+        "MY_CUSTOM_VAR": "ignore_me",  # Should be ignored
     }
-    mocker.patch('os.environ', mock_environ)
+    mocker.patch("os.environ", mock_environ)
 
     info = SystemInfo.get_environment_info()
 
     assert info == {
-        'PATH': '/bin:/usr/bin',
-        'CC': 'gcc',
-        'CXX': 'g++',
+        "PATH": "/bin:/usr/bin",
+        "CC": "gcc",
+        "CXX": "g++",
         # Other relevant vars should be included if they were in mock_environ,
         # but since they weren't, they are correctly omitted.
     }
@@ -954,10 +997,14 @@ def test_get_environment_info(mocker):
 
 # --- Tests for Convenience Functions ---
 
+
 def test_load_json_convenience(mocker, tmp_path):
     """Test the top-level load_json convenience function."""
     mock_config_manager_instance = MagicMock(spec=ConfigurationManager)
-    mocker.patch('tools.compiler_helper.utils.ConfigurationManager', return_value=mock_config_manager_instance)
+    mocker.patch(
+        "tools.compiler_helper.utils.ConfigurationManager",
+        return_value=mock_config_manager_instance,
+    )
 
     file_path = tmp_path / "convenience.json"
     load_json(file_path)
@@ -968,10 +1015,15 @@ def test_load_json_convenience(mocker, tmp_path):
 def test_save_json_convenience(mocker, tmp_path):
     """Test the top-level save_json convenience function."""
     mock_config_manager_instance = MagicMock(spec=ConfigurationManager)
-    mocker.patch('tools.compiler_helper.utils.ConfigurationManager', return_value=mock_config_manager_instance)
+    mocker.patch(
+        "tools.compiler_helper.utils.ConfigurationManager",
+        return_value=mock_config_manager_instance,
+    )
 
     file_path = tmp_path / "convenience_save.json"
     data = {"a": 1}
     save_json(file_path, data, indent=4)
 
-    mock_config_manager_instance.save_json.assert_called_once_with(file_path, data, indent=4)
+    mock_config_manager_instance.save_json.assert_called_once_with(
+        file_path, data, indent=4
+    )

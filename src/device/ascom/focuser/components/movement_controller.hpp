@@ -330,10 +330,10 @@ public:
 private:
     // Hardware interface reference
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // Configuration
     MovementConfig config_;
-    
+
     // Current state
     std::atomic<int> current_position_{0};
     std::atomic<int> target_position_{0};
@@ -341,37 +341,37 @@ private:
     std::atomic<bool> is_moving_{false};
     std::atomic<bool> is_reversed_{false};
     std::atomic<FocusDirection> direction_{FocusDirection::NONE};
-    
+
     // Movement timing
     std::chrono::steady_clock::time_point move_start_time_;
     std::chrono::steady_clock::time_point last_position_update_;
-    
+
     // Statistics
     MovementStats stats_;
     mutable std::mutex stats_mutex_;
-    
+
     // Callbacks
     PositionCallback position_callback_;
     MovementStartCallback movement_start_callback_;
     MovementCompleteCallback movement_complete_callback_;
     MovementProgressCallback movement_progress_callback_;
-    
+
     // Monitoring
     std::atomic<bool> monitoring_active_{false};
     std::thread monitoring_thread_;
     mutable std::mutex controller_mutex_;
-    
+
     // Private methods
     auto updateCurrentPosition() -> void;
     auto notifyPositionChange(int position) -> void;
     auto notifyMovementStart(int startPosition, int targetPosition) -> void;
     auto notifyMovementComplete(bool success, int finalPosition, const std::string& message) -> void;
     auto notifyMovementProgress(double progress, int currentPosition) -> void;
-    
+
     auto monitorMovementProgress() -> void;
     auto calculateProgress(int currentPos, int startPos, int targetPos) -> double;
     auto updateMovementStats(int steps, std::chrono::milliseconds duration) -> void;
-    
+
     // Validation helpers
     auto validateSpeed(double speed) -> bool;
     auto validatePosition(int position) -> bool;

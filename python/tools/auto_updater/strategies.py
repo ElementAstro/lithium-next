@@ -29,7 +29,9 @@ class JsonUpdateStrategy:
                     return None
         except aiohttp.ClientError as e:
             raise NetworkError(
-                f"Failed to fetch update info from {self.url}: {e}") from e
+                f"Failed to fetch update info from {self.url}: {e}"
+            ) from e
         except Exception as e:
             raise NetworkError(
-                f"An unexpected error occurred while checking for updates: {e}") from e
+                f"An unexpected error occurred while checking for updates: {e}"
+            ) from e

@@ -33,11 +33,11 @@ HardwareInterface::HardwareInterface() {
 HardwareInterface::~HardwareInterface() {
     spdlog::debug("HardwareInterface destructor called");
     disconnect();
-    
+
     if (work_guard_) {
         work_guard_.reset();
     }
-    
+
     if (io_context_) {
         io_context_->stop();
     }
@@ -49,9 +49,9 @@ HardwareInterface::~HardwareInterface() {
 
 auto HardwareInterface::initialize() -> bool {
     spdlog::info("Initializing ASCOM Rotator Hardware Interface");
-    
+
     clearLastError();
-    
+
 #ifdef _WIN32
     if (!initializeCOM()) {
         setLastError("Failed to initialize COM");
@@ -68,46 +68,46 @@ auto HardwareInterface::initialize() -> bool {
         spdlog::warn("Failed to create Alpaca client: {}", e.what());
         // Continue initialization - we can still try COM connections
     }
-    
+
     spdlog::info("Hardware Interface initialized successfully");
     return true;
 }
 
 auto HardwareInterface::destroy() -> bool {
     spdlog::info("Destroying ASCOM Rotator Hardware Interface");
-    
+
     disconnect();
-    
+
     if (alpaca_client_) {
         alpaca_client_.reset();
     }
-    
+
 #ifdef _WIN32
     cleanupCOM();
 #endif
-    
+
     return true;
 }
 
 auto HardwareInterface::connect(const std::string& deviceIdentifier, ConnectionType type) -> bool {
-    spdlog::info("Connecting to ASCOM rotator device: {} (type: {})", 
+    spdlog::info("Connecting to ASCOM rotator device: {} (type: {})",
                  deviceIdentifier, static_cast<int>(type));
-    
+
     std::lock_guard<std::mutex> lock(device_mutex_);
-    
+
     if (is_connected_.load()) {
         spdlog::warn("Already connected to a device");
         return true;
     }
-    
+
     clearLastError();
     connection_type_ = type;
-    
+
     bool success = false;
-    
+
     if (type == ConnectionType::ALPACA_REST) {
         // Parse Alpaca device identifier (format: "host:port/device_number" or just device name)
-        if (deviceIdentifier.find("://") != std::string::npos || 
+        if (deviceIdentifier.find("://") != std::string::npos ||
             deviceIdentifier.find(":") != std::string::npos) {
             // Parse URL-like identifier
             // For simplicity, assume localhost:11111/0 format
@@ -126,7 +126,7 @@ auto HardwareInterface::connect(const std::string& deviceIdentifier, ConnectionT
         setLastError("Unsupported connection type");
         return false;
     }
-    
+
     if (success) {
         is_connected_.store(true);
         device_info_.name = deviceIdentifier;
@@ -136,19 +136,19 @@ auto HardwareInterface::connect(const std::string& deviceIdentifier, ConnectionT
     } else {
         spdlog::error("Failed to connect to rotator device: {}", getLastError());
     }
-    
+
     return success;
 }
 
 auto HardwareInterface::disconnect() -> bool {
     spdlog::info("Disconnecting from ASCOM rotator device");
-    
+
     std::lock_guard<std::mutex> lock(device_mutex_);
-    
+
     if (!is_connected_.load()) {
         return true;
     }
-    
+
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         disconnectAlpacaDevice();
     }
@@ -157,10 +157,10 @@ auto HardwareInterface::disconnect() -> bool {
         disconnectCOMDriver();
     }
 #endif
-    
+
     is_connected_.store(false);
     device_info_.connected = false;
-    
+
     spdlog::info("Disconnected from rotator device");
     return true;
 }
@@ -171,20 +171,20 @@ auto HardwareInterface::isConnected() const -> bool {
 
 auto HardwareInterface::reconnect() -> bool {
     spdlog::info("Reconnecting to ASCOM rotator device");
-    
+
     std::string device_name = device_info_.name;
     ConnectionType type = connection_type_;
-    
+
     disconnect();
-    
+
     return connect(device_name, type);
 }
 
 auto HardwareInterface::scanDevices() -> std::vector<std::string> {
     spdlog::info("Scanning for ASCOM rotator devices");
-    
+
     std::vector<std::string> devices;
-    
+
 #ifdef _WIN32
     // Scan Windows registry for ASCOM Rotator drivers
     // TODO: Implement registry scanning for COM drivers
@@ -201,33 +201,33 @@ auto HardwareInterface::scanDevices() -> std::vector<std::string> {
     } catch (const std::exception& e) {
         spdlog::warn("Failed to discover Alpaca devices: {}", e.what());
     }
-    
+
     spdlog::info("Found {} rotator devices", devices.size());
     return devices;
 }
 
-auto HardwareInterface::discoverAlpacaDevices(const std::string& host, int port) 
+auto HardwareInterface::discoverAlpacaDevices(const std::string& host, int port)
     -> std::vector<ASCOMDeviceInfo> {
     std::vector<ASCOMDeviceInfo> devices;
-    
+
     if (!alpaca_client_) {
         spdlog::warn("Alpaca client not initialized");
         return devices;
     }
-    
+
     // TODO: Implement Alpaca device discovery
     // This would involve querying the management API endpoints
-    
+
     return devices;
 }
 
 auto HardwareInterface::getDeviceInfo() -> std::optional<ASCOMDeviceInfo> {
     std::lock_guard<std::mutex> lock(device_mutex_);
-    
+
     if (!is_connected_.load()) {
         return std::nullopt;
     }
-    
+
     return device_info_;
 }
 
@@ -235,7 +235,7 @@ auto HardwareInterface::getCapabilities() -> RotatorCapabilities {
     if (!is_connected_.load()) {
         return RotatorCapabilities{};
     }
-    
+
     // Update capabilities from device if needed
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         // Query Alpaca properties to update capabilities
@@ -244,7 +244,7 @@ auto HardwareInterface::getCapabilities() -> RotatorCapabilities {
             capabilities_.canReverse = (*canReverse == "true");
         }
     }
-    
+
     return capabilities_;
 }
 
@@ -252,31 +252,31 @@ auto HardwareInterface::updateDeviceInfo() -> bool {
     if (!is_connected_.load()) {
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(device_mutex_);
-    
+
     try {
         // Get basic device information
         auto description = getProperty("description");
         if (description) {
             device_info_.description = *description;
         }
-        
+
         auto driverInfo = getProperty("driverinfo");
         if (driverInfo) {
             device_info_.driverInfo = *driverInfo;
         }
-        
+
         auto driverVersion = getProperty("driverversion");
         if (driverVersion) {
             device_info_.driverVersion = *driverVersion;
         }
-        
+
         auto interfaceVersion = getProperty("interfaceversion");
         if (interfaceVersion) {
             device_info_.interfaceVersion = *interfaceVersion;
         }
-        
+
         return true;
     } catch (const std::exception& e) {
         setLastError("Failed to update device info: " + std::string(e.what()));
@@ -288,7 +288,7 @@ auto HardwareInterface::getProperty(const std::string& propertyName) -> std::opt
     if (!is_connected_.load()) {
         return std::nullopt;
     }
-    
+
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         return sendAlpacaRequest("GET", propertyName);
     }
@@ -302,7 +302,7 @@ auto HardwareInterface::getProperty(const std::string& propertyName) -> std::opt
         }
     }
 #endif
-    
+
     return std::nullopt;
 }
 
@@ -310,7 +310,7 @@ auto HardwareInterface::setProperty(const std::string& propertyName, const std::
     if (!is_connected_.load()) {
         return false;
     }
-    
+
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         std::string params = propertyName + "=" + value;
         auto response = sendAlpacaRequest("PUT", propertyName, params);
@@ -322,22 +322,22 @@ auto HardwareInterface::setProperty(const std::string& propertyName, const std::
         VariantInit(&var);
         var.vt = VT_BSTR;
         var.bstrVal = SysAllocString(std::wstring(value.begin(), value.end()).c_str());
-        
+
         bool result = setCOMProperty(propertyName, var);
         VariantClear(&var);
         return result;
     }
 #endif
-    
+
     return false;
 }
 
-auto HardwareInterface::invokeMethod(const std::string& methodName, 
+auto HardwareInterface::invokeMethod(const std::string& methodName,
                                     const std::vector<std::string>& parameters) -> std::optional<std::string> {
     if (!is_connected_.load()) {
         return std::nullopt;
     }
-    
+
     if (connection_type_ == ConnectionType::ALPACA_REST) {
         std::string params;
         for (size_t i = 0; i < parameters.size(); ++i) {
@@ -352,7 +352,7 @@ auto HardwareInterface::invokeMethod(const std::string& methodName,
         return std::nullopt;
     }
 #endif
-    
+
     return std::nullopt;
 }
 
@@ -360,7 +360,7 @@ auto HardwareInterface::setAlpacaConnection(const std::string& host, int port, i
     alpaca_host_ = host;
     alpaca_port_ = port;
     alpaca_device_number_ = deviceNumber;
-    
+
     // Recreate Alpaca client with new settings
     if (alpaca_client_) {
         alpaca_client_ = std::make_unique<lithium::device::ascom::AlpacaClient>(host, port);
@@ -383,7 +383,7 @@ auto HardwareInterface::getClientId() const -> std::string {
 auto HardwareInterface::executeAsync(std::function<void()> operation) -> std::future<void> {
     auto promise = std::make_shared<std::promise<void>>();
     auto future = promise->get_future();
-    
+
     io_context_->post([operation, promise]() {
         try {
             operation();
@@ -392,7 +392,7 @@ auto HardwareInterface::executeAsync(std::function<void()> operation) -> std::fu
             promise->set_exception(std::current_exception());
         }
     });
-    
+
     return future;
 }
 
@@ -418,11 +418,11 @@ auto HardwareInterface::sendAlpacaRequest(const std::string& method, const std::
         setLastError("Alpaca client not initialized");
         return std::nullopt;
     }
-    
+
     try {
         // Construct the full URL path
         std::string path = "/api/v1/rotator/" + std::to_string(alpaca_device_number_) + "/" + endpoint;
-        
+
         // TODO: Use actual Alpaca client implementation
         // For now, return a placeholder
         return std::string("{}"); // Empty JSON response
@@ -442,7 +442,7 @@ auto HardwareInterface::validateConnection() -> bool {
     if (!is_connected_.load()) {
         return false;
     }
-    
+
     // Try to get a basic property to validate connection
     auto connected = getProperty("connected");
     return connected && (*connected == "true");
@@ -458,20 +458,20 @@ auto HardwareInterface::connectAlpacaDevice(const std::string& host, int port, i
         if (!alpaca_client_) {
             alpaca_client_ = std::make_unique<lithium::device::ascom::AlpacaClient>(host, port);
         }
-        
+
         // Test connection by setting connected property
         if (!setProperty("connected", "true")) {
             setLastError("Failed to connect to Alpaca device");
             return false;
         }
-        
+
         // Verify connection
         auto connected = getProperty("connected");
         if (!connected || *connected != "true") {
             setLastError("Device connection verification failed");
             return false;
         }
-        
+
         return true;
     } catch (const std::exception& e) {
         setLastError("Alpaca connection failed: " + std::string(e.what()));
@@ -493,7 +493,7 @@ auto HardwareInterface::disconnectAlpacaDevice() -> bool {
 
 auto HardwareInterface::connectCOMDriver(const std::string& progId) -> bool {
     com_prog_id_ = progId;
-    
+
     // TODO: Implement COM driver connection
     // This involves creating COM instance and connecting
     setLastError("COM driver connection not yet implemented");
@@ -518,7 +518,7 @@ auto HardwareInterface::getCOMInterface() -> IDispatch* {
     return com_rotator_;
 }
 
-auto HardwareInterface::invokeCOMMethod(const std::string& method, VARIANT* params, int param_count) 
+auto HardwareInterface::invokeCOMMethod(const std::string& method, VARIANT* params, int param_count)
     -> std::optional<VARIANT> {
     // TODO: Implement COM method invocation
     return std::nullopt;

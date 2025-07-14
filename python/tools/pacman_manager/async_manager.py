@@ -27,9 +27,13 @@ class AsyncPacmanManager:
     Built on top of the synchronous manager but provides async interface.
     """
 
-    def __init__(self, config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs):
+    def __init__(
+        self, config_path: Optional[Path] = None, use_sudo: bool = True, **kwargs
+    ):
         """Initialize the async pacman manager."""
-        self._sync_manager = PacmanManager({"config_path": config_path, "use_sudo": use_sudo})
+        self._sync_manager = PacmanManager(
+            {"config_path": config_path, "use_sudo": use_sudo}
+        )
         self._semaphore = asyncio.Semaphore(5)  # Limit concurrent operations
         self._session_cache = PackageCache()
 
@@ -44,16 +48,13 @@ class AsyncPacmanManager:
     async def close(self) -> None:
         """Clean up resources."""
         # Cleanup cache and other resources
-        if hasattr(self._sync_manager, '_executor'):
+        if hasattr(self._sync_manager, "_executor"):
             self._sync_manager._executor.shutdown(wait=False)
 
     @async_retry_on_failure(max_attempts=3)
     @async_benchmark()
     async def install_package(
-        self,
-        package_name: str,
-        no_confirm: bool = True,
-        **options: Any
+        self, package_name: str, no_confirm: bool = True, **options: Any
     ) -> CommandResult:
         """
         Asynchronously install a package.
@@ -65,8 +66,7 @@ class AsyncPacmanManager:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
                 None,
-                lambda: self._sync_manager.install_package(
-                    package_name, no_confirm)
+                lambda: self._sync_manager.install_package(package_name, no_confirm),
             )
 
             # Invalidate cache for the installed package
@@ -77,10 +77,7 @@ class AsyncPacmanManager:
     @async_retry_on_failure(max_attempts=3)
     @async_benchmark()
     async def remove_package(
-        self,
-        package_name: str,
-        remove_deps: bool = False,
-        no_confirm: bool = True
+        self, package_name: str, remove_deps: bool = False, no_confirm: bool = True
     ) -> CommandResult:
         """
         Asynchronously remove a package.
@@ -92,7 +89,8 @@ class AsyncPacmanManager:
             result = await loop.run_in_executor(
                 None,
                 lambda: self._sync_manager.remove_package(
-                    package_name, remove_deps, no_confirm)
+                    package_name, remove_deps, no_confirm
+                ),
             )
 
             # Invalidate cache for the removed package
@@ -103,9 +101,7 @@ class AsyncPacmanManager:
     @async_cache_result(ttl=300)  # Cache for 5 minutes
     @async_benchmark()
     async def search_packages(
-        self,
-        query: str,
-        limit: Optional[int] = None
+        self, query: str, limit: Optional[int] = None
     ) -> List[PackageInfo]:
         """
         Asynchronously search for packages.
@@ -114,8 +110,7 @@ class AsyncPacmanManager:
 
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
-            None,
-            lambda: self._sync_manager.search_package(query)
+            None, lambda: self._sync_manager.search_package(query)
         )
 
         if limit:
@@ -129,17 +124,18 @@ class AsyncPacmanManager:
         Asynchronously get detailed package information.
         """
         # Check session cache first
-        cached_info = self._session_cache.get_package(
-            PackageName(package_name))
+        cached_info = self._session_cache.get_package(PackageName(package_name))
         if cached_info:
             return cached_info
 
         logger.info(f"Getting package info: {package_name}")
 
         loop = asyncio.get_event_loop()
+
         def get_info():
             installed = self._sync_manager.list_installed_packages()
             return installed.get(package_name) if installed else None
+
         result = await loop.run_in_executor(None, get_info)
 
         # Cache the result
@@ -157,8 +153,7 @@ class AsyncPacmanManager:
 
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
-            None,
-            self._sync_manager.update_package_database
+            None, self._sync_manager.update_package_database
         )
 
         # Clear cache after database update
@@ -174,8 +169,12 @@ class AsyncPacmanManager:
         logger.info("Upgrading system")
 
         loop = asyncio.get_event_loop()
+
         def upgrade():
-            return self._sync_manager.run_command(["pacman", "-Syu", "--noconfirm"] if no_confirm else ["pacman", "-Syu"])
+            return self._sync_manager.run_command(
+                ["pacman", "-Syu", "--noconfirm"] if no_confirm else ["pacman", "-Syu"]
+            )
+
         result = await loop.run_in_executor(None, upgrade)
 
         # Clear cache after system upgrade
@@ -191,8 +190,7 @@ class AsyncPacmanManager:
 
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
-            None,
-            lambda: list(self._sync_manager.list_installed_packages().values())
+            None, lambda: list(self._sync_manager.list_installed_packages().values())
         )
 
         return result
@@ -205,17 +203,13 @@ class AsyncPacmanManager:
 
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
-            None,
-            self._sync_manager.list_outdated_packages
+            None, self._sync_manager.list_outdated_packages
         )
 
         return result
 
     async def install_multiple_packages(
-        self,
-        package_names: List[str],
-        max_concurrent: int = 3,
-        no_confirm: bool = True
+        self, package_names: List[str], max_concurrent: int = 3, no_confirm: bool = True
     ) -> Dict[str, CommandResult]:
         """
         Install multiple packages concurrently with controlled parallelism.
@@ -253,7 +247,7 @@ class AsyncPacmanManager:
         package_names: List[str],
         max_concurrent: int = 3,
         remove_deps: bool = False,
-        no_confirm: bool = True
+        no_confirm: bool = True,
     ) -> Dict[str, CommandResult]:
         """
         Remove multiple packages concurrently with controlled parallelism.
@@ -264,7 +258,9 @@ class AsyncPacmanManager:
 
         async def remove_single(package_name: str) -> tuple[str, CommandResult]:
             async with remove_semaphore:
-                result = await self.remove_package(package_name, remove_deps, no_confirm)
+                result = await self.remove_package(
+                    package_name, remove_deps, no_confirm
+                )
                 return package_name, result
 
         tasks = [remove_single(package) for package in package_names]
@@ -282,9 +278,7 @@ class AsyncPacmanManager:
         return final_results
 
     async def batch_package_info(
-        self,
-        package_names: List[str],
-        max_concurrent: int = 10
+        self, package_names: List[str], max_concurrent: int = 10
     ) -> Dict[str, Optional[PackageInfo]]:
         """
         Get package information for multiple packages concurrently.
@@ -293,7 +287,9 @@ class AsyncPacmanManager:
 
         info_semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def get_single_info(package_name: str) -> tuple[str, Optional[PackageInfo]]:
+        async def get_single_info(
+            package_name: str,
+        ) -> tuple[str, Optional[PackageInfo]]:
             async with info_semaphore:
                 info = await self.get_package_info(package_name)
                 return package_name, info
@@ -313,10 +309,7 @@ class AsyncPacmanManager:
         return final_results
 
     async def smart_search(
-        self,
-        query: str,
-        include_descriptions: bool = True,
-        min_relevance: float = 0.1
+        self, query: str, include_descriptions: bool = True, min_relevance: float = 0.1
     ) -> List[PackageInfo]:
         """
         Enhanced search with relevance scoring and filtering.
@@ -362,11 +355,11 @@ class AsyncPacmanManager:
         logger.info("Performing system health check")
 
         health_status = {
-            'pacman_available': False,
-            'database_accessible': False,
-            'cache_writable': False,
-            'sudo_available': False,
-            'errors': []
+            "pacman_available": False,
+            "database_accessible": False,
+            "cache_writable": False,
+            "sudo_available": False,
+            "errors": [],
         }
 
         try:
@@ -375,43 +368,39 @@ class AsyncPacmanManager:
 
             # Test database access
             await loop.run_in_executor(
-                None,
-                lambda: self._sync_manager.run_command(['pacman', '--version'])
+                None, lambda: self._sync_manager.run_command(["pacman", "--version"])
             )
-            health_status['pacman_available'] = True
+            health_status["pacman_available"] = True
 
             # Test database query
             await loop.run_in_executor(
-                None,
-                lambda: self._sync_manager.run_command(['pacman', '-Q'])
+                None, lambda: self._sync_manager.run_command(["pacman", "-Q"])
             )
-            health_status['database_accessible'] = True
+            health_status["database_accessible"] = True
 
             # Test cache directory
-            cache_dir = Path.home() / '.cache' / 'pacman_manager'
+            cache_dir = Path.home() / ".cache" / "pacman_manager"
             cache_dir.mkdir(parents=True, exist_ok=True)
-            test_file = cache_dir / '.write_test'
-            test_file.write_text('test')
+            test_file = cache_dir / ".write_test"
+            test_file.write_text("test")
             test_file.unlink()
-            health_status['cache_writable'] = True
+            health_status["cache_writable"] = True
 
             # Test sudo (if configured)
-            if self._sync_manager._config.get('use_sudo', True):
+            if self._sync_manager._config.get("use_sudo", True):
                 try:
                     await loop.run_in_executor(
                         None,
-                        lambda: self._sync_manager.run_command(
-                            ['sudo', '-n', 'true'])
+                        lambda: self._sync_manager.run_command(["sudo", "-n", "true"]),
                     )
-                    health_status['sudo_available'] = True
+                    health_status["sudo_available"] = True
                 except Exception:
-                    health_status['errors'].append(
-                        'Sudo authentication required')
+                    health_status["errors"].append("Sudo authentication required")
             else:
-                health_status['sudo_available'] = True
+                health_status["sudo_available"] = True
 
         except Exception as e:
-            health_status['errors'].append(str(e))
+            health_status["errors"].append(str(e))
 
         return health_status
 

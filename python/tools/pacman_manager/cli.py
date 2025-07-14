@@ -34,7 +34,7 @@ class CLI:
     def _create_parser(self) -> argparse.ArgumentParser:
         """Create argument parser with modern CLI design."""
         parser = argparse.ArgumentParser(
-            description='🚀 Advanced Pacman Package Manager CLI Tool',
+            description="🚀 Advanced Pacman Package Manager CLI Tool",
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
@@ -46,82 +46,56 @@ Examples:
 
         # Global options
         parser.add_argument(
-            '--version', action='version',
-            version='Pacman Manager 2.0.0'
+            "--version", action="version", version="Pacman Manager 2.0.0"
         )
         parser.add_argument(
-            '--verbose', '-v', action='count', default=0,
-            help='Increase verbosity (use -vv for debug)'
+            "--verbose",
+            "-v",
+            action="count",
+            default=0,
+            help="Increase verbosity (use -vv for debug)",
         )
-        parser.add_argument(
-            '--config', type=Path,
-            help='Custom config file path'
-        )
+        parser.add_argument("--config", type=Path, help="Custom config file path")
 
         # Subcommands
-        subparsers = parser.add_subparsers(
-            dest='command', help='Available commands'
-        )
+        subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
         # Install command
-        install_parser = subparsers.add_parser(
-            'install', help='Install packages'
-        )
+        install_parser = subparsers.add_parser("install", help="Install packages")
         install_parser.add_argument(
-            'packages', nargs='+',
-            help='Package names to install'
+            "packages", nargs="+", help="Package names to install"
         )
 
         # Remove command
-        remove_parser = subparsers.add_parser(
-            'remove', help='Remove packages'
-        )
+        remove_parser = subparsers.add_parser("remove", help="Remove packages")
         remove_parser.add_argument(
-            'packages', nargs='+',
-            help='Package names to remove'
+            "packages", nargs="+", help="Package names to remove"
         )
 
         # Search command
-        search_parser = subparsers.add_parser(
-            'search', help='Search packages'
-        )
+        search_parser = subparsers.add_parser("search", help="Search packages")
+        search_parser.add_argument("--query", "-q", required=True, help="Search query")
         search_parser.add_argument(
-            '--query', '-q', required=True,
-            help='Search query'
-        )
-        search_parser.add_argument(
-            '--limit', type=int, default=20,
-            help='Limit number of results'
+            "--limit", type=int, default=20, help="Limit number of results"
         )
 
         # Analytics command
-        analytics_parser = subparsers.add_parser(
-            'analytics', help='Show analytics'
+        analytics_parser = subparsers.add_parser("analytics", help="Show analytics")
+        analytics_parser.add_argument(
+            "--report", action="store_true", help="Generate full report"
         )
         analytics_parser.add_argument(
-            '--report', action='store_true',
-            help='Generate full report'
+            "--export", type=Path, help="Export metrics to file"
         )
         analytics_parser.add_argument(
-            '--export', type=Path,
-            help='Export metrics to file'
-        )
-        analytics_parser.add_argument(
-            '--clear', action='store_true',
-            help='Clear all metrics'
+            "--clear", action="store_true", help="Clear all metrics"
         )
 
         # Cache command
-        cache_parser = subparsers.add_parser(
-            'cache', help='Cache management'
-        )
+        cache_parser = subparsers.add_parser("cache", help="Cache management")
+        cache_parser.add_argument("--clear", action="store_true", help="Clear cache")
         cache_parser.add_argument(
-            '--clear', action='store_true',
-            help='Clear cache'
-        )
-        cache_parser.add_argument(
-            '--stats', action='store_true',
-            help='Show cache statistics'
+            "--stats", action="store_true", help="Show cache statistics"
         )
 
         return parser
@@ -177,9 +151,9 @@ Examples:
             sys.stderr,
             level=level,
             format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-                   "<level>{level: <8}</level> | "
-                   "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-                   "<level>{message}</level>"
+            "<level>{level: <8}</level> | "
+            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+            "<level>{message}</level>",
         )
 
     def _execute_command(self, args: argparse.Namespace) -> int:
@@ -195,6 +169,7 @@ Examples:
         """Execute command asynchronously."""
         try:
             from .async_manager import AsyncPacmanManager
+
             manager = AsyncPacmanManager()
             return await self._handle_command_async(manager, args)
         except Exception as e:
@@ -204,15 +179,15 @@ Examples:
     def _handle_command(self, manager: PacmanManager, args: argparse.Namespace) -> int:
         """Handle command execution with sync manager."""
         match args.command:
-            case 'install':
+            case "install":
                 return self._handle_install(manager, args)
-            case 'remove':
+            case "remove":
                 return self._handle_remove(manager, args)
-            case 'search':
+            case "search":
                 return self._handle_search(manager, args)
-            case 'analytics':
+            case "analytics":
                 return self._handle_analytics(args)
-            case 'cache':
+            case "cache":
                 return self._handle_cache(args)
             case _:
                 print(f"❌ Unknown command: {args.command}")
@@ -221,15 +196,15 @@ Examples:
     async def _handle_command_async(self, manager, args: argparse.Namespace) -> int:
         """Handle command execution with async manager."""
         match args.command:
-            case 'install':
+            case "install":
                 return await self._handle_install_async(manager, args)
-            case 'remove':
+            case "remove":
                 return await self._handle_remove_async(manager, args)
-            case 'search':
+            case "search":
                 return await self._handle_search_async(manager, args)
-            case 'analytics':
+            case "analytics":
                 return await self._handle_analytics_async(args)
-            case 'cache':
+            case "cache":
                 return self._handle_cache(args)
             case _:
                 print(f"❌ Unknown command: {args.command}")
@@ -241,13 +216,13 @@ Examples:
 
         for package in args.packages:
             print(f"📦 Installing {package}...")
-            self.analytics.start_operation('install', package)
+            self.analytics.start_operation("install", package)
 
             try:
                 result = manager.install_package(package)
                 # Handle different return types
-                if hasattr(result, '__getitem__') and 'success' in result:
-                    success = result['success']
+                if hasattr(result, "__getitem__") and "success" in result:
+                    success = result["success"]
                 else:
                     success = bool(result)
 
@@ -257,10 +232,10 @@ Examples:
                 else:
                     print(f"❌ Failed to install {package}")
 
-                self.analytics.end_operation('install', package, success)
+                self.analytics.end_operation("install", package, success)
             except Exception as e:
                 print(f"❌ Error installing {package}: {e}")
-                self.analytics.end_operation('install', package, False)
+                self.analytics.end_operation("install", package, False)
 
         return 0 if success_count == len(args.packages) else 1
 
@@ -270,26 +245,26 @@ Examples:
 
         for package in args.packages:
             print(f"📦 Installing {package}...")
-            self.analytics.start_operation('install', package)
+            self.analytics.start_operation("install", package)
 
             try:
                 result = await manager.install_package(package)
                 # Handle different return types
-                if hasattr(result, '__getitem__') and 'success' in result:
-                    success = result['success']
+                if hasattr(result, "__getitem__") and "success" in result:
+                    success = result["success"]
                 else:
                     success = bool(result)
 
                 if success:
                     print(f"✅ Successfully installed {package}")
                     success_count += 1
-                    self.analytics.end_operation('install', package, True)
+                    self.analytics.end_operation("install", package, True)
                 else:
                     print(f"❌ Failed to install {package}")
-                    self.analytics.end_operation('install', package, False)
+                    self.analytics.end_operation("install", package, False)
             except Exception as e:
                 print(f"❌ Error installing {package}: {e}")
-                self.analytics.end_operation('install', package, False)
+                self.analytics.end_operation("install", package, False)
 
         return 0 if success_count == len(args.packages) else 1
 
@@ -299,13 +274,13 @@ Examples:
 
         for package in args.packages:
             print(f"🗑️  Removing {package}...")
-            self.analytics.start_operation('remove', package)
+            self.analytics.start_operation("remove", package)
 
             try:
                 result = manager.remove_package(package)
                 # Handle different return types
-                if hasattr(result, '__getitem__') and 'success' in result:
-                    success = result['success']
+                if hasattr(result, "__getitem__") and "success" in result:
+                    success = result["success"]
                 else:
                     success = bool(result)
 
@@ -315,10 +290,10 @@ Examples:
                 else:
                     print(f"❌ Failed to remove {package}")
 
-                self.analytics.end_operation('remove', package, success)
+                self.analytics.end_operation("remove", package, success)
             except Exception as e:
                 print(f"❌ Error removing {package}: {e}")
-                self.analytics.end_operation('remove', package, False)
+                self.analytics.end_operation("remove", package, False)
 
         return 0 if success_count == len(args.packages) else 1
 
@@ -328,26 +303,26 @@ Examples:
 
         for package in args.packages:
             print(f"🗑️  Removing {package}...")
-            self.analytics.start_operation('remove', package)
+            self.analytics.start_operation("remove", package)
 
             try:
                 result = await manager.remove_package(package)
                 # Handle different return types
-                if hasattr(result, '__getitem__') and 'success' in result:
-                    success = result['success']
+                if hasattr(result, "__getitem__") and "success" in result:
+                    success = result["success"]
                 else:
                     success = bool(result)
 
                 if success:
                     print(f"✅ Successfully removed {package}")
                     success_count += 1
-                    self.analytics.end_operation('remove', package, True)
+                    self.analytics.end_operation("remove", package, True)
                 else:
                     print(f"❌ Failed to remove {package}")
-                    self.analytics.end_operation('remove', package, False)
+                    self.analytics.end_operation("remove", package, False)
             except Exception as e:
                 print(f"❌ Error removing {package}: {e}")
-                self.analytics.end_operation('remove', package, False)
+                self.analytics.end_operation("remove", package, False)
 
         return 0 if success_count == len(args.packages) else 1
 
@@ -357,7 +332,7 @@ Examples:
 
         try:
             # Use manager's search functionality if available
-            if hasattr(manager, 'search_package'):
+            if hasattr(manager, "search_package"):
                 results = manager.search_package(args.query)
                 if not isinstance(results, list):
                     results = [results] if results else []
@@ -372,13 +347,13 @@ Examples:
 
             # Limit results
             if len(results) > args.limit:
-                results = results[:args.limit]
+                results = results[: args.limit]
 
             print(f"\n📋 Found {len(results)} package(s):")
             for pkg in results:
-                if hasattr(pkg, 'name') and hasattr(pkg, 'version'):
+                if hasattr(pkg, "name") and hasattr(pkg, "version"):
                     print(f"  📦 {pkg.name} ({pkg.version})")
-                    if hasattr(pkg, 'description') and pkg.description:
+                    if hasattr(pkg, "description") and pkg.description:
                         print(f"      {pkg.description}")
                 else:
                     print(f"  📦 {pkg}")
@@ -394,7 +369,7 @@ Examples:
         print(f"🔍 Searching for '{args.query}'...")
 
         try:
-            if hasattr(manager, 'search_package'):
+            if hasattr(manager, "search_package"):
                 results = await manager.search_package(args.query)
                 if not isinstance(results, list):
                     results = [results] if results else []
@@ -408,13 +383,13 @@ Examples:
 
             # Limit results
             if len(results) > args.limit:
-                results = results[:args.limit]
+                results = results[: args.limit]
 
             print(f"\n📋 Found {len(results)} package(s):")
             for pkg in results:
-                if hasattr(pkg, 'name') and hasattr(pkg, 'version'):
+                if hasattr(pkg, "name") and hasattr(pkg, "version"):
                     print(f"  📦 {pkg.name} ({pkg.version})")
-                    if hasattr(pkg, 'description') and pkg.description:
+                    if hasattr(pkg, "description") and pkg.description:
                         print(f"      {pkg.description}")
                 else:
                     print(f"  📦 {pkg}")

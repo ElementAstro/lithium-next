@@ -12,9 +12,9 @@ from .cmake import CMakeParser
 from .factory import ParserFactory
 
 __all__ = [
-    'CompilerOutputParser',
-    'GccClangParser',
-    'MsvcParser',
-    'CMakeParser',
-    'ParserFactory'
+    "CompilerOutputParser",
+    "GccClangParser",
+    "MsvcParser",
+    "CMakeParser",
+    "ParserFactory",
 ]

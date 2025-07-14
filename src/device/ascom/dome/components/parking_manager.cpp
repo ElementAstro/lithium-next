@@ -282,7 +282,7 @@ auto ParkingManager::executeParkingSequence() -> bool {
             } else {
                 spdlog::error("Dome parking failed: {}", message);
             }
-            
+
             if (parking_callback_) {
                 parking_callback_(success, message);
             }
@@ -299,15 +299,15 @@ auto ParkingManager::executeHomingSequence() -> bool {
     // We just need to monitor completion
     std::thread([this]() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        
+
         // Check if homing is complete
         updateParkStatus();
-        
+
         is_homing_.store(false);
         if (homing_callback_) {
             homing_callback_(true, "Homing completed");
         }
-        
+
         spdlog::info("Dome homing completed");
     }).detach();
 

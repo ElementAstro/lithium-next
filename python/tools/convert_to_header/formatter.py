@@ -30,7 +30,7 @@ class HeaderFormatter:
                 if 32 <= byte_value <= 126 and chr(byte_value) not in "'\\":
                     return f"'{chr(byte_value)}'"
                 if byte_value == ord("'"):
-                    return "'\''"
+                    return "'''"
                 if byte_value == ord("\\"):
                     return "'\\\\'"
                 return f"0x{byte_value:02X}"
@@ -89,13 +89,13 @@ class HeaderFormatter:
             lines.append(f"// Generated from {original_filename}")
             if opts.include_timestamp:
                 lines.append(
-                    f"// Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    f"// Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
             if opts.compression != "none":
                 lines.append(f"// Compression: {opts.compression}")
                 lines.append(f"// Original size: {original_size} bytes")
             if checksum:
-                lines.append(
-                    f"// Checksum ({opts.checksum_algorithm}): {checksum}")
+                lines.append(f"// Checksum ({opts.checksum_algorithm}): {checksum}")
             lines.append(f"// Compressed size: {len(data)} bytes")
             lines.append("")
 
@@ -116,27 +116,32 @@ class HeaderFormatter:
 
         class_indent = "  " if opts.cpp_class else ""
         if opts.cpp_class:
-            class_name = opts.cpp_class_name or f"{opts.array_name.capitalize()}Resource"
+            class_name = (
+                opts.cpp_class_name or f"{opts.array_name.capitalize()}Resource"
+            )
             lines.append(f"class {class_name} {{")
             lines.append("public:")
 
         array_decl = f"{opts.const_qualifier} {opts.array_type} {opts.array_name}[]"
         lines.append(f"{class_indent}{array_decl} =")
-        lines.append(textwrap.indent(
-            self._format_array_initializer(data), class_indent))
+        lines.append(
+            textwrap.indent(self._format_array_initializer(data), class_indent)
+        )
         lines.append("")
 
         if opts.include_size_var:
-            size_decl = f'{opts.const_qualifier} unsigned int {opts.size_name} = sizeof({opts.array_name});'
+            size_decl = f"{opts.const_qualifier} unsigned int {opts.size_name} = sizeof({opts.array_name});"
             lines.append(f"{class_indent}{size_decl}")
             lines.append("")
 
         if opts.cpp_class:
             lines.append(
-                f"  const {opts.array_type}* data() const {{ return {opts.array_name}; }}")
+                f"  const {opts.array_type}* data() const {{ return {opts.array_name}; }}"
+            )
             if opts.include_size_var:
                 lines.append(
-                    f"  unsigned int size() const {{ return {opts.size_name}; }}")
+                    f"  unsigned int size() const {{ return {opts.size_name}; }}"
+                )
             lines.append("};")
             lines.append("")
 

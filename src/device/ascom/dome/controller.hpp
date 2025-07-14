@@ -41,7 +41,7 @@ namespace lithium::ascom::dome {
 
 /**
  * @brief Modular ASCOM Dome Controller
- * 
+ *
  * This class serves as the main orchestrator for the ASCOM dome system,
  * coordinating between various specialized components to provide a complete
  * dome control interface following the AtomDome interface.
@@ -198,7 +198,7 @@ private:
 
     // === Statistics ===
     std::atomic<double> total_rotation_{0.0};
-    
+
     // === Presets ===
     std::array<std::optional<double>, 10> presets_;
 
@@ -210,9 +210,9 @@ private:
     auto applyConfiguration() -> void;
 
     // === Error handling ===
-    auto handleComponentError(const std::string& component, const std::string& operation, 
+    auto handleComponentError(const std::string& component, const std::string& operation,
                              const std::exception& error) -> void;
-    
+
     // === Configuration synchronization ===
     auto syncComponentConfigurations() -> bool;
 };

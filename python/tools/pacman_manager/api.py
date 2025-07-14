@@ -35,7 +35,7 @@ class PacmanAPI:
         use_sudo: bool = True,
         enable_caching: bool = True,
         enable_plugins: bool = False,
-        plugin_directories: Optional[List[Path]] = None
+        plugin_directories: Optional[List[Path]] = None,
     ):
         """
         Initialize the Pacman API.
@@ -68,7 +68,9 @@ class PacmanAPI:
     def _get_manager(self) -> PacmanManager:
         """Get or create the manager instance."""
         if self._manager is None:
-            self._manager = PacmanManager({"config_path": self.config_path, "use_sudo": self.use_sudo})
+            self._manager = PacmanManager(
+                {"config_path": self.config_path, "use_sudo": self.use_sudo}
+            )
 
             # Load plugins if enabled
             if self._plugin_manager:
@@ -89,10 +91,7 @@ class PacmanAPI:
     # Package Installation
     @benchmark()
     def install(
-        self,
-        package: Union[str, List[str]],
-        no_confirm: bool = True,
-        **options
+        self, package: Union[str, List[str]], no_confirm: bool = True, **options
     ) -> Union[CommandResult, Dict[str, CommandResult]]:
         """
         Install one or more packages.
@@ -109,22 +108,21 @@ class PacmanAPI:
             # Call pre-install hooks
             if self._plugin_manager:
                 if isinstance(package, str):
-                    self._plugin_manager.call_hook(
-                        'before_install', package, **options)
+                    self._plugin_manager.call_hook("before_install", package, **options)
                 else:
                     for pkg in package:
-                        self._plugin_manager.call_hook(
-                            'before_install', pkg, **options)
+                        self._plugin_manager.call_hook("before_install", pkg, **options)
 
             # Perform installation
             if isinstance(package, str):
                 result = manager.install_package(package, no_confirm)
-                success = result['success']
+                success = result["success"]
 
                 # Call post-install hooks
                 if self._plugin_manager:
                     self._plugin_manager.call_hook(
-                        'after_install', package, success=success)
+                        "after_install", package, success=success
+                    )
 
                 # Invalidate cache
                 if self._cache:
@@ -141,7 +139,8 @@ class PacmanAPI:
                     # Call post-install hooks
                     if self._plugin_manager:
                         self._plugin_manager.call_hook(
-                            'after_install', pkg, success=result['success'])
+                            "after_install", pkg, success=result["success"]
+                        )
 
                     # Invalidate cache
                     if self._cache:
@@ -155,7 +154,7 @@ class PacmanAPI:
         package: Union[str, List[str]],
         remove_deps: bool = False,
         no_confirm: bool = True,
-        **options
+        **options,
     ) -> Union[CommandResult, Dict[str, CommandResult]]:
         """
         Remove one or more packages.
@@ -173,23 +172,21 @@ class PacmanAPI:
             # Call pre-remove hooks
             if self._plugin_manager:
                 if isinstance(package, str):
-                    self._plugin_manager.call_hook(
-                        'before_remove', package, **options)
+                    self._plugin_manager.call_hook("before_remove", package, **options)
                 else:
                     for pkg in package:
-                        self._plugin_manager.call_hook(
-                            'before_remove', pkg, **options)
+                        self._plugin_manager.call_hook("before_remove", pkg, **options)
 
             # Perform removal
             if isinstance(package, str):
-                result = manager.remove_package(
-                    package, remove_deps, no_confirm)
-                success = result['success']
+                result = manager.remove_package(package, remove_deps, no_confirm)
+                success = result["success"]
 
                 # Call post-remove hooks
                 if self._plugin_manager:
                     self._plugin_manager.call_hook(
-                        'after_remove', package, success=success)
+                        "after_remove", package, success=success
+                    )
 
                 # Invalidate cache
                 if self._cache:
@@ -200,14 +197,14 @@ class PacmanAPI:
                 # Multiple packages
                 results = {}
                 for pkg in package:
-                    result = manager.remove_package(
-                        pkg, remove_deps, no_confirm)
+                    result = manager.remove_package(pkg, remove_deps, no_confirm)
                     results[pkg] = result
 
                     # Call post-remove hooks
                     if self._plugin_manager:
                         self._plugin_manager.call_hook(
-                            'after_remove', pkg, success=result['success'])
+                            "after_remove", pkg, success=result["success"]
+                        )
 
                     # Invalidate cache
                     if self._cache:
@@ -220,7 +217,7 @@ class PacmanAPI:
         self,
         query: str,
         limit: Optional[int] = None,
-        filters: Optional[SearchFilter] = None
+        filters: Optional[SearchFilter] = None,
     ) -> List[PackageInfo]:
         """
         Search for packages.
@@ -246,29 +243,32 @@ class PacmanAPI:
 
             return results
 
-    def _apply_search_filters(self, packages: List[PackageInfo], filters: SearchFilter) -> List[PackageInfo]:
+    def _apply_search_filters(
+        self, packages: List[PackageInfo], filters: SearchFilter
+    ) -> List[PackageInfo]:
         """Apply search filters to package list."""
         filtered = packages
 
         # Filter by repository
-        if 'repository' in filters and filters['repository']:
-            filtered = [pkg for pkg in filtered if pkg.repository ==
-                        filters['repository']]
+        if "repository" in filters and filters["repository"]:
+            filtered = [
+                pkg for pkg in filtered if pkg.repository == filters["repository"]
+            ]
 
         # Filter by installed status
-        if 'installed_only' in filters and filters['installed_only']:
+        if "installed_only" in filters and filters["installed_only"]:
             filtered = [pkg for pkg in filtered if pkg.installed]
 
         # Filter by outdated status
-        if 'outdated_only' in filters and filters['outdated_only']:
+        if "outdated_only" in filters and filters["outdated_only"]:
             filtered = [pkg for pkg in filtered if pkg.needs_update]
 
         # Sort by specified field
-        if 'sort_by' in filters:
-            sort_key = filters['sort_by']
-            if sort_key == 'name':
+        if "sort_by" in filters:
+            sort_key = filters["sort_by"]
+            if sort_key == "name":
                 filtered.sort(key=lambda x: x.name)
-            elif sort_key == 'size':
+            elif sort_key == "size":
                 filtered.sort(key=lambda x: x.install_size, reverse=True)
             # Add more sorting options as needed
 
@@ -349,7 +349,9 @@ class PacmanAPI:
         """
         with self._manager_context() as manager:
             # PacmanManager does not have upgrade_system, so run the command directly
-            result = manager.run_command(["pacman", "-Syu", "--noconfirm"] if no_confirm else ["pacman", "-Syu"])
+            result = manager.run_command(
+                ["pacman", "-Syu", "--noconfirm"] if no_confirm else ["pacman", "-Syu"]
+            )
             if self._cache:
                 self._cache.clear_all()
             return result
@@ -415,7 +417,7 @@ class PacmanAPI:
             for plugin_name in list(self._plugin_manager.plugins.keys()):
                 self._plugin_manager.unregister_plugin(plugin_name)
 
-        if self._manager and hasattr(self._manager, '_executor'):
+        if self._manager and hasattr(self._manager, "_executor"):
             self._manager._executor.shutdown(wait=False)
 
 
@@ -434,8 +436,7 @@ class AsyncPacmanAPI:
         """Get or create async manager."""
         if self._async_manager is None:
             self._async_manager = AsyncPacmanManager(
-                self.sync_api.config_path,
-                self.sync_api.use_sudo
+                self.sync_api.config_path, self.sync_api.use_sudo
             )
         return self._async_manager
 

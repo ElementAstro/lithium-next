@@ -336,21 +336,21 @@ private:
     // Component references
     std::shared_ptr<HardwareInterface> hardware_;
     std::shared_ptr<MovementController> movement_;
-    
+
     // Configuration
     BacklashConfig config_;
-    
+
     // Backlash tracking
     std::atomic<LastDirection> last_direction_{LastDirection::NONE};
     std::atomic<int> last_position_{0};
-    
+
     // Backlash measurements
     BacklashMeasurement last_measurement_;
     std::vector<BacklashMeasurement> measurement_history_;
-    
+
     // Statistics
     BacklashStats stats_;
-    
+
     // Adaptive learning data
     struct LearningData {
         FocusDirection direction;
@@ -360,45 +360,45 @@ private:
     };
     std::vector<LearningData> learning_history_;
     static constexpr size_t MAX_LEARNING_HISTORY = 100;
-    
+
     // Threading and synchronization
     mutable std::mutex config_mutex_;
     mutable std::mutex stats_mutex_;
     mutable std::mutex learning_mutex_;
     mutable std::mutex measurement_mutex_;
-    
+
     // Callbacks
     CompensationCallback compensation_callback_;
     CalibrationCallback calibration_callback_;
     CompensationStatsCallback compensation_stats_callback_;
-    
+
     // Private methods
     auto determineDirection(int startPosition, int targetPosition) -> FocusDirection;
     auto hasDirectionChanged(int startPosition, int targetPosition) -> bool;
     auto updateBacklashStats(FocusDirection direction, int steps, bool success) -> void;
     auto addLearningData(FocusDirection direction, int steps, bool success) -> void;
     auto analyzeCompensationSuccess(int targetPosition, int finalPosition) -> bool;
-    
+
     // Measurement algorithms
     auto measureBacklashBidirectional() -> BacklashMeasurement;
     auto measureBacklashUnidirectional() -> BacklashMeasurement;
     auto measureBacklashRepeated() -> BacklashMeasurement;
-    
+
     // Compensation algorithms
     auto calculateFixedCompensation(FocusDirection direction) -> int;
     auto calculateAdaptiveCompensation(FocusDirection direction) -> int;
     auto calculateMeasuredCompensation(FocusDirection direction) -> int;
-    
+
     // Calibration helpers
     auto findOptimalCompensationSteps(FocusDirection direction) -> int;
     auto validateCompensationSteps(int steps) -> bool;
     auto adjustCompensationBasedOnHistory() -> void;
-    
+
     // Notification methods
     auto notifyCompensationApplied(FocusDirection direction, int steps, bool success) -> void;
     auto notifyCalibrationCompleted(const BacklashMeasurement& measurement) -> void;
     auto notifyStatsUpdated(const BacklashStats& stats) -> void;
-    
+
     // Utility methods
     auto clampCompensationSteps(int steps) -> int;
     auto isSmallMove(int steps) -> bool;

@@ -55,7 +55,7 @@ OPTIONS:
     --no-ccache            Disable ccache usage
     --profile              Enable profiling build (Release with debug info)
     --asan                 Enable AddressSanitizer (Debug build)
-    --tsan                 Enable ThreadSanitizer (Debug build) 
+    --tsan                 Enable ThreadSanitizer (Debug build)
     --ubsan                Enable UndefinedBehaviorSanitizer
     --benchmarks           Build optimized for benchmarks
     --size                 Optimize for minimal size

@@ -31,7 +31,7 @@ int main() {
     try {
         // Create and initialize the controller
         auto controller = std::make_unique<ASCOMFilterwheelController>("ASCOM Test Filterwheel");
-        
+
         if (!controller->initialize()) {
             spdlog::error("Failed to initialize ASCOM filterwheel controller");
             return -1;
@@ -40,7 +40,7 @@ int main() {
         // Scan for available devices
         spdlog::info("Scanning for ASCOM filterwheel devices...");
         auto devices = controller->scan();
-        
+
         if (devices.empty()) {
             spdlog::warn("No ASCOM filterwheel devices found");
             // Try connecting to a default device for testing

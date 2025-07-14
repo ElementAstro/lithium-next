@@ -13,24 +13,25 @@ from typing import ClassVar
 
 class OutputColors(Enum):
     """ANSI color codes for terminal output with enhanced features."""
-    GREEN = '\033[0;32m'
-    RED = '\033[0;31m'
-    YELLOW = '\033[0;33m'
-    BLUE = '\033[0;34m'
-    MAGENTA = '\033[0;35m'
-    CYAN = '\033[0;36m'
-    WHITE = '\033[0;37m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    RESET = '\033[0m'
-    
+
+    GREEN = "\033[0;32m"
+    RED = "\033[0;31m"
+    YELLOW = "\033[0;33m"
+    BLUE = "\033[0;34m"
+    MAGENTA = "\033[0;35m"
+    CYAN = "\033[0;36m"
+    WHITE = "\033[0;37m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    RESET = "\033[0m"
+
     # Light variants
-    LIGHT_GREEN = '\033[0;92m'
-    LIGHT_RED = '\033[0;91m'
-    LIGHT_YELLOW = '\033[0;93m'
-    LIGHT_BLUE = '\033[0;94m'
-    LIGHT_MAGENTA = '\033[0;95m'
-    LIGHT_CYAN = '\033[0;96m'
+    LIGHT_GREEN = "\033[0;92m"
+    LIGHT_RED = "\033[0;91m"
+    LIGHT_YELLOW = "\033[0;93m"
+    LIGHT_BLUE = "\033[0;94m"
+    LIGHT_MAGENTA = "\033[0;95m"
+    LIGHT_CYAN = "\033[0;96m"
 
     @classmethod
     def is_color_supported(cls) -> bool:
@@ -39,34 +40,35 @@ class OutputColors(Enum):
         if _color_support_cache is None:
             _color_support_cache = cls._check_color_support()
         return _color_support_cache
-    
+
     @staticmethod
     def _check_color_support() -> bool:
         """Internal method to check color support."""
         # Check for common environment variables
-        if any(env_var in os.environ for env_var in ('COLORTERM', 'FORCE_COLOR')):
+        if any(env_var in os.environ for env_var in ("COLORTERM", "FORCE_COLOR")):
             return True
-        
+
         # Check TERM environment variable
-        term = os.environ.get('TERM', '').lower()
-        if any(term_type in term for term_type in ('color', 'ansi', 'xterm', 'screen')):
+        term = os.environ.get("TERM", "").lower()
+        if any(term_type in term for term_type in ("color", "ansi", "xterm", "screen")):
             return True
-        
+
         # Windows-specific checks
         if platform.system() == "Windows":
             # Check for Windows 10 version 1607+ (build 14393+) which supports ANSI
             try:
                 import sys
+
                 if sys.version_info >= (3, 6):
                     # Modern Windows with ANSI support
                     return True
             except ImportError:
                 pass
             return "TERM" in os.environ
-        
+
         # Unix-like systems
         return os.isatty(1)  # Check if stdout is a TTY
-    
+
     def format_text(self, text: str, reset: bool = True) -> str:
         """Format text with this color."""
         if not self.is_color_supported():
@@ -79,6 +81,7 @@ _color_support_cache: bool | None = None
 
 class OperatingSystem(Enum):
     """Operating system types."""
+
     LINUX = "Linux"
     WINDOWS = "Windows"
     MACOS = "Darwin"

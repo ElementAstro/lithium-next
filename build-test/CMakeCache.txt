@@ -2325,4 +2325,3 @@ pkgcfg_lib__OPENSSL_ssl-ADVANCED:INTERNAL=1
 prefix_result:INTERNAL=AsynchDNS;GSS-API;HSTS;HTTP2;HTTPS-proxy;IDN;IPv6;Kerberos;Largefile;NTLM;PSL;SPNEGO;SSL;TLS-SRP;UnixSockets;alt-svc;brotli;libz;threadsafe;zstd
 //Directories where pybind11 and possibly Python headers are located
 pybind11_INCLUDE_DIRS:INTERNAL=/usr/include;/usr/include/python3.12
-

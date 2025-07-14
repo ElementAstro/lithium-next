@@ -29,10 +29,10 @@ auto PropertyManager::initialize() -> bool {
         config_.maxCacheSize = 100;
         config_.strictValidation = false;
         config_.logPropertyAccess = false;
-        
+
         // Register standard ASCOM focuser properties
         registerStandardProperties();
-        
+
         return true;
     } catch (const std::exception& e) {
         return false;
@@ -43,16 +43,16 @@ auto PropertyManager::destroy() -> bool {
     try {
         stopMonitoring();
         clearPropertyCache();
-        
+
         std::lock_guard<std::mutex> metadata_lock(metadata_mutex_);
         std::lock_guard<std::mutex> cache_lock(cache_mutex_);
         std::lock_guard<std::mutex> stats_lock(stats_mutex_);
-        
+
         property_metadata_.clear();
         property_cache_.clear();
         property_stats_.clear();
         property_validators_.clear();
-        
+
         return true;
     } catch (const std::exception& e) {
         return false;
@@ -71,13 +71,13 @@ auto PropertyManager::getPropertyConfig() const -> PropertyConfig {
 
 auto PropertyManager::registerProperty(const std::string& name, const PropertyMetadata& metadata) -> bool {
     std::lock_guard<std::mutex> lock(metadata_mutex_);
-    
+
     if (property_metadata_.find(name) != property_metadata_.end()) {
         return false; // Property already registered
     }
-    
+
     property_metadata_[name] = metadata;
-    
+
     // Initialize cache entry
     std::lock_guard<std::mutex> cache_lock(cache_mutex_);
     PropertyCacheEntry entry;
@@ -87,13 +87,13 @@ auto PropertyManager::registerProperty(const std::string& name, const PropertyMe
     entry.isDirty = false;
     entry.accessCount = 0;
     entry.lastAccess = std::chrono::steady_clock::now();
-    
+
     property_cache_[name] = entry;
-    
+
     // Initialize statistics
     std::lock_guard<std::mutex> stats_lock(stats_mutex_);
     property_stats_[name] = PropertyStats{};
-    
+
     return true;
 }
 
@@ -101,40 +101,40 @@ auto PropertyManager::unregisterProperty(const std::string& name) -> bool {
     std::lock_guard<std::mutex> metadata_lock(metadata_mutex_);
     std::lock_guard<std::mutex> cache_lock(cache_mutex_);
     std::lock_guard<std::mutex> stats_lock(stats_mutex_);
-    
+
     auto it = property_metadata_.find(name);
     if (it == property_metadata_.end()) {
         return false;
     }
-    
+
     property_metadata_.erase(it);
     property_cache_.erase(name);
     property_stats_.erase(name);
     property_validators_.erase(name);
-    
+
     return true;
 }
 
 auto PropertyManager::getPropertyMetadata(const std::string& name) -> std::optional<PropertyMetadata> {
     std::lock_guard<std::mutex> lock(metadata_mutex_);
-    
+
     auto it = property_metadata_.find(name);
     if (it != property_metadata_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
 auto PropertyManager::getRegisteredProperties() -> std::vector<std::string> {
     std::lock_guard<std::mutex> lock(metadata_mutex_);
     std::vector<std::string> properties;
-    
+
     properties.reserve(property_metadata_.size());
     for (const auto& [name, metadata] : property_metadata_) {
         properties.push_back(name);
     }
-    
+
     return properties;
 }
 
@@ -145,125 +145,125 @@ auto PropertyManager::isPropertyRegistered(const std::string& name) -> bool {
 
 auto PropertyManager::setPropertyMetadata(const std::string& name, const PropertyMetadata& metadata) -> bool {
     std::lock_guard<std::mutex> lock(metadata_mutex_);
-    
+
     auto it = property_metadata_.find(name);
     if (it == property_metadata_.end()) {
         return false;
     }
-    
+
     it->second = metadata;
     return true;
 }
 
 auto PropertyManager::getProperty(const std::string& name) -> std::optional<PropertyValue> {
     auto start_time = std::chrono::steady_clock::now();
-    
+
     // Check if property is registered
     if (!isPropertyRegistered(name)) {
         return std::nullopt;
     }
-    
+
     // Try to get from cache first
     if (config_.enableCaching) {
         auto cached_value = getCachedProperty(name);
         if (cached_value.has_value()) {
             auto duration = std::chrono::steady_clock::now() - start_time;
-            updatePropertyStats(name, true, false, 
+            updatePropertyStats(name, true, false,
                               std::chrono::duration_cast<std::chrono::milliseconds>(duration), true);
             return cached_value;
         }
     }
-    
+
     // Get from hardware
     auto value = getPropertyFromHardware(name);
     if (value.has_value()) {
         if (config_.enableCaching) {
             setCachedProperty(name, value.value());
         }
-        
+
         auto duration = std::chrono::steady_clock::now() - start_time;
-        updatePropertyStats(name, true, false, 
+        updatePropertyStats(name, true, false,
                           std::chrono::duration_cast<std::chrono::milliseconds>(duration), true);
         return value;
     }
-    
+
     // Update statistics for failed read
     auto duration = std::chrono::steady_clock::now() - start_time;
-    updatePropertyStats(name, true, false, 
+    updatePropertyStats(name, true, false,
                       std::chrono::duration_cast<std::chrono::milliseconds>(duration), false);
-    
+
     return std::nullopt;
 }
 
 auto PropertyManager::setProperty(const std::string& name, const PropertyValue& value) -> bool {
     auto start_time = std::chrono::steady_clock::now();
-    
+
     // Check if property is registered
     if (!isPropertyRegistered(name)) {
         return false;
     }
-    
+
     // Check if property is read-only
     auto metadata = getPropertyMetadata(name);
     if (metadata && metadata->readOnly) {
         return false;
     }
-    
+
     // Validate value
     if (config_.enableValidation && !validatePropertyValue(name, value)) {
         auto duration = std::chrono::steady_clock::now() - start_time;
-        updatePropertyStats(name, false, true, 
+        updatePropertyStats(name, false, true,
                           std::chrono::duration_cast<std::chrono::milliseconds>(duration), false);
         return false;
     }
-    
+
     // Get old value for notification
     auto old_value = getProperty(name);
-    
+
     // Set to hardware
     bool success = setPropertyToHardware(name, value);
-    
+
     if (success) {
         // Update cache
         if (config_.enableCaching) {
             setCachedProperty(name, value);
         }
-        
+
         // Notify change
         if (config_.enableNotifications && old_value.has_value()) {
             notifyPropertyChange(name, old_value.value(), value);
         }
     }
-    
+
     auto duration = std::chrono::steady_clock::now() - start_time;
-    updatePropertyStats(name, false, true, 
+    updatePropertyStats(name, false, true,
                       std::chrono::duration_cast<std::chrono::milliseconds>(duration), success);
-    
+
     return success;
 }
 
 auto PropertyManager::getProperties(const std::vector<std::string>& names) -> std::unordered_map<std::string, PropertyValue> {
     std::unordered_map<std::string, PropertyValue> result;
-    
+
     for (const auto& name : names) {
         auto value = getProperty(name);
         if (value.has_value()) {
             result[name] = value.value();
         }
     }
-    
+
     return result;
 }
 
 auto PropertyManager::setProperties(const std::unordered_map<std::string, PropertyValue>& properties) -> bool {
     bool all_success = true;
-    
+
     for (const auto& [name, value] : properties) {
         if (!setProperty(name, value)) {
             all_success = false;
         }
     }
-    
+
     return all_success;
 }
 
@@ -276,12 +276,12 @@ auto PropertyManager::getValidationError(const std::string& name) -> std::string
     return ""; // Placeholder
 }
 
-auto PropertyManager::setPropertyValidator(const std::string& name, 
+auto PropertyManager::setPropertyValidator(const std::string& name,
                                          std::function<bool(const PropertyValue&)> validator) -> bool {
     if (!isPropertyRegistered(name)) {
         return false;
     }
-    
+
     property_validators_[name] = std::move(validator);
     return true;
 }
@@ -292,7 +292,7 @@ auto PropertyManager::clearPropertyValidator(const std::string& name) -> bool {
         property_validators_.erase(it);
         return true;
     }
-    
+
     return false;
 }
 
@@ -323,32 +323,32 @@ auto PropertyManager::getCacheStats() -> std::unordered_map<std::string, Propert
 
 auto PropertyManager::getCacheHitRate() -> double {
     std::lock_guard<std::mutex> lock(stats_mutex_);
-    
+
     int total_cache_hits = 0;
     int total_cache_misses = 0;
-    
+
     for (const auto& [name, stats] : property_stats_) {
         total_cache_hits += stats.cacheHits;
         total_cache_misses += stats.cacheMisses;
     }
-    
+
     int total_accesses = total_cache_hits + total_cache_misses;
     if (total_accesses == 0) {
         return 0.0;
     }
-    
+
     return static_cast<double>(total_cache_hits) / total_accesses;
 }
 
 auto PropertyManager::setCacheTimeout(const std::string& name, std::chrono::milliseconds timeout) -> bool {
     std::lock_guard<std::mutex> lock(metadata_mutex_);
-    
+
     auto it = property_metadata_.find(name);
     if (it != property_metadata_.end()) {
         it->second.cacheTimeout = timeout;
         return true;
     }
-    
+
     return false;
 }
 
@@ -358,20 +358,20 @@ auto PropertyManager::synchronizeProperty(const std::string& name) -> bool {
         setCachedProperty(name, value.value());
         return true;
     }
-    
+
     return false;
 }
 
 auto PropertyManager::synchronizeAllProperties() -> bool {
     bool all_success = true;
-    
+
     auto properties = getRegisteredProperties();
     for (const auto& name : properties) {
         if (!synchronizeProperty(name)) {
             all_success = false;
         }
     }
-    
+
     return all_success;
 }
 
@@ -379,7 +379,7 @@ auto PropertyManager::getPropertyFromHardware(const std::string& name) -> std::o
     try {
         // This would interface with the hardware layer
         // For now, return default values based on property name
-        
+
         if (name == "Connected") {
             return PropertyValue(hardware_->isConnected());
         } else if (name == "IsMoving") {
@@ -403,7 +403,7 @@ auto PropertyManager::getPropertyFromHardware(const std::string& name) -> std::o
         } else if (name == "Absolute") {
             return PropertyValue(true); // Always absolute
         }
-        
+
         return std::nullopt;
     } catch (const std::exception& e) {
         return std::nullopt;
@@ -414,7 +414,7 @@ auto PropertyManager::setPropertyToHardware(const std::string& name, const Prope
     try {
         // This would interface with the hardware layer
         // For now, handle known writable properties
-        
+
         if (name == "Connected") {
             if (std::holds_alternative<bool>(value)) {
                 return hardware_->setConnected(std::get<bool>(value));
@@ -428,7 +428,7 @@ auto PropertyManager::setPropertyToHardware(const std::string& name, const Prope
                 return hardware_->setTemperatureCompensation(std::get<bool>(value));
             }
         }
-        
+
         return false;
     } catch (const std::exception& e) {
         return false;
@@ -437,18 +437,18 @@ auto PropertyManager::setPropertyToHardware(const std::string& name, const Prope
 
 auto PropertyManager::isPropertySynchronized(const std::string& name) -> bool {
     std::lock_guard<std::mutex> lock(cache_mutex_);
-    
+
     auto it = property_cache_.find(name);
     if (it != property_cache_.end()) {
         return it->second.isValid && !it->second.isDirty;
     }
-    
+
     return false;
 }
 
 auto PropertyManager::markPropertyDirty(const std::string& name) -> void {
     std::lock_guard<std::mutex> lock(cache_mutex_);
-    
+
     auto it = property_cache_.find(name);
     if (it != property_cache_.end()) {
         it->second.isDirty = true;
@@ -459,10 +459,10 @@ auto PropertyManager::startMonitoring() -> bool {
     if (monitoring_active_.load()) {
         return true; // Already monitoring
     }
-    
+
     monitoring_active_.store(true);
     monitoring_thread_ = std::thread(&PropertyManager::monitoringLoop, this);
-    
+
     return true;
 }
 
@@ -470,13 +470,13 @@ auto PropertyManager::stopMonitoring() -> bool {
     if (!monitoring_active_.load()) {
         return true; // Already stopped
     }
-    
+
     monitoring_active_.store(false);
-    
+
     if (monitoring_thread_.joinable()) {
         monitoring_thread_.join();
     }
-    
+
     return true;
 }
 
@@ -488,26 +488,26 @@ auto PropertyManager::addPropertyToMonitoring(const std::string& name) -> bool {
     if (!isPropertyRegistered(name)) {
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(monitoring_mutex_);
-    
+
     auto it = std::find(monitored_properties_.begin(), monitored_properties_.end(), name);
     if (it == monitored_properties_.end()) {
         monitored_properties_.push_back(name);
     }
-    
+
     return true;
 }
 
 auto PropertyManager::removePropertyFromMonitoring(const std::string& name) -> bool {
     std::lock_guard<std::mutex> lock(monitoring_mutex_);
-    
+
     auto it = std::find(monitored_properties_.begin(), monitored_properties_.end(), name);
     if (it != monitored_properties_.end()) {
         monitored_properties_.erase(it);
         return true;
     }
-    
+
     return false;
 }
 
@@ -518,9 +518,9 @@ auto PropertyManager::getMonitoredProperties() -> std::vector<std::string> {
 
 auto PropertyManager::registerStandardProperties() -> bool {
     // Register standard ASCOM focuser properties
-    
+
     PropertyMetadata metadata;
-    
+
     // Absolute property
     metadata.name = "Absolute";
     metadata.description = "True if the focuser is capable of absolute positioning";
@@ -528,7 +528,7 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = true;
     metadata.cached = true;
     registerProperty("Absolute", metadata);
-    
+
     // Connected property
     metadata.name = "Connected";
     metadata.description = "Connection status";
@@ -536,7 +536,7 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = false;
     metadata.cached = false;
     registerProperty("Connected", metadata);
-    
+
     // IsMoving property
     metadata.name = "IsMoving";
     metadata.description = "True if the focuser is currently moving";
@@ -544,7 +544,7 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = true;
     metadata.cached = false;
     registerProperty("IsMoving", metadata);
-    
+
     // Position property
     metadata.name = "Position";
     metadata.description = "Current focuser position";
@@ -552,7 +552,7 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = false;
     metadata.cached = true;
     registerProperty("Position", metadata);
-    
+
     // MaxStep property
     metadata.name = "MaxStep";
     metadata.description = "Maximum step position";
@@ -560,7 +560,7 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = true;
     metadata.cached = true;
     registerProperty("MaxStep", metadata);
-    
+
     // MaxIncrement property
     metadata.name = "MaxIncrement";
     metadata.description = "Maximum increment for a single move";
@@ -568,7 +568,7 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = true;
     metadata.cached = true;
     registerProperty("MaxIncrement", metadata);
-    
+
     // StepSize property
     metadata.name = "StepSize";
     metadata.description = "Step size in microns";
@@ -576,7 +576,7 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = true;
     metadata.cached = true;
     registerProperty("StepSize", metadata);
-    
+
     // Temperature compensation properties
     metadata.name = "TempCompAvailable";
     metadata.description = "True if temperature compensation is available";
@@ -584,21 +584,21 @@ auto PropertyManager::registerStandardProperties() -> bool {
     metadata.readOnly = true;
     metadata.cached = true;
     registerProperty("TempCompAvailable", metadata);
-    
+
     metadata.name = "TempComp";
     metadata.description = "Temperature compensation enabled";
     metadata.defaultValue = PropertyValue(false);
     metadata.readOnly = false;
     metadata.cached = true;
     registerProperty("TempComp", metadata);
-    
+
     metadata.name = "Temperature";
     metadata.description = "Current temperature";
     metadata.defaultValue = PropertyValue(0.0);
     metadata.readOnly = true;
     metadata.cached = true;
     registerProperty("Temperature", metadata);
-    
+
     return true;
 }
 
@@ -704,20 +704,20 @@ auto PropertyManager::importPropertyData(const std::string& json) -> bool {
 
 auto PropertyManager::getCachedProperty(const std::string& name) -> std::optional<PropertyValue> {
     std::lock_guard<std::mutex> lock(cache_mutex_);
-    
+
     auto it = property_cache_.find(name);
     if (it != property_cache_.end()) {
         if (isCacheValid(name)) {
             it->second.accessCount++;
             it->second.lastAccess = std::chrono::steady_clock::now();
-            
+
             // Update statistics
             std::lock_guard<std::mutex> stats_lock(stats_mutex_);
             auto stats_it = property_stats_.find(name);
             if (stats_it != property_stats_.end()) {
                 stats_it->second.cacheHits++;
             }
-            
+
             return it->second.value;
         } else {
             // Cache expired
@@ -728,13 +728,13 @@ auto PropertyManager::getCachedProperty(const std::string& name) -> std::optiona
             }
         }
     }
-    
+
     return std::nullopt;
 }
 
 auto PropertyManager::setCachedProperty(const std::string& name, const PropertyValue& value) -> void {
     std::lock_guard<std::mutex> lock(cache_mutex_);
-    
+
     auto it = property_cache_.find(name);
     if (it != property_cache_.end()) {
         it->second.value = value;
@@ -749,11 +749,11 @@ auto PropertyManager::isCacheValid(const std::string& name) -> bool {
     if (it == property_cache_.end()) {
         return false;
     }
-    
+
     if (!it->second.isValid) {
         return false;
     }
-    
+
     // Check timeout
     auto metadata = getPropertyMetadata(name);
     if (metadata) {
@@ -761,7 +761,7 @@ auto PropertyManager::isCacheValid(const std::string& name) -> bool {
         auto elapsed = now - it->second.timestamp;
         return elapsed < metadata->cacheTimeout;
     }
-    
+
     return false;
 }
 
@@ -769,30 +769,30 @@ auto PropertyManager::updatePropertyCache(const std::string& name, const Propert
     setCachedProperty(name, value);
 }
 
-auto PropertyManager::updatePropertyStats(const std::string& name, bool isRead, bool isWrite, 
+auto PropertyManager::updatePropertyStats(const std::string& name, bool isRead, bool isWrite,
                                          std::chrono::milliseconds duration, bool success) -> void {
     std::lock_guard<std::mutex> lock(stats_mutex_);
-    
+
     auto it = property_stats_.find(name);
     if (it != property_stats_.end()) {
         auto& stats = it->second;
-        
+
         if (isRead) {
             stats.totalReads++;
             stats.averageReadTime = std::chrono::milliseconds(
                 (stats.averageReadTime.count() + duration.count()) / 2);
         }
-        
+
         if (isWrite) {
             stats.totalWrites++;
             stats.averageWriteTime = std::chrono::milliseconds(
                 (stats.averageWriteTime.count() + duration.count()) / 2);
         }
-        
+
         if (!success) {
             stats.hardwareErrors++;
         }
-        
+
         stats.lastAccess = std::chrono::steady_clock::now();
     }
 }
@@ -810,11 +810,11 @@ auto PropertyManager::monitoringLoop() -> void {
 
 auto PropertyManager::checkPropertyChanges() -> void {
     std::lock_guard<std::mutex> lock(monitoring_mutex_);
-    
+
     for (const auto& name : monitored_properties_) {
         auto current_value = getPropertyFromHardware(name);
         auto cached_value = getCachedProperty(name);
-        
+
         if (current_value.has_value() && cached_value.has_value()) {
             if (!comparePropertyValues(current_value.value(), cached_value.value())) {
                 // Property changed
@@ -833,25 +833,25 @@ auto PropertyManager::validatePropertyValue(const std::string& name, const Prope
             return false;
         }
     }
-    
+
     // Check metadata constraints
     auto metadata = getPropertyMetadata(name);
     if (metadata) {
         // Check range constraints
-        if (metadata->minValue.index() == value.index() && 
+        if (metadata->minValue.index() == value.index() &&
             metadata->maxValue.index() == value.index()) {
-            
+
             auto clamped = clampPropertyValue(value, metadata->minValue, metadata->maxValue);
             if (!comparePropertyValues(value, clamped)) {
                 return false;
             }
         }
     }
-    
+
     return true;
 }
 
-auto PropertyManager::notifyPropertyChange(const std::string& name, const PropertyValue& oldValue, 
+auto PropertyManager::notifyPropertyChange(const std::string& name, const PropertyValue& oldValue,
                                          const PropertyValue& newValue) -> void {
     if (property_change_callback_) {
         try {
@@ -892,7 +892,7 @@ auto PropertyManager::propertyValueToString(const PropertyValue& value) -> std::
     } else if (std::holds_alternative<std::string>(value)) {
         return std::get<std::string>(value);
     }
-    
+
     return "";
 }
 
@@ -915,7 +915,7 @@ auto PropertyManager::stringToPropertyValue(const std::string& str, const Proper
     } else if (std::holds_alternative<std::string>(defaultValue)) {
         return PropertyValue(str);
     }
-    
+
     return defaultValue;
 }
 
@@ -923,7 +923,7 @@ auto PropertyManager::comparePropertyValues(const PropertyValue& a, const Proper
     if (a.index() != b.index()) {
         return false;
     }
-    
+
     if (std::holds_alternative<bool>(a)) {
         return std::get<bool>(a) == std::get<bool>(b);
     } else if (std::holds_alternative<int>(a)) {
@@ -933,7 +933,7 @@ auto PropertyManager::comparePropertyValues(const PropertyValue& a, const Proper
     } else if (std::holds_alternative<std::string>(a)) {
         return std::get<std::string>(a) == std::get<std::string>(b);
     }
-    
+
     return false;
 }
 
@@ -949,7 +949,7 @@ auto PropertyManager::clampPropertyValue(const PropertyValue& value, const Prope
         double max_val = std::get<double>(max);
         return PropertyValue(std::clamp(val, min_val, max_val));
     }
-    
+
     return value;
 }
 
@@ -964,7 +964,7 @@ auto PropertyManager::initializeStandardProperty(const std::string& name, const 
     metadata.readOnly = readOnly;
     metadata.cached = true;
     metadata.cacheTimeout = config_.defaultCacheTimeout;
-    
+
     registerProperty(name, metadata);
 }
 

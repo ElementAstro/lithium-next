@@ -243,7 +243,7 @@ auto HardwareInterface::getDomeCapabilities() -> std::optional<std::string> {
     if (!capabilities_.capabilities_loaded) {
         return std::nullopt;
     }
-    
+
     // Return capabilities as a formatted string
     std::string caps;
     if (capabilities_.can_find_home) caps += "home,";
@@ -252,11 +252,11 @@ auto HardwareInterface::getDomeCapabilities() -> std::optional<std::string> {
     if (capabilities_.can_set_shutter) caps += "shutter,";
     if (capabilities_.can_slave) caps += "slave,";
     if (capabilities_.can_sync_azimuth) caps += "sync,";
-    
+
     if (!caps.empty()) {
         caps.pop_back(); // Remove trailing comma
     }
-    
+
     return caps;
 }
 

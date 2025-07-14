@@ -13,6 +13,7 @@ from typing import Self, Any
 
 class OperatingSystem(Enum):
     """Enum representing supported operating systems."""
+
     LINUX = auto()
     WINDOWS = auto()
     MACOS = auto()
@@ -32,7 +33,12 @@ class OperatingSystem(Enum):
 class NginxError(Exception):
     """Base exception class for all Nginx-related errors."""
 
-    def __init__(self, message: str, error_code: int | None = None, details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        error_code: int | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(message)
         self.error_code = error_code
         self.details = details or {}
@@ -42,8 +48,7 @@ class NginxError(Exception):
         if self.error_code:
             base_msg += f" (Error Code: {self.error_code})"
         if self.details:
-            details_str = ", ".join(
-                f"{k}: {v}" for k, v in self.details.items())
+            details_str = ", ".join(f"{k}: {v}" for k, v in self.details.items())
             base_msg += f" - {details_str}"
         return base_msg
 
@@ -63,6 +68,7 @@ class OperationError(NginxError):
 @dataclass(frozen=True, slots=True)
 class NginxPaths:
     """Immutable class holding paths related to Nginx installation."""
+
     base_path: Path
     conf_path: Path
     binary_path: Path
@@ -73,7 +79,9 @@ class NginxPaths:
     ssl_path: Path
 
     @classmethod
-    def from_base_path(cls, base_path: Path, binary_path: Path, logs_path: Path) -> Self:
+    def from_base_path(
+        cls, base_path: Path, binary_path: Path, logs_path: Path
+    ) -> Self:
         """Create NginxPaths from base path and derived paths."""
         return cls(
             base_path=base_path,
@@ -88,6 +96,11 @@ class NginxPaths:
 
     def ensure_directories(self) -> None:
         """Ensure all necessary directories exist."""
-        for path_attr in ["backup_path", "sites_available", "sites_enabled", "ssl_path"]:
+        for path_attr in [
+            "backup_path",
+            "sites_available",
+            "sites_enabled",
+            "ssl_path",
+        ]:
             path = getattr(self, path_attr)
             path.mkdir(parents=True, exist_ok=True)

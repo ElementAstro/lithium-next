@@ -26,7 +26,7 @@ set_target_properties(lithium_device_asi_camera PROPERTIES
 )
 
 # Find and link ASI Camera SDK
-find_library(ASI_CAMERA_LIBRARY 
+find_library(ASI_CAMERA_LIBRARY
     NAMES ASICamera2 libASICamera2
     PATHS
         /usr/local/lib
@@ -38,7 +38,7 @@ find_library(ASI_CAMERA_LIBRARY
 if(ASI_CAMERA_LIBRARY)
     message(STATUS "Found ASI Camera SDK: ${ASI_CAMERA_LIBRARY}")
     add_compile_definitions(LITHIUM_ASI_CAMERA_ENABLED)
-    
+
     # Find ASI Camera headers
     find_path(ASI_CAMERA_INCLUDE_DIR
         NAMES ASICamera2.h
@@ -47,11 +47,11 @@ if(ASI_CAMERA_LIBRARY)
             /usr/include
             ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/include
     )
-    
+
     if(ASI_CAMERA_INCLUDE_DIR)
         target_include_directories(lithium_device_asi_camera PRIVATE ${ASI_CAMERA_INCLUDE_DIR})
     endif()
-    
+
     target_link_libraries(lithium_device_asi_camera PRIVATE ${ASI_CAMERA_LIBRARY})
 endif()
 

@@ -15,8 +15,12 @@ from loguru import logger
 from ..core.base import BuildHelperBase
 from ..core.models import BuildStatus, BuildResult
 from ..core.errors import (
-    ConfigurationError, BuildError, InstallationError, 
-    TestError, ErrorContext, handle_build_error
+    ConfigurationError,
+    BuildError,
+    InstallationError,
+    TestError,
+    ErrorContext,
+    handle_build_error,
 )
 
 
@@ -48,7 +52,7 @@ class CMakeBuilder(BuildHelperBase):
             options=cmake_options,
             env_vars=env_vars,
             verbose=verbose,
-            parallel=parallel
+            parallel=parallel,
         )
         self.generator = generator
         self.build_type = build_type
@@ -60,8 +64,8 @@ class CMakeBuilder(BuildHelperBase):
                 "generator": generator,
                 "build_type": build_type,
                 "source_dir": str(self.source_dir),
-                "build_dir": str(self.build_dir)
-            }
+                "build_dir": str(self.build_dir),
+            },
         )
 
     async def _get_cmake_version(self) -> str:
@@ -72,10 +76,10 @@ class CMakeBuilder(BuildHelperBase):
         try:
             result = await self.run_command(["cmake", "--version"])
             if result.success and result.output:
-                version_line = result.output.strip().split('\n')[0]
+                version_line = result.output.strip().split("\n")[0]
                 self._cmake_version = version_line
                 logger.debug(f"Detected CMake: {version_line}")
-                
+
                 # Cache the version for future use
                 self.set_cache_value("cmake_version", version_line)
                 return version_line
@@ -92,14 +96,14 @@ class CMakeBuilder(BuildHelperBase):
         """Validate CMake environment and dependencies."""
         # Check CMake availability
         await self._get_cmake_version()
-        
+
         # Validate source directory
         if not self.source_dir.exists():
             raise ConfigurationError(
                 f"Source directory does not exist: {self.source_dir}",
-                context=ErrorContext(working_directory=self.build_dir)
+                context=ErrorContext(working_directory=self.build_dir),
             )
-            
+
         # Check for CMakeLists.txt
         cmake_file = self.source_dir / "CMakeLists.txt"
         if not cmake_file.exists():
@@ -107,8 +111,8 @@ class CMakeBuilder(BuildHelperBase):
                 f"CMakeLists.txt not found in source directory: {self.source_dir}",
                 context=ErrorContext(
                     working_directory=self.build_dir,
-                    additional_info={"missing_file": str(cmake_file)}
-                )
+                    additional_info={"missing_file": str(cmake_file)},
+                ),
             )
 
     async def configure(self) -> BuildResult:
@@ -131,7 +135,7 @@ class CMakeBuilder(BuildHelperBase):
                 f"-DCMAKE_INSTALL_PREFIX={self.install_prefix}",
                 str(self.source_dir),
             ]
-            
+
             # Add user-specified options
             if self.options:
                 cmake_args.extend(self.options)
@@ -144,18 +148,21 @@ class CMakeBuilder(BuildHelperBase):
             if result.success:
                 self.status = BuildStatus.COMPLETED
                 logger.success("CMake configuration successful")
-                
+
                 # Cache successful configuration
-                self.set_cache_value("last_configure_success", {
-                    "timestamp": result.timestamp,
-                    "generator": self.generator,
-                    "build_type": self.build_type
-                })
+                self.set_cache_value(
+                    "last_configure_success",
+                    {
+                        "timestamp": result.timestamp,
+                        "generator": self.generator,
+                        "build_type": self.build_type,
+                    },
+                )
             else:
                 self.status = BuildStatus.FAILED
                 error_msg = f"CMake configuration failed: {result.error}"
                 logger.error(error_msg)
-                
+
                 raise ConfigurationError(
                     error_msg,
                     context=ErrorContext(
@@ -164,8 +171,8 @@ class CMakeBuilder(BuildHelperBase):
                         working_directory=self.build_dir,
                         environment_vars=self.env_vars,
                         stderr=result.error,
-                        execution_time=result.execution_time
-                    )
+                        execution_time=result.execution_time,
+                    ),
                 )
 
             return result
@@ -176,7 +183,7 @@ class CMakeBuilder(BuildHelperBase):
                     "configure",
                     e,
                     context=ErrorContext(working_directory=self.build_dir),
-                    recoverable=True
+                    recoverable=True,
                 )
             raise
 
@@ -193,7 +200,7 @@ class CMakeBuilder(BuildHelperBase):
                 "--build",
                 str(self.build_dir),
                 "--parallel",
-                str(self.parallel)
+                str(self.parallel),
             ]
 
             if target:
@@ -210,18 +217,21 @@ class CMakeBuilder(BuildHelperBase):
             if result.success:
                 self.status = BuildStatus.COMPLETED
                 logger.success(f"Build of {build_desc} successful")
-                
+
                 # Cache successful build info
-                self.set_cache_value("last_build_success", {
-                    "timestamp": result.timestamp,
-                    "target": target,
-                    "execution_time": result.execution_time
-                })
+                self.set_cache_value(
+                    "last_build_success",
+                    {
+                        "timestamp": result.timestamp,
+                        "target": target,
+                        "execution_time": result.execution_time,
+                    },
+                )
             else:
                 self.status = BuildStatus.FAILED
                 error_msg = f"CMake build failed: {result.error}"
                 logger.error(error_msg)
-                
+
                 raise BuildError(
                     error_msg,
                     target=target,
@@ -232,8 +242,8 @@ class CMakeBuilder(BuildHelperBase):
                         working_directory=self.build_dir,
                         environment_vars=self.env_vars,
                         stderr=result.error,
-                        execution_time=result.execution_time
-                    )
+                        execution_time=result.execution_time,
+                    ),
                 )
 
             return result
@@ -245,9 +255,9 @@ class CMakeBuilder(BuildHelperBase):
                     e,
                     context=ErrorContext(
                         working_directory=self.build_dir,
-                        additional_info={"target": target}
+                        additional_info={"target": target},
                     ),
-                    recoverable=True
+                    recoverable=True,
                 )
             raise
 
@@ -269,15 +279,11 @@ class CMakeBuilder(BuildHelperBase):
                     f"Cannot write to install directory {self.install_prefix}: {e}",
                     install_prefix=self.install_prefix,
                     permission_error=True,
-                    context=ErrorContext(working_directory=self.build_dir)
+                    context=ErrorContext(working_directory=self.build_dir),
                 )
 
             # Build install command
-            install_cmd = [
-                "cmake",
-                "--install",
-                str(self.build_dir)
-            ]
+            install_cmd = ["cmake", "--install", str(self.build_dir)]
 
             logger.debug(f"CMake install command: {' '.join(install_cmd)}")
 
@@ -286,12 +292,14 @@ class CMakeBuilder(BuildHelperBase):
 
             if result.success:
                 self.status = BuildStatus.COMPLETED
-                logger.success(f"Project installed successfully to {self.install_prefix}")
+                logger.success(
+                    f"Project installed successfully to {self.install_prefix}"
+                )
             else:
                 self.status = BuildStatus.FAILED
                 error_msg = f"CMake installation failed: {result.error}"
                 logger.error(error_msg)
-                
+
                 raise InstallationError(
                     error_msg,
                     install_prefix=self.install_prefix,
@@ -301,8 +309,8 @@ class CMakeBuilder(BuildHelperBase):
                         working_directory=self.build_dir,
                         environment_vars=self.env_vars,
                         stderr=result.error,
-                        execution_time=result.execution_time
-                    )
+                        execution_time=result.execution_time,
+                    ),
                 )
 
             return result
@@ -313,7 +321,7 @@ class CMakeBuilder(BuildHelperBase):
                     "install",
                     e,
                     context=ErrorContext(working_directory=self.build_dir),
-                    recoverable=False
+                    recoverable=False,
                 )
             raise
 
@@ -330,7 +338,7 @@ class CMakeBuilder(BuildHelperBase):
                 "-C",
                 self.build_type,
                 "-j",
-                str(self.parallel)
+                str(self.parallel),
             ]
 
             if self.verbose:
@@ -347,7 +355,7 @@ class CMakeBuilder(BuildHelperBase):
             if result.success:
                 self.status = BuildStatus.COMPLETED
                 logger.success("All tests passed")
-                
+
                 # Try to extract test statistics from output
                 test_stats = self._parse_ctest_output(result.output)
                 if test_stats:
@@ -356,10 +364,10 @@ class CMakeBuilder(BuildHelperBase):
                 self.status = BuildStatus.FAILED
                 error_msg = f"CTest tests failed: {result.error}"
                 logger.error(error_msg)
-                
+
                 # Try to extract failure information
                 test_stats = self._parse_ctest_output(result.output)
-                
+
                 raise TestError(
                     error_msg,
                     test_suite="ctest",
@@ -372,8 +380,8 @@ class CMakeBuilder(BuildHelperBase):
                         environment_vars=self.env_vars,
                         stderr=result.error,
                         stdout=result.output,
-                        execution_time=result.execution_time
-                    )
+                        execution_time=result.execution_time,
+                    ),
                 )
 
             return result
@@ -384,7 +392,7 @@ class CMakeBuilder(BuildHelperBase):
                     "test",
                     e,
                     context=ErrorContext(working_directory=self.build_dir),
-                    recoverable=True
+                    recoverable=True,
                 )
             raise
 
@@ -392,14 +400,17 @@ class CMakeBuilder(BuildHelperBase):
         """Parse CTest output to extract test statistics."""
         if not output:
             return None
-            
+
         try:
-            lines = output.split('\n')
+            lines = output.split("\n")
             for line in lines:
                 if "tests passed" in line.lower():
                     # Example: "100% tests passed, 0 tests failed out of 25"
                     import re
-                    match = re.search(r'(\d+)% tests passed, (\d+) tests failed out of (\d+)', line)
+
+                    match = re.search(
+                        r"(\d+)% tests passed, (\d+) tests failed out of (\d+)", line
+                    )
                     if match:
                         failed = int(match.group(2))
                         total = int(match.group(3))
@@ -407,7 +418,7 @@ class CMakeBuilder(BuildHelperBase):
                         return {"passed": passed, "failed": failed, "total": total}
         except Exception as e:
             logger.debug(f"Failed to parse CTest output: {e}")
-        
+
         return None
 
     async def generate_docs(self, doc_target: str = "doc") -> BuildResult:
@@ -418,10 +429,12 @@ class CMakeBuilder(BuildHelperBase):
         try:
             # Use the build method to build documentation target
             result = await self.build(doc_target)
-            
+
             if result.success:
-                logger.success(f"Documentation generated successfully with target '{doc_target}'")
-            
+                logger.success(
+                    f"Documentation generated successfully with target '{doc_target}'"
+                )
+
             return result
 
         except BuildError as e:
@@ -429,7 +442,7 @@ class CMakeBuilder(BuildHelperBase):
             logger.error(f"Documentation generation failed: {str(e)}")
             new_context = e.context.additional_info.copy()
             new_context["doc_target"] = doc_target
-            
+
             raise e.with_context(additional_info=new_context)
 
         except Exception as e:
@@ -438,15 +451,15 @@ class CMakeBuilder(BuildHelperBase):
                 e,
                 context=ErrorContext(
                     working_directory=self.build_dir,
-                    additional_info={"doc_target": doc_target}
+                    additional_info={"doc_target": doc_target},
                 ),
-                recoverable=True
+                recoverable=True,
             )
 
     async def get_build_info(self) -> Dict[str, Any]:
         """Get comprehensive build information and status."""
         cmake_version = await self._get_cmake_version()
-        
+
         return {
             "builder_type": "cmake",
             "cmake_version": cmake_version,
@@ -460,6 +473,6 @@ class CMakeBuilder(BuildHelperBase):
             "cache_info": {
                 "last_configure": self.get_cache_value("last_configure_success"),
                 "last_build": self.get_cache_value("last_build_success"),
-                "cmake_version": self.get_cache_value("cmake_version")
-            }
+                "cmake_version": self.get_cache_value("cmake_version"),
+            },
         }

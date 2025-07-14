@@ -111,7 +111,7 @@ public:
     std::unique_ptr<AtomFilterWheel> createFilterWheel(const DeviceCreationConfig& config);
     std::unique_ptr<AtomRotator> createRotator(const DeviceCreationConfig& config);
     std::unique_ptr<AtomDome> createDome(const DeviceCreationConfig& config);
-    
+
     // Legacy factory methods for backwards compatibility
     std::unique_ptr<AtomCamera> createCamera(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
     std::unique_ptr<AtomTelescope> createTelescope(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
@@ -119,21 +119,21 @@ public:
     std::unique_ptr<AtomFilterWheel> createFilterWheel(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
     std::unique_ptr<AtomRotator> createRotator(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
     std::unique_ptr<AtomDome> createDome(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
-    
+
     // Generic device creation
     std::unique_ptr<AtomDriver> createDevice(const DeviceCreationConfig& config);
     std::unique_ptr<AtomDriver> createDevice(DeviceType type, const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
-    
+
     // Device type utilities
     static DeviceType stringToDeviceType(const std::string& typeStr);
     static std::string deviceTypeToString(DeviceType type);
     static DeviceBackend stringToBackend(const std::string& backendStr);
     static std::string backendToString(DeviceBackend backend);
-    
+
     // Available device backends
     std::vector<DeviceBackend> getAvailableBackends(DeviceType type) const;
     bool isBackendAvailable(DeviceType type, DeviceBackend backend) const;
-    
+
     // Enhanced device discovery
     struct DeviceInfo {
         std::string name;
@@ -145,13 +145,13 @@ public:
         bool is_available{true};
         std::chrono::milliseconds response_time{0};
     };
-    
+
     std::vector<DeviceInfo> discoverDevices(DeviceType type = DeviceType::UNKNOWN, DeviceBackend backend = DeviceBackend::MOCK) const;
-    
+
     // Async device discovery
     using DeviceDiscoveryCallback = std::function<void(const std::vector<DeviceInfo>&)>;
     void discoverDevicesAsync(DeviceDiscoveryCallback callback, DeviceType type = DeviceType::UNKNOWN, DeviceBackend backend = DeviceBackend::MOCK);
-    
+
     // Device caching
     void enableCaching(bool enable);
     bool isCachingEnabled() const;
@@ -159,7 +159,7 @@ public:
     size_t getCacheSize() const;
     void clearCache();
     void clearCacheForType(DeviceType type);
-    
+
     // Device pooling
     void enablePooling(bool enable);
     bool isPoolingEnabled() const;
@@ -167,33 +167,33 @@ public:
     size_t getPoolSize(DeviceType type) const;
     void preloadPool(DeviceType type, size_t count);
     void clearPool(DeviceType type);
-    
+
     // Performance monitoring
     void enablePerformanceMonitoring(bool enable);
     bool isPerformanceMonitoringEnabled() const;
     DevicePerformanceProfile getPerformanceProfile(DeviceType type, DeviceBackend backend) const;
     void resetPerformanceProfile(DeviceType type, DeviceBackend backend);
-    
+
     // Registry for custom device creators
     using DeviceCreator = std::function<std::unique_ptr<AtomDriver>(const DeviceCreationConfig&)>;
     void registerDeviceCreator(DeviceType type, DeviceBackend backend, DeviceCreator creator);
     void unregisterDeviceCreator(DeviceType type, DeviceBackend backend);
-    
+
     // Advanced configuration
     void setDefaultTimeout(std::chrono::milliseconds timeout);
     std::chrono::milliseconds getDefaultTimeout() const;
     void setMaxConcurrentCreations(size_t max_concurrent);
     size_t getMaxConcurrentCreations() const;
-    
+
     // Batch operations
     std::vector<std::unique_ptr<AtomDriver>> createDevicesBatch(const std::vector<DeviceCreationConfig>& configs);
     using BatchCreationCallback = std::function<void(const std::vector<std::pair<DeviceCreationConfig, std::unique_ptr<AtomDriver>>>&)>;
     void createDevicesBatchAsync(const std::vector<DeviceCreationConfig>& configs, BatchCreationCallback callback);
-    
+
     // Device validation
     bool validateDeviceConfig(const DeviceCreationConfig& config) const;
     std::vector<std::string> getConfigErrors(const DeviceCreationConfig& config) const;
-    
+
     // Resource management
     struct ResourceUsage {
         size_t total_devices_created{0};
@@ -204,13 +204,13 @@ public:
         size_t concurrent_creations{0};
     };
     ResourceUsage getResourceUsage() const;
-    
+
     // Configuration presets
     void savePreset(const std::string& name, const DeviceCreationConfig& config);
     DeviceCreationConfig loadPreset(const std::string& name);
     std::vector<std::string> getPresetNames() const;
     void deletePreset(const std::string& name);
-    
+
     // Factory statistics
     struct FactoryStatistics {
         size_t total_creations{0};
@@ -224,32 +224,32 @@ public:
     };
     FactoryStatistics getStatistics() const;
     void resetStatistics();
-    
+
     // Event callbacks
     using DeviceCreatedCallback = std::function<void(const std::string&, DeviceType, DeviceBackend, bool)>;
     void setDeviceCreatedCallback(DeviceCreatedCallback callback);
-    
+
     // Cleanup and maintenance
     void runMaintenance();
     void cleanup();
-    
+
 private:
     DeviceFactory();
     ~DeviceFactory();
-    
+
     // Disable copy and assignment
     DeviceFactory(const DeviceFactory&) = delete;
     DeviceFactory& operator=(const DeviceFactory&) = delete;
-    
+
     // Internal implementation
     class Impl;
     std::unique_ptr<Impl> pimpl_;
-    
+
     // Helper methods
     std::string makeRegistryKey(DeviceType type, DeviceBackend backend) const;
     std::unique_ptr<AtomDriver> createDeviceInternal(const DeviceCreationConfig& config);
     void updatePerformanceProfile(DeviceType type, DeviceBackend backend, std::chrono::milliseconds creation_time, bool success);
-    
+
     // Backend availability checking
     bool isINDIAvailable() const;
     bool isASCOMAvailable() const;

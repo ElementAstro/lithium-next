@@ -31,12 +31,12 @@ PowerManager::PowerManager(std::shared_ptr<SwitchManager> switch_manager)
 
 auto PowerManager::initialize() -> bool {
     spdlog::info("Initializing Power Manager");
-    
+
     if (!switch_manager_) {
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     // Initialize power data for all switches
     auto switchCount = switch_manager_->getSwitchCount();
     for (uint32_t i = 0; i < switchCount; ++i) {
@@ -44,25 +44,25 @@ auto PowerManager::initialize() -> bool {
             spdlog::warn("Failed to initialize power data for switch {}", i);
         }
     }
-    
+
     // Reset energy tracking
     total_energy_consumed_ = 0.0;
     last_energy_update_ = std::chrono::steady_clock::now();
-    
+
     return true;
 }
 
 auto PowerManager::destroy() -> bool {
     spdlog::info("Destroying Power Manager");
-    
+
     std::lock_guard<std::mutex> data_lock(power_data_mutex_);
     std::lock_guard<std::mutex> history_lock(history_mutex_);
     std::lock_guard<std::mutex> essential_lock(essential_mutex_);
-    
+
     power_data_.clear();
     power_history_.clear();
     essential_switches_.clear();
-    
+
     return true;
 }
 
@@ -77,7 +77,7 @@ auto PowerManager::getTotalPowerConsumption() -> double {
     if (!monitoring_enabled_.load()) {
         return 0.0;
     }
-    
+
     updateTotalPowerConsumption();
     return total_power_consumption_.load();
 }
@@ -86,13 +86,13 @@ auto PowerManager::getSwitchPowerConsumption(uint32_t index) -> std::optional<do
     if (!monitoring_enabled_.load()) {
         return std::nullopt;
     }
-    
+
     std::lock_guard<std::mutex> lock(power_data_mutex_);
     auto it = power_data_.find(index);
     if (it == power_data_.end()) {
         return std::nullopt;
     }
-    
+
     return calculateSwitchPower(index);
 }
 
@@ -108,14 +108,14 @@ auto PowerManager::updatePowerConsumption() -> bool {
     if (!switch_manager_ || !monitoring_enabled_.load()) {
         return false;
     }
-    
+
     updateTotalPowerConsumption();
     updateEnergyConsumption();
-    
+
     double totalPower = total_power_consumption_.load();
     addPowerHistoryEntry(totalPower);
     checkPowerThresholds();
-    
+
     return true;
 }
 
@@ -134,27 +134,27 @@ auto PowerManager::setSwitchPowerData(uint32_t index, double nominalPower, doubl
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     if (index >= switch_manager_->getSwitchCount()) {
         setLastError("Invalid switch index: " + std::to_string(index));
         return false;
     }
-    
+
     if (nominalPower < 0.0 || standbyPower < 0.0) {
         setLastError("Power values must be non-negative");
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(power_data_mutex_);
-    
+
     PowerData& data = power_data_[index];
     data.switch_index = index;
     data.nominal_power = nominalPower;
     data.standby_power = standbyPower;
     data.last_update = std::chrono::steady_clock::now();
     data.monitoring_enabled = true;
-    
-    spdlog::debug("Set power data for switch {}: nominal={}W, standby={}W", 
+
+    spdlog::debug("Set power data for switch {}: nominal={}W, standby={}W",
                   index, nominalPower, standbyPower);
     return true;
 }
@@ -187,12 +187,12 @@ auto PowerManager::getSwitchPowerData(const std::string& name) -> std::optional<
 
 auto PowerManager::getAllPowerData() -> std::vector<PowerData> {
     std::lock_guard<std::mutex> lock(power_data_mutex_);
-    
+
     std::vector<PowerData> result;
     for (const auto& [index, data] : power_data_) {
         result.push_back(data);
     }
-    
+
     return result;
 }
 
@@ -200,10 +200,10 @@ auto PowerManager::setPowerLimit(double maxWatts) -> bool {
     if (!validatePowerLimit(maxWatts)) {
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(power_limit_mutex_);
     power_limit_.max_total_power = maxWatts;
-    
+
     spdlog::debug("Set power limit to {}W", maxWatts);
     return true;
 }
@@ -218,17 +218,17 @@ auto PowerManager::setPowerThresholds(double warning, double critical) -> bool {
         setLastError("Thresholds must be between 0.0 and 1.0");
         return false;
     }
-    
+
     if (warning >= critical) {
         setLastError("Warning threshold must be less than critical threshold");
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(power_limit_mutex_);
     power_limit_.warning_threshold = warning;
     power_limit_.critical_threshold = critical;
-    
-    spdlog::debug("Set power thresholds: warning={}%, critical={}%", 
+
+    spdlog::debug("Set power thresholds: warning={}%, critical={}%",
                   warning * 100, critical * 100);
     return true;
 }
@@ -241,7 +241,7 @@ auto PowerManager::getPowerThresholds() -> std::pair<double, double> {
 auto PowerManager::enablePowerLimits(bool enforce) -> bool {
     std::lock_guard<std::mutex> lock(power_limit_mutex_);
     power_limit_.enforce_limits = enforce;
-    
+
     spdlog::debug("Power limits enforcement {}", enforce ? "enabled" : "disabled");
     return true;
 }
@@ -254,7 +254,7 @@ auto PowerManager::arePowerLimitsEnabled() -> bool {
 auto PowerManager::enableAutoShutdown(bool enable) -> bool {
     std::lock_guard<std::mutex> lock(power_limit_mutex_);
     power_limit_.auto_shutdown = enable;
-    
+
     spdlog::debug("Auto shutdown {}", enable ? "enabled" : "disabled");
     return true;
 }
@@ -268,10 +268,10 @@ auto PowerManager::checkPowerLimits() -> bool {
     if (!monitoring_enabled_.load()) {
         return true;
     }
-    
+
     double totalPower = getTotalPowerConsumption();
     double powerLimit = getPowerLimit();
-    
+
     return totalPower <= powerLimit;
 }
 
@@ -283,14 +283,14 @@ auto PowerManager::getPowerUtilization() -> double {
     if (!monitoring_enabled_.load()) {
         return 0.0;
     }
-    
+
     double totalPower = getTotalPowerConsumption();
     double powerLimit = getPowerLimit();
-    
+
     if (powerLimit <= 0.0) {
         return 0.0;
     }
-    
+
     return (totalPower / powerLimit) * 100.0;
 }
 
@@ -298,10 +298,10 @@ auto PowerManager::getAvailablePower() -> double {
     if (!monitoring_enabled_.load()) {
         return 0.0;
     }
-    
+
     double totalPower = getTotalPowerConsumption();
     double powerLimit = getPowerLimit();
-    
+
     return std::max(0.0, powerLimit - totalPower);
 }
 
@@ -309,29 +309,29 @@ auto PowerManager::canSwitchBeActivated(uint32_t index) -> bool {
     if (!switch_manager_ || !monitoring_enabled_.load()) {
         return true; // Allow if monitoring is disabled
     }
-    
+
     // Check if switch is already on
     auto state = switch_manager_->getSwitchState(index);
     if (state && *state == SwitchState::ON) {
         return true; // Already on
     }
-    
+
     // Get switch power requirements
     auto powerData = getSwitchPowerData(index);
     if (!powerData) {
         return true; // No power data, allow by default
     }
-    
+
     double requiredPower = powerData->nominal_power - powerData->standby_power;
     double availablePower = getAvailablePower();
-    
+
     bool canActivate = requiredPower <= availablePower;
-    
+
     if (!canActivate) {
-        spdlog::debug("Cannot activate switch {}: requires {}W, available {}W", 
+        spdlog::debug("Cannot activate switch {}: requires {}W, available {}W",
                       index, requiredPower, availablePower);
     }
-    
+
     return canActivate;
 }
 
@@ -355,14 +355,14 @@ auto PowerManager::getSwitchEnergyConsumed(uint32_t index) -> std::optional<doub
     if (!powerData) {
         return std::nullopt;
     }
-    
+
     double totalEnergy = getTotalEnergyConsumed();
     double totalPower = getTotalPowerConsumption();
-    
+
     if (totalPower <= 0.0) {
         return 0.0;
     }
-    
+
     double switchPower = calculateSwitchPower(index);
     return (switchPower / totalPower) * totalEnergy;
 }
@@ -378,22 +378,22 @@ auto PowerManager::getSwitchEnergyConsumed(const std::string& name) -> std::opti
 auto PowerManager::resetEnergyCounters() -> bool {
     total_energy_consumed_ = 0.0;
     last_energy_update_ = std::chrono::steady_clock::now();
-    
+
     spdlog::debug("Energy counters reset");
     return true;
 }
 
 auto PowerManager::getPowerHistory(uint32_t samples) -> std::vector<std::pair<std::chrono::steady_clock::time_point, double>> {
     std::lock_guard<std::mutex> lock(history_mutex_);
-    
+
     size_t count = std::min(static_cast<size_t>(samples), power_history_.size());
     std::vector<std::pair<std::chrono::steady_clock::time_point, double>> result;
-    
+
     if (count > 0) {
         auto start_it = power_history_.end() - count;
         result.assign(start_it, power_history_.end());
     }
-    
+
     return result;
 }
 
@@ -402,12 +402,12 @@ auto PowerManager::emergencyPowerOff() -> bool {
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     spdlog::warn("Emergency power off initiated");
-    
+
     bool success = true;
     auto switchCount = switch_manager_->getSwitchCount();
-    
+
     for (uint32_t i = 0; i < switchCount; ++i) {
         if (!isSwitchEssential(i)) {
             if (!switch_manager_->setSwitchState(i, SwitchState::OFF)) {
@@ -416,7 +416,7 @@ auto PowerManager::emergencyPowerOff() -> bool {
             }
         }
     }
-    
+
     executeEmergencyShutdown("Emergency power off executed");
     return success;
 }
@@ -426,12 +426,12 @@ auto PowerManager::powerOffNonEssentialSwitches() -> bool {
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     spdlog::info("Powering off non-essential switches");
-    
+
     bool success = true;
     auto switchCount = switch_manager_->getSwitchCount();
-    
+
     for (uint32_t i = 0; i < switchCount; ++i) {
         if (!isSwitchEssential(i)) {
             auto state = switch_manager_->getSwitchState(i);
@@ -443,7 +443,7 @@ auto PowerManager::powerOffNonEssentialSwitches() -> bool {
             }
         }
     }
-    
+
     return success;
 }
 
@@ -452,15 +452,15 @@ auto PowerManager::markSwitchAsEssential(uint32_t index, bool essential) -> bool
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     if (index >= switch_manager_->getSwitchCount()) {
         setLastError("Invalid switch index: " + std::to_string(index));
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(essential_mutex_);
     essential_switches_[index] = essential;
-    
+
     spdlog::debug("Switch {} marked as {}", index, essential ? "essential" : "non-essential");
     return true;
 }
@@ -522,40 +522,40 @@ auto PowerManager::calculateSwitchPower(uint32_t index) -> double {
     if (it == power_data_.end()) {
         return 0.0;
     }
-    
+
     const PowerData& data = it->second;
     if (!data.monitoring_enabled || !switch_manager_) {
         return data.standby_power;
     }
-    
+
     auto state = switch_manager_->getSwitchState(index);
     if (!state) {
         return data.standby_power;
     }
-    
+
     return (*state == SwitchState::ON) ? data.nominal_power : data.standby_power;
 }
 
 auto PowerManager::updateTotalPowerConsumption() -> void {
     std::lock_guard<std::mutex> lock(power_data_mutex_);
-    
+
     double totalPower = 0.0;
     for (const auto& [index, data] : power_data_) {
         totalPower += calculateSwitchPower(index);
     }
-    
+
     total_power_consumption_ = totalPower;
 }
 
 auto PowerManager::updateEnergyConsumption() -> void {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_energy_update_);
-    
+
     if (elapsed.count() > 0) {
         double hours = elapsed.count() / (1000.0 * 3600.0); // Convert ms to hours
         double currentPower = total_power_consumption_.load();
         double energy = currentPower * hours / 1000.0; // Convert W·h to kWh
-        
+
         total_energy_consumed_ += energy;
         last_energy_update_ = now;
     }
@@ -563,12 +563,12 @@ auto PowerManager::updateEnergyConsumption() -> void {
 
 auto PowerManager::addPowerHistoryEntry(double power) -> void {
     std::lock_guard<std::mutex> lock(history_mutex_);
-    
+
     power_history_.emplace_back(std::chrono::steady_clock::now(), power);
-    
+
     // Keep history size manageable
     if (power_history_.size() > MAX_HISTORY_SIZE) {
-        power_history_.erase(power_history_.begin(), 
+        power_history_.erase(power_history_.begin(),
                            power_history_.begin() + (power_history_.size() - MAX_HISTORY_SIZE));
     }
 }
@@ -578,12 +578,12 @@ auto PowerManager::validatePowerData(const PowerData& data) -> bool {
         setLastError("Power values must be non-negative");
         return false;
     }
-    
+
     if (data.standby_power > data.nominal_power) {
         setLastError("Standby power cannot exceed nominal power");
         return false;
     }
-    
+
     return true;
 }
 
@@ -592,7 +592,7 @@ auto PowerManager::validatePowerLimit(double limit) -> bool {
         setLastError("Power limit must be positive");
         return false;
     }
-    
+
     return true;
 }
 
@@ -606,23 +606,23 @@ auto PowerManager::checkPowerThresholds() -> void {
     if (!monitoring_enabled_.load()) {
         return;
     }
-    
+
     double totalPower = total_power_consumption_.load();
     double powerLimit = 0.0;
     double warningThreshold = 0.0;
     double criticalThreshold = 0.0;
-    
+
     {
         std::lock_guard<std::mutex> lock(power_limit_mutex_);
         if (!power_limit_.enforce_limits) {
             return;
         }
-        
+
         powerLimit = power_limit_.max_total_power;
         warningThreshold = powerLimit * power_limit_.warning_threshold;
         criticalThreshold = powerLimit * power_limit_.critical_threshold;
     }
-    
+
     if (totalPower >= criticalThreshold) {
         executePowerLimitActions();
     } else if (totalPower >= warningThreshold) {
@@ -633,16 +633,16 @@ auto PowerManager::checkPowerThresholds() -> void {
 auto PowerManager::executePowerLimitActions() -> void {
     double totalPower = total_power_consumption_.load();
     double powerLimit = getPowerLimit();
-    
+
     notifyPowerLimitExceeded(totalPower, powerLimit);
-    
+
     if (isAutoShutdownEnabled()) {
-        spdlog::warn("Power limit exceeded ({}W > {}W), executing auto shutdown", 
+        spdlog::warn("Power limit exceeded ({}W > {}W), executing auto shutdown",
                      totalPower, powerLimit);
         powerOffNonEssentialSwitches();
         executeEmergencyShutdown("Auto shutdown due to power limit exceeded");
     } else {
-        spdlog::warn("Power limit exceeded ({}W > {}W), but auto shutdown is disabled", 
+        spdlog::warn("Power limit exceeded ({}W > {}W), but auto shutdown is disabled",
                      totalPower, powerLimit);
     }
 }
@@ -677,13 +677,13 @@ auto PowerManager::findPowerDataByName(const std::string& name) -> std::optional
     if (!switch_manager_) {
         return std::nullopt;
     }
-    
+
     return switch_manager_->getSwitchIndex(name);
 }
 
 auto PowerManager::ensurePowerDataExists(uint32_t index) -> bool {
     std::lock_guard<std::mutex> lock(power_data_mutex_);
-    
+
     if (power_data_.find(index) == power_data_.end()) {
         PowerData data;
         data.switch_index = index;
@@ -692,10 +692,10 @@ auto PowerManager::ensurePowerDataExists(uint32_t index) -> bool {
         data.current_power = 0.0;
         data.last_update = std::chrono::steady_clock::now();
         data.monitoring_enabled = true;
-        
+
         power_data_[index] = data;
     }
-    
+
     return true;
 }
 

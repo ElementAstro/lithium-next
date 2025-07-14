@@ -21,11 +21,12 @@ from .pacman_types import PluginHook, AsyncPluginHook
 from .exceptions import PacmanError
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class PluginError(PacmanError):
     """Exception raised for plugin-related errors."""
+
     pass
 
 
@@ -36,8 +37,8 @@ class PluginBase(ABC):
 
     def __init__(self):
         self.name = self.__class__.__name__
-        self.version = getattr(self, '__version__', '1.0.0')
-        self.description = getattr(self, '__description__', '')
+        self.version = getattr(self, "__version__", "1.0.0")
+        self.description = getattr(self, "__description__", "")
         self.enabled = True
 
     @abstractmethod
@@ -64,10 +65,11 @@ class HookRegistry:
 
     def __init__(self):
         self._hooks: Dict[str, List[tuple[int, Callable]]] = defaultdict(list)
-        self._async_hooks: Dict[str,
-                                List[tuple[int, Callable]]] = defaultdict(list)
+        self._async_hooks: Dict[str, List[tuple[int, Callable]]] = defaultdict(list)
 
-    def register_hook(self, hook_name: str, callback: Callable, priority: int = 50) -> None:
+    def register_hook(
+        self, hook_name: str, callback: Callable, priority: int = 50
+    ) -> None:
         """
         Register a hook callback with optional priority.
         Lower priority numbers execute first.
@@ -136,9 +138,10 @@ class HookRegistry:
     def has_hooks(self, hook_name: str) -> bool:
         """Check if any hooks are registered for the given name."""
         return (
-            hook_name in self._hooks and len(self._hooks[hook_name]) > 0 or
-            hook_name in self._async_hooks and len(
-                self._async_hooks[hook_name]) > 0
+            hook_name in self._hooks
+            and len(self._hooks[hook_name]) > 0
+            or hook_name in self._async_hooks
+            and len(self._async_hooks[hook_name]) > 0
         )
 
     def list_hooks(self) -> Dict[str, int]:
@@ -228,8 +231,7 @@ class PluginManager:
     def register_plugin(self, plugin: PluginBase) -> None:
         """Register a plugin instance."""
         if plugin.name in self.plugins:
-            logger.warning(
-                f"Plugin '{plugin.name}' already registered, replacing")
+            logger.warning(f"Plugin '{plugin.name}' already registered, replacing")
 
         self.plugins[plugin.name] = plugin
 
@@ -261,8 +263,7 @@ class PluginManager:
         try:
             plugin.cleanup()
         except Exception as e:
-            logger.error(
-                f"Error during plugin cleanup for '{plugin_name}': {e}")
+            logger.error(f"Error during plugin cleanup for '{plugin_name}': {e}")
 
         # Remove hooks
         hooks = plugin.get_hooks()
@@ -309,10 +310,10 @@ class PluginManager:
         """Get information about all registered plugins."""
         return {
             name: {
-                'version': plugin.version,
-                'description': plugin.description,
-                'enabled': plugin.enabled,
-                'hooks': list(plugin.get_hooks().keys())
+                "version": plugin.version,
+                "description": plugin.description,
+                "enabled": plugin.enabled,
+                "hooks": list(plugin.get_hooks().keys()),
             }
             for name, plugin in self.plugins.items()
         }
@@ -339,12 +340,10 @@ class PluginManager:
                             logger.info(f"Reloaded plugin: {plugin_name}")
                             return True
                     except Exception as e:
-                        logger.error(
-                            f"Failed to reload plugin '{plugin_name}': {e}")
+                        logger.error(f"Failed to reload plugin '{plugin_name}': {e}")
                         return False
 
-        logger.warning(
-            f"Could not find plugin file for '{plugin_name}' to reload")
+        logger.warning(f"Could not find plugin file for '{plugin_name}' to reload")
         return False
 
 
@@ -356,8 +355,8 @@ class LoggingPlugin(PluginBase):
 
     def __init__(self):
         super().__init__()
-        self.__version__ = '1.0.0'
-        self.__description__ = 'Logs all package operations'
+        self.__version__ = "1.0.0"
+        self.__description__ = "Logs all package operations"
 
     def initialize(self, manager) -> None:
         """Initialize the logging plugin."""
@@ -367,10 +366,10 @@ class LoggingPlugin(PluginBase):
     def get_hooks(self) -> Dict[str, Callable]:
         """Return hook callbacks."""
         return {
-            'before_install': self.log_before_install,
-            'after_install': self.log_after_install,
-            'before_remove': self.log_before_remove,
-            'after_remove': self.log_after_remove,
+            "before_install": self.log_before_install,
+            "after_install": self.log_after_install,
+            "before_remove": self.log_before_remove,
+            "after_remove": self.log_after_remove,
         }
 
     def log_before_install(self, package_name: str, **kwargs) -> None:
@@ -380,8 +379,7 @@ class LoggingPlugin(PluginBase):
     def log_after_install(self, package_name: str, success: bool, **kwargs) -> None:
         """Log after package installation."""
         status = "successfully" if success else "failed to"
-        logger.info(
-            f"[Plugin] {status.capitalize()} installed package: {package_name}")
+        logger.info(f"[Plugin] {status.capitalize()} installed package: {package_name}")
 
     def log_before_remove(self, package_name: str, **kwargs) -> None:
         """Log before package removal."""
@@ -390,14 +388,14 @@ class LoggingPlugin(PluginBase):
     def log_after_remove(self, package_name: str, success: bool, **kwargs) -> None:
         """Log after package removal."""
         status = "successfully" if success else "failed to"
-        logger.info(
-            f"[Plugin] {status.capitalize()} removed package: {package_name}")
+        logger.info(f"[Plugin] {status.capitalize()} removed package: {package_name}")
 
 
 class BackupPlugin(PluginBase):
     """
     Example plugin that creates backups before package operations.
     """
+
     __version__ = "1.0.0"
     __description__ = "Creates backups before package installations and removals"
 
@@ -418,8 +416,7 @@ class BackupPlugin(PluginBase):
 
     def create_backup(self, package_name: str, **kwargs) -> None:
         """Create a backup of package list before operations."""
-        backup_file = self.backup_dir / \
-            f"backup_{datetime.now():%Y%m%d_%H%M%S}.txt"
+        backup_file = self.backup_dir / f"backup_{datetime.now():%Y%m%d_%H%M%S}.txt"
         try:
             # This would ideally run pacman -Q to get installed packages
             backup_file.write_text(f"Backup before {package_name} operation\n")
@@ -432,6 +429,7 @@ class NotificationPlugin(PluginBase):
     """
     Example plugin that sends notifications for package operations.
     """
+
     __version__ = "1.0.0"
     __description__ = "Sends desktop notifications for package operations"
 
@@ -452,10 +450,10 @@ class NotificationPlugin(PluginBase):
 
         if success:
             self._send_notification(
-                f"✅ Package '{package_name}' installed successfully")
+                f"✅ Package '{package_name}' installed successfully"
+            )
         else:
-            self._send_notification(
-                f"❌ Failed to install package '{package_name}'")
+            self._send_notification(f"❌ Failed to install package '{package_name}'")
 
     def notify_remove(self, package_name: str, success: bool, **kwargs) -> None:
         """Send notification after package removal."""
@@ -463,11 +461,9 @@ class NotificationPlugin(PluginBase):
             return
 
         if success:
-            self._send_notification(
-                f"🗑️ Package '{package_name}' removed successfully")
+            self._send_notification(f"🗑️ Package '{package_name}' removed successfully")
         else:
-            self._send_notification(
-                f"❌ Failed to remove package '{package_name}'")
+            self._send_notification(f"❌ Failed to remove package '{package_name}'")
 
     def _send_notification(self, message: str) -> None:
         """Send a desktop notification (placeholder implementation)."""
@@ -480,6 +476,7 @@ class SecurityPlugin(PluginBase):
     """
     Example plugin that performs security checks before package operations.
     """
+
     __version__ = "1.0.0"
     __description__ = "Performs security checks and validations"
 
@@ -494,7 +491,8 @@ class SecurityPlugin(PluginBase):
     def initialize(self, manager) -> None:
         super().initialize(manager)
         logger.info(
-            f"Security plugin loaded with {len(self.blacklisted_packages)} blacklisted packages")
+            f"Security plugin loaded with {len(self.blacklisted_packages)} blacklisted packages"
+        )
 
     def get_hooks(self) -> Dict[str, Callable]:
         return {
@@ -505,11 +503,11 @@ class SecurityPlugin(PluginBase):
         """Perform security check before package installation."""
         if package_name in self.blacklisted_packages:
             logger.warning(
-                f"⚠️ Security warning: Package '{package_name}' is blacklisted!")
+                f"⚠️ Security warning: Package '{package_name}' is blacklisted!"
+            )
             # In a real implementation, this could raise an exception to block the operation
         else:
-            logger.debug(
-                f"✅ Security check passed for package: {package_name}")
+            logger.debug(f"✅ Security check passed for package: {package_name}")
 
 
 # Export all plugin classes

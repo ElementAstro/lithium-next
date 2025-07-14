@@ -37,12 +37,12 @@ MonitoringSystem::~MonitoringSystem() {
 
 auto MonitoringSystem::initialize() -> bool {
     spdlog::info("Initializing Monitoring System");
-    
+
     if (!hardware_ || !position_manager_) {
         setError("Hardware or position manager not available");
         return false;
     }
-    
+
     return true;
 }
 
@@ -58,24 +58,24 @@ auto MonitoringSystem::startMonitoring() -> bool {
         spdlog::warn("Monitoring already active");
         return true;
     }
-    
+
     spdlog::info("Starting filter wheel monitoring");
-    
+
     is_monitoring_.store(true);
     stop_monitoring_.store(false);
-    
+
     // Start monitoring thread
     if (monitoring_thread_ && monitoring_thread_->joinable()) {
         monitoring_thread_->join();
     }
     monitoring_thread_ = std::make_unique<std::thread>(&MonitoringSystem::monitoringLoop, this);
-    
+
     // Start health check thread
     if (health_check_thread_ && health_check_thread_->joinable()) {
         health_check_thread_->join();
     }
     health_check_thread_ = std::make_unique<std::thread>(&MonitoringSystem::healthCheckLoop, this);
-    
+
     return true;
 }
 
@@ -83,16 +83,16 @@ auto MonitoringSystem::stopMonitoring() -> void {
     if (!is_monitoring_.load()) {
         return;
     }
-    
+
     spdlog::info("Stopping filter wheel monitoring");
-    
+
     is_monitoring_.store(false);
     stop_monitoring_.store(true);
-    
+
     if (monitoring_thread_ && monitoring_thread_->joinable()) {
         monitoring_thread_->join();
     }
-    
+
     if (health_check_thread_ && health_check_thread_->joinable()) {
         health_check_thread_->join();
     }
@@ -105,29 +105,29 @@ auto MonitoringSystem::isMonitoring() -> bool {
 auto MonitoringSystem::performHealthCheck() -> HealthCheck {
     HealthCheck check;
     check.timestamp = std::chrono::system_clock::now();
-    
+
     auto hardware_health = checkHardwareHealth();
     auto position_health = checkPositionHealth();
     auto temperature_health = checkTemperatureHealth();
     auto performance_health = checkPerformanceHealth();
-    
+
     // Determine overall status
     HealthStatus overall = HealthStatus::HEALTHY;
-    if (hardware_health.first == HealthStatus::CRITICAL || 
+    if (hardware_health.first == HealthStatus::CRITICAL ||
         position_health.first == HealthStatus::CRITICAL ||
         temperature_health.first == HealthStatus::CRITICAL ||
         performance_health.first == HealthStatus::CRITICAL) {
         overall = HealthStatus::CRITICAL;
-    } else if (hardware_health.first == HealthStatus::WARNING || 
+    } else if (hardware_health.first == HealthStatus::WARNING ||
                position_health.first == HealthStatus::WARNING ||
                temperature_health.first == HealthStatus::WARNING ||
                performance_health.first == HealthStatus::WARNING) {
         overall = HealthStatus::WARNING;
     }
-    
+
     check.status = overall;
     check.description = "Filter wheel health check completed";
-    
+
     // Collect issues and recommendations
     if (!hardware_health.second.empty()) {
         check.issues.push_back("Hardware: " + hardware_health.second);
@@ -141,14 +141,14 @@ auto MonitoringSystem::performHealthCheck() -> HealthCheck {
     if (!performance_health.second.empty()) {
         check.issues.push_back("Performance: " + performance_health.second);
     }
-    
+
     // Store the result
     {
         std::lock_guard<std::mutex> lock(health_mutex_);
         last_health_check_ = check;
         current_health_.store(overall);
     }
-    
+
     return check;
 }
 
@@ -186,10 +186,10 @@ auto MonitoringSystem::resetMetrics() -> void {
 
 auto MonitoringSystem::recordMovement(int from_position, int to_position, bool success, std::chrono::milliseconds duration) -> void {
     std::lock_guard<std::mutex> lock(metrics_mutex_);
-    
+
     metrics_.total_movements++;
     metrics_.position_usage[to_position]++;
-    
+
     if (success) {
         // Update timing statistics
         if (metrics_.min_move_time == std::chrono::milliseconds{0} || duration < metrics_.min_move_time) {
@@ -198,7 +198,7 @@ auto MonitoringSystem::recordMovement(int from_position, int to_position, bool s
         if (duration > metrics_.max_move_time) {
             metrics_.max_move_time = duration;
         }
-        
+
         // Update average (simple moving average)
         if (metrics_.total_movements == 1) {
             metrics_.average_move_time = duration;
@@ -207,34 +207,34 @@ auto MonitoringSystem::recordMovement(int from_position, int to_position, bool s
             metrics_.average_move_time = total_time / metrics_.total_movements;
         }
     }
-    
+
     // Update success rate
     metrics_.movement_success_rate = calculateSuccessRate();
-    
-    spdlog::debug("Recorded movement: {} -> {}, success: {}, duration: {}ms", 
+
+    spdlog::debug("Recorded movement: {} -> {}, success: {}, duration: {}ms",
                   from_position, to_position, success, duration.count());
 }
 
 auto MonitoringSystem::recordCommunication(bool success) -> void {
     std::lock_guard<std::mutex> lock(metrics_mutex_);
-    
+
     metrics_.total_commands++;
     if (!success) {
         metrics_.communication_errors++;
     }
-    
+
     metrics_.last_communication = std::chrono::steady_clock::now();
 }
 
 auto MonitoringSystem::recordTemperature(double temperature) -> void {
     std::lock_guard<std::mutex> lock(metrics_mutex_);
-    
+
     metrics_.current_temperature = temperature;
-    
+
     if (!metrics_.min_temperature.has_value() || temperature < *metrics_.min_temperature) {
         metrics_.min_temperature = temperature;
     }
-    
+
     if (!metrics_.max_temperature.has_value() || temperature > *metrics_.max_temperature) {
         metrics_.max_temperature = temperature;
     }
@@ -242,37 +242,37 @@ auto MonitoringSystem::recordTemperature(double temperature) -> void {
 
 auto MonitoringSystem::getAlerts(AlertLevel min_level) -> std::vector<Alert> {
     std::lock_guard<std::mutex> lock(alerts_mutex_);
-    
+
     std::vector<Alert> filtered_alerts;
     for (const auto& alert : alerts_) {
         if (static_cast<int>(alert.level) >= static_cast<int>(min_level)) {
             filtered_alerts.push_back(alert);
         }
     }
-    
+
     return filtered_alerts;
 }
 
 auto MonitoringSystem::getUnacknowledgedAlerts() -> std::vector<Alert> {
     std::lock_guard<std::mutex> lock(alerts_mutex_);
-    
+
     std::vector<Alert> unacknowledged;
     for (const auto& alert : alerts_) {
         if (!alert.acknowledged) {
             unacknowledged.push_back(alert);
         }
     }
-    
+
     return unacknowledged;
 }
 
 auto MonitoringSystem::acknowledgeAlert(size_t alert_index) -> bool {
     std::lock_guard<std::mutex> lock(alerts_mutex_);
-    
+
     if (alert_index >= alerts_.size()) {
         return false;
     }
-    
+
     alerts_[alert_index].acknowledged = true;
     spdlog::debug("Alert {} acknowledged", alert_index);
     return true;
@@ -366,48 +366,48 @@ auto MonitoringSystem::generateReport(const std::string& file_path) -> bool { re
 // Internal monitoring methods
 auto MonitoringSystem::monitoringLoop() -> void {
     spdlog::debug("Starting monitoring loop");
-    
+
     while (!stop_monitoring_.load()) {
         try {
             updateMetrics();
             checkCommunication();
-            
+
             if (temperature_monitoring_enabled_) {
                 checkTemperature();
             }
-            
+
             checkPerformance();
-            
+
         } catch (const std::exception& e) {
             spdlog::error("Exception in monitoring loop: {}", e.what());
             generateAlert(AlertLevel::ERROR, "Monitoring exception: " + std::string(e.what()), "MonitoringSystem");
         }
-        
+
         std::this_thread::sleep_for(monitoring_interval_);
     }
-    
+
     spdlog::debug("Monitoring loop finished");
 }
 
 auto MonitoringSystem::healthCheckLoop() -> void {
     spdlog::debug("Starting health check loop");
-    
+
     while (!stop_monitoring_.load()) {
         try {
             auto health_check = performHealthCheck();
-            
+
             if (health_callback_) {
                 health_callback_(health_check.status, health_check.description);
             }
-            
+
         } catch (const std::exception& e) {
             spdlog::error("Exception in health check loop: {}", e.what());
             generateAlert(AlertLevel::ERROR, "Health check exception: " + std::string(e.what()), "MonitoringSystem");
         }
-        
+
         std::this_thread::sleep_for(health_check_interval_);
     }
-    
+
     spdlog::debug("Health check loop finished");
 }
 
@@ -418,16 +418,16 @@ auto MonitoringSystem::generateAlert(AlertLevel level, const std::string& messag
     alert.component = component.empty() ? "FilterWheel" : component;
     alert.timestamp = std::chrono::system_clock::now();
     alert.acknowledged = false;
-    
+
     {
         std::lock_guard<std::mutex> lock(alerts_mutex_);
         alerts_.push_back(alert);
         trimAlerts();
     }
-    
+
     notifyAlert(alert);
-    
-    spdlog::info("Alert generated: [{}] {}", 
+
+    spdlog::info("Alert generated: [{}] {}",
                  static_cast<int>(level), message);
 }
 
@@ -441,7 +441,7 @@ auto MonitoringSystem::calculateSuccessRate() -> double {
     if (metrics_.total_movements == 0) {
         return 100.0;
     }
-    
+
     // This is a simplified calculation - in reality you'd track failures
     uint64_t successful_movements = metrics_.total_movements; // Assuming all recorded movements were successful
     return (static_cast<double>(successful_movements) / metrics_.total_movements) * 100.0;
@@ -451,13 +451,13 @@ auto MonitoringSystem::checkHardwareHealth() -> std::pair<HealthStatus, std::str
     if (!hardware_) {
         return {HealthStatus::CRITICAL, "Hardware interface not available"};
     }
-    
+
     // Check if hardware is responsive
     try {
         if (!hardware_->isConnected()) {
             return {HealthStatus::CRITICAL, "Hardware not connected"};
         }
-        
+
         return {HealthStatus::HEALTHY, ""};
     } catch (const std::exception& e) {
         return {HealthStatus::CRITICAL, "Hardware communication error: " + std::string(e.what())};
@@ -468,7 +468,7 @@ auto MonitoringSystem::checkPositionHealth() -> std::pair<HealthStatus, std::str
     if (!position_manager_) {
         return {HealthStatus::CRITICAL, "Position manager not available"};
     }
-    
+
     // Add position-specific health checks here
     return {HealthStatus::HEALTHY, ""};
 }
@@ -477,7 +477,7 @@ auto MonitoringSystem::checkTemperatureHealth() -> std::pair<HealthStatus, std::
     if (!temperature_monitoring_enabled_) {
         return {HealthStatus::HEALTHY, ""};
     }
-    
+
     // Add temperature-specific health checks here
     return {HealthStatus::HEALTHY, ""};
 }
@@ -487,7 +487,7 @@ auto MonitoringSystem::checkPerformanceHealth() -> std::pair<HealthStatus, std::
     if (success_rate < 90.0) {
         return {HealthStatus::WARNING, "Low movement success rate: " + std::to_string(success_rate) + "%"};
     }
-    
+
     return {HealthStatus::HEALTHY, ""};
 }
 
@@ -530,10 +530,10 @@ auto MonitoringSystem::trimAlerts(size_t max_alerts) -> void {
 auto MonitoringSystem::updateMetrics() -> void {
     // Update general metrics
     auto now = std::chrono::steady_clock::now();
-    
+
     std::lock_guard<std::mutex> lock(metrics_mutex_);
     metrics_.uptime = std::chrono::duration_cast<std::chrono::milliseconds>(now - metrics_.start_time);
-    
+
     if (metrics_callback_) {
         try {
             metrics_callback_(metrics_);
@@ -549,7 +549,7 @@ auto MonitoringSystem::checkCommunication() -> void {
         try {
             bool connected = hardware_->isConnected();
             recordCommunication(connected);
-            
+
             if (!connected) {
                 generateAlert(AlertLevel::WARNING, "Communication with hardware lost", "Hardware");
             }
@@ -567,7 +567,7 @@ auto MonitoringSystem::checkTemperature() -> void {
 
 auto MonitoringSystem::checkPerformance() -> void {
     auto success_rate = calculateSuccessRate();
-    
+
     if (success_rate < 95.0 && success_rate >= 90.0) {
         generateAlert(AlertLevel::WARNING, "Movement success rate below 95%: " + std::to_string(success_rate) + "%", "Performance");
     } else if (success_rate < 90.0) {

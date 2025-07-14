@@ -34,27 +34,27 @@ PropertyManager::~PropertyManager() {
 
 auto PropertyManager::initialize() -> bool {
     spdlog::info("Initializing Property Manager");
-    
+
     if (!hardware_) {
         setLastError("Hardware interface not available");
         return false;
     }
-    
+
     clearLastError();
-    
+
     // Register standard ASCOM rotator properties
     registerStandardProperties();
-    
+
     spdlog::info("Property Manager initialized successfully");
     return true;
 }
 
 auto PropertyManager::destroy() -> bool {
     spdlog::info("Destroying Property Manager");
-    
+
     stopPropertyMonitoring();
     clearPropertyCache();
-    
+
     return true;
 }
 
@@ -62,7 +62,7 @@ auto PropertyManager::getProperty(const std::string& name) -> std::optional<Prop
     if (!validatePropertyAccess(name, false)) {
         return std::nullopt;
     }
-    
+
     // Check cache first
     if (isCacheValid(name)) {
         std::shared_lock<std::shared_mutex> lock(property_mutex_);
@@ -71,13 +71,13 @@ auto PropertyManager::getProperty(const std::string& name) -> std::optional<Prop
             return it->second.value;
         }
     }
-    
+
     // Load from hardware
     auto value = loadPropertyFromHardware(name);
     if (value) {
         updatePropertyCache(name, *value);
     }
-    
+
     return value;
 }
 
@@ -85,24 +85,24 @@ auto PropertyManager::setProperty(const std::string& name, const PropertyValue& 
     if (!validatePropertyAccess(name, true)) {
         return false;
     }
-    
+
     // Validate the value
     if (!validateProperty(name, value)) {
         setLastError("Invalid property value for: " + name);
         return false;
     }
-    
+
     // Save to hardware
     if (!savePropertyToHardware(name, value)) {
         return false;
     }
-    
+
     // Update cache
     updatePropertyCache(name, value);
-    
+
     // Notify callbacks
     notifyPropertyChange(name, value);
-    
+
     return true;
 }
 
@@ -161,16 +161,16 @@ auto PropertyManager::validateProperty(const std::string& name, const PropertyVa
     if (!metadata) {
         return false;
     }
-    
+
     // Check if property is writable
     if (!metadata->writable) {
         setLastError("Property is read-only: " + name);
         return false;
     }
-    
+
     // Type validation happens implicitly through variant
     // Additional range validation could be added here
-    
+
     return true;
 }
 
@@ -210,14 +210,14 @@ auto PropertyManager::updateDeviceCapabilities() -> bool {
     if (!hardware_ || !hardware_->isConnected()) {
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(capabilities_mutex_);
-    
+
     bool success = queryDeviceCapabilities();
     if (success) {
         capabilities_loaded_.store(true);
     }
-    
+
     return success;
 }
 
@@ -225,7 +225,7 @@ auto PropertyManager::getDeviceCapabilities() -> DeviceCapabilities {
     if (!capabilities_loaded_.load()) {
         updateDeviceCapabilities();
     }
-    
+
     std::lock_guard<std::mutex> lock(capabilities_mutex_);
     return capabilities_;
 }
@@ -263,7 +263,7 @@ auto PropertyManager::clearLastError() -> void {
 
 auto PropertyManager::registerStandardProperties() -> void {
     std::unique_lock<std::shared_mutex> lock(property_mutex_);
-    
+
     // Connection properties
     property_registry_["connected"] = PropertyMetadata{
         .name = "connected",
@@ -274,7 +274,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(1000)
     };
-    
+
     // Position properties
     property_registry_["position"] = PropertyMetadata{
         .name = "position",
@@ -287,7 +287,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(500)
     };
-    
+
     property_registry_["mechanicalposition"] = PropertyMetadata{
         .name = "mechanicalposition",
         .description = "Mechanical position of the rotator",
@@ -299,7 +299,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(500)
     };
-    
+
     // Movement properties
     property_registry_["ismoving"] = PropertyMetadata{
         .name = "ismoving",
@@ -310,7 +310,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(200)
     };
-    
+
     // Capability properties
     property_registry_["canreverse"] = PropertyMetadata{
         .name = "canreverse",
@@ -321,7 +321,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(10000)
     };
-    
+
     property_registry_["reverse"] = PropertyMetadata{
         .name = "reverse",
         .description = "Rotator reverse state",
@@ -331,7 +331,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(5000)
     };
-    
+
     // Device information
     property_registry_["description"] = PropertyMetadata{
         .name = "description",
@@ -342,7 +342,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(60000)
     };
-    
+
     property_registry_["driverinfo"] = PropertyMetadata{
         .name = "driverinfo",
         .description = "Driver information",
@@ -352,7 +352,7 @@ auto PropertyManager::registerStandardProperties() -> void {
         .cached = true,
         .cache_duration = std::chrono::milliseconds(60000)
     };
-    
+
     property_registry_["driverversion"] = PropertyMetadata{
         .name = "driverversion",
         .description = "Driver version",
@@ -368,19 +368,19 @@ auto PropertyManager::loadPropertyFromHardware(const std::string& name) -> std::
     if (!hardware_ || !hardware_->isConnected()) {
         return std::nullopt;
     }
-    
+
     auto response = hardware_->getProperty(name);
     if (!response) {
         return std::nullopt;
     }
-    
+
     // Parse the response based on property metadata
     auto metadata = getPropertyMetadata(name);
     if (!metadata) {
         // Try to parse as string by default
         return PropertyValue{*response};
     }
-    
+
     return parsePropertyValue(*response, *metadata);
 }
 
@@ -389,7 +389,7 @@ auto PropertyManager::savePropertyToHardware(const std::string& name, const Prop
         setLastError("Hardware not connected");
         return false;
     }
-    
+
     std::string str_value = propertyValueToString(value);
     return hardware_->setProperty(name, str_value);
 }
@@ -433,26 +433,26 @@ auto PropertyManager::propertyValueToString(const PropertyValue& value) -> std::
 
 auto PropertyManager::isCacheValid(const std::string& name) -> bool {
     std::shared_lock<std::shared_mutex> lock(property_mutex_);
-    
+
     auto reg_it = property_registry_.find(name);
     if (reg_it == property_registry_.end() || !reg_it->second.cached) {
         return false;
     }
-    
+
     auto cache_it = property_cache_.find(name);
     if (cache_it == property_cache_.end() || !cache_it->second.valid) {
         return false;
     }
-    
+
     auto now = std::chrono::steady_clock::now();
     auto age = now - cache_it->second.timestamp;
-    
+
     return age < reg_it->second.cache_duration;
 }
 
 auto PropertyManager::updatePropertyCache(const std::string& name, const PropertyValue& value) -> void {
     std::unique_lock<std::shared_mutex> lock(property_mutex_);
-    
+
     property_cache_[name] = PropertyCacheEntry{
         .value = value,
         .timestamp = std::chrono::steady_clock::now(),
@@ -480,22 +480,22 @@ auto PropertyManager::queryDeviceCapabilities() -> bool {
     if (canReverse) {
         capabilities_.can_reverse = *canReverse;
     }
-    
+
     auto description = getStringProperty("description");
     if (description) {
         capabilities_.device_description = *description;
     }
-    
+
     auto driverInfo = getStringProperty("driverinfo");
     if (driverInfo) {
         capabilities_.driver_info = *driverInfo;
     }
-    
+
     auto driverVersion = getStringProperty("driverversion");
     if (driverVersion) {
         capabilities_.driver_version = *driverVersion;
     }
-    
+
     return true;
 }
 
@@ -505,17 +505,17 @@ auto PropertyManager::validatePropertyAccess(const std::string& name, bool write
         setLastError("Unknown property: " + name);
         return false;
     }
-    
+
     if (write_access && !metadata->writable) {
         setLastError("Property is read-only: " + name);
         return false;
     }
-    
+
     if (!write_access && !metadata->readable) {
         setLastError("Property is write-only: " + name);
         return false;
     }
-    
+
     return true;
 }
 

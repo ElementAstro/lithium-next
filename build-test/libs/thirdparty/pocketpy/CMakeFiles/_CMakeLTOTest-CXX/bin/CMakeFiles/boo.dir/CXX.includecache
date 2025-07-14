@@ -4,7 +4,6 @@
 
 #IncludeRegexComplain: ^$
 
-#IncludeRegexTransform: 
+#IncludeRegexTransform:
 
 /home/max/lithium-next/build-test/libs/thirdparty/pocketpy/CMakeFiles/_CMakeLTOTest-CXX/src/main.cpp
-

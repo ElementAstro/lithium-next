@@ -249,7 +249,7 @@ public:
     /**
      * @brief Invoke COM method
      */
-    auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr, 
+    auto invokeCOMMethod(const std::string& method, VARIANT* params = nullptr,
                         int paramCount = 0) -> std::optional<VARIANT>;
 
     /**
@@ -299,20 +299,20 @@ private:
     std::string name_;
     std::atomic<bool> connected_{false};
     std::atomic<ASCOMFocuserState> state_{ASCOMFocuserState::IDLE};
-    
+
     FocuserInfo focuser_info_;
     ConnectionInfo connection_info_;
     std::string last_error_;
-    
+
     mutable std::mutex interface_mutex_;
-    
+
     // Callbacks
     ErrorCallback error_callback_;
     StateChangeCallback state_change_callback_;
 
     // Connection-specific data
     std::unique_ptr<lithium::device::ascom::FocuserClient> alpaca_client_;
-    
+
 #ifdef _WIN32
     IDispatch* com_focuser_{nullptr};
 #endif
@@ -322,12 +322,12 @@ private:
     auto setError(const std::string& error) -> void;
     auto setState(ASCOMFocuserState newState) -> void;
     auto validateConnection() -> bool;
-    
+
     // Alpaca helpers
     auto buildAlpacaUrl(const std::string& endpoint) -> std::string;
     auto executeAlpacaRequest(const std::string& method, const std::string& url,
                              const std::string& params) -> std::optional<std::string>;
-    
+
 #ifdef _WIN32
     // COM helpers
     auto initializeCOM() -> bool;

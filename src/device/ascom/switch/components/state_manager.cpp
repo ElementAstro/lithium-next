@@ -42,45 +42,45 @@ StateManager::StateManager(std::shared_ptr<SwitchManager> switch_manager,
 
 auto StateManager::initialize() -> bool {
     spdlog::info("Initializing State Manager");
-    
+
     if (!switch_manager_) {
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     // Ensure directories exist
     if (!ensureDirectoryExists(config_directory_)) {
         setLastError("Failed to create config directory");
         return false;
     }
-    
+
     if (!ensureDirectoryExists(backup_directory_)) {
         spdlog::warn("Failed to create backup directory, backup functionality will be limited");
     }
-    
+
     // Load existing configuration if available
     loadConfiguration();
-    
+
     return true;
 }
 
 auto StateManager::destroy() -> bool {
     spdlog::info("Destroying State Manager");
-    
+
     // Stop auto-save thread
     stopAutoSaveThread();
-    
+
     // Save current state before shutdown if auto-save is enabled
     if (auto_save_enabled_.load() && state_modified_.load()) {
         saveConfiguration();
     }
-    
+
     std::lock_guard<std::mutex> config_lock(config_mutex_);
     std::lock_guard<std::mutex> settings_lock(settings_mutex_);
-    
+
     current_config_ = DeviceConfiguration{};
     custom_settings_.clear();
-    
+
     return true;
 }
 
@@ -104,21 +104,21 @@ auto StateManager::resetToDefaults() -> bool {
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     spdlog::info("Resetting to default state");
-    
+
     // Turn off all switches
     auto switchCount = switch_manager_->getSwitchCount();
     for (uint32_t i = 0; i < switchCount; ++i) {
         switch_manager_->setSwitchState(i, SwitchState::OFF);
     }
-    
+
     // Clear settings
     {
         std::lock_guard<std::mutex> lock(settings_mutex_);
         custom_settings_.clear();
     }
-    
+
     // Reset configuration
     {
         std::lock_guard<std::mutex> lock(config_mutex_);
@@ -126,7 +126,7 @@ auto StateManager::resetToDefaults() -> bool {
         current_config_.config_version = "1.0";
         current_config_.saved_at = std::chrono::steady_clock::now();
     }
-    
+
     state_modified_ = true;
     return saveConfiguration();
 }
@@ -134,13 +134,13 @@ auto StateManager::resetToDefaults() -> bool {
 auto StateManager::saveStateToFile(const std::string& filename) -> bool {
     auto config = collectCurrentState();
     bool success = writeConfigurationFile(getFullPath(filename), config);
-    
+
     if (success) {
         last_save_time_ = std::chrono::steady_clock::now();
         state_modified_ = false;
         notifyStateChange(true, filename);
     }
-    
+
     logOperation("Save state to " + filename, success);
     return success;
 }
@@ -150,7 +150,7 @@ auto StateManager::loadStateFromFile(const std::string& filename) -> bool {
     if (!config) {
         return false;
     }
-    
+
     bool success = applyConfiguration(*config);
     if (success) {
         std::lock_guard<std::mutex> lock(config_mutex_);
@@ -159,7 +159,7 @@ auto StateManager::loadStateFromFile(const std::string& filename) -> bool {
         state_modified_ = false;
         notifyStateChange(false, filename);
     }
-    
+
     logOperation("Load state from " + filename, success);
     return success;
 }
@@ -174,14 +174,14 @@ auto StateManager::loadConfiguration() -> bool {
         spdlog::debug("Configuration file not found, using defaults");
         return resetToDefaults();
     }
-    
+
     return loadStateFromFile(config_filename_);
 }
 
 auto StateManager::exportConfiguration(const std::string& filename) -> bool {
     auto config = collectCurrentState();
     bool success = writeConfigurationFile(filename, config);
-    
+
     logOperation("Export configuration to " + filename, success);
     return success;
 }
@@ -190,12 +190,12 @@ auto StateManager::importConfiguration(const std::string& filename) -> bool {
     if (!validateConfiguration(filename)) {
         return false;
     }
-    
+
     auto config = parseConfigurationFile(filename);
     if (!config) {
         return false;
     }
-    
+
     bool success = applyConfiguration(*config);
     if (success) {
         std::lock_guard<std::mutex> lock(config_mutex_);
@@ -203,7 +203,7 @@ auto StateManager::importConfiguration(const std::string& filename) -> bool {
         state_modified_ = true;
         saveConfiguration();
     }
-    
+
     logOperation("Import configuration from " + filename, success);
     return success;
 }
@@ -213,20 +213,20 @@ auto StateManager::validateConfiguration(const std::string& filename) -> bool {
     if (!config) {
         return false;
     }
-    
+
     return validateConfigurationData(*config);
 }
 
 auto StateManager::enableAutoSave(bool enable) -> bool {
     bool wasEnabled = auto_save_enabled_.load();
     auto_save_enabled_ = enable;
-    
+
     if (enable && !wasEnabled) {
         return startAutoSaveThread();
     } else if (!enable && wasEnabled) {
         stopAutoSaveThread();
     }
-    
+
     spdlog::debug("Auto-save {}", enable ? "enabled" : "disabled");
     return true;
 }
@@ -240,7 +240,7 @@ auto StateManager::setAutoSaveInterval(uint32_t intervalSeconds) -> bool {
         setLastError("Auto-save interval must be at least 10 seconds");
         return false;
     }
-    
+
     auto_save_interval_ = intervalSeconds;
     spdlog::debug("Auto-save interval set to {} seconds", intervalSeconds);
     return true;
@@ -253,34 +253,34 @@ auto StateManager::getAutoSaveInterval() -> uint32_t {
 auto StateManager::createBackup() -> bool {
     std::string backupName = generateBackupName();
     std::string backupPath = getBackupPath(backupName);
-    
+
     auto config = collectCurrentState();
     bool success = writeConfigurationFile(backupPath, config);
-    
+
     if (success) {
         cleanupOldBackups();
         notifyBackup(backupName, true);
     } else {
         notifyBackup(backupName, false);
     }
-    
+
     logOperation("Create backup " + backupName, success);
     return success;
 }
 
 auto StateManager::restoreFromBackup(const std::string& backupName) -> bool {
     std::string backupPath = getBackupPath(backupName);
-    
+
     if (!std::filesystem::exists(backupPath)) {
         setLastError("Backup not found: " + backupName);
         return false;
     }
-    
+
     auto config = parseConfigurationFile(backupPath);
     if (!config) {
         return false;
     }
-    
+
     bool success = applyConfiguration(*config);
     if (success) {
         std::lock_guard<std::mutex> lock(config_mutex_);
@@ -288,14 +288,14 @@ auto StateManager::restoreFromBackup(const std::string& backupName) -> bool {
         state_modified_ = true;
         saveConfiguration();
     }
-    
+
     logOperation("Restore from backup " + backupName, success);
     return success;
 }
 
 auto StateManager::listBackups() -> std::vector<std::string> {
     std::vector<std::string> backups;
-    
+
     try {
         if (std::filesystem::exists(backup_directory_)) {
             for (const auto& entry : std::filesystem::directory_iterator(backup_directory_)) {
@@ -307,7 +307,7 @@ auto StateManager::listBackups() -> std::vector<std::string> {
     } catch (const std::exception& e) {
         setLastError("Failed to list backups: " + std::string(e.what()));
     }
-    
+
     std::sort(backups.begin(), backups.end(), std::greater<std::string>());
     return backups;
 }
@@ -327,12 +327,12 @@ auto StateManager::setEmergencyState() -> bool {
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     spdlog::warn("Setting emergency state");
-    
+
     // Save current state before emergency shutdown
     saveEmergencyState();
-    
+
     // Turn off all non-essential switches
     if (power_manager_) {
         power_manager_->powerOffNonEssentialSwitches();
@@ -343,10 +343,10 @@ auto StateManager::setEmergencyState() -> bool {
             switch_manager_->setSwitchState(i, SwitchState::OFF);
         }
     }
-    
+
     emergency_state_active_ = true;
     notifyEmergency(true);
-    
+
     return true;
 }
 
@@ -354,11 +354,11 @@ auto StateManager::clearEmergencyState() -> bool {
     if (!emergency_state_active_.load()) {
         return true;
     }
-    
+
     spdlog::info("Clearing emergency state");
     emergency_state_active_ = false;
     notifyEmergency(false);
-    
+
     return true;
 }
 
@@ -369,31 +369,31 @@ auto StateManager::isEmergencyStateActive() -> bool {
 auto StateManager::saveEmergencyState() -> bool {
     auto config = collectCurrentState();
     std::string emergencyPath = getFullPath(emergency_filename_);
-    
+
     bool success = writeConfigurationFile(emergencyPath, config);
     logOperation("Save emergency state", success);
-    
+
     return success;
 }
 
 auto StateManager::restoreEmergencyState() -> bool {
     std::string emergencyPath = getFullPath(emergency_filename_);
-    
+
     if (!std::filesystem::exists(emergencyPath)) {
         setLastError("Emergency state file not found");
         return false;
     }
-    
+
     auto config = parseConfigurationFile(emergencyPath);
     if (!config) {
         return false;
     }
-    
+
     bool success = applyConfiguration(*config);
     if (success) {
         clearEmergencyState();
     }
-    
+
     logOperation("Restore emergency state", success);
     return success;
 }
@@ -415,7 +415,7 @@ auto StateManager::getStateFileSize() -> std::optional<size_t> {
     } catch (const std::exception& e) {
         setLastError("Failed to get file size: " + std::string(e.what()));
     }
-    
+
     return std::nullopt;
 }
 
@@ -433,15 +433,15 @@ auto StateManager::setSetting(const std::string& key, const std::string& value) 
         setLastError("Setting key cannot be empty");
         return false;
     }
-    
+
     {
         std::lock_guard<std::mutex> lock(settings_mutex_);
         custom_settings_[key] = value;
     }
-    
+
     state_modified_ = true;
     spdlog::debug("Setting '{}' = '{}'", key, value);
-    
+
     return true;
 }
 
@@ -454,12 +454,12 @@ auto StateManager::getSetting(const std::string& key) -> std::optional<std::stri
 auto StateManager::removeSetting(const std::string& key) -> bool {
     std::lock_guard<std::mutex> lock(settings_mutex_);
     auto erased = custom_settings_.erase(key);
-    
+
     if (erased > 0) {
         state_modified_ = true;
         spdlog::debug("Removed setting '{}'", key);
     }
-    
+
     return erased > 0;
 }
 
@@ -472,12 +472,12 @@ auto StateManager::clearAllSettings() -> bool {
     std::lock_guard<std::mutex> lock(settings_mutex_);
     bool hadSettings = !custom_settings_.empty();
     custom_settings_.clear();
-    
+
     if (hadSettings) {
         state_modified_ = true;
         spdlog::debug("Cleared all settings");
     }
-    
+
     return true;
 }
 
@@ -512,14 +512,14 @@ auto StateManager::clearLastError() -> void {
 
 auto StateManager::startAutoSaveThread() -> bool {
     std::lock_guard<std::mutex> lock(auto_save_mutex_);
-    
+
     if (auto_save_running_.load()) {
         return true;
     }
-    
+
     auto_save_running_ = true;
     auto_save_thread_ = std::make_unique<std::thread>(&StateManager::autoSaveLoop, this);
-    
+
     spdlog::debug("Auto-save thread started");
     return true;
 }
@@ -532,39 +532,39 @@ auto StateManager::stopAutoSaveThread() -> void {
         }
         auto_save_running_ = false;
     }
-    
+
     auto_save_cv_.notify_all();
-    
+
     if (auto_save_thread_ && auto_save_thread_->joinable()) {
         auto_save_thread_->join();
     }
-    
+
     auto_save_thread_.reset();
     spdlog::debug("Auto-save thread stopped");
 }
 
 auto StateManager::autoSaveLoop() -> void {
     spdlog::debug("Auto-save loop started");
-    
+
     while (auto_save_running_.load()) {
         std::unique_lock<std::mutex> lock(auto_save_mutex_);
         auto interval = std::chrono::seconds(auto_save_interval_.load());
-        
+
         auto_save_cv_.wait_for(lock, interval, [this] {
             return !auto_save_running_.load();
         });
-        
+
         if (!auto_save_running_.load()) {
             break;
         }
-        
+
         if (state_modified_.load()) {
             lock.unlock();
             saveConfiguration();
             lock.lock();
         }
     }
-    
+
     spdlog::debug("Auto-save loop stopped");
 }
 
@@ -572,28 +572,28 @@ auto StateManager::collectCurrentState() -> DeviceConfiguration {
     DeviceConfiguration config;
     config.config_version = "1.0";
     config.saved_at = std::chrono::steady_clock::now();
-    
+
     if (switch_manager_) {
         auto switchCount = switch_manager_->getSwitchCount();
         for (uint32_t i = 0; i < switchCount; ++i) {
             SavedSwitchState savedState;
             savedState.index = i;
-            
+
             auto switchInfo = switch_manager_->getSwitchInfo(i);
             savedState.name = switchInfo ? switchInfo->name : ("Switch " + std::to_string(i));
             savedState.state = switch_manager_->getSwitchState(i).value_or(SwitchState::OFF);
             savedState.enabled = true;
             savedState.timestamp = std::chrono::steady_clock::now();
-            
+
             config.switch_states.push_back(savedState);
         }
     }
-    
+
     {
         std::lock_guard<std::mutex> lock(settings_mutex_);
         config.settings = custom_settings_;
     }
-    
+
     return config;
 }
 
@@ -601,14 +601,14 @@ auto StateManager::applyConfiguration(const DeviceConfiguration& config) -> bool
     if (!validateConfigurationData(config)) {
         return false;
     }
-    
+
     if (!switch_manager_) {
         setLastError("Switch manager not available");
         return false;
     }
-    
+
     spdlog::info("Applying configuration with {} switch states", config.switch_states.size());
-    
+
     // Apply switch states
     for (const auto& savedState : config.switch_states) {
         if (savedState.enabled && savedState.index < switch_manager_->getSwitchCount()) {
@@ -617,13 +617,13 @@ auto StateManager::applyConfiguration(const DeviceConfiguration& config) -> bool
             }
         }
     }
-    
+
     // Apply settings
     {
         std::lock_guard<std::mutex> lock(settings_mutex_);
         custom_settings_ = config.settings;
     }
-    
+
     return true;
 }
 
@@ -632,11 +632,11 @@ auto StateManager::validateConfigurationData(const DeviceConfiguration& config) 
         setLastError("Configuration version cannot be empty");
         return false;
     }
-    
+
     if (!switch_manager_) {
         return true; // Can't validate switch states without manager
     }
-    
+
     auto switchCount = switch_manager_->getSwitchCount();
     for (const auto& savedState : config.switch_states) {
         if (savedState.index >= switchCount) {
@@ -644,7 +644,7 @@ auto StateManager::validateConfigurationData(const DeviceConfiguration& config) 
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -663,7 +663,7 @@ auto StateManager::ensureDirectoryExists(const std::string& directory) -> bool {
 auto StateManager::generateBackupName() -> std::string {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
-    
+
     std::stringstream ss;
     ss << "backup_" << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S");
     return ss.str();
@@ -676,10 +676,10 @@ auto StateManager::parseConfigurationFile(const std::string& filename) -> std::o
             setLastError("Failed to open file: " + filename);
             return std::nullopt;
         }
-        
+
         std::string content((std::istreambuf_iterator<char>(file)),
                            std::istreambuf_iterator<char>());
-        
+
         return jsonToConfig(content);
     } catch (const std::exception& e) {
         setLastError("Failed to parse configuration file: " + std::string(e.what()));
@@ -690,13 +690,13 @@ auto StateManager::parseConfigurationFile(const std::string& filename) -> std::o
 auto StateManager::writeConfigurationFile(const std::string& filename, const DeviceConfiguration& config) -> bool {
     try {
         std::string json = configToJson(config);
-        
+
         std::ofstream file(filename);
         if (!file.is_open()) {
             setLastError("Failed to create file: " + filename);
             return false;
         }
-        
+
         file << json;
         return true;
     } catch (const std::exception& e) {
@@ -721,12 +721,12 @@ auto StateManager::logOperation(const std::string& operation, bool success) -> v
 
 auto StateManager::configToJson(const DeviceConfiguration& config) -> std::string {
     nlohmann::json j;
-    
+
     j["device_name"] = config.device_name;
     j["config_version"] = config.config_version;
     j["saved_at"] = std::chrono::duration_cast<std::chrono::milliseconds>(
         config.saved_at.time_since_epoch()).count();
-    
+
     j["switch_states"] = nlohmann::json::array();
     for (const auto& state : config.switch_states) {
         nlohmann::json stateJson;
@@ -736,28 +736,28 @@ auto StateManager::configToJson(const DeviceConfiguration& config) -> std::strin
         stateJson["enabled"] = state.enabled;
         stateJson["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>(
             state.timestamp.time_since_epoch()).count();
-        
+
         j["switch_states"].push_back(stateJson);
     }
-    
+
     j["settings"] = config.settings;
-    
+
     return j.dump(2);
 }
 
 auto StateManager::jsonToConfig(const std::string& json) -> std::optional<DeviceConfiguration> {
     try {
         nlohmann::json j = nlohmann::json::parse(json);
-        
+
         DeviceConfiguration config;
         config.device_name = j.value("device_name", "");
         config.config_version = j.value("config_version", "1.0");
-        
+
         if (j.contains("saved_at")) {
             auto ms = j["saved_at"].get<uint64_t>();
             config.saved_at = std::chrono::steady_clock::time_point(std::chrono::milliseconds(ms));
         }
-        
+
         if (j.contains("switch_states")) {
             for (const auto& stateJson : j["switch_states"]) {
                 SavedSwitchState state;
@@ -765,20 +765,20 @@ auto StateManager::jsonToConfig(const std::string& json) -> std::optional<Device
                 state.name = stateJson.value("name", "");
                 state.state = static_cast<SwitchState>(stateJson.value("state", 0));
                 state.enabled = stateJson.value("enabled", true);
-                
+
                 if (stateJson.contains("timestamp")) {
                     auto ms = stateJson["timestamp"].get<uint64_t>();
                     state.timestamp = std::chrono::steady_clock::time_point(std::chrono::milliseconds(ms));
                 }
-                
+
                 config.switch_states.push_back(state);
             }
         }
-        
+
         if (j.contains("settings")) {
             config.settings = j["settings"].get<std::unordered_map<std::string, std::string>>();
         }
-        
+
         return config;
     } catch (const std::exception& e) {
         setLastError("Failed to parse JSON configuration: " + std::string(e.what()));
@@ -821,7 +821,7 @@ auto StateManager::cleanupOldBackups(uint32_t maxBackups) -> void {
         if (backups.size() > maxBackups) {
             // Sort by name (which includes timestamp), keep newest
             std::sort(backups.begin(), backups.end(), std::greater<std::string>());
-            
+
             for (size_t i = maxBackups; i < backups.size(); ++i) {
                 std::string backupPath = getBackupPath(backups[i]);
                 std::filesystem::remove(backupPath);

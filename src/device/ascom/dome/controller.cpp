@@ -26,7 +26,7 @@ namespace lithium::ascom::dome {
 ASCOMDomeController::ASCOMDomeController(std::string name)
     : AtomDome(std::move(name)) {
     spdlog::info("Initializing ASCOM Dome Controller: {}", getName());
-    
+
     // Initialize components
     hardware_interface_ = std::make_shared<components::HardwareInterface>();
     azimuth_manager_ = std::make_shared<components::AzimuthManager>(hardware_interface_);
@@ -35,7 +35,7 @@ ASCOMDomeController::ASCOMDomeController(std::string name)
     telescope_coordinator_ = std::make_shared<components::TelescopeCoordinator>(hardware_interface_, azimuth_manager_);
     weather_monitor_ = std::make_shared<components::WeatherMonitor>();
     configuration_manager_ = std::make_shared<components::ConfigurationManager>();
-    
+
     // Setup component callbacks
     setupComponentCallbacks();
 }
@@ -47,65 +47,65 @@ ASCOMDomeController::~ASCOMDomeController() {
 
 auto ASCOMDomeController::initialize() -> bool {
     spdlog::info("Initializing ASCOM Dome Controller");
-    
+
     if (!hardware_interface_->initialize()) {
         spdlog::error("Failed to initialize hardware interface");
         return false;
     }
-    
+
     // Load configuration
     std::string config_path = configuration_manager_->getDefaultConfigPath();
     if (!configuration_manager_->loadConfiguration(config_path)) {
         spdlog::warn("Failed to load configuration, using defaults");
         configuration_manager_->loadDefaultConfiguration();
     }
-    
+
     // Apply configuration to components
     applyConfiguration();
-    
+
     // Start weather monitoring if enabled
     if (configuration_manager_->getBool("weather", "safety_enabled", true)) {
         weather_monitor_->startMonitoring();
     }
-    
+
     spdlog::info("ASCOM Dome Controller initialized successfully");
     return true;
 }
 
 auto ASCOMDomeController::destroy() -> bool {
     spdlog::info("Destroying ASCOM Dome Controller");
-    
+
     // Stop monitoring
     if (weather_monitor_) {
         weather_monitor_->stopMonitoring();
     }
-    
+
     if (telescope_coordinator_) {
         telescope_coordinator_->stopAutomaticFollowing();
     }
-    
+
     // Disconnect hardware
     if (hardware_interface_) {
         hardware_interface_->disconnect();
         hardware_interface_->destroy();
     }
-    
+
     // Save configuration if needed
     if (configuration_manager_ && configuration_manager_->hasUnsavedChanges()) {
         configuration_manager_->saveConfiguration(configuration_manager_->getDefaultConfigPath());
     }
-    
+
     return true;
 }
 
 auto ASCOMDomeController::connect(const std::string& deviceName, int timeout, int maxRetry) -> bool {
     spdlog::info("Connecting to ASCOM dome: {}", deviceName);
-    
+
     if (!hardware_interface_) {
         spdlog::error("Hardware interface not initialized");
         return false;
     }
-    
+
     // Determine connection type from device name
     components::HardwareInterface::ConnectionType type;
     if (deviceName.find("://") != std::string::npos) {
@@ -113,36 +113,36 @@ auto ASCOMDomeController::connect(const std::string& deviceName, int timeout, in
     } else {
         type = components::HardwareInterface::ConnectionType::COM_DRIVER;
     }
-    
+
     if (hardware_interface_->connect(deviceName, type, timeout)) {
         // Update dome capabilities from hardware interface
         hardware_interface_->updateCapabilities();
-        
+
         spdlog::info("Successfully connected to dome: {}", deviceName);
         return true;
     }
-    
+
     spdlog::error("Failed to connect to dome: {}", deviceName);
     return false;
 }
 
 auto ASCOMDomeController::disconnect() -> bool {
     spdlog::info("Disconnecting from ASCOM dome");
-    
+
     if (hardware_interface_) {
         return hardware_interface_->disconnect();
     }
-    
+
     return true;
 }
 
 auto ASCOMDomeController::scan() -> std::vector<std::string> {
     spdlog::info("Scanning for ASCOM dome devices");
-    
+
     if (hardware_interface_) {
         return hardware_interface_->scan();
     }
-    
+
     return {};
 }
 
@@ -270,7 +270,7 @@ auto ASCOMDomeController::getShutterState() -> ShutterState {
     if (!shutter_manager_) {
         return ShutterState::UNKNOWN;
     }
-    
+
     auto state = shutter_manager_->getShutterState();
     // Convert from component enum to AtomDome enum
     switch (state) {
@@ -481,7 +481,7 @@ auto ASCOMDomeController::setupComponentCallbacks() -> void {
             }
         });
     }
-    
+
     if (shutter_manager_) {
         shutter_manager_->setStatusCallback([this](ShutterState state) {
             if (monitoring_system_) {
@@ -489,13 +489,13 @@ auto ASCOMDomeController::setupComponentCallbacks() -> void {
             }
         });
     }
-    
+
     if (weather_monitor_) {
         weather_monitor_->setWeatherCallback([this](const components::WeatherConditions& conditions) {
             if (monitoring_system_) {
                 monitoring_system_->updateWeatherConditions(conditions);
             }
-            
+
             // Auto-close shutter if unsafe conditions
             if (!conditions.is_safe && shutter_manager_) {
                 spdlog::warn("Unsafe weather conditions detected, closing shutter");
@@ -503,7 +503,7 @@ auto ASCOMDomeController::setupComponentCallbacks() -> void {
             }
         });
     }
-    
+
     if (telescope_coordinator_) {
         telescope_coordinator_->setFollowingCallback([this](double target_azimuth) {
             if (azimuth_manager_) {
@@ -517,7 +517,7 @@ auto ASCOMDomeController::applyConfiguration() -> void {
     if (!configuration_manager_) {
         return;
     }
-    
+
     // Apply azimuth settings
     if (azimuth_manager_) {
         components::AzimuthManager::AzimuthSettings settings;
@@ -528,10 +528,10 @@ auto ASCOMDomeController::applyConfiguration() -> void {
         settings.movement_timeout = configuration_manager_->getInt("movement", "movement_timeout", 300);
         settings.backlash_compensation = configuration_manager_->getDouble("movement", "backlash_compensation", 0.0);
         settings.backlash_enabled = configuration_manager_->getBool("movement", "backlash_enabled", false);
-        
+
         azimuth_manager_->setAzimuthSettings(settings);
     }
-    
+
     // Apply telescope coordination settings
     if (telescope_coordinator_) {
         components::TelescopeCoordinator::TelescopeParameters params;
@@ -539,7 +539,7 @@ auto ASCOMDomeController::applyConfiguration() -> void {
         params.height_offset = configuration_manager_->getDouble("telescope", "height_offset", 0.0);
         params.azimuth_offset = configuration_manager_->getDouble("telescope", "azimuth_offset", 0.0);
         params.altitude_offset = configuration_manager_->getDouble("telescope", "altitude_offset", 0.0
-    
+
     // Apply parking settings
     if (parking_manager_) {
         double park_pos = configuration_manager_->getDouble("dome", "park_position", 0.0);
@@ -556,7 +556,7 @@ auto ASCOMDomeController::updateDomeCapabilities(const components::ASCOMDomeCapa
     dome_caps.canSetAzimuth = capabilities.can_set_azimuth;
     dome_caps.canSetParkPosition = capabilities.can_set_park;
     dome_caps.hasBacklash = true; // Software implementation
-    
+
     setDomeCapabilities(dome_caps);
 }
 
@@ -569,7 +569,7 @@ auto ASCOMDomeController::setupComponentCallbacks() -> void {
             }
         });
     }
-    
+
     if (shutter_manager_) {
         shutter_manager_->setStatusCallback([this](ShutterState state) {
             if (monitoring_system_) {
@@ -577,13 +577,13 @@ auto ASCOMDomeController::setupComponentCallbacks() -> void {
             }
         });
     }
-    
+
     if (weather_monitor_) {
         weather_monitor_->setWeatherCallback([this](const components::WeatherConditions& conditions) {
             if (monitoring_system_) {
                 monitoring_system_->updateWeatherConditions(conditions);
             }
-            
+
             // Auto-close shutter if unsafe conditions
             if (!conditions.is_safe && shutter_manager_) {
                 spdlog::warn("Unsafe weather conditions detected, closing shutter");
@@ -591,7 +591,7 @@ auto ASCOMDomeController::setupComponentCallbacks() -> void {
             }
         });
     }
-    
+
     if (telescope_coordinator_) {
         telescope_coordinator_->setFollowingCallback([this](double target_azimuth) {
             if (azimuth_manager_) {

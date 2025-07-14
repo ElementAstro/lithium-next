@@ -410,16 +410,16 @@ private:
     std::atomic<bool> connected_{false};
     mutable std::mutex mutex_;
     mutable std::mutex infoMutex_;
-    
+
     // Connection details
     ConnectionType connectionType_{ConnectionType::ALPACA_REST};
     ConnectionSettings currentSettings_;
     std::string deviceName_;
-    
+
     // Alpaca client integration
     boost::asio::io_context& io_context_;
     std::unique_ptr<lithium::device::ascom::DeviceClient<lithium::device::ascom::DeviceType::Camera>> alpaca_client_;
-    
+
     // Camera information cache
     mutable std::optional<CameraInfo> cameraInfo_;
     mutable std::chrono::steady_clock::time_point lastInfoUpdate_;
@@ -440,11 +440,11 @@ private:
     // Alpaca helper methods (using new optimized client)
     auto connectAlpaca(const ConnectionSettings& settings) -> bool;
     auto disconnectAlpaca() -> bool;
-    
+
     // Connection type specific methods
     auto connectCOM(const ConnectionSettings& settings) -> bool;
     auto disconnectCOM() -> bool;
-    
+
     // Alpaca discovery using new client
     auto discoverAlpacaDevices() -> std::vector<std::string>;
 
@@ -454,9 +454,9 @@ private:
 
     // Error handling helpers
     void setLastError(const std::string& error) const { lastError_ = error; }
-    
+
     // Alpaca communication helper
-    auto sendAlpacaRequest(const std::string& method, const std::string& endpoint, 
+    auto sendAlpacaRequest(const std::string& method, const std::string& endpoint,
                           const std::string& params = "") const -> std::optional<std::string>;
 };
 

@@ -29,10 +29,10 @@ HomeManager::HomeManager(std::shared_ptr<HardwareInterface> hardware,
     : hardware_interface_(std::move(hardware))
     , azimuth_manager_(std::move(azimuth_manager)) {
     spdlog::debug("HomeManager initialized");
-    
+
     // Detect if home sensor is available
     has_home_sensor_ = detectHomeSensor();
-    
+
     // Some domes don't require homing
     requires_homing_.store(has_home_sensor_.load());
 }
@@ -49,22 +49,22 @@ auto HomeManager::findHome() -> bool {
         spdlog::warn("Homing already in progress");
         return false;
     }
-    
+
     if (!hardware_interface_) {
         spdlog::error("Hardware interface not available");
         return false;
     }
-    
+
     spdlog::info("Starting dome homing sequence");
-    
+
     // Start homing in separate thread
     abort_homing_ = false;
     is_homing_ = true;
-    
+
     homing_thread_ = std::make_unique<std::thread>([this]() {
         performHomingSequence();
     });
-    
+
     return true;
 }
 
@@ -73,14 +73,14 @@ auto HomeManager::setHomePosition(double azimuth) -> bool {
         spdlog::error("Invalid home position: {}", azimuth);
         return false;
     }
-    
+
     home_position_ = azimuth;
     is_homed_ = true;
     last_home_time_ = std::chrono::steady_clock::now();
-    
+
     spdlog::info("Home position set to {:.2f} degrees", azimuth);
     notifyHomeComplete(true, azimuth);
-    
+
     return true;
 }
 
@@ -100,15 +100,15 @@ auto HomeManager::abortHoming() -> bool {
     if (!is_homing_) {
         return true;
     }
-    
+
     spdlog::info("Aborting homing sequence");
     abort_homing_ = true;
-    
+
     // Wait for homing thread to finish
     if (homing_thread_ && homing_thread_->joinable()) {
         homing_thread_->join();
     }
-    
+
     return true;
 }
 
@@ -120,7 +120,7 @@ auto HomeManager::isAtHome() -> bool {
     if (!has_home_sensor_) {
         return false;
     }
-    
+
     // Check if dome is at home position
     if (auto current_az = azimuth_manager_->getCurrentAzimuth()) {
         if (home_position_) {
@@ -128,7 +128,7 @@ auto HomeManager::isAtHome() -> bool {
             return diff < 1.0; // Within 1 degree
         }
     }
-    
+
     return false;
 }
 
@@ -137,15 +137,15 @@ auto HomeManager::calibrateHome() -> bool {
         spdlog::warn("No home sensor available for calibration");
         return false;
     }
-    
+
     spdlog::info("Calibrating home position");
-    
+
     // Find exact home sensor position
     auto home_pos = findHomeSensorPosition();
     if (home_pos) {
         return setHomePosition(*home_pos);
     }
-    
+
     return false;
 }
 
@@ -181,16 +181,16 @@ auto HomeManager::getTimeSinceLastHome() -> std::chrono::milliseconds {
     if (!is_homed_) {
         return std::chrono::milliseconds::max();
     }
-    
+
     auto now = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - last_home_time_);
 }
 
 void HomeManager::performHomingSequence() {
     notifyStatus("Starting homing sequence");
-    
+
     auto start_time = std::chrono::steady_clock::now();
-    
+
     try {
         if (has_home_sensor_) {
             // Use home sensor for homing
@@ -199,7 +199,7 @@ void HomeManager::performHomingSequence() {
                 home_position_ = *home_pos;
                 is_homed_ = true;
                 last_home_time_ = std::chrono::steady_clock::now();
-                
+
                 notifyStatus("Homing completed successfully");
                 notifyHomeComplete(true, *home_pos);
             } else {
@@ -212,7 +212,7 @@ void HomeManager::performHomingSequence() {
                 home_position_ = *current_az;
                 is_homed_ = true;
                 last_home_time_ = std::chrono::steady_clock::now();
-                
+
                 notifyStatus("Manual homing completed");
                 notifyHomeComplete(true, *current_az);
             } else {
@@ -225,7 +225,7 @@ void HomeManager::performHomingSequence() {
         notifyStatus("Homing failed: " + std::string(e.what()));
         notifyHomeComplete(false, 0.0);
     }
-    
+
     is_homing_ = false;
 }
 
@@ -252,24 +252,24 @@ auto HomeManager::findHomeSensorPosition() -> std::optional<double> {
     if (!has_home_sensor_) {
         return std::nullopt;
     }
-    
+
     // Implementation would depend on specific hardware
     // This is a placeholder that would need to be implemented
     // based on the actual ASCOM dome's capabilities
-    
+
     notifyStatus("Searching for home sensor");
-    
+
     // Simulate home sensor search
     for (int i = 0; i < 10 && !abort_homing_; ++i) {
         std::this_thread::sleep_for(100ms);
-        
+
         // Check if we found the home sensor
         // This is where actual hardware interaction would occur
         if (i == 5) { // Simulate finding home at iteration 5
             return 0.0; // Home at 0 degrees
         }
     }
-    
+
     return std::nullopt;
 }
 

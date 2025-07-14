@@ -287,38 +287,38 @@ private:
     // Component references
     std::shared_ptr<HardwareInterface> hardware_;
     std::shared_ptr<MovementController> movement_;
-    
+
     // Configuration
     CompensationConfig config_;
     TemperatureCompensation compensation_;
-    
+
     // Temperature monitoring
     std::atomic<bool> monitoring_active_{false};
     std::thread monitoring_thread_;
     std::atomic<double> current_temperature_{0.0};
     std::atomic<double> last_compensation_temperature_{0.0};
-    
+
     // Temperature history
     std::vector<TemperatureReading> temperature_history_;
     static constexpr size_t MAX_HISTORY_SIZE = 1000;
-    
+
     // Statistics
     TemperatureStats stats_;
     mutable std::mutex stats_mutex_;
     mutable std::mutex history_mutex_;
     mutable std::mutex config_mutex_;
-    
+
     // Callbacks
     TemperatureCallback temperature_callback_;
     CompensationCallback compensation_callback_;
     TemperatureAlertCallback temperature_alert_callback_;
-    
+
     // Compensation algorithms
     auto calculateLinearCompensation(double tempChange) -> int;
     auto calculatePolynomialCompensation(double tempChange) -> int;
     auto calculateLookupTableCompensation(double tempChange) -> int;
     auto calculateAdaptiveCompensation(double tempChange) -> int;
-    
+
     // Private methods
     auto monitorTemperature() -> void;
     auto updateTemperatureReading(double temperature) -> void;
@@ -327,29 +327,29 @@ private:
     auto checkTemperatureCompensation() -> void;
     auto applyTemperatureCompensation(double tempChange) -> bool;
     auto validateCompensationSteps(int steps) -> int;
-    
+
     // Notification methods
     auto notifyTemperatureChange(double temperature) -> void;
     auto notifyCompensationApplied(double tempChange, int steps, bool success) -> void;
     auto notifyTemperatureAlert(double temperature, const std::string& message) -> void;
-    
+
     // Calibration helpers
     auto recordCalibrationPoint(double temperature, int position) -> void;
     auto calculateBestFitCoefficient() -> double;
     auto validateCalibrationData() -> bool;
-    
+
     // Utility methods
     auto clampTemperature(double temperature) -> double;
     auto isValidTemperature(double temperature) -> bool;
     auto formatTemperature(double temperature) -> std::string;
-    
+
     // Compensation data for adaptive algorithm
     struct CalibrationPoint {
         double temperature;
         int position;
         std::chrono::steady_clock::time_point timestamp;
     };
-    
+
     std::vector<CalibrationPoint> calibration_points_;
     static constexpr size_t MAX_CALIBRATION_POINTS = 50;
 };

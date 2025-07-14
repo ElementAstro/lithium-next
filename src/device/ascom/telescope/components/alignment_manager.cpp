@@ -118,7 +118,7 @@ bool AlignmentManager::setAlignmentMode(::AlignmentMode mode) {
 
         // Convert template alignment mode to ASCOM alignment mode
         auto ascomMode = convertTemplateToASCOMAlignmentMode(mode);
-        
+
         // Set alignment mode through hardware interface
         bool success = hardware_->setAlignmentMode(ascomMode);
         if (!success) {

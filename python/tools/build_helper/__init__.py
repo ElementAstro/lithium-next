@@ -3,7 +3,7 @@
 """
 Advanced Build System Helper with Modern Python Features
 
-A versatile, high-performance build system utility supporting CMake, Meson, and Bazel 
+A versatile, high-performance build system utility supporting CMake, Meson, and Bazel
 with enhanced error handling, async operations, and comprehensive logging capabilities.
 
 Features:
@@ -27,13 +27,21 @@ from loguru import logger
 # Core components
 from .core.base import BuildHelperBase
 from .core.models import (
-    BuildStatus, BuildResult, BuildOptions, 
-    BuildMetrics, BuildSession
+    BuildStatus,
+    BuildResult,
+    BuildOptions,
+    BuildMetrics,
+    BuildSession,
 )
 from .core.errors import (
-    BuildSystemError, ConfigurationError, BuildError,
-    TestError, InstallationError, DependencyError,
-    ErrorContext, handle_build_error
+    BuildSystemError,
+    ConfigurationError,
+    BuildError,
+    TestError,
+    InstallationError,
+    DependencyError,
+    ErrorContext,
+    handle_build_error,
 )
 
 # Builders
@@ -55,19 +63,19 @@ __description__ = "Advanced Build System Helper with Modern Python Features"
 def configure_default_logging(level: str = "INFO", enable_colors: bool = True) -> None:
     """
     Configure default logging for the build_helper package.
-    
+
     Args:
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         enable_colors: Whether to enable colored output
     """
     logger.remove()  # Remove default handler
-    
+
     log_format = (
         "<green>{time:HH:mm:ss}</green> | "
         "<level>{level: <8}</level> | "
         "<level>{message}</level>"
     )
-    
+
     if level in ["DEBUG", "TRACE"]:
         log_format = (
             "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
@@ -75,13 +83,13 @@ def configure_default_logging(level: str = "INFO", enable_colors: bool = True) -
             "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
             "<level>{message}</level>"
         )
-    
+
     logger.add(
         sys.stderr,
         level=level,
         format=log_format,
         colorize=enable_colors,
-        enqueue=True  # Thread-safe logging
+        enqueue=True,  # Thread-safe logging
     )
 
 
@@ -104,11 +112,11 @@ def auto_build(
     clean: bool = False,
     test: bool = False,
     install: bool = False,
-    verbose: bool = False
+    verbose: bool = False,
 ) -> bool:
     """
     Convenience function for auto-detected build operations.
-    
+
     Args:
         source_dir: Source directory (defaults to current directory)
         build_dir: Build directory (defaults to 'build')
@@ -116,41 +124,39 @@ def auto_build(
         test: Whether to run tests after building
         install: Whether to install after building
         verbose: Enable verbose output
-        
+
     Returns:
         True if build was successful, False otherwise
     """
     import asyncio
-    
+
     source_path = Path(source_dir or ".")
     build_path = Path(build_dir or "build")
-    
+
     try:
         # Auto-detect build system
         builder_type = BuilderFactory.detect_build_system(source_path)
         if not builder_type:
             logger.error(f"No supported build system detected in {source_path}")
             return False
-        
+
         # Create builder
         builder = BuilderFactory.create_builder(
             builder_type=builder_type,
             source_dir=source_path,
             build_dir=build_path,
-            verbose=verbose
+            verbose=verbose,
         )
-        
+
         # Execute build workflow
         async def run_build():
             return await builder.full_build_workflow(
-                clean_first=clean,
-                run_tests=test,
-                install_after_build=install
+                clean_first=clean, run_tests=test, install_after_build=install
             )
-        
+
         results = asyncio.run(run_build())
         return all(result.success for result in results)
-        
+
     except Exception as e:
         logger.error(f"Auto-build failed: {e}")
         return False
@@ -163,36 +169,31 @@ configure_default_logging()
 __all__ = [
     # Core classes
     "BuildHelperBase",
-    "BuildStatus", 
-    "BuildResult", 
+    "BuildStatus",
+    "BuildResult",
     "BuildOptions",
     "BuildMetrics",
     "BuildSession",
-    
     # Error classes
-    "BuildSystemError", 
-    "ConfigurationError", 
+    "BuildSystemError",
+    "ConfigurationError",
     "BuildError",
-    "TestError", 
+    "TestError",
     "InstallationError",
     "DependencyError",
     "ErrorContext",
     "handle_build_error",
-    
     # Builder classes
-    "CMakeBuilder", 
-    "MesonBuilder", 
+    "CMakeBuilder",
+    "MesonBuilder",
     "BazelBuilder",
-    
     # Utility classes
-    "BuilderFactory", 
+    "BuilderFactory",
     "BuildConfig",
-    
     # Convenience functions
     "auto_build",
     "configure_default_logging",
     "get_version_info",
-    
     # Package metadata
     "__version__",
     "__author__",

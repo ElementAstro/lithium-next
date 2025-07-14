@@ -13,14 +13,12 @@ from typing import TypedDict, Self, ClassVar, Callable, Any
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .pacman_types import (
-    PackageName, PackageVersion, RepositoryName,
-    CommandOutput
-)
+from .pacman_types import PackageName, PackageVersion, RepositoryName, CommandOutput
 
 
 class PackageStatus(StrEnum):
     """Enum representing the status of a package with string values."""
+
     INSTALLED = "installed"
     NOT_INSTALLED = "not_installed"
     OUTDATED = "outdated"
@@ -32,6 +30,7 @@ class PackageStatus(StrEnum):
 
 class PackagePriority(Enum):
     """Priority levels for package operations."""
+
     LOW = auto()
     NORMAL = auto()
     HIGH = auto()
@@ -41,6 +40,7 @@ class PackagePriority(Enum):
 @dataclass(frozen=True, slots=True)
 class Dependency:
     """Represents a package dependency with version constraints."""
+
     name: PackageName
     version_constraint: str = ""
     optional: bool = False
@@ -98,8 +98,8 @@ class PackageInfo:
 
     # Class variables
     _FIELD_FORMATTERS: ClassVar[dict[str, Callable[[int], str]]] = {
-        'install_size': lambda x: f"{x / 1024 / 1024:.2f} MB" if x > 0 else "Unknown",
-        'download_size': lambda x: f"{x / 1024 / 1024:.2f} MB" if x > 0 else "Unknown",
+        "install_size": lambda x: f"{x / 1024 / 1024:.2f} MB" if x > 0 else "Unknown",
+        "download_size": lambda x: f"{x / 1024 / 1024:.2f} MB" if x > 0 else "Unknown",
     }
 
     def __post_init__(self) -> None:
@@ -117,12 +117,12 @@ class PackageInfo:
     @property
     def formatted_install_size(self) -> str:
         """Get human-readable install size."""
-        return self._FIELD_FORMATTERS['install_size'](self.install_size)
+        return self._FIELD_FORMATTERS["install_size"](self.install_size)
 
     @property
     def formatted_download_size(self) -> str:
         """Get human-readable download size."""
-        return self._FIELD_FORMATTERS['download_size'](self.download_size)
+        return self._FIELD_FORMATTERS["download_size"](self.download_size)
 
     @property
     def total_dependencies(self) -> int:
@@ -145,48 +145,54 @@ class PackageInfo:
             if hasattr(self, key):
                 if getattr(self, key) != value:
                     return False
-            elif key == "keyword" and value.lower() not in " ".join(self.keywords).lower():
+            elif (
+                key == "keyword"
+                and value.lower() not in " ".join(self.keywords).lower()
+            ):
                 return False
         return True
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary representation."""
         return {
-            'name': str(self.name),
-            'version': str(self.version),
-            'description': self.description,
-            'install_size': self.install_size,
-            'download_size': self.download_size,
-            'installed': self.installed,
-            'repository': str(self.repository),
-            'status': self.status.value,
-            'priority': self.priority.name,
-            'dependencies': [str(dep) for dep in self.dependencies],
-            'optional_dependencies': [str(dep) for dep in self.optional_dependencies],
-            'build_date': self.build_date.isoformat() if self.build_date else None,
-            'install_date': self.install_date.isoformat() if self.install_date else None,
+            "name": str(self.name),
+            "version": str(self.version),
+            "description": self.description,
+            "install_size": self.install_size,
+            "download_size": self.download_size,
+            "installed": self.installed,
+            "repository": str(self.repository),
+            "status": self.status.value,
+            "priority": self.priority.name,
+            "dependencies": [str(dep) for dep in self.dependencies],
+            "optional_dependencies": [str(dep) for dep in self.optional_dependencies],
+            "build_date": self.build_date.isoformat() if self.build_date else None,
+            "install_date": (
+                self.install_date.isoformat() if self.install_date else None
+            ),
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
         """Create instance from dictionary."""
         # Convert string fields to appropriate types
-        if 'name' in data:
-            data['name'] = PackageName(data['name'])
-        if 'version' in data:
-            data['version'] = PackageVersion(data['version'])
-        if 'repository' in data:
-            data['repository'] = RepositoryName(data['repository'])
-        if 'status' in data:
-            data['status'] = PackageStatus(data['status'])
-        if 'priority' in data:
-            data['priority'] = PackagePriority[data['priority']]
+        if "name" in data:
+            data["name"] = PackageName(data["name"])
+        if "version" in data:
+            data["version"] = PackageVersion(data["version"])
+        if "repository" in data:
+            data["repository"] = RepositoryName(data["repository"])
+        if "status" in data:
+            data["status"] = PackageStatus(data["status"])
+        if "priority" in data:
+            data["priority"] = PackagePriority[data["priority"]]
 
         return cls(**data)
 
 
 class CommandResult(TypedDict):
     """Enhanced type definition for command execution results."""
+
     success: bool
     stdout: CommandOutput
     stderr: CommandOutput
@@ -201,6 +207,7 @@ class CommandResult(TypedDict):
 @dataclass(frozen=True, slots=True)
 class OperationSummary:
     """Summary of a package operation."""
+
     operation: str
     packages_affected: list[PackageName]
     success_count: int
@@ -225,6 +232,7 @@ class OperationSummary:
 @dataclass(slots=True)
 class PackageCache:
     """Cache entry for package information."""
+
     package_info: PackageInfo
     cached_at: float = field(default_factory=time.time)
     ttl: float = 3600.0  # 1 hour default TTL
@@ -243,6 +251,7 @@ class PackageCache:
 @dataclass(frozen=True, slots=True)
 class RepositoryInfo:
     """Information about a package repository."""
+
     name: RepositoryName
     url: str
     enabled: bool = True

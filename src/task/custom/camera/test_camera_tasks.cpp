@@ -9,21 +9,21 @@ int main() {
     // Initialize high-performance spdlog
     spdlog::set_level(spdlog::level::info);
     spdlog::set_pattern("[%H:%M:%S.%e] [%^%l%$] %v");
-    
+
     spdlog::info("=== Camera Task System Build Test ===");
     spdlog::info("Version: {}", CameraTaskSystemInfo::VERSION);
     spdlog::info("Build Date: {}", CameraTaskSystemInfo::BUILD_DATE);
     spdlog::info("Total Tasks: {}", CameraTaskSystemInfo::TOTAL_TASKS);
-    
+
     spdlog::info("\n=== Testing Task Creation ===");
-    
+
     try {
         // Test basic exposure tasks
         auto takeExposure = std::make_unique<TakeExposureTask>("TakeExposure", nullptr);
         auto takeManyExposure = std::make_unique<TakeManyExposureTask>("TakeManyExposure", nullptr);
         auto subFrameExposure = std::make_unique<SubFrameExposureTask>("SubFrameExposure", nullptr);
         spdlog::info("✓ Basic exposure tasks created successfully");
-        
+
         // Test calibration tasks
         auto darkFrame = std::make_unique<DarkFrameTask>("DarkFrame", nullptr);
         auto biasFrame = std::make_unique<BiasFrameTask>("BiasFrame", nullptr);

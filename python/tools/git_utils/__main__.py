@@ -11,8 +11,13 @@ from loguru import logger
 
 from .cli import setup_parser
 from .exceptions import (
-    GitException, GitCommandError, GitRepositoryNotFound,
-    GitBranchError, GitMergeConflict, GitRebaseConflictError, GitCherryPickError
+    GitException,
+    GitCommandError,
+    GitRepositoryNotFound,
+    GitBranchError,
+    GitMergeConflict,
+    GitRebaseConflictError,
+    GitCherryPickError,
 )
 from .models import GitResult
 
@@ -57,14 +62,18 @@ def main():
     logger.debug(f"Command-line arguments: {args}")
 
     try:
-        if hasattr(args, 'func'):
+        if hasattr(args, "func"):
             logger.info(f"Executing command: {args.command}")
             result = args.func(args)
 
             if isinstance(result, GitResult):
                 if result.success:
-                    if hasattr(args, 'json') and args.json and result.data is not None:
-                        print(json.dumps(result.data, default=lambda o: o.__dict__, indent=2))
+                    if hasattr(args, "json") and args.json and result.data is not None:
+                        print(
+                            json.dumps(
+                                result.data, default=lambda o: o.__dict__, indent=2
+                            )
+                        )
                     elif result.output:
                         print(result.output)
                     else:
@@ -84,7 +93,13 @@ def main():
         logger.error(f"Git command error: {e}")
         print(f"Git command error: {e}", file=sys.stderr)
         sys.exit(1)
-    except (GitRepositoryNotFound, GitBranchError, GitMergeConflict, GitRebaseConflictError, GitCherryPickError) as e:
+    except (
+        GitRepositoryNotFound,
+        GitBranchError,
+        GitMergeConflict,
+        GitRebaseConflictError,
+        GitCherryPickError,
+    ) as e:
         logger.error(f"Git operation error: {e}")
         print(f"Git operation error: {e}", file=sys.stderr)
         sys.exit(1)

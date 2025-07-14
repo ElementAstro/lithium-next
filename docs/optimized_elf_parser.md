@@ -68,11 +68,11 @@ if (parser.parse()) {
     if (auto header = parser.getElfHeader()) {
         std::cout << "Entry point: 0x" << std::hex << header->entry << std::endl;
     }
-    
+
     // Access symbol table
     auto symbols = parser.getSymbolTable();
     std::cout << "Found " << symbols.size() << " symbols" << std::endl;
-    
+
     // Find specific symbol
     if (auto symbol = parser.findSymbolByName("main")) {
         std::cout << "main() at address: 0x" << std::hex << symbol->value << std::endl;
@@ -100,17 +100,17 @@ OptimizedElfParser parser("/path/to/large/binary", config);
 ```cpp
 // Use factory with predefined performance profiles
 auto speedOptimized = OptimizedElfParserFactory::create(
-    "/usr/bin/ls", 
+    "/usr/bin/ls",
     OptimizedElfParserFactory::PerformanceProfile::Speed
 );
 
 auto memoryOptimized = OptimizedElfParserFactory::create(
-    "/usr/bin/ls", 
+    "/usr/bin/ls",
     OptimizedElfParserFactory::PerformanceProfile::Memory
 );
 
 auto balanced = OptimizedElfParserFactory::create(
-    "/usr/bin/ls", 
+    "/usr/bin/ls",
     OptimizedElfParserFactory::PerformanceProfile::Balanced
 );
 ```
@@ -144,7 +144,7 @@ std::vector<std::string> symbolNames = {
 auto results = parser.batchFindSymbols(symbolNames);
 for (size_t i = 0; i < results.size(); ++i) {
     if (results[i]) {
-        std::cout << symbolNames[i] << " found at 0x" 
+        std::cout << symbolNames[i] << " found at 0x"
                   << std::hex << results[i]->value << std::endl;
     }
 }
@@ -303,14 +303,14 @@ try {
         std::cerr << "Failed to parse ELF file" << std::endl;
         return false;
     }
-    
+
     // Use std::optional for potentially missing data
     if (auto symbol = parser.findSymbolByName("function_name")) {
         processSymbol(*symbol);
     } else {
         std::cout << "Symbol not found" << std::endl;
     }
-    
+
 } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return false;

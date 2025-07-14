@@ -143,26 +143,26 @@ private:
     std::map<std::string, FilterProfile> profiles_;
     std::map<std::string, std::string> settings_;
     std::string current_profile_name_;
-    
+
     // File paths
     std::string config_path_;
     std::string profiles_path_;
     std::string settings_path_;
     std::string backups_path_;
-    
+
     // Threading and synchronization
     mutable std::mutex config_mutex_;
     mutable std::mutex profiles_mutex_;
     mutable std::mutex settings_mutex_;
-    
+
     // Callbacks
     ConfigurationChangeCallback config_change_callback_;
     ProfileChangeCallback profile_change_callback_;
-    
+
     // Error handling
     std::string last_error_;
     mutable std::mutex error_mutex_;
-    
+
     // File operations
     auto loadConfigurationsFromFile() -> bool;
     auto saveConfigurationsToFile() -> bool;
@@ -170,18 +170,18 @@ private:
     auto saveProfilesToFile() -> bool;
     auto loadSettingsFromFile() -> bool;
     auto saveSettingsToFile() -> bool;
-    
+
     // JSON serialization
     auto configurationToJson(const FilterConfiguration& config) -> std::string;
     auto configurationFromJson(const std::string& json) -> std::optional<FilterConfiguration>;
     auto profileToJson(const FilterProfile& profile) -> std::string;
     auto profileFromJson(const std::string& json) -> std::optional<FilterProfile>;
-    
+
     // Validation helpers
     auto validateSlot(int slot) -> bool;
     auto validateName(const std::string& name) -> bool;
     auto validateProfileName(const std::string& name) -> bool;
-    
+
     // Utility methods
     auto setError(const std::string& error) -> void;
     auto notifyConfigurationChange(int slot, const FilterConfiguration& config) -> void;

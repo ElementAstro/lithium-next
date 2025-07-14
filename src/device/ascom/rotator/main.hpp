@@ -37,7 +37,7 @@ namespace lithium::device::ascom::rotator {
 
 /**
  * @brief Main ASCOM Rotator Integration Class
- * 
+ *
  * This class provides the primary integration interface for the modular
  * ASCOM rotator system. It encapsulates the controller and provides
  * simplified access to rotator functionality.
@@ -49,26 +49,26 @@ public:
         std::string device_name;
         std::string client_id;
         components::ConnectionType connection_type;
-        
+
         // Connection settings
         std::string alpaca_host;
         int alpaca_port;
         int alpaca_device_number;
         std::string com_prog_id;
-        
+
         // Feature flags
         bool enable_monitoring;
         bool enable_presets;
         bool enable_backlash_compensation;
         bool enable_position_limits;
-        
+
         // Performance settings
         int position_update_interval_ms;
         int property_cache_duration_ms;
         int movement_timeout_ms;
-        
+
         // Constructor with default values
-        RotatorInitConfig() 
+        RotatorInitConfig()
             : device_name("Default ASCOM Rotator")
             , client_id("Lithium-Next")
             , connection_type(components::ConnectionType::ALPACA_REST)
@@ -89,8 +89,8 @@ public:
     ~ASCOMRotatorMain();
 
     // Factory methods
-    static auto createRotator(const std::string& name, 
-                             const RotatorInitConfig& config = {}) 
+    static auto createRotator(const std::string& name,
+                             const RotatorInitConfig& config = {})
         -> std::shared_ptr<ASCOMRotatorMain>;
     static auto createRotatorWithController(const std::string& name,
                                            std::shared_ptr<ASCOMRotatorController> controller)
@@ -103,7 +103,7 @@ public:
 
     // Connection management
     auto connect(const std::string& deviceIdentifier) -> bool;
-    auto connectWithConfig(const std::string& deviceIdentifier, 
+    auto connectWithConfig(const std::string& deviceIdentifier,
                           const RotatorInitConfig& config) -> bool;
     auto disconnect() -> bool;
     auto reconnect() -> bool;
@@ -183,7 +183,7 @@ class ASCOMRotatorRegistry {
 public:
     static auto getInstance() -> ASCOMRotatorRegistry&;
 
-    auto registerRotator(const std::string& name, 
+    auto registerRotator(const std::string& name,
                         std::shared_ptr<ASCOMRotatorMain> rotator) -> bool;
     auto unregisterRotator(const std::string& name) -> bool;
     auto getRotator(const std::string& name) -> std::shared_ptr<ASCOMRotatorMain>;
@@ -205,7 +205,7 @@ namespace utils {
     /**
      * @brief Create a quick rotator instance with minimal configuration
      */
-    auto createQuickRotator(const std::string& device_identifier = "localhost:11111/0") 
+    auto createQuickRotator(const std::string& device_identifier = "localhost:11111/0")
         -> std::shared_ptr<ASCOMRotatorMain>;
 
     /**
@@ -245,7 +245,7 @@ namespace utils {
  */
 class ASCOMRotatorException : public std::runtime_error {
 public:
-    explicit ASCOMRotatorException(const std::string& message) 
+    explicit ASCOMRotatorException(const std::string& message)
         : std::runtime_error("ASCOM Rotator Error: " + message) {}
 };
 

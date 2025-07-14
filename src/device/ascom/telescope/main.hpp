@@ -56,7 +56,7 @@ enum class TelescopeState {
 
 /**
  * @brief Main ASCOM Telescope integration class
- * 
+ *
  * This class provides a simplified interface to the modular telescope components,
  * managing their lifecycle and coordinating their interactions.
  */

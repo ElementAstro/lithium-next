@@ -59,7 +59,10 @@ def test_create_self_signed_cert(basic_options: CertificateOptions):
     # Verify certificate content
     with result.cert_path.open("rb") as f:
         cert = x509.load_pem_x509_certificate(f.read())
-    assert cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value == "test.local"
+    assert (
+        cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
+        == "test.local"
+    )
     assert cert.issuer == cert.subject  # Self-signed
 
 
@@ -73,7 +76,10 @@ def test_create_csr(basic_options: CertificateOptions):
     # Verify CSR content
     with result.csr_path.open("rb") as f:
         csr = x509.load_pem_x509_csr(f.read())
-    assert csr.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value == "test.local"
+    assert (
+        csr.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
+        == "test.local"
+    )
     assert csr.is_signature_valid
 
 
@@ -109,7 +115,10 @@ def test_sign_certificate(basic_options: CertificateOptions, temp_cert_dir: Path
     with signed_cert_path.open("rb") as f:
         signed_cert = x509.load_pem_x509_certificate(f.read())
 
-    assert signed_cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value == "test.local"
+    assert (
+        signed_cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
+        == "test.local"
+    )
     assert signed_cert.issuer == ca_cert.subject
 
 

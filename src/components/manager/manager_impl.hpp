@@ -66,10 +66,10 @@ public:
     // C++23 concepts for type safety
     template<std::convertible_to<json> ParamsType>
     auto loadComponent(const ParamsType& params) -> std::expected<bool, std::string>;
-    
+
     template<std::convertible_to<json> ParamsType>
     auto unloadComponent(const ParamsType& params) -> std::expected<bool, std::string>;
-    
+
     auto scanComponents(std::string_view path) -> std::vector<std::string>;
 
     // Modern C++ return types with expected
@@ -90,31 +90,31 @@ public:
         try {
             Version ver = Version::parse(std::string{version});
             dependencyGraph_.addNode(std::string{component_name}, ver);
-            
+
             auto depIter = std::ranges::begin(dependencies);
             auto depVersionIter = std::ranges::begin(dependencies_version);
             auto depEnd = std::ranges::end(dependencies);
             auto depVersionEnd = std::ranges::end(dependencies_version);
-            
+
             while (depIter != depEnd) {
-                Version depVer = (depVersionIter != depVersionEnd) 
-                               ? Version::parse(std::string{*depVersionIter++}) 
+                Version depVer = (depVersionIter != depVersionEnd)
+                               ? Version::parse(std::string{*depVersionIter++})
                                : Version{1, 0, 0};
                 dependencyGraph_.addDependency(std::string{component_name}, std::string{*depIter++}, depVer);
             }
-            
+
             logger_->debug("Updated dependency graph for component: {}", component_name);
         } catch (const std::exception& e) {
             logger_->error("Failed to update dependency graph: {}", e.what());
         }
     }
-    
+
     template<std::ranges::range ComponentsRange>
     auto batchLoad(ComponentsRange&& components) -> std::expected<bool, std::string> {
         try {
             bool success = true;
             std::vector<std::future<std::expected<bool, std::string>>> futures;
-            
+
             // Convert range to vector for processing
             std::vector<std::string> componentVec;
             for (auto&& component : components) {
@@ -154,7 +154,7 @@ public:
             return std::unexpected(error);
         }
     }
-    
+
     void printDependencyTree() const;
 
     // Component lifecycle operations with expected
@@ -175,33 +175,33 @@ private:
     std::shared_ptr<ModuleLoader> moduleLoader_;
     std::unique_ptr<FileTracker> fileTracker_;
     DependencyGraph dependencyGraph_;
-    
+
     // Component storage with improved concurrency using atom containers
     atom::type::concurrent_map<std::string, std::shared_ptr<Component>> components_;
     atom::type::concurrent_map<std::string, ComponentOptions> componentOptions_;
     atom::type::concurrent_map<std::string, ComponentState> componentStates_;
-    
+
     // Modern synchronization primitives with C++23 optimizations
     mutable std::shared_mutex eventListenersMutex_;  // Only for event listeners
-    
-    // C++20 atomic wait/notify for better lock-free performance  
+
+    // C++20 atomic wait/notify for better lock-free performance
     mutable std::atomic_flag updating_components_ = ATOMIC_FLAG_INIT;
     mutable std::atomic<std::size_t> active_readers_{0};
-    
+
     // Performance and monitoring with atomics
     std::atomic<bool> performanceMonitoringEnabled_{true};
     mutable std::atomic<std::size_t> lastErrorCount_{0};
     mutable std::atomic<std::size_t> operationCounter_{0};
-    
+
     // C++23 stop tokens for cancellation
     std::stop_source stop_source_;
     std::stop_token stop_token_{stop_source_.get_token()};
-    
+
     // Memory management with enhanced pool optimization
     std::shared_ptr<atom::memory::ObjectPool<std::shared_ptr<Component>>>
         component_pool_;
     std::unique_ptr<MemoryPool<char, 4096>> memory_pool_;
-    
+
     // C++23 stacktrace for better error diagnostics (when available)
     #if LITHIUM_HAS_STACKTRACE
     mutable std::stacktrace last_error_trace_;
@@ -220,29 +220,29 @@ private:
     void updateComponentState(std::string_view name, ComponentState newState) noexcept;
     [[nodiscard]] auto validateComponentOperation(std::string_view name) const noexcept -> bool;
     auto loadComponentByName(std::string_view name) -> std::expected<bool, std::string>;
-    
+
     // C++20 coroutine support for async operations
     auto asyncLoadComponent(std::string_view name) -> std::coroutine_handle<>;
-    
+
     // C++23 optimized lock-free operations
-    [[nodiscard]] auto tryFastRead(std::string_view name) const noexcept 
+    [[nodiscard]] auto tryFastRead(std::string_view name) const noexcept
         -> std::optional<std::weak_ptr<Component>>;
     void optimizedBatchUpdate(std::span<const std::string> names,
                              std::function<void(const std::string&)> operation);
-    
+
     // Lock-free performance counters
     void incrementOperationCounter() noexcept {
         operationCounter_.fetch_add(1, std::memory_order_relaxed);
     }
-    
-    // C++23 atomic wait/notify optimizations  
+
+    // C++23 atomic wait/notify optimizations
     void waitForUpdatesComplete() const noexcept;
     void notifyUpdateComplete() const noexcept;
-    
+
     // Template constraint helpers
     template<typename T>
-    static constexpr bool is_valid_component_name_v = 
-        std::convertible_to<T, std::string_view> && 
+    static constexpr bool is_valid_component_name_v =
+        std::convertible_to<T, std::string_view> &&
         !std::same_as<std::remove_cvref_t<T>, std::nullptr_t>;
 };
 

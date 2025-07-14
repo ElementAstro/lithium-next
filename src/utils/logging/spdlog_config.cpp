@@ -32,7 +32,7 @@ namespace lithium::logging {
 
 namespace {
     // Thread-safe logger registry with heterogeneous lookup
-    std::unordered_map<std::string, std::shared_ptr<spdlog::logger>, 
+    std::unordered_map<std::string, std::shared_ptr<spdlog::logger>,
                        std::hash<std::string_view>, std::equal_to<>> logger_registry_;
     std::shared_mutex registry_mutex_;
 }
@@ -69,7 +69,7 @@ void LogConfig::initialize(const LoggerConfig& config) {
             std::fprintf(stderr, "spdlog error: %s\n", msg.c_str());
         });
 
-        LITHIUM_LOG_INFO(default_logger, 
+        LITHIUM_LOG_INFO(default_logger,
                         "High-performance logging initialized with C++23 optimizations");
 
     } catch (const std::exception& e) {
@@ -79,11 +79,11 @@ void LogConfig::initialize(const LoggerConfig& config) {
     }
 }
 
-auto LogConfig::getLogger(std::string_view name, const LoggerConfig& config) 
+auto LogConfig::getLogger(std::string_view name, const LoggerConfig& config)
     -> std::shared_ptr<spdlog::logger> {
-    
+
     std::string nameStr{name}; // Convert to string for map lookup
-    
+
     // Fast path: check with shared lock first
     {
         std::shared_lock lock(registry_mutex_);
@@ -94,7 +94,7 @@ auto LogConfig::getLogger(std::string_view name, const LoggerConfig& config)
 
     // Slow path: create new logger with unique lock
     std::unique_lock lock(registry_mutex_);
-    
+
     // Double-check pattern
     if (auto it = logger_registry_.find(nameStr); it != logger_registry_.end()) {
         return it->second;
@@ -135,12 +135,12 @@ auto LogConfig::getLogger(std::string_view name, const LoggerConfig& config)
             callback_sink->set_level(spdlog::level::trace);
             sinks.push_back(callback_sink);
 
-            logger = std::make_shared<spdlog::logger>(std::string{name}, 
+            logger = std::make_shared<spdlog::logger>(std::string{name},
                                                      sinks.begin(), sinks.end());
         }
 
         logger->set_level(convertLevel(config.level));
-        
+
         if (config.flush_on_error) {
             logger->flush_on(spdlog::level::err);
         }
@@ -152,14 +152,14 @@ auto LogConfig::getLogger(std::string_view name, const LoggerConfig& config)
         return logger;
 
     } catch (const std::exception& e) {
-        throw std::runtime_error(std::format("Failed to create logger '{}': {}", 
+        throw std::runtime_error(std::format("Failed to create logger '{}': {}",
                                             name, e.what()));
     }
 }
 
 auto LogConfig::createAsyncLogger(std::string_view name, const LoggerConfig& config)
     -> std::shared_ptr<spdlog::async_logger> {
-    
+
     try {
         // Create sinks
         std::vector<spdlog::sink_ptr> sinks;
@@ -192,8 +192,8 @@ auto LogConfig::createAsyncLogger(std::string_view name, const LoggerConfig& con
 
         // Create async logger with optimized overflow policy
         auto logger = std::make_shared<spdlog::async_logger>(
-            std::string{name}, 
-            sinks.begin(), 
+            std::string{name},
+            sinks.begin(),
             sinks.end(),
             spdlog::thread_pool(),
             spdlog::async_overflow_policy::block);
@@ -228,17 +228,17 @@ auto LogConfig::getMetrics() noexcept -> json {
         metrics["error_count"] = error_count_.load(std::memory_order_relaxed);
         metrics["global_level"] = static_cast<int>(global_level_.load(std::memory_order_relaxed));
         metrics["initialized"] = initialized_.load(std::memory_order_relaxed);
-        
+
         std::shared_lock lock(registry_mutex_);
         metrics["registered_loggers"] = logger_registry_.size();
-        
+
         std::vector<std::string> logger_names;
         logger_names.reserve(logger_registry_.size());
         for (const auto& [name, logger] : logger_registry_) {
             logger_names.push_back(name);
         }
         metrics["logger_names"] = std::move(logger_names);
-        
+
     } catch (...) {
         metrics["error"] = "Failed to collect metrics";
     }

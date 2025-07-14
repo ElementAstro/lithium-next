@@ -51,10 +51,10 @@ struct PoolConnection {
     std::shared_ptr<AtomDriver> device;
     ConnectionState state{ConnectionState::IDLE};
     ConnectionHealth health{ConnectionHealth::UNKNOWN};
-    
+
     std::chrono::system_clock::time_point created_at;
     std::chrono::system_clock::time_point last_used;
-    
+
     size_t usage_count{0};
     size_t error_count{0};
 };
@@ -73,27 +73,27 @@ public:
     DeviceConnectionPool();
     explicit DeviceConnectionPool(const ConnectionPoolConfig& config);
     ~DeviceConnectionPool();
-    
+
     // Basic management
     void initialize();
     void shutdown();
     bool isInitialized() const;
-    
+
     // Device registration
     void registerDevice(const std::string& device_name, std::shared_ptr<AtomDriver> device);
     void unregisterDevice(const std::string& device_name);
-    
+
     // Connection management
-    std::string acquireConnection(const std::string& device_name, 
+    std::string acquireConnection(const std::string& device_name,
                                 std::chrono::milliseconds timeout = std::chrono::milliseconds{30000});
     bool releaseConnection(const std::string& connection_id);
     bool isConnectionActive(const std::string& connection_id) const;
     std::shared_ptr<AtomDriver> getDevice(const std::string& connection_id) const;
-    
+
     // Statistics and monitoring
     ConnectionStatistics getStatistics() const;
     std::string getPoolStatus() const;
-    
+
     // Maintenance and optimization
     void runMaintenance();
     bool isPerformanceOptimizationEnabled() const;

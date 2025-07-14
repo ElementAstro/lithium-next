@@ -57,26 +57,26 @@ class OperationMetric:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
-            'operation': self.operation,
-            'package_name': self.package_name,
-            'duration': self.duration,
-            'success': self.success,
-            'timestamp': self.timestamp.isoformat(),
-            'memory_usage': self.memory_usage,
-            'cpu_usage': self.cpu_usage,
+            "operation": self.operation,
+            "package_name": self.package_name,
+            "duration": self.duration,
+            "success": self.success,
+            "timestamp": self.timestamp.isoformat(),
+            "memory_usage": self.memory_usage,
+            "cpu_usage": self.cpu_usage,
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> OperationMetric:
         """Create from dictionary."""
         return cls(
-            operation=data['operation'],
-            package_name=data['package_name'],
-            duration=data['duration'],
-            success=data['success'],
-            timestamp=datetime.fromisoformat(data['timestamp']),
-            memory_usage=data.get('memory_usage'),
-            cpu_usage=data.get('cpu_usage'),
+            operation=data["operation"],
+            package_name=data["package_name"],
+            duration=data["duration"],
+            success=data["success"],
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            memory_usage=data.get("memory_usage"),
+            cpu_usage=data.get("cpu_usage"),
         )
 
 
@@ -86,8 +86,7 @@ class PackageAnalytics:
 
     cache: LRUCache[Any] = field(default_factory=lambda: LRUCache(1000, 3600))
     _metrics: List[OperationMetric] = field(default_factory=list, init=False)
-    _usage_stats: Dict[str, PackageUsageStats] = field(
-        default_factory=dict, init=False)
+    _usage_stats: Dict[str, PackageUsageStats] = field(default_factory=dict, init=False)
     _start_time: Optional[float] = field(default=None, init=False)
 
     # Class-level constants
@@ -98,7 +97,9 @@ class PackageAnalytics:
         """Start tracking an operation."""
         self._start_time = time.perf_counter()
 
-    def end_operation(self, operation: str, package_name: str, success: bool = True) -> None:
+    def end_operation(
+        self, operation: str, package_name: str, success: bool = True
+    ) -> None:
         """End tracking an operation and record metrics."""
         if self._start_time is None:
             return
@@ -121,9 +122,11 @@ class PackageAnalytics:
         self._metrics.append(metric)
         if len(self._metrics) > self.MAX_METRICS:
             # Remove oldest metrics when exceeding limit
-            self._metrics = self._metrics[-self.MAX_METRICS // 2:]
+            self._metrics = self._metrics[-self.MAX_METRICS // 2 :]
 
-    def _update_usage_stats(self, operation: str, package_name: str, duration: float) -> None:
+    def _update_usage_stats(
+        self, operation: str, package_name: str, duration: float
+    ) -> None:
         """Update usage statistics for a package."""
         if package_name not in self._usage_stats:
             self._usage_stats[package_name] = PackageUsageStats(
@@ -136,17 +139,18 @@ class PackageAnalytics:
             )
 
         stats = self._usage_stats[package_name]
-        stats['last_accessed'] = datetime.now()
+        stats["last_accessed"] = datetime.now()
 
-        if operation == 'install':
-            stats['install_count'] += 1
-            stats['total_install_time'] += duration
-            stats['avg_install_time'] = stats['total_install_time'] / \
-                stats['install_count']
-        elif operation == 'remove':
-            stats['remove_count'] += 1
-        elif operation == 'upgrade':
-            stats['upgrade_count'] += 1
+        if operation == "install":
+            stats["install_count"] += 1
+            stats["total_install_time"] += duration
+            stats["avg_install_time"] = (
+                stats["total_install_time"] / stats["install_count"]
+            )
+        elif operation == "remove":
+            stats["remove_count"] += 1
+        elif operation == "upgrade":
+            stats["upgrade_count"] += 1
 
     def get_operation_stats(self, operation: Optional[str] = None) -> Dict[str, Any]:
         """Get statistics for operations."""
@@ -161,12 +165,12 @@ class PackageAnalytics:
         success_count = sum(1 for m in metrics if m.success)
 
         return {
-            'total_operations': len(metrics),
-            'success_rate': success_count / len(metrics) if metrics else 0,
-            'avg_duration': sum(durations) / len(durations) if durations else 0,
-            'min_duration': min(durations) if durations else 0,
-            'max_duration': max(durations) if durations else 0,
-            'operations_by_package': Counter(m.package_name for m in metrics),
+            "total_operations": len(metrics),
+            "success_rate": success_count / len(metrics) if metrics else 0,
+            "avg_duration": sum(durations) / len(durations) if durations else 0,
+            "min_duration": min(durations) if durations else 0,
+            "max_duration": max(durations) if durations else 0,
+            "operations_by_package": Counter(m.package_name for m in metrics),
         }
 
     def get_package_usage(self, package_name: str) -> Optional[PackageUsageStats]:
@@ -176,8 +180,9 @@ class PackageAnalytics:
     def get_most_used_packages(self, limit: int = 10) -> List[Tuple[str, int]]:
         """Get most frequently used packages."""
         package_counts = {
-            name: stats['install_count'] +
-            stats['remove_count'] + stats['upgrade_count']
+            name: stats["install_count"]
+            + stats["remove_count"]
+            + stats["upgrade_count"]
             for name, stats in self._usage_stats.items()
         }
         return sorted(package_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
@@ -189,10 +194,7 @@ class PackageAnalytics:
     def get_recent_failures(self, hours: int = 24) -> List[OperationMetric]:
         """Get recent failed operations."""
         cutoff = datetime.now() - timedelta(hours=hours)
-        return [
-            m for m in self._metrics
-            if not m.success and m.timestamp >= cutoff
-        ]
+        return [m for m in self._metrics if not m.success and m.timestamp >= cutoff]
 
     def get_system_metrics(self) -> SystemMetrics:
         """Get system-wide package metrics."""
@@ -222,23 +224,29 @@ class PackageAnalytics:
     def generate_report(self, include_details: bool = False) -> Dict[str, Any]:
         """Generate a comprehensive analytics report."""
         report = {
-            'generated_at': datetime.now().isoformat(),
-            'metrics_count': len(self._metrics),
-            'tracked_packages': len(self._usage_stats),
-            'overall_stats': self.get_operation_stats(),
-            'most_used_packages': self.get_most_used_packages(),
-            'system_metrics': self.get_system_metrics(),
+            "generated_at": datetime.now().isoformat(),
+            "metrics_count": len(self._metrics),
+            "tracked_packages": len(self._usage_stats),
+            "overall_stats": self.get_operation_stats(),
+            "most_used_packages": self.get_most_used_packages(),
+            "system_metrics": self.get_system_metrics(),
         }
 
         if include_details:
-            report.update({
-                'slowest_operations': [m.to_dict() for m in self.get_slowest_operations()],
-                'recent_failures': [m.to_dict() for m in self.get_recent_failures()],
-                'operation_breakdown': {
-                    op: self.get_operation_stats(op)
-                    for op in {'install', 'remove', 'upgrade', 'search'}
-                },
-            })
+            report.update(
+                {
+                    "slowest_operations": [
+                        m.to_dict() for m in self.get_slowest_operations()
+                    ],
+                    "recent_failures": [
+                        m.to_dict() for m in self.get_recent_failures()
+                    ],
+                    "operation_breakdown": {
+                        op: self.get_operation_stats(op)
+                        for op in {"install", "remove", "upgrade", "search"}
+                    },
+                }
+            )
 
         return report
 
@@ -247,32 +255,32 @@ class PackageAnalytics:
         import json
 
         data = {
-            'metrics': [m.to_dict() for m in self._metrics],
-            'usage_stats': self._usage_stats,
-            'exported_at': datetime.now().isoformat(),
+            "metrics": [m.to_dict() for m in self._metrics],
+            "usage_stats": self._usage_stats,
+            "exported_at": datetime.now().isoformat(),
         }
 
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
 
     def import_metrics(self, file_path: Path) -> None:
         """Import metrics from a file."""
         import json
 
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        self._metrics = [
-            OperationMetric.from_dict(m) for m in data.get('metrics', [])
-        ]
-        self._usage_stats = data.get('usage_stats', {})
+        self._metrics = [OperationMetric.from_dict(m) for m in data.get("metrics", [])]
+        self._usage_stats = data.get("usage_stats", {})
 
     def clear_metrics(self) -> None:
         """Clear all stored metrics and statistics."""
         self._metrics.clear()
         self._usage_stats.clear()
 
-    async def async_generate_report(self, include_details: bool = False) -> Dict[str, Any]:
+    async def async_generate_report(
+        self, include_details: bool = False
+    ) -> Dict[str, Any]:
         """Asynchronously generate analytics report."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.generate_report, include_details)
@@ -300,6 +308,8 @@ def create_analytics(cache: Optional[LRUCache[Any]] = None) -> PackageAnalytics:
     return PackageAnalytics(cache=cache or LRUCache(1000, 3600))
 
 
-async def async_create_analytics(cache: Optional[LRUCache[Any]] = None) -> PackageAnalytics:
+async def async_create_analytics(
+    cache: Optional[LRUCache[Any]] = None,
+) -> PackageAnalytics:
     """Asynchronously create analytics instance."""
     return create_analytics(cache)

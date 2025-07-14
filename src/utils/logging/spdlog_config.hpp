@@ -86,18 +86,18 @@ public:
      * @param config Optional custom configuration
      * @return Shared pointer to logger
      */
-    static auto getLogger(std::string_view name, 
-                         const LoggerConfig& config = LoggerConfig{}) 
+    static auto getLogger(std::string_view name,
+                         const LoggerConfig& config = LoggerConfig{})
         -> std::shared_ptr<spdlog::logger>;
 
     /**
      * @brief Create high-performance async logger
-     * @param name Logger name  
+     * @param name Logger name
      * @param config Logger configuration
      * @return Async logger instance
      */
     static auto createAsyncLogger(std::string_view name,
-                                 const LoggerConfig& config) 
+                                 const LoggerConfig& config)
         -> std::shared_ptr<spdlog::async_logger>;
 
     /**
@@ -164,8 +164,8 @@ private:
             , scope_name_(scope_name)
             , start_time_(std::chrono::high_resolution_clock::now()) {
             if constexpr (sizeof...(args) > 0) {
-                logger_->debug("Entering scope: {} with args: {}", 
-                              scope_name_, 
+                logger_->debug("Entering scope: {} with args: {}",
+                              scope_name_,
                               std::format("{}", std::forward<Args>(args)...));
             } else {
                 logger_->debug("Entering scope: {}", scope_name_);
@@ -193,11 +193,11 @@ private:
 
     static inline std::atomic<bool> initialized_{false};
     static inline std::atomic<LogLevel> global_level_{LogLevel::INFO};
-    
+
     // Performance metrics
     static inline std::atomic<std::uint64_t> total_logs_{0};
     static inline std::atomic<std::uint64_t> error_count_{0};
-    
+
     static auto convertLevel(LogLevel level) noexcept -> spdlog::level::level_enum;
     static auto convertLevel(spdlog::level::level_enum level) noexcept -> LogLevel;
 };

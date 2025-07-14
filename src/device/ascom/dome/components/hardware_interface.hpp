@@ -24,9 +24,9 @@ namespace lithium::ascom::dome::components {
 
 /**
  * @brief Hardware Interface for ASCOM Dome
- * 
- * This component provides a low-level hardware abstraction layer for 
- * communicating with the physical dome device through either ASCOM COM 
+ *
+ * This component provides a low-level hardware abstraction layer for
+ * communicating with the physical dome device through either ASCOM COM
  * drivers or Alpaca REST API.
  */
 class HardwareInterface {
@@ -100,7 +100,7 @@ public:
     auto getDriverVersion() -> std::optional<std::string>;
     auto getInterfaceVersion() -> std::optional<int>;
     auto getDeviceName() -> std::optional<std::string>;
-    
+
     // === Alpaca Connection Info ===
     auto getAlpacaHost() const -> std::string;
     auto getAlpacaPort() const -> int;
@@ -116,7 +116,7 @@ protected:
     std::atomic<bool> is_connected_{false};
     std::atomic<ConnectionType> connection_type_{ConnectionType::ALPACA_REST};
     std::atomic<HardwareStatus> hardware_status_{HardwareStatus::DISCONNECTED};
-    
+
     // === Capability Cache ===
     struct Capabilities {
         bool can_find_home{false};
@@ -156,10 +156,10 @@ protected:
     auto parseAlpacaUrl(const std::string& url) -> bool;
 
     // === Hardware-specific command implementations ===
-    virtual auto sendAlpacaCommand(const std::string& endpoint, const std::string& method, 
+    virtual auto sendAlpacaCommand(const std::string& endpoint, const std::string& method,
                                   const std::string& params = "") -> std::optional<std::string>;
     virtual auto sendCOMCommand(const std::string& method, const std::string& params = "") -> std::optional<std::string>;
-    
+
     // === Alpaca-specific helpers ===
     auto sendAlpacaRequest(const std::string& method, const std::string& endpoint, const std::string& params = "") -> std::optional<std::string>;
     auto parseAlpacaResponse(const std::string& response) -> std::optional<std::string>;

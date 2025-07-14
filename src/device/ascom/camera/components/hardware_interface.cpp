@@ -33,7 +33,7 @@ and both COM and Alpaca protocol integration.
 
 namespace lithium::device::ascom::camera::components {
 
-HardwareInterface::HardwareInterface(boost::asio::io_context& io_context) 
+HardwareInterface::HardwareInterface(boost::asio::io_context& io_context)
     : io_context_(io_context) {
     spdlog::info("ASCOM Hardware Interface created");
 }
@@ -120,9 +120,9 @@ auto HardwareInterface::discoverDevices() -> std::vector<std::string> {
 
 auto HardwareInterface::discoverAlpacaDevices() -> std::vector<std::string> {
     std::vector<std::string> devices;
-    
+
     spdlog::info("Discovering Alpaca camera devices using optimized client");
-    
+
     if (!alpaca_client_) {
         spdlog::error("Alpaca client not initialized");
         return devices;
@@ -134,24 +134,24 @@ auto HardwareInterface::discoverAlpacaDevices() -> std::vector<std::string> {
             auto result = co_await alpaca_client_->discover_devices();
             if (result) {
                 for (const auto& device : result.value()) {
-                    devices.push_back(std::format("{}:{}/camera/{}", 
+                    devices.push_back(std::format("{}:{}/camera/{}",
                                                 device.host, device.port, device.number));
                 }
             }
         }, boost::asio::detached);
-        
+
         // Give some time for discovery
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        
+
     } catch (const std::exception& e) {
         spdlog::error("Error during Alpaca device discovery: {}", e.what());
     }
-    
+
     // If no devices found, add localhost default
     if (devices.empty()) {
         devices.push_back("localhost:11111/camera/0");
     }
-    
+
     spdlog::debug("Found {} Alpaca devices", devices.size());
     return devices;
 }
@@ -632,7 +632,7 @@ auto HardwareInterface::setSubFrame(int startX, int startY, int numX, int numY) 
 
     if (connectionType_ == ConnectionType::ALPACA_REST) {
         std::ostringstream params;
-        params << "StartX=" << startX << "&StartY=" << startY 
+        params << "StartX=" << startX << "&StartY=" << startY
                << "&NumX=" << numX << "&NumY=" << numY;
         auto response = const_cast<HardwareInterface*>(this)->sendAlpacaRequest("PUT", "frame", params.str());
         return response.has_value();
@@ -650,10 +650,10 @@ auto HardwareInterface::setSubFrame(int startX, int startY, int numX, int numY) 
 
         value.intVal = startY;
         if (!setCOMProperty("StartY", value)) return false;
-        
+
         value.intVal = numX;
         if (!setCOMProperty("NumX", value)) return false;
-        
+
         value.intVal = numY;
         if (!setCOMProperty("NumY", value)) return false;
 
@@ -706,7 +706,7 @@ auto HardwareInterface::sendAlpacaRequest(const std::string& method,
     // Legacy method implementation for compatibility
     // TODO: Replace with proper alpaca_client_ usage
     spdlog::debug("sendAlpacaRequest called: {} {} {}", method, endpoint, params);
-    
+
     // For now, return a placeholder to prevent compile errors
     // This should be replaced with actual Alpaca API calls
     if (endpoint == "camerastate") {
@@ -716,7 +716,7 @@ auto HardwareInterface::sendAlpacaRequest(const std::string& method,
     } else if (endpoint == "gain" || endpoint == "offset") {
         return "100"; // Default value
     }
-    
+
     return std::nullopt;
 }
 
@@ -900,7 +900,7 @@ auto HardwareInterface::connectAlpaca(const ConnectionSettings& settings) -> boo
         device_info.host = settings.host;
         device_info.port = settings.port;
         device_info.number = settings.deviceNumber;
-        
+
         // For now, set connected state directly
         deviceName_ = settings.deviceName;
         connected_ = true;

@@ -20,8 +20,8 @@ set_target_properties(lithium_device_ascom_rotator PROPERTIES
 )
 
 # Include directories
-target_include_directories(lithium_device_ascom_rotator 
-    PUBLIC 
+target_include_directories(lithium_device_ascom_rotator
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/..
     PRIVATE
@@ -29,8 +29,8 @@ target_include_directories(lithium_device_ascom_rotator
 )
 
 # Link dependencies
-target_link_libraries(lithium_device_ascom_rotator 
-    PUBLIC 
+target_link_libraries(lithium_device_ascom_rotator
+    PUBLIC
         lithium_device_template
         atom
     PRIVATE
@@ -40,7 +40,7 @@ target_link_libraries(lithium_device_ascom_rotator
 
 # Platform-specific dependencies
 if(WIN32)
-    target_link_libraries(lithium_device_ascom_rotator PRIVATE 
+    target_link_libraries(lithium_device_ascom_rotator PRIVATE
         ole32 oleaut32 uuid comctl32 wbemuuid)
     target_compile_definitions(lithium_device_ascom_rotator PRIVATE
         WIN32_LEAN_AND_MEAN
@@ -53,7 +53,7 @@ if(UNIX)
     pkg_check_modules(CURL REQUIRED libcurl)
     target_link_libraries(lithium_device_ascom_rotator PRIVATE ${CURL_LIBRARIES})
     target_include_directories(lithium_device_ascom_rotator PRIVATE ${CURL_INCLUDE_DIRS})
-    
+
     # Find Boost for asio (if needed)
     find_package(Boost REQUIRED COMPONENTS system)
     target_link_libraries(lithium_device_ascom_rotator PRIVATE Boost::system)
@@ -62,13 +62,13 @@ endif()
 # Integration test (if testing is enabled)
 if(BUILD_TESTING)
     add_executable(rotator_integration_test rotator_integration_test.cpp)
-    target_link_libraries(rotator_integration_test PRIVATE 
+    target_link_libraries(rotator_integration_test PRIVATE
         lithium_device_ascom_rotator
         lithium_device_template
         atom
     )
     target_include_directories(rotator_integration_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    
+
     # Add test
     add_test(NAME RotatorModularIntegrationTest COMMAND rotator_integration_test)
 endif()

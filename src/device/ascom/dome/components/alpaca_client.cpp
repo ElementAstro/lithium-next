@@ -97,7 +97,7 @@ auto AlpacaClient::getDeviceInfo() -> std::optional<DeviceInfo> {
     if (!impl_->is_connected_) {
         return std::nullopt;
     }
-    
+
     DeviceInfo info;
     info.name = "Alpaca Dome";
     info.device_type = "Dome";

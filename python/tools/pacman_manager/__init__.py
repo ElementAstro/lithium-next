@@ -14,12 +14,25 @@ __description__ = "Advanced Pacman Package Manager with Modern Python Features"
 from .manager import PacmanManager
 from .config import PacmanConfig
 from .models import PackageInfo, PackageStatus, CommandResult
+
 # Exceptions
 from .exceptions import (
-    PacmanError, CommandError, PackageNotFoundError, ConfigError,
-    DependencyError, PermissionError, NetworkError, CacheError,
-    ValidationError, PluginError, DatabaseError, RepositoryError,
-    SignatureError, LockError, ErrorContext, create_error_context
+    PacmanError,
+    CommandError,
+    PackageNotFoundError,
+    ConfigError,
+    DependencyError,
+    PermissionError,
+    NetworkError,
+    CacheError,
+    ValidationError,
+    PluginError,
+    DatabaseError,
+    RepositoryError,
+    SignatureError,
+    LockError,
+    ErrorContext,
+    create_error_context,
 )
 from .async_manager import AsyncPacmanManager
 from .api import PacmanAPI
@@ -64,12 +77,10 @@ __all__ = [
     "PacmanConfig",
     "PacmanAPI",
     "CLI",
-
     # Data models
     "PackageInfo",
     "PackageStatus",
     "CommandResult",
-
     # Exceptions
     "PacmanError",
     "CommandError",
@@ -87,7 +98,6 @@ __all__ = [
     "LockError",
     "ErrorContext",
     "create_error_context",
-
     # Advanced features
     "PackageCache",
     "PackageAnalytics",
@@ -97,7 +107,6 @@ __all__ = [
     "BackupPlugin",
     "NotificationPlugin",
     "SecurityPlugin",
-
     # Type definitions
     "PackageName",
     "PackageVersion",
@@ -105,18 +114,15 @@ __all__ = [
     "CacheKey",
     "CommandOptions",
     "SearchFilter",
-
     # Context managers
     "PacmanContext",
     "async_pacman_context",
-
     # Decorators
     "require_sudo",
     "validate_package",
     "cache_result",
     "retry_on_failure",
     "benchmark",
-
     # Metadata
     "__version__",
     "__author__",
@@ -132,8 +138,8 @@ def quick_install(package: str, **kwargs) -> bool:
         manager = PacmanManager()
         result = manager.install_package(package, **kwargs)
         # Handle different return types
-        if hasattr(result, '__getitem__') and 'success' in result:
-            return result['success']
+        if hasattr(result, "__getitem__") and "success" in result:
+            return result["success"]
         return bool(result)
     except Exception:
         return False
@@ -153,11 +159,12 @@ async def async_quick_install(package: str, **kwargs) -> bool:
     """Async quick package installation."""
     try:
         from .async_manager import AsyncPacmanManager
+
         manager = AsyncPacmanManager()
         result = await manager.install_package(package, **kwargs)
         # Handle different return types
-        if hasattr(result, '__getitem__') and 'success' in result:
-            return result['success']
+        if hasattr(result, "__getitem__") and "success" in result:
+            return result["success"]
         return bool(result)
     except Exception:
         return False
@@ -167,6 +174,7 @@ async def async_quick_search(query: str, limit: int = 10) -> list[PackageInfo]:
     """Async quick package search."""
     try:
         from .async_manager import AsyncPacmanManager
+
         manager = AsyncPacmanManager()
         results = await manager.search_packages(query, limit=limit)
         return results

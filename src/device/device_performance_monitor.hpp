@@ -38,7 +38,7 @@ struct PerformanceMetrics {
     double memory_usage{0.0}; // MB
     size_t queue_depth{0};
     size_t concurrent_operations{0};
-    
+
     std::chrono::system_clock::time_point timestamp;
 };
 
@@ -70,7 +70,7 @@ struct PerformanceThresholds {
     double max_memory_usage{1024.0};     // MB
     size_t max_queue_depth{100};
     size_t max_concurrent_operations{10};
-    
+
     // Alert thresholds
     std::chrono::milliseconds warning_response_time{2000};
     std::chrono::milliseconds critical_response_time{10000};
@@ -84,14 +84,14 @@ struct PerformanceStatistics {
     PerformanceMetrics average;
     PerformanceMetrics minimum;
     PerformanceMetrics maximum;
-    
+
     size_t total_operations{0};
     size_t successful_operations{0};
     size_t failed_operations{0};
-    
+
     std::chrono::system_clock::time_point start_time;
     std::chrono::system_clock::time_point last_update;
-    
+
     std::vector<PerformanceAlert> recent_alerts;
 };
 
@@ -114,52 +114,52 @@ class DevicePerformanceMonitor {
 public:
     DevicePerformanceMonitor();
     ~DevicePerformanceMonitor();
-    
+
     // Configuration
     void setMonitoringConfig(const MonitoringConfig& config);
     MonitoringConfig getMonitoringConfig() const;
-    
+
     // Device management
     void addDevice(const std::string& name, std::shared_ptr<AtomDriver> device);
     void removeDevice(const std::string& name);
     bool isDeviceMonitored(const std::string& name) const;
-    
+
     // Threshold management
     void setThresholds(const std::string& device_name, const PerformanceThresholds& thresholds);
     PerformanceThresholds getThresholds(const std::string& device_name) const;
     void setGlobalThresholds(const PerformanceThresholds& thresholds);
     PerformanceThresholds getGlobalThresholds() const;
-    
+
     // Monitoring control
     void startMonitoring();
     void stopMonitoring();
     bool isMonitoring() const;
-    
+
     void startDeviceMonitoring(const std::string& device_name);
     void stopDeviceMonitoring(const std::string& device_name);
     bool isDeviceMonitoring(const std::string& device_name) const;
-    
+
     // Metrics collection
-    void recordOperation(const std::string& device_name, 
-                        std::chrono::milliseconds duration, 
+    void recordOperation(const std::string& device_name,
+                        std::chrono::milliseconds duration,
                         bool success);
     void recordMetrics(const std::string& device_name, const PerformanceMetrics& metrics);
-    
+
     // Performance query
     PerformanceMetrics getCurrentMetrics(const std::string& device_name) const;
     PerformanceStatistics getStatistics(const std::string& device_name) const;
-    std::vector<PerformanceMetrics> getMetricsHistory(const std::string& device_name, 
+    std::vector<PerformanceMetrics> getMetricsHistory(const std::string& device_name,
                                                      size_t count = 100) const;
-    
+
     // Alert management
     void setAlertCallback(PerformanceAlertCallback callback);
     void setUpdateCallback(PerformanceUpdateCallback callback);
-    
+
     std::vector<PerformanceAlert> getActiveAlerts() const;
     std::vector<PerformanceAlert> getDeviceAlerts(const std::string& device_name) const;
     void clearAlerts(const std::string& device_name = "");
     void acknowledgeAlert(const PerformanceAlert& alert);
-    
+
     // Analysis and prediction
     struct PredictionResult {
         std::string device_name;
@@ -169,10 +169,10 @@ public:
         std::chrono::system_clock::time_point prediction_time;
         std::chrono::seconds time_horizon;
     };
-    
-    std::vector<PredictionResult> predictPerformance(const std::string& device_name, 
+
+    std::vector<PredictionResult> predictPerformance(const std::string& device_name,
                                                    std::chrono::seconds horizon) const;
-    
+
     // Performance optimization suggestions
     struct OptimizationSuggestion {
         std::string device_name;
@@ -182,9 +182,9 @@ public:
         double expected_improvement;
         int priority;
     };
-    
+
     std::vector<OptimizationSuggestion> getOptimizationSuggestions(const std::string& device_name) const;
-    
+
     // System-wide monitoring
     struct SystemPerformance {
         size_t total_devices{0};
@@ -196,32 +196,32 @@ public:
         size_t total_operations{0};
         size_t total_alerts{0};
     };
-    
+
     SystemPerformance getSystemPerformance() const;
-    
+
     // Reporting
-    std::string generateReport(const std::string& device_name, 
+    std::string generateReport(const std::string& device_name,
                               std::chrono::system_clock::time_point start_time,
                               std::chrono::system_clock::time_point end_time) const;
-    
-    void exportMetrics(const std::string& device_name, 
+
+    void exportMetrics(const std::string& device_name,
                       const std::string& output_path,
                       const std::string& format = "csv") const;
-    
+
     // Maintenance
     void cleanup();
     void resetStatistics(const std::string& device_name = "");
-    
+
 private:
     class Impl;
     std::unique_ptr<Impl> pimpl_;
-    
+
     // Internal methods
     void monitoringLoop();
     void updateDeviceMetrics(const std::string& device_name);
     void checkThresholds(const std::string& device_name, const PerformanceMetrics& metrics);
     void triggerAlert(const PerformanceAlert& alert);
-    
+
     // Analysis methods
     double calculateTrend(const std::vector<double>& values) const;
     double calculateMovingAverage(const std::vector<double>& values, size_t window_size) const;
@@ -233,12 +233,12 @@ namespace performance_utils {
     double calculatePercentile(const std::vector<double>& values, double percentile);
     double calculateStandardDeviation(const std::vector<double>& values);
     std::vector<double> smoothData(const std::vector<double>& values, size_t window_size);
-    
+
     // Resource monitoring
     double getCurrentCpuUsage();
     double getCurrentMemoryUsage();
     double getProcessMemoryUsage();
-    
+
     // Time utilities
     std::chrono::milliseconds getCurrentTime();
     std::string formatDuration(std::chrono::milliseconds duration);

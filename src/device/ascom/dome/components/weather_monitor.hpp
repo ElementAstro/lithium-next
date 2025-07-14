@@ -75,7 +75,7 @@ public:
     auto startMonitoring() -> bool;
     auto stopMonitoring() -> bool;
     auto isMonitoring() -> bool;
-    
+
     // === Weather Data ===
     auto getCurrentWeather() -> WeatherData;
     auto getWeatherHistory(int hours) -> std::vector<WeatherData>;

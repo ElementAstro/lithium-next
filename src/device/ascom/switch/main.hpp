@@ -31,7 +31,7 @@ namespace lithium::device::ascom::sw {
 
 /**
  * @brief Main ASCOM Switch Integration Class
- * 
+ *
  * This class provides the primary integration interface for the modular
  * ASCOM switch system. It encapsulates the controller and provides
  * simplified access to switch functionality.
@@ -221,13 +221,13 @@ public:
 
 class ConfigurationException : public ASCOMSwitchMainException {
 public:
-    explicit ConfigurationException(const std::string& message) 
+    explicit ConfigurationException(const std::string& message)
         : ASCOMSwitchMainException("Configuration error: " + message) {}
 };
 
 class InitializationException : public ASCOMSwitchMainException {
 public:
-    explicit InitializationException(const std::string& message) 
+    explicit InitializationException(const std::string& message)
         : ASCOMSwitchMainException("Initialization error: " + message) {}
 };
 
