@@ -10,6 +10,7 @@ import platform
 
 class HashAlgorithm(str, Enum):
     """Supported hash algorithms for file verification."""
+
     MD5 = "md5"
     SHA1 = "sha1"
     SHA256 = "sha256"

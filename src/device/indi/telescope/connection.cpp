@@ -25,10 +25,10 @@ auto TelescopeConnection::connect(const std::string& deviceName, int timeout, in
 
     deviceName_ = deviceName;
     spdlog::info("Connecting to telescope device: {}...", deviceName_);
-    
+
     // Implementation would depend on INDI client setup
     // This is a placeholder for the actual INDI connection logic
-    
+
     return true;
 }
 
@@ -37,7 +37,7 @@ auto TelescopeConnection::disconnect() -> bool {
         spdlog::warn("Telescope {} is not connected.", deviceName_);
         return false;
     }
-    
+
     spdlog::info("Disconnecting from telescope device: {}", deviceName_);
     isConnected_.store(false);
     return true;
@@ -63,7 +63,7 @@ auto TelescopeConnection::getDevice() const -> INDI::BaseDevice {
 
 auto TelescopeConnection::setConnectionMode(ConnectionMode mode) -> bool {
     connectionMode_ = mode;
-    spdlog::info("Connection mode set to: {}", 
+    spdlog::info("Connection mode set to: {}",
                 static_cast<int>(mode));
     return true;
 }

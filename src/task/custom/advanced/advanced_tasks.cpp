@@ -6,17 +6,17 @@ namespace lithium::task::advanced {
 
 void registerAdvancedTasks() {
     LOG_F(INFO, "Registering advanced astrophotography tasks...");
-    
+
     // Tasks are automatically registered via the AUTO_REGISTER_TASK macros
     // in their respective implementation files
-    
+
     LOG_F(INFO, "Advanced tasks registration completed");
 }
 
 std::vector<std::string> getAdvancedTaskNames() {
     return {
         "SmartExposure",
-        "DeepSkySequence", 
+        "DeepSkySequence",
         "PlanetaryImaging",
         "Timelapse",
         "MeridianFlip",
@@ -31,7 +31,7 @@ std::vector<std::string> getAdvancedTaskNames() {
 
 bool isAdvancedTask(const std::string& taskName) {
     const auto advancedTasks = getAdvancedTaskNames();
-    return std::find(advancedTasks.begin(), advancedTasks.end(), taskName) 
+    return std::find(advancedTasks.begin(), advancedTasks.end(), taskName)
            != advancedTasks.end();
 }
 

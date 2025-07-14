@@ -293,10 +293,10 @@ while (tempCtrl->isCoolerOn()) {
     auto temp = tempCtrl->getTemperature();
     double power = tempCtrl->getCoolingPower();
     double stability = tempCtrl->getTemperatureStability();
-    
+
     LOG_F(INFO, "Temp: {:.1f}°C, Power: {:.1f}%, Stability: {:.3f}°C",
           temp.value_or(25.0), power, stability);
-    
+
     std::this_thread::sleep_for(std::chrono::minutes(1));
 }
 ```
@@ -310,7 +310,7 @@ auto hwCtrl = camera->getHardwareController();
 std::vector<int> focusPositions = {10000, 12000, 14000, 16000, 18000};
 
 // Execute sequence with callback
-hwCtrl->performFocusSequence(focusPositions, 
+hwCtrl->performFocusSequence(focusPositions,
     [](int position, bool completed) {
         if (completed) {
             LOG_F(INFO, "Focus sequence completed at position: {}", position);
@@ -401,7 +401,7 @@ cmake --install build --prefix=/usr/local
 class MyCustomComponent : public ComponentBase {
 public:
     explicit MyCustomComponent(ASICameraCore* core) : ComponentBase(core) {}
-    
+
     auto initialize() -> bool override { /* implementation */ }
     auto destroy() -> bool override { /* implementation */ }
     auto getComponentName() const -> std::string override { return "My Component"; }

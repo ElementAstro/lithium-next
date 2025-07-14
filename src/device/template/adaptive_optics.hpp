@@ -74,18 +74,18 @@ struct AOParameters {
     bool enable_tip_tilt{true};
     bool enable_focus{false};
     bool enable_higher_order{false};
-    
+
     // Tip-tilt parameters
     double tip_gain{0.5};
     double tilt_gain{0.5};
     double max_tip{5.0};          // arcseconds
     double max_tilt{5.0};         // arcseconds
-    
+
     // Deformable mirror parameters
     std::vector<double> actuator_gains;
     double max_actuator_stroke{1.0}; // microns
     bool enable_zernike_correction{false};
-    
+
     // Wavefront sensor parameters
     double exposure_time{0.001};  // seconds
     int binning{1};
@@ -110,7 +110,7 @@ public:
         setType("AdaptiveOptics");
         ao_statistics_.session_start = std::chrono::system_clock::now();
     }
-    
+
     ~AtomAdaptiveOptics() override = default;
 
     // Capabilities
@@ -226,30 +226,30 @@ protected:
     AOCapabilities ao_capabilities_;
     AOParameters ao_parameters_;
     AOStatistics ao_statistics_;
-    
+
     // Current data
     TipTiltData current_tip_tilt_;
     WavefrontData current_wavefront_;
     std::vector<double> actuator_voltages_;
-    
+
     // Correction history for statistics
     std::vector<TipTiltData> correction_history_;
     static constexpr size_t MAX_CORRECTION_HISTORY = 1000;
-    
+
     // Device connections
     std::string target_camera_name_;
     std::string guide_camera_name_;
-    
+
     // Calibration state
     bool calibrated_{false};
     std::string calibration_file_;
-    
+
     // Callbacks
     CorrectionCallback correction_callback_;
     StateCallback state_callback_;
     WavefrontCallback wavefront_callback_;
     StatisticsCallback statistics_callback_;
-    
+
     // Utility methods
     virtual void updateAOState(AOState state) { ao_state_ = state; }
     virtual void updateStatistics(const TipTiltData& correction);

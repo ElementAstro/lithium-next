@@ -34,7 +34,7 @@ class HardwareInterface;
 
 /**
  * @brief Exposure Manager for ASCOM Camera
- * 
+ *
  * Manages all exposure operations including single exposures, sequences,
  * progress tracking, timeout handling, and result processing.
  */
@@ -125,11 +125,11 @@ public:
      * @brief Check if exposure is in progress
      * @return true if exposing
      */
-    bool isExposing() const { 
+    bool isExposing() const {
         auto state = state_.load();
-        return state == ExposureState::EXPOSING || state == ExposureState::DOWNLOADING; 
+        return state == ExposureState::EXPOSING || state == ExposureState::DOWNLOADING;
     }
-    
+
     // =========================================================================
     // State and Progress
     // =========================================================================
@@ -169,7 +169,7 @@ public:
      * @return Duration in seconds
      */
     double getCurrentDuration() const { return currentSettings_.duration; }
-    
+
     // =========================================================================
     // Results and Statistics
     // =========================================================================

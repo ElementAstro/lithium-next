@@ -100,13 +100,13 @@ set_property(TARGET ${PROJECT_NAME}_mock PROPERTY POSITION_INDEPENDENT_CODE ON)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/indi/camera.cpp")
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(INDI QUIET indi)
-    
+
     if(INDI_FOUND)
         add_library(${PROJECT_NAME}_indi STATIC ${INDI_DEVICE_FILES})
         set_property(TARGET ${PROJECT_NAME}_indi PROPERTY POSITION_INDEPENDENT_CODE ON)
         target_include_directories(${PROJECT_NAME}_indi PRIVATE ${INDI_INCLUDE_DIRS})
         target_link_libraries(${PROJECT_NAME}_indi PRIVATE ${INDI_LIBRARIES} ${PROJECT_LIBS})
-        
+
         # Install INDI library
         install(TARGETS ${PROJECT_NAME}_indi
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -138,12 +138,12 @@ set_target_properties(${PROJECT_NAME}_mock PROPERTIES
 # Create integration test executable
 if(BUILD_TESTING)
     add_executable(device_integration_test device_integration_test.cpp)
-    target_link_libraries(device_integration_test PRIVATE 
-        ${PROJECT_NAME}_mock 
+    target_link_libraries(device_integration_test PRIVATE
+        ${PROJECT_NAME}_mock
         ${PROJECT_LIBS}
     )
     target_include_directories(device_integration_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    
+
     # Add test
     add_test(NAME DeviceIntegrationTest COMMAND device_integration_test)
 endif()

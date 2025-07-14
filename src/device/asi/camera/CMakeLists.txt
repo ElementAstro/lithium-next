@@ -92,7 +92,7 @@ install(
 )
         DOC "ASI Camera SDK include directory"
     )
-    
+
     if(ASI_CAMERA_INCLUDE_DIR)
         target_include_directories(asi_camera PRIVATE ${ASI_CAMERA_INCLUDE_DIR})
     endif()

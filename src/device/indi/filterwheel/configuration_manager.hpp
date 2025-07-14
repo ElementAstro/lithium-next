@@ -35,7 +35,7 @@ public:
      * @param core Shared pointer to the INDIFilterWheelCore
      */
     explicit ConfigurationManager(std::shared_ptr<INDIFilterWheelCore> core);
-    
+
     /**
      * @brief Virtual destructor.
      */
@@ -110,16 +110,16 @@ public:
 private:
     bool initialized_{false};
     std::unordered_map<std::string, FilterWheelConfiguration> configurations_;
-    
+
     // File operations
     bool saveConfigurationsToFile();
     bool loadConfigurationsFromFile();
     std::string getConfigurationFilePath() const;
-    
+
     // Current state capture
     FilterWheelConfiguration captureCurrentConfiguration(const std::string& name);
     bool applyConfiguration(const FilterWheelConfiguration& config);
-    
+
     // Validation
     bool isValidConfigurationName(const std::string& name) const;
 };

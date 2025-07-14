@@ -18,9 +18,9 @@ def cli_clone_repository(args) -> GitResult:
     """Clone a repository from the command line."""
     git = GitUtils()
     options = []
-    if hasattr(args, 'depth') and args.depth:
+    if hasattr(args, "depth") and args.depth:
         options.append(f"--depth={args.depth}")
-    if hasattr(args, 'branch') and args.branch:
+    if hasattr(args, "branch") and args.branch:
         options.extend(["--branch", args.branch])
     return git.clone_repository(args.repo_url, args.clone_dir, options)
 
@@ -221,29 +221,31 @@ Examples:
 
     # Clone command
     parser_clone = subparsers.add_parser("clone", help="Clone a repository")
+    parser_clone.add_argument("repo_url", help="URL of the repository to clone")
     parser_clone.add_argument(
-        "repo_url", help="URL of the repository to clone")
+        "clone_dir", help="Directory to clone the repository into"
+    )
     parser_clone.add_argument(
-        "clone_dir", help="Directory to clone the repository into")
-    parser_clone.add_argument(
-        "--depth", type=int, help="Create a shallow clone with specified depth")
+        "--depth", type=int, help="Create a shallow clone with specified depth"
+    )
     parser_clone.add_argument("--branch", "-b", help="Clone a specific branch")
     parser_clone.set_defaults(func=cli_clone_repository)
 
     # Pull command
     parser_pull = subparsers.add_parser(
-        "pull", help="Pull the latest changes from remote")
+        "pull", help="Pull the latest changes from remote"
+    )
     add_repo_dir(parser_pull)
-    parser_pull.add_argument("--remote", default="origin",
-                             help="Remote to pull from (default: origin)")
+    parser_pull.add_argument(
+        "--remote", default="origin", help="Remote to pull from (default: origin)"
+    )
     parser_pull.add_argument("--branch", help="Branch to pull")
     parser_pull.set_defaults(func=cli_pull_latest_changes)
 
     # ... (rest of the parser setup from the original file)
 
     # Status command
-    parser_status = subparsers.add_parser(
-        "status", help="View the current status")
+    parser_status = subparsers.add_parser("status", help="View the current status")
     add_repo_dir(parser_status)
     parser_status.add_argument("--json", action="store_true", help="Output in JSON format")
     parser_status.set_defaults(func=cli_view_status)
@@ -251,12 +253,13 @@ Examples:
     # Log command
     parser_log = subparsers.add_parser("log", help="View commit history")
     add_repo_dir(parser_log)
-    parser_log.add_argument("-n", "--num-entries",
-                            type=int, help="Number of commits to display")
-    parser_log.add_argument("--oneline", action="store_true", default=True,
-                            help="One line per commit")
     parser_log.add_argument(
-        "--graph", action="store_true", help="Show branch graph")
+        "-n", "--num-entries", type=int, help="Number of commits to display"
+    )
+    parser_log.add_argument(
+        "--oneline", action="store_true", default=True, help="One line per commit"
+    )
+    parser_log.add_argument("--graph", action="store_true", help="Show branch graph")
     parser_log.add_argument(
         "-a", "--all", action="store_true", help="Show commits from all branches")
     parser_log.add_argument("--json", action="store_true", help="Output in JSON format")

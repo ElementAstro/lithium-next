@@ -28,7 +28,7 @@ auto TelescopeParking::isParked() -> bool {
         spdlog::debug("TELESCOPE_PARK property not available");
         return false;
     }
-    
+
     bool parked = property[0].getState() == ISS_ON;
     isParked_.store(parked);
     return parked;
@@ -39,17 +39,17 @@ auto TelescopeParking::park() -> bool {
         spdlog::error("Parking is not supported by this telescope");
         return false;
     }
-    
+
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_PARK");
     if (!property.isValid()) {
         spdlog::error("Unable to find TELESCOPE_PARK property");
         return false;
     }
-    
+
     property[0].setState(ISS_ON);
     property[1].setState(ISS_OFF);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Parking telescope {}", name_);
     return true;
 }
@@ -59,17 +59,17 @@ auto TelescopeParking::unpark() -> bool {
         spdlog::error("Parking is not supported by this telescope");
         return false;
     }
-    
+
     INDI::PropertySwitch property = device_.getProperty("TELESCOPE_PARK");
     if (!property.isValid()) {
         spdlog::error("Unable to find TELESCOPE_PARK property");
         return false;
     }
-    
+
     property[0].setState(ISS_OFF);
     property[1].setState(ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Unparking telescope {}", name_);
     return true;
 }
@@ -80,12 +80,12 @@ auto TelescopeParking::setParkOption(ParkOptions option) -> bool {
         spdlog::error("Unable to find TELESCOPE_PARK_OPTION property");
         return false;
     }
-    
+
     // Reset all options
     for (int i = 0; i < property.count(); ++i) {
         property[i].setState(ISS_OFF);
     }
-    
+
     switch (option) {
     case ParkOptions::CURRENT:
         if (property.count() > 0) property[0].setState(ISS_ON);
@@ -103,7 +103,7 @@ auto TelescopeParking::setParkOption(ParkOptions option) -> bool {
         // All remain OFF
         break;
     }
-    
+
     device_.getBaseClient()->sendNewProperty(property);
     parkOption_ = option;
     spdlog::info("Park option set to: {}", static_cast<int>(option));
@@ -116,7 +116,7 @@ auto TelescopeParking::getParkPosition() -> std::optional<EquatorialCoordinates>
         spdlog::error("Unable to find TELESCOPE_PARK_POSITION property");
         return std::nullopt;
     }
-    
+
     EquatorialCoordinates coords;
     coords.ra = property[0].getValue();
     coords.dec = property[1].getValue();
@@ -130,14 +130,14 @@ auto TelescopeParking::setParkPosition(double parkRA, double parkDEC) -> bool {
         spdlog::error("Unable to find TELESCOPE_PARK_POSITION property");
         return false;
     }
-    
+
     property[0].setValue(parkRA);
     property[1].setValue(parkDEC);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     parkPosition_.ra = parkRA;
     parkPosition_.dec = parkDEC;
-    
+
     spdlog::info("Park position set to: RA={:.6f}h, DEC={:.6f}°", parkRA, parkDEC);
     return true;
 }
@@ -148,7 +148,7 @@ auto TelescopeParking::initializeHome(std::string_view command) -> bool {
         spdlog::error("Unable to find HOME_INIT property");
         return false;
     }
-    
+
     if (command.empty() || command == "SLEWHOME") {
         property[0].setState(ISS_ON);
         property[1].setState(ISS_OFF);
@@ -161,7 +161,7 @@ auto TelescopeParking::initializeHome(std::string_view command) -> bool {
         spdlog::error("Unknown home initialization command: {}", command);
         return false;
     }
-    
+
     device_.getBaseClient()->sendNewProperty(property);
     isHomeInitInProgress_.store(true);
     return true;
@@ -173,10 +173,10 @@ auto TelescopeParking::findHome() -> bool {
         spdlog::warn("HOME_FIND property not available, using HOME_INIT instead");
         return initializeHome("SLEWHOME");
     }
-    
+
     property[0].setState(ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Finding home position for telescope {}", name_);
     return true;
 }
@@ -187,10 +187,10 @@ auto TelescopeParking::setHome() -> bool {
         spdlog::warn("HOME_SET property not available, using HOME_INIT SYNC instead");
         return initializeHome("SYNCHOME");
     }
-    
+
     property[0].setState(ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Setting current position as home for telescope {}", name_);
     return true;
 }
@@ -201,10 +201,10 @@ auto TelescopeParking::gotoHome() -> bool {
         spdlog::warn("HOME_GOTO property not available, using HOME_INIT SLEW instead");
         return initializeHome("SLEWHOME");
     }
-    
+
     property[0].setState(ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     spdlog::info("Going to home position for telescope {}", name_);
     return true;
 }
@@ -219,7 +219,7 @@ auto TelescopeParking::isHomeSet() -> bool {
 
 auto TelescopeParking::watchParkingProperties() -> void {
     spdlog::debug("Setting up parking property watchers");
-    
+
     device_.watchProperty("TELESCOPE_PARK",
         [this](const INDI::PropertySwitch& property) {
             if (property.isValid()) {
@@ -229,7 +229,7 @@ auto TelescopeParking::watchParkingProperties() -> void {
                 updateParkingState();
             }
         }, INDI::BaseDevice::WATCH_UPDATE);
-    
+
     device_.watchProperty("TELESCOPE_PARK_POSITION",
         [this](const INDI::PropertyNumber& property) {
             if (property.isValid() && property.count() >= 2) {
@@ -239,7 +239,7 @@ auto TelescopeParking::watchParkingProperties() -> void {
                             parkPosition_.ra, parkPosition_.dec);
             }
         }, INDI::BaseDevice::WATCH_UPDATE);
-    
+
     device_.watchProperty("TELESCOPE_PARK_OPTION",
         [this](const INDI::PropertySwitch& property) {
             if (property.isValid()) {
@@ -257,13 +257,13 @@ auto TelescopeParking::watchParkingProperties() -> void {
 
 auto TelescopeParking::watchHomeProperties() -> void {
     spdlog::debug("Setting up home property watchers");
-    
+
     device_.watchProperty("HOME_INIT",
         [this](const INDI::PropertySwitch& property) {
             if (property.isValid()) {
                 bool inProgress = property[0].getState() == ISS_ON || property[1].getState() == ISS_ON;
                 isHomeInitInProgress_.store(inProgress);
-                
+
                 if (!inProgress) {
                     // Home initialization completed
                     isHomed_.store(true);
@@ -272,7 +272,7 @@ auto TelescopeParking::watchHomeProperties() -> void {
                 }
             }
         }, INDI::BaseDevice::WATCH_UPDATE);
-    
+
     // Watch for other home-related properties if available
     device_.watchProperty("HOME_FIND",
         [this](const INDI::PropertySwitch& property) {
@@ -290,7 +290,7 @@ auto TelescopeParking::watchHomeProperties() -> void {
 
 auto TelescopeParking::updateParkingState() -> void {
     isParkEnabled_ = canPark();
-    
+
     if (isParked_.load()) {
         spdlog::debug("Telescope {} is parked", name_);
     } else {
@@ -302,7 +302,7 @@ auto TelescopeParking::updateHomeState() -> void {
     if (isHomed_.load()) {
         spdlog::debug("Telescope {} is at home position", name_);
     }
-    
+
     if (isHomeSet_.load()) {
         spdlog::debug("Telescope {} has home position set", name_);
     }

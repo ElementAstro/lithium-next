@@ -40,7 +40,7 @@ public:
             "Focuser_ZWO_EAF", "FilterWheel_ZWO_EFW",
             "Guider_ZWO_ASI120MM", "GPS_Device"
         };
-        
+
         for (const auto& device : devices) {
             if (devices_.find(device) == devices_.end()) {
                 DeviceInfo info;
@@ -50,7 +50,7 @@ public:
                 devices_[device] = info;
             }
         }
-        
+
         spdlog::info("Device scan found {} devices", devices.size());
         return devices;
     }
@@ -60,10 +60,10 @@ public:
         if (it == devices_.end()) {
             return false;
         }
-        
+
         // Simulate connection time
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        
+
         it->second.connected = true;
         it->second.lastUpdate = std::chrono::steady_clock::now();
         spdlog::info("Connected to device: {}", deviceName);
@@ -75,7 +75,7 @@ public:
         if (it == devices_.end()) {
             return false;
         }
-        
+
         it->second.connected = false;
         spdlog::info("Disconnected from device: {}", deviceName);
         return true;
@@ -86,17 +86,17 @@ public:
         if (it == devices_.end()) {
             return json{{"error", "Device not found"}};
         }
-        
+
         auto& device = it->second;
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
             now - device.lastUpdate).count();
-        
+
         // Simulate some health issues occasionally
         if (elapsed > 60) {
             device.healthy = false;
         }
-        
+
         return json{
             {"name", device.name},
             {"type", device.type},
@@ -152,26 +152,26 @@ auto DeviceScanConnectTask::taskName() -> std::string {
 void DeviceScanConnectTask::execute(const json& params) {
     try {
         validateScanParameters(params);
-        
+
         bool scanOnly = params.value("scan_only", false);
         bool autoConnect = params.value("auto_connect", true);
         std::vector<std::string> deviceTypes;
-        
+
         if (params.contains("device_types")) {
             deviceTypes = params["device_types"].get<std::vector<std::string>>();
         } else {
             deviceTypes = {"Camera", "Telescope", "Focuser", "FilterWheel", "Guider"};
         }
-        
+
         spdlog::info("Device scan starting for types: {}", json(deviceTypes).dump());
-        
+
 #ifdef MOCK_DEVICES
         auto& deviceManager = MockDeviceManager::getInstance();
-        
+
         // Scan for devices
         auto foundDevices = deviceManager.scanDevices();
         spdlog::info("Found {} devices during scan", foundDevices.size());
-        
+
         if (!scanOnly && autoConnect) {
             int connectedCount = 0;
             for (const auto& device : foundDevices) {
@@ -183,20 +183,20 @@ void DeviceScanConnectTask::execute(const json& params) {
                         break;
                     }
                 }
-                
+
                 if (shouldConnect) {
                     if (deviceManager.connectDevice(device)) {
                         connectedCount++;
                     }
                 }
             }
-            
+
             spdlog::info("Connected to {}/{} devices", connectedCount, foundDevices.size());
         }
 #endif
-        
+
         LOG_F(INFO, "Device scan and connect completed successfully");
-        
+
     } catch (const std::exception& e) {
         handleConnectionError(*this, e);
         throw;
@@ -204,12 +204,12 @@ void DeviceScanConnectTask::execute(const json& params) {
 }
 
 auto DeviceScanConnectTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<DeviceScanConnectTask>("DeviceScanConnect", 
+    auto task = std::make_unique<DeviceScanConnectTask>("DeviceScanConnect",
         [](const json& params) {
             DeviceScanConnectTask taskInstance("DeviceScanConnect", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -222,7 +222,7 @@ void DeviceScanConnectTask::defineParameters(Task& task) {
         .defaultValue = false,
         .description = "Only scan devices, don't connect"
     });
-    
+
     task.addParameter({
         .name = "auto_connect",
         .type = "boolean",
@@ -230,7 +230,7 @@ void DeviceScanConnectTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Automatically connect to found devices"
     });
-    
+
     task.addParameter({
         .name = "device_types",
         .type = "array",
@@ -245,7 +245,7 @@ void DeviceScanConnectTask::validateScanParameters(const json& params) {
         if (!params["device_types"].is_array()) {
             throw atom::error::InvalidArgument("device_types must be an array");
         }
-        
+
         std::vector<std::string> validTypes = {"Camera", "Telescope", "Focuser", "FilterWheel", "Guider", "GPS"};
         for (const auto& type : params["device_types"]) {
             if (std::find(validTypes.begin(), validTypes.end(), type.get<std::string>()) == validTypes.end()) {
@@ -269,39 +269,39 @@ auto DeviceHealthMonitorTask::taskName() -> std::string {
 void DeviceHealthMonitorTask::execute(const json& params) {
     try {
         validateHealthParameters(params);
-        
+
         int duration = params.value("duration", 60);
         int interval = params.value("interval", 10);
         bool alertOnFailure = params.value("alert_on_failure", true);
-        
+
         spdlog::info("Starting device health monitoring for {} seconds", duration);
-        
+
 #ifdef MOCK_DEVICES
         auto& deviceManager = MockDeviceManager::getInstance();
-        
+
         auto startTime = std::chrono::steady_clock::now();
         while (std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - startTime).count() < duration) {
-            
+
             json healthReport = json::object();
-            
+
             for (const auto& [deviceName, deviceInfo] : deviceManager.getAllDevices()) {
                 auto health = deviceManager.getDeviceHealth(deviceName);
                 healthReport[deviceName] = health;
-                
+
                 if (alertOnFailure && (!health["connected"].get<bool>() || !health["healthy"].get<bool>())) {
                     spdlog::warn("Device health alert: {} is not healthy", deviceName);
                 }
             }
-            
+
             spdlog::debug("Health check completed: {}", healthReport.dump(2));
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(interval));
         }
 #endif
-        
+
         LOG_F(INFO, "Device health monitoring completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("DeviceHealthMonitorTask failed: {}", e.what());
         throw;
@@ -309,12 +309,12 @@ void DeviceHealthMonitorTask::execute(const json& params) {
 }
 
 auto DeviceHealthMonitorTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<DeviceHealthMonitorTask>("DeviceHealthMonitor", 
+    auto task = std::make_unique<DeviceHealthMonitorTask>("DeviceHealthMonitor",
         [](const json& params) {
             DeviceHealthMonitorTask taskInstance("DeviceHealthMonitor", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -327,7 +327,7 @@ void DeviceHealthMonitorTask::defineParameters(Task& task) {
         .defaultValue = 60,
         .description = "Monitoring duration in seconds"
     });
-    
+
     task.addParameter({
         .name = "interval",
         .type = "integer",
@@ -335,7 +335,7 @@ void DeviceHealthMonitorTask::defineParameters(Task& task) {
         .defaultValue = 10,
         .description = "Check interval in seconds"
     });
-    
+
     task.addParameter({
         .name = "alert_on_failure",
         .type = "boolean",
@@ -352,7 +352,7 @@ void DeviceHealthMonitorTask::validateHealthParameters(const json& params) {
             throw atom::error::InvalidArgument("Duration must be between 10 and 86400 seconds");
         }
     }
-    
+
     if (params.contains("interval")) {
         int interval = params["interval"];
         if (interval < 1 || interval > 3600) {
@@ -370,49 +370,49 @@ auto AutoFilterSequenceTask::taskName() -> std::string {
 void AutoFilterSequenceTask::execute(const json& params) {
     try {
         validateFilterSequenceParameters(params);
-        
+
         std::vector<json> filterSequence = params["filter_sequence"];
         bool autoFocus = params.value("auto_focus_per_filter", true);
         int repetitions = params.value("repetitions", 1);
-        
-        spdlog::info("Starting auto filter sequence with {} filters, {} repetitions", 
+
+        spdlog::info("Starting auto filter sequence with {} filters, {} repetitions",
                     filterSequence.size(), repetitions);
-        
+
         for (int rep = 0; rep < repetitions; ++rep) {
             spdlog::info("Filter sequence repetition {}/{}", rep + 1, repetitions);
-            
+
             for (size_t i = 0; i < filterSequence.size(); ++i) {
                 const auto& filterConfig = filterSequence[i];
-                
+
                 std::string filterName = filterConfig["filter"];
                 int exposureCount = filterConfig["count"];
                 double exposureTime = filterConfig["exposure"];
-                
-                spdlog::info("Filter {}: {} x {:.1f}s exposures", 
+
+                spdlog::info("Filter {}: {} x {:.1f}s exposures",
                            filterName, exposureCount, exposureTime);
-                
+
                 // Change filter (mock implementation)
                 spdlog::info("Changing to filter: {}", filterName);
                 std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-                
+
                 // Auto-focus if enabled
                 if (autoFocus) {
                     spdlog::info("Performing autofocus for filter: {}", filterName);
                     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
                 }
-                
+
                 // Take exposures
                 for (int exp = 0; exp < exposureCount; ++exp) {
-                    spdlog::info("Taking exposure {}/{} with filter {}", 
+                    spdlog::info("Taking exposure {}/{} with filter {}",
                                exp + 1, exposureCount, filterName);
                     std::this_thread::sleep_for(std::chrono::milliseconds(
                         static_cast<int>(exposureTime * 100))); // Simulate exposure
                 }
             }
         }
-        
+
         LOG_F(INFO, "Auto filter sequence completed successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("AutoFilterSequenceTask failed: {}", e.what());
         throw;
@@ -420,12 +420,12 @@ void AutoFilterSequenceTask::execute(const json& params) {
 }
 
 auto AutoFilterSequenceTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<AutoFilterSequenceTask>("AutoFilterSequence", 
+    auto task = std::make_unique<AutoFilterSequenceTask>("AutoFilterSequence",
         [](const json& params) {
             AutoFilterSequenceTask taskInstance("AutoFilterSequence", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -438,7 +438,7 @@ void AutoFilterSequenceTask::defineParameters(Task& task) {
         .defaultValue = json::array(),
         .description = "Array of filter configurations"
     });
-    
+
     task.addParameter({
         .name = "auto_focus_per_filter",
         .type = "boolean",
@@ -446,7 +446,7 @@ void AutoFilterSequenceTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Perform autofocus when changing filters"
     });
-    
+
     task.addParameter({
         .name = "repetitions",
         .type = "integer",
@@ -460,14 +460,14 @@ void AutoFilterSequenceTask::validateFilterSequenceParameters(const json& params
     if (!params.contains("filter_sequence")) {
         throw atom::error::InvalidArgument("Missing required parameter: filter_sequence");
     }
-    
+
     auto sequence = params["filter_sequence"];
     if (!sequence.is_array() || sequence.empty()) {
         throw atom::error::InvalidArgument("filter_sequence must be a non-empty array");
     }
-    
+
     for (const auto& filterConfig : sequence) {
-        if (!filterConfig.contains("filter") || !filterConfig.contains("count") || 
+        if (!filterConfig.contains("filter") || !filterConfig.contains("count") ||
             !filterConfig.contains("exposure")) {
             throw atom::error::InvalidArgument("Each filter config must have filter, count, and exposure");
         }
@@ -483,30 +483,30 @@ auto FocusFilterOptimizationTask::taskName() -> std::string {
 void FocusFilterOptimizationTask::execute(const json& params) {
     try {
         validateFocusFilterParameters(params);
-        
+
         std::vector<std::string> filters = params["filters"];
         double exposureTime = params.value("exposure_time", 3.0);
         bool saveOffsets = params.value("save_offsets", true);
-        
+
         spdlog::info("Optimizing focus offsets for {} filters", filters.size());
-        
+
 #ifdef MOCK_DEVICES
         auto& deviceManager = MockDeviceManager::getInstance();
-        
+
         // Start with luminance as reference
         int referencePosition = 25000;
         json focusOffsets;
-        
+
         for (const auto& filter : filters) {
             spdlog::info("Measuring focus offset for filter: {}", filter);
-            
+
             // Change to filter
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-            
+
             // Perform autofocus
             spdlog::info("Performing autofocus with filter: {}", filter);
             std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-            
+
             // Simulate focus position measurement
             int focusPosition = referencePosition;
             if (filter == "Red") focusPosition -= 50;
@@ -515,22 +515,22 @@ void FocusFilterOptimizationTask::execute(const json& params) {
             else if (filter == "Ha") focusPosition += 100;
             else if (filter == "OIII") focusPosition += 150;
             else if (filter == "SII") focusPosition += 125;
-            
+
             int offset = focusPosition - referencePosition;
             focusOffsets[filter] = offset;
-            
+
             if (saveOffsets) {
                 deviceManager.setFilterOffset(filter, offset);
             }
-            
+
             spdlog::info("Filter {} focus offset: {}", filter, offset);
         }
-        
+
         spdlog::info("Focus filter optimization completed: {}", focusOffsets.dump(2));
 #endif
-        
+
         LOG_F(INFO, "Focus filter optimization completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("FocusFilterOptimizationTask failed: {}", e.what());
         throw;
@@ -538,12 +538,12 @@ void FocusFilterOptimizationTask::execute(const json& params) {
 }
 
 auto FocusFilterOptimizationTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<FocusFilterOptimizationTask>("FocusFilterOptimization", 
+    auto task = std::make_unique<FocusFilterOptimizationTask>("FocusFilterOptimization",
         [](const json& params) {
             FocusFilterOptimizationTask taskInstance("FocusFilterOptimization", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -556,7 +556,7 @@ void FocusFilterOptimizationTask::defineParameters(Task& task) {
         .defaultValue = json::array({"Luminance", "Red", "Green", "Blue"}),
         .description = "List of filters to optimize"
     });
-    
+
     task.addParameter({
         .name = "exposure_time",
         .type = "number",
@@ -564,7 +564,7 @@ void FocusFilterOptimizationTask::defineParameters(Task& task) {
         .defaultValue = 3.0,
         .description = "Exposure time for focus measurements"
     });
-    
+
     task.addParameter({
         .name = "save_offsets",
         .type = "boolean",
@@ -578,7 +578,7 @@ void FocusFilterOptimizationTask::validateFocusFilterParameters(const json& para
     if (!params.contains("filters")) {
         throw atom::error::InvalidArgument("Missing required parameter: filters");
     }
-    
+
     auto filters = params["filters"];
     if (!filters.is_array() || filters.empty()) {
         throw atom::error::InvalidArgument("filters must be a non-empty array");
@@ -594,34 +594,34 @@ auto IntelligentAutoFocusTask::taskName() -> std::string {
 void IntelligentAutoFocusTask::execute(const json& params) {
     try {
         validateIntelligentFocusParameters(params);
-        
+
         bool useTemperatureCompensation = params.value("temperature_compensation", true);
         bool useFilterOffsets = params.value("filter_offsets", true);
         std::string currentFilter = params.value("current_filter", "Luminance");
         double exposureTime = params.value("exposure_time", 3.0);
-        
+
         spdlog::info("Intelligent autofocus with temp compensation: {}, filter offsets: {}",
                     useTemperatureCompensation, useFilterOffsets);
-        
+
 #ifdef MOCK_DEVICES
         auto& deviceManager = MockDeviceManager::getInstance();
-        
+
         // Get current temperature
         double currentTemp = 15.0;  // Simulate current temperature
         double lastFocusTemp = 20.0;  // Last focus temperature
-        
+
         int basePosition = 25000;
         int targetPosition = basePosition;
-        
+
         // Apply temperature compensation
         if (useTemperatureCompensation) {
             double tempDelta = currentTemp - lastFocusTemp;
             int tempOffset = static_cast<int>(tempDelta * -10);  // -10 steps per degree
             targetPosition += tempOffset;
-            spdlog::info("Temperature compensation: {} steps for {:.1f}°C change", 
+            spdlog::info("Temperature compensation: {} steps for {:.1f}°C change",
                         tempOffset, tempDelta);
         }
-        
+
         // Apply filter offset
         if (useFilterOffsets) {
             auto offsets = deviceManager.getFilterOffsets();
@@ -631,19 +631,19 @@ void IntelligentAutoFocusTask::execute(const json& params) {
                 spdlog::info("Filter offset for {}: {} steps", currentFilter, filterOffset);
             }
         }
-        
+
         spdlog::info("Moving focuser to intelligent position: {}", targetPosition);
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-        
+
         // Perform fine autofocus
         spdlog::info("Performing fine autofocus adjustment");
         std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-        
+
         spdlog::info("Intelligent autofocus completed at position: {}", targetPosition);
 #endif
-        
+
         LOG_F(INFO, "Intelligent autofocus completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("IntelligentAutoFocusTask failed: {}", e.what());
         throw;
@@ -651,12 +651,12 @@ void IntelligentAutoFocusTask::execute(const json& params) {
 }
 
 auto IntelligentAutoFocusTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<IntelligentAutoFocusTask>("IntelligentAutoFocus", 
+    auto task = std::make_unique<IntelligentAutoFocusTask>("IntelligentAutoFocus",
         [](const json& params) {
             IntelligentAutoFocusTask taskInstance("IntelligentAutoFocus", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -669,7 +669,7 @@ void IntelligentAutoFocusTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Use temperature compensation"
     });
-    
+
     task.addParameter({
         .name = "filter_offsets",
         .type = "boolean",
@@ -677,7 +677,7 @@ void IntelligentAutoFocusTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Use filter-specific focus offsets"
     });
-    
+
     task.addParameter({
         .name = "current_filter",
         .type = "string",
@@ -685,7 +685,7 @@ void IntelligentAutoFocusTask::defineParameters(Task& task) {
         .defaultValue = "Luminance",
         .description = "Currently installed filter"
     });
-    
+
     task.addParameter({
         .name = "exposure_time",
         .type = "number",
@@ -715,29 +715,29 @@ void CoordinatedShutdownTask::execute(const json& params) {
         bool parkTelescope = params.value("park_telescope", true);
         bool stopCooling = params.value("stop_cooling", true);
         bool disconnectDevices = params.value("disconnect_devices", true);
-        
+
         spdlog::info("Starting coordinated shutdown sequence");
-        
+
         // 1. Stop any ongoing exposures
         spdlog::info("Stopping ongoing exposures...");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        
+
         // 2. Stop guiding
         spdlog::info("Stopping autoguiding...");
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        
+
         // 3. Park telescope
         if (parkTelescope) {
             spdlog::info("Parking telescope...");
             std::this_thread::sleep_for(std::chrono::milliseconds(3000));
         }
-        
+
         // 4. Stop camera cooling
         if (stopCooling) {
             spdlog::info("Disabling camera cooling...");
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         }
-        
+
         // 5. Disconnect devices
         if (disconnectDevices) {
 #ifdef MOCK_DEVICES
@@ -750,10 +750,10 @@ void CoordinatedShutdownTask::execute(const json& params) {
             }
 #endif
         }
-        
+
         spdlog::info("Coordinated shutdown completed successfully");
         LOG_F(INFO, "Coordinated shutdown completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("CoordinatedShutdownTask failed: {}", e.what());
         throw;
@@ -761,12 +761,12 @@ void CoordinatedShutdownTask::execute(const json& params) {
 }
 
 auto CoordinatedShutdownTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<CoordinatedShutdownTask>("CoordinatedShutdown", 
+    auto task = std::make_unique<CoordinatedShutdownTask>("CoordinatedShutdown",
         [](const json& params) {
             CoordinatedShutdownTask taskInstance("CoordinatedShutdown", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -779,7 +779,7 @@ void CoordinatedShutdownTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Park telescope during shutdown"
     });
-    
+
     task.addParameter({
         .name = "stop_cooling",
         .type = "boolean",
@@ -787,7 +787,7 @@ void CoordinatedShutdownTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Stop camera cooling during shutdown"
     });
-    
+
     task.addParameter({
         .name = "disconnect_devices",
         .type = "boolean",
@@ -806,24 +806,24 @@ auto EnvironmentMonitorTask::taskName() -> std::string {
 void EnvironmentMonitorTask::execute(const json& params) {
     try {
         validateEnvironmentParameters(params);
-        
+
         int duration = params.value("duration", 300);
         int interval = params.value("interval", 30);
         double maxWindSpeed = params.value("max_wind_speed", 10.0);
         double maxHumidity = params.value("max_humidity", 85.0);
-        
+
         spdlog::info("Starting environment monitoring for {} seconds", duration);
-        
+
         auto startTime = std::chrono::steady_clock::now();
         while (std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - startTime).count() < duration) {
-            
+
             // Simulate environmental readings
             double temperature = 15.0 + (rand() % 10 - 5);
             double humidity = 50.0 + (rand() % 30);
             double windSpeed = 3.0 + (rand() % 8);
             double pressure = 1013.25 + (rand() % 20 - 10);
-            
+
             json envData = {
                 {"temperature", temperature},
                 {"humidity", humidity},
@@ -832,26 +832,26 @@ void EnvironmentMonitorTask::execute(const json& params) {
                 {"timestamp", std::chrono::duration_cast<std::chrono::seconds>(
                     std::chrono::steady_clock::now().time_since_epoch()).count()}
             };
-            
+
             spdlog::info("Environment: T={:.1f}°C, H={:.1f}%, W={:.1f}m/s, P={:.1f}hPa",
                         temperature, humidity, windSpeed, pressure);
-            
+
             // Check alert conditions
             if (windSpeed > maxWindSpeed) {
-                spdlog::warn("Wind speed alert: {:.1f} m/s exceeds limit {:.1f} m/s", 
+                spdlog::warn("Wind speed alert: {:.1f} m/s exceeds limit {:.1f} m/s",
                            windSpeed, maxWindSpeed);
             }
-            
+
             if (humidity > maxHumidity) {
-                spdlog::warn("Humidity alert: {:.1f}% exceeds limit {:.1f}%", 
+                spdlog::warn("Humidity alert: {:.1f}% exceeds limit {:.1f}%",
                            humidity, maxHumidity);
             }
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(interval));
         }
-        
+
         LOG_F(INFO, "Environment monitoring completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("EnvironmentMonitorTask failed: {}", e.what());
         throw;
@@ -859,12 +859,12 @@ void EnvironmentMonitorTask::execute(const json& params) {
 }
 
 auto EnvironmentMonitorTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<EnvironmentMonitorTask>("EnvironmentMonitor", 
+    auto task = std::make_unique<EnvironmentMonitorTask>("EnvironmentMonitor",
         [](const json& params) {
             EnvironmentMonitorTask taskInstance("EnvironmentMonitor", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -877,7 +877,7 @@ void EnvironmentMonitorTask::defineParameters(Task& task) {
         .defaultValue = 300,
         .description = "Monitoring duration in seconds"
     });
-    
+
     task.addParameter({
         .name = "interval",
         .type = "integer",
@@ -885,7 +885,7 @@ void EnvironmentMonitorTask::defineParameters(Task& task) {
         .defaultValue = 30,
         .description = "Check interval in seconds"
     });
-    
+
     task.addParameter({
         .name = "max_wind_speed",
         .type = "number",
@@ -893,7 +893,7 @@ void EnvironmentMonitorTask::defineParameters(Task& task) {
         .defaultValue = 10.0,
         .description = "Maximum safe wind speed (m/s)"
     });
-    
+
     task.addParameter({
         .name = "max_humidity",
         .type = "number",
@@ -910,7 +910,7 @@ void EnvironmentMonitorTask::validateEnvironmentParameters(const json& params) {
             throw atom::error::InvalidArgument("Duration must be between 60 and 86400 seconds");
         }
     }
-    
+
     if (params.contains("max_wind_speed")) {
         double windSpeed = params["max_wind_speed"];
         if (windSpeed < 0.0 || windSpeed > 50.0) {

@@ -25,7 +25,7 @@ class INDISwitchClient;
 
 /**
  * @brief Switch power management component
- * 
+ *
  * Handles power monitoring, consumption tracking, and power limits
  */
 class SwitchPower {
@@ -37,16 +37,16 @@ public:
     auto getSwitchPowerConsumption(uint32_t index) -> std::optional<double>;
     auto getSwitchPowerConsumption(const std::string& name) -> std::optional<double>;
     auto getTotalPowerConsumption() -> double;
-    
+
     // Power limits
     auto setPowerLimit(double maxWatts) -> bool;
     auto getPowerLimit() -> double;
     auto isPowerLimitExceeded() -> bool;
-    
+
     // Power management
     void updatePowerConsumption();
     void checkPowerLimits();
-    
+
     // Power callback registration
     using PowerCallback = std::function<void(double totalPower, bool limitExceeded)>;
     void setPowerCallback(PowerCallback callback);
@@ -54,14 +54,14 @@ public:
 private:
     INDISwitchClient* client_;
     mutable std::mutex power_mutex_;
-    
+
     // Power tracking
     double total_power_consumption_{0.0};
     double power_limit_{1000.0}; // Default 1000W limit
-    
+
     // Power callback
     PowerCallback power_callback_;
-    
+
     // Internal methods
     void notifyPowerEvent(double totalPower, bool limitExceeded);
 };

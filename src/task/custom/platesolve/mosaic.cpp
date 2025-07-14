@@ -14,7 +14,7 @@ namespace lithium::task::platesolve {
 
 MosaicTask::MosaicTask()
     : PlateSolveTaskBase("Mosaic") {
-    
+
     // Initialize centering task
     centeringTask_ = std::make_unique<CenteringTask>();
 
@@ -30,7 +30,7 @@ MosaicTask::MosaicTask()
 
 void MosaicTask::execute(const json& params) {
     auto startTime = std::chrono::steady_clock::now();
-    
+
     try {
         addHistoryEntry("Starting mosaic task");
         spdlog::info("Executing Mosaic task with params: {}", params.dump(4));
@@ -57,7 +57,7 @@ void MosaicTask::execute(const json& params) {
             {"total_time_ms", result.totalTime.count()},
             {"centering_results", json::array()}
         });
-        
+
         // Add centering results
         auto& centeringResultsJson = getResult()["centering_results"];
         for (const auto& centeringResult : result.centeringResults) {
@@ -76,14 +76,14 @@ void MosaicTask::execute(const json& params) {
 
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        
+
         addHistoryEntry("Mosaic completed successfully");
         spdlog::info("Mosaic completed in {} ms", duration.count());
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        
+
         setErrorType(TaskErrorType::DeviceError);
         addHistoryEntry("Mosaic failed: " + std::string(e.what()));
         spdlog::error("Mosaic failed after {} ms: {}", duration.count(), e.what());
@@ -109,12 +109,12 @@ auto MosaicTask::executeImpl(const json& params) -> MosaicResult {
 
     try {
         spdlog::info("Starting {}x{} mosaic centered at RA={:.6f}°, Dec={:.6f}°, {:.1f}% overlap",
-                     config.gridWidth, config.gridHeight, 
+                     config.gridWidth, config.gridHeight,
                      lithium::tools::hourToDegree(config.centerRA), config.centerDec, config.overlap);
 
         // Calculate grid positions
         auto positions = calculateGridPositions(config);
-        
+
         result.totalPositions = static_cast<int>(positions.size());
         result.totalFrames = result.totalPositions * config.framesPerPosition;
 
@@ -126,7 +126,7 @@ auto MosaicTask::executeImpl(const json& params) -> MosaicResult {
             int positionIndex = static_cast<int>(i) + 1;
 
             spdlog::info("Mosaic position {} of {}: RA={:.6f}°, Dec={:.6f}° (Grid: {}, {})",
-                         positionIndex, result.totalPositions, 
+                         positionIndex, result.totalPositions,
                          position.ra, position.dec,
                          (i % config.gridWidth) + 1,
                          (i / config.gridWidth) + 1);
@@ -143,7 +143,7 @@ auto MosaicTask::executeImpl(const json& params) -> MosaicResult {
                     int framesCompleted = takeExposuresAtPosition(config, positionIndex);
                     result.completedFrames += framesCompleted;
                     result.completedPositions++;
-                    
+
                     spdlog::info("Position {} completed: {} frames taken", positionIndex, framesCompleted);
                 } else {
                     spdlog::warn("Position {} failed centering, skipping exposures", positionIndex);
@@ -160,7 +160,7 @@ auto MosaicTask::executeImpl(const json& params) -> MosaicResult {
         result.totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 
         result.success = (result.completedPositions > 0);
-        
+
         spdlog::info("Mosaic completed: {}/{} positions, {}/{} frames in {} ms",
                      result.completedPositions, result.totalPositions,
                      result.completedFrames, result.totalFrames,
@@ -212,12 +212,12 @@ auto MosaicTask::calculateGridPositions(const MosaicConfig& config) -> std::vect
     return positions;
 }
 
-auto MosaicTask::processPosition(const Coordinates& position, const MosaicConfig& config, 
+auto MosaicTask::processPosition(const Coordinates& position, const MosaicConfig& config,
                                 int positionIndex, int totalPositions) -> CenteringResult {
     try {
         // Initial slew to position (in real implementation)
         spdlog::info("Slewing to position: RA={:.6f}°, Dec={:.6f}°", position.ra, position.dec);
-        
+
         // Simulate slew time
         std::this_thread::sleep_for(std::chrono::seconds(2));
 
@@ -249,7 +249,7 @@ auto MosaicTask::processPosition(const Coordinates& position, const MosaicConfig
 
     } catch (const std::exception& e) {
         spdlog::error("Failed to process position {}: {}", positionIndex, e.what());
-        
+
         CenteringResult result;
         result.success = false;
         result.targetPosition = position;
@@ -275,7 +275,7 @@ auto MosaicTask::takeExposuresAtPosition(const MosaicConfig& config, int positio
             // Use basic exposure task
             auto exposureTask = lithium::task::task::TakeExposureTask::createEnhancedTask();
             exposureTask->execute(exposureParams);
-            
+
             successfulFrames++;
             addHistoryEntry("Completed frame " + std::to_string(frame + 1) + " at position " + std::to_string(positionIndex));
         }
@@ -289,7 +289,7 @@ auto MosaicTask::takeExposuresAtPosition(const MosaicConfig& config, int positio
 
 auto MosaicTask::parseConfig(const json& params) -> MosaicConfig {
     MosaicConfig config;
-    
+
     config.centerRA = params.at("center_ra").get<double>();
     config.centerDec = params.at("center_dec").get<double>();
     config.gridWidth = params.at("grid_width").get<int>();
@@ -300,7 +300,7 @@ auto MosaicTask::parseConfig(const json& params) -> MosaicConfig {
     config.autoCenter = params.value("auto_center", true);
     config.gain = params.value("gain", 100);
     config.offset = params.value("offset", 10);
-    
+
     // Parse centering config
     config.centering.tolerance = params.value("centering_tolerance", 60.0);  // Larger tolerance for mosaic
     config.centering.maxIterations = params.value("centering_max_iterations", 3);
@@ -309,7 +309,7 @@ auto MosaicTask::parseConfig(const json& params) -> MosaicConfig {
     config.centering.platesolve.gain = params.value("centering_gain", 100);
     config.centering.platesolve.offset = params.value("centering_offset", 10);
     config.centering.platesolve.solverType = params.value("solver_type", "astrometry");
-    
+
     return config;
 }
 
@@ -317,27 +317,27 @@ void MosaicTask::validateConfig(const MosaicConfig& config) {
     if (config.centerRA < 0 || config.centerRA >= 24) {
         THROW_INVALID_ARGUMENT("Center RA must be between 0 and 24 hours");
     }
-    
+
     if (config.centerDec < -90 || config.centerDec > 90) {
         THROW_INVALID_ARGUMENT("Center Dec must be between -90 and 90 degrees");
     }
-    
+
     if (config.gridWidth < 1 || config.gridWidth > 10) {
         THROW_INVALID_ARGUMENT("Grid width must be between 1 and 10");
     }
-    
+
     if (config.gridHeight < 1 || config.gridHeight > 10) {
         THROW_INVALID_ARGUMENT("Grid height must be between 1 and 10");
     }
-    
+
     if (config.overlap < 0 || config.overlap > 50) {
         THROW_INVALID_ARGUMENT("Overlap must be between 0 and 50 percent");
     }
-    
+
     if (config.frameExposure <= 0 || config.frameExposure > 3600) {
         THROW_INVALID_ARGUMENT("Frame exposure must be between 0 and 3600 seconds");
     }
-    
+
     if (config.framesPerPosition < 1 || config.framesPerPosition > 10) {
         THROW_INVALID_ARGUMENT("Frames per position must be between 1 and 10");
     }

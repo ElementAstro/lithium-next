@@ -49,11 +49,11 @@ public:
         if (!videoRunning_) {
             throw atom::error::RuntimeError("Video is not running");
         }
-        
+
         frameCount_++;
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - videoStartTime_);
-        
+
         return json{
             {"frame_number", frameCount_},
             {"timestamp", elapsed.count()},
@@ -97,25 +97,25 @@ auto StartVideoTask::taskName() -> std::string {
 void StartVideoTask::execute(const json& params) {
     try {
         validateVideoParameters(params);
-        
+
         spdlog::info("Starting video stream with parameters: {}", params.dump());
-        
+
 #ifdef MOCK_CAMERA
         auto& camera = MockCameraDevice::getInstance();
         if (!camera.startVideo()) {
             throw atom::error::RuntimeError("Failed to start video stream - already running");
         }
 #endif
-        
+
         // Log success
         LOG_F(INFO, "Video stream started successfully");
-        
+
         // Optional: Wait for stream to stabilize
         if (params.contains("stabilize_delay") && params["stabilize_delay"].is_number()) {
             int delay = params["stabilize_delay"];
             std::this_thread::sleep_for(std::chrono::milliseconds(delay));
         }
-        
+
     } catch (const std::exception& e) {
         spdlog::error("StartVideoTask failed: {}", e.what());
         throw;
@@ -123,12 +123,12 @@ void StartVideoTask::execute(const json& params) {
 }
 
 auto StartVideoTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<StartVideoTask>("StartVideo", 
+    auto task = std::make_unique<StartVideoTask>("StartVideo",
         [](const json& params) {
             StartVideoTask taskInstance("StartVideo", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -141,7 +141,7 @@ void StartVideoTask::defineParameters(Task& task) {
         .defaultValue = 1000,
         .description = "Delay in milliseconds to wait for stream stabilization"
     });
-    
+
     task.addParameter({
         .name = "format",
         .type = "string",
@@ -149,7 +149,7 @@ void StartVideoTask::defineParameters(Task& task) {
         .defaultValue = "RGB24",
         .description = "Video format (RGB24, YUV420, etc.)"
     });
-    
+
     task.addParameter({
         .name = "fps",
         .type = "number",
@@ -166,7 +166,7 @@ void StartVideoTask::validateVideoParameters(const json& params) {
             throw atom::error::InvalidArgument("Stabilize delay must be between 0 and 10000 ms");
         }
     }
-    
+
     if (params.contains("fps")) {
         double fps = params["fps"];
         if (fps <= 0 || fps > 120) {
@@ -189,16 +189,16 @@ auto StopVideoTask::taskName() -> std::string {
 void StopVideoTask::execute(const json& params) {
     try {
         spdlog::info("Stopping video stream");
-        
+
 #ifdef MOCK_CAMERA
         auto& camera = MockCameraDevice::getInstance();
         if (!camera.stopVideo()) {
             spdlog::warn("Video stream was not running");
         }
 #endif
-        
+
         LOG_F(INFO, "Video stream stopped successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("StopVideoTask failed: {}", e.what());
         throw;
@@ -206,12 +206,12 @@ void StopVideoTask::execute(const json& params) {
 }
 
 auto StopVideoTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<StopVideoTask>("StopVideo", 
+    auto task = std::make_unique<StopVideoTask>("StopVideo",
         [](const json& params) {
             StopVideoTask taskInstance("StopVideo", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -229,19 +229,19 @@ auto GetVideoFrameTask::taskName() -> std::string {
 void GetVideoFrameTask::execute(const json& params) {
     try {
         validateFrameParameters(params);
-        
+
 #ifdef MOCK_CAMERA
         auto& camera = MockCameraDevice::getInstance();
         if (!camera.isVideoRunning()) {
             throw atom::error::RuntimeError("Video stream is not running");
         }
-        
+
         auto frameData = camera.getVideoFrame();
         spdlog::info("Retrieved video frame: {}", frameData.dump());
 #endif
-        
+
         LOG_F(INFO, "Video frame retrieved successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("GetVideoFrameTask failed: {}", e.what());
         throw;
@@ -249,12 +249,12 @@ void GetVideoFrameTask::execute(const json& params) {
 }
 
 auto GetVideoFrameTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<GetVideoFrameTask>("GetVideoFrame", 
+    auto task = std::make_unique<GetVideoFrameTask>("GetVideoFrame",
         [](const json& params) {
             GetVideoFrameTask taskInstance("GetVideoFrame", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -287,42 +287,42 @@ auto RecordVideoTask::taskName() -> std::string {
 void RecordVideoTask::execute(const json& params) {
     try {
         validateRecordingParameters(params);
-        
+
         int duration = params.value("duration", 10);
         std::string filename = params.value("filename", "video_recording.mp4");
-        
+
         spdlog::info("Starting video recording for {} seconds to file: {}", duration, filename);
-        
+
 #ifdef MOCK_CAMERA
         auto& camera = MockCameraDevice::getInstance();
-        
+
         // Start video if not already running
         bool wasRunning = camera.isVideoRunning();
         if (!wasRunning) {
             camera.startVideo();
         }
-        
+
         // Simulate recording
         auto startTime = std::chrono::steady_clock::now();
         auto endTime = startTime + std::chrono::seconds(duration);
-        
+
         int framesCaptured = 0;
         while (std::chrono::steady_clock::now() < endTime) {
             camera.getVideoFrame();
             framesCaptured++;
             std::this_thread::sleep_for(std::chrono::milliseconds(33)); // ~30 FPS
         }
-        
+
         // Stop video if we started it
         if (!wasRunning) {
             camera.stopVideo();
         }
-        
+
         spdlog::info("Video recording completed. Captured {} frames", framesCaptured);
 #endif
-        
+
         LOG_F(INFO, "Video recording completed successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("RecordVideoTask failed: {}", e.what());
         throw;
@@ -330,12 +330,12 @@ void RecordVideoTask::execute(const json& params) {
 }
 
 auto RecordVideoTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<RecordVideoTask>("RecordVideo", 
+    auto task = std::make_unique<RecordVideoTask>("RecordVideo",
         [](const json& params) {
             RecordVideoTask taskInstance("RecordVideo", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -348,7 +348,7 @@ void RecordVideoTask::defineParameters(Task& task) {
         .defaultValue = 10,
         .description = "Recording duration in seconds"
     });
-    
+
     task.addParameter({
         .name = "filename",
         .type = "string",
@@ -356,7 +356,7 @@ void RecordVideoTask::defineParameters(Task& task) {
         .defaultValue = "video_recording.mp4",
         .description = "Output filename for the video recording"
     });
-    
+
     task.addParameter({
         .name = "quality",
         .type = "string",
@@ -364,7 +364,7 @@ void RecordVideoTask::defineParameters(Task& task) {
         .defaultValue = "high",
         .description = "Recording quality (low, medium, high)"
     });
-    
+
     task.addParameter({
         .name = "fps",
         .type = "number",
@@ -381,7 +381,7 @@ void RecordVideoTask::validateRecordingParameters(const json& params) {
             throw atom::error::InvalidArgument("Duration must be between 1 and 3600 seconds");
         }
     }
-    
+
     if (params.contains("fps")) {
         double fps = params["fps"];
         if (fps <= 0 || fps > 120) {
@@ -400,23 +400,23 @@ void VideoStreamMonitorTask::execute(const json& params) {
     try {
         int duration = params.value("monitor_duration", 30);
         spdlog::info("Monitoring video stream for {} seconds", duration);
-        
+
 #ifdef MOCK_CAMERA
         auto& camera = MockCameraDevice::getInstance();
-        
+
         auto startTime = std::chrono::steady_clock::now();
         auto endTime = startTime + std::chrono::seconds(duration);
-        
+
         while (std::chrono::steady_clock::now() < endTime) {
             auto status = camera.getVideoStatus();
             spdlog::info("Video status: {}", status.dump());
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(5));
         }
 #endif
-        
+
         LOG_F(INFO, "Video stream monitoring completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("VideoStreamMonitorTask failed: {}", e.what());
         throw;
@@ -424,12 +424,12 @@ void VideoStreamMonitorTask::execute(const json& params) {
 }
 
 auto VideoStreamMonitorTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<VideoStreamMonitorTask>("VideoStreamMonitor", 
+    auto task = std::make_unique<VideoStreamMonitorTask>("VideoStreamMonitor",
         [](const json& params) {
             VideoStreamMonitorTask taskInstance("VideoStreamMonitor", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -442,7 +442,7 @@ void VideoStreamMonitorTask::defineParameters(Task& task) {
         .defaultValue = 30,
         .description = "Duration to monitor video stream in seconds"
     });
-    
+
     task.addParameter({
         .name = "report_interval",
         .type = "integer",

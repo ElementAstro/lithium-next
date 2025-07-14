@@ -19,8 +19,7 @@ class GitUtilsPyBindAdapter:
     @staticmethod
     def clone_repository(repo_url: str, clone_dir: str) -> bool:
         """Simplified clone operation for C++ binding."""
-        logger.info(
-            f"C++ binding: Cloning repository {repo_url} to {clone_dir}")
+        logger.info(f"C++ binding: Cloning repository {repo_url} to {clone_dir}")
         git = GitUtils()
         result = git.clone_repository(repo_url, clone_dir)
         return result.success
@@ -40,8 +39,7 @@ class GitUtilsPyBindAdapter:
     @staticmethod
     def add_and_commit(repo_dir: str, message: str) -> bool:
         """Combined add and commit operation for C++ binding."""
-        logger.info(
-            f"C++ binding: Adding and committing changes in {repo_dir}")
+        logger.info(f"C++ binding: Adding and committing changes in {repo_dir}")
         git = GitUtils(repo_dir)
         try:
             add_result = git.add_changes()

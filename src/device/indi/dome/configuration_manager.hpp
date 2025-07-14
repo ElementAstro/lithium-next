@@ -15,7 +15,7 @@ class ConfigurationManager : public DomeComponentBase {
 public:
     explicit ConfigurationManager(std::shared_ptr<INDIDomeCore> core)
         : DomeComponentBase(std::move(core), "ConfigurationManager") {}
-    
+
     auto initialize() -> bool override { return true; }
     auto cleanup() -> bool override { return true; }
     void handlePropertyUpdate(const INDI::Property& property) override {}

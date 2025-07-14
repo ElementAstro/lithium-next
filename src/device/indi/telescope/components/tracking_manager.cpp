@@ -40,17 +40,17 @@ TrackingManager::~TrackingManager() {
 
 bool TrackingManager::initialize() {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (initialized_) {
         logWarning("Tracking manager already initialized");
         return true;
     }
-    
+
     if (!hardware_->isConnected()) {
         logError("Hardware interface not connected");
         return false;
     }
-    
+
     try {
         // Initialize state
         trackingEnabled_ = false;
@@ -58,30 +58,30 @@ bool TrackingManager::initialize() {
         autoGuidingEnabled_ = false;
         pecEnabled_ = false;
         pecCalibrated_ = false;
-        
+
         // Initialize tracking status
         currentStatus_ = TrackingStatus{};
         currentStatus_.mode = TrackMode::SIDEREAL;
         currentStatus_.lastUpdate = std::chrono::steady_clock::now();
-        
+
         // Initialize statistics
         statistics_ = TrackingStatistics{};
         statistics_.trackingStartTime = std::chrono::steady_clock::now();
-        
+
         // Set default sidereal rates
         currentRates_ = calculateSiderealRates();
         trackRateRA_ = currentRates_.slewRateRA;
         trackRateDEC_ = currentRates_.slewRateDEC;
-        
+
         // Register for property updates via hardware interface
         hardware_->setPropertyUpdateCallback([this](const std::string& propertyName, const INDI::Property& property) {
             handlePropertyUpdate(propertyName);
         });
-        
+
         initialized_ = true;
         logInfo("Tracking manager initialized successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         logError("Failed to initialize tracking manager: " + std::string(e.what()));
         return false;
@@ -90,26 +90,26 @@ bool TrackingManager::initialize() {
 
 bool TrackingManager::shutdown() {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         return true;
     }
-    
+
     try {
         // Disable tracking if enabled
         if (trackingEnabled_) {
             enableTracking(false);
         }
-        
+
         // Clear callbacks
         trackingStateCallback_ = nullptr;
         trackingErrorCallback_ = nullptr;
-        
+
         initialized_ = false;
-        
+
         logInfo("Tracking manager shut down successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         logError("Error during tracking manager shutdown: " + std::string(e.what()));
         return false;
@@ -118,16 +118,16 @@ bool TrackingManager::shutdown() {
 
 bool TrackingManager::enableTracking(bool enable) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     try {
         if (hardware_->setTrackingState(enable)) {
             trackingEnabled_ = enable;
-            
+
             if (enable) {
                 statistics_.trackingStartTime = std::chrono::steady_clock::now();
                 logInfo("Tracking enabled with mode: " + std::to_string(static_cast<int>(currentMode_.load())));
@@ -137,22 +137,22 @@ bool TrackingManager::enableTracking(bool enable) {
                 auto sessionTime = std::chrono::duration_cast<std::chrono::seconds>(
                     now - statistics_.trackingStartTime);
                 statistics_.totalTrackingTime += sessionTime;
-                
+
                 logInfo("Tracking disabled");
             }
-            
+
             updateTrackingStatus();
-            
+
             if (trackingStateCallback_) {
                 trackingStateCallback_(enable, currentMode_);
             }
-            
+
             return true;
         } else {
             logError("Failed to " + std::string(enable ? "enable" : "disable") + " tracking");
             return false;
         }
-        
+
     } catch (const std::exception& e) {
         logError("Exception during tracking enable/disable: " + std::string(e.what()));
         return false;
@@ -165,17 +165,17 @@ bool TrackingManager::isTrackingEnabled() const {
 
 bool TrackingManager::setTrackingMode(TrackMode mode) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     if (!isValidTrackMode(mode)) {
         logError("Invalid tracking mode: " + std::to_string(static_cast<int>(mode)));
         return false;
     }
-    
+
     try {
         std::string modeStr;
         switch (mode) {
@@ -185,10 +185,10 @@ bool TrackingManager::setTrackingMode(TrackMode mode) {
             case TrackMode::CUSTOM: modeStr = "TRACK_CUSTOM"; break;
             case TrackMode::NONE: modeStr = "TRACK_OFF"; break;
         }
-        
+
         if (hardware_->setTrackingMode(modeStr)) {
             currentMode_ = mode;
-            
+
             // Update rates based on new mode
             switch (mode) {
                 case TrackMode::SIDEREAL:
@@ -204,23 +204,23 @@ bool TrackingManager::setTrackingMode(TrackMode mode) {
                     // Keep current custom rates
                     break;
             }
-            
+
             trackRateRA_ = currentRates_.raRate;
             trackRateDEC_ = currentRates_.decRate;
-            
+
             updateTrackingStatus();
-            
+
             if (trackingStateCallback_) {
                 trackingStateCallback_(trackingEnabled_, mode);
             }
-            
+
             logInfo("Set tracking mode to: " + std::to_string(static_cast<int>(mode)));
             return true;
         } else {
             logError("Failed to set tracking mode");
             return false;
         }
-        
+
     } catch (const std::exception& e) {
         logError("Exception during set tracking mode: " + std::string(e.what()));
         return false;
@@ -229,38 +229,38 @@ bool TrackingManager::setTrackingMode(TrackMode mode) {
 
 bool TrackingManager::setTrackRates(double raRate, double decRate) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     if (!validateTrackRates(raRate, decRate)) {
         logError("Invalid track rates: RA=" + std::to_string(raRate) + ", DEC=" + std::to_string(decRate));
         return false;
     }
-    
+
     try {
         MotionRates rates;
         rates.raRate = raRate;
         rates.decRate = decRate;
-        
+
         if (hardware_->setTrackRates(rates)) {
             currentRates_ = rates;
             trackRateRA_ = raRate;
             trackRateDEC_ = decRate;
             currentMode_ = TrackMode::CUSTOM;
-            
+
             updateTrackingStatus();
-            
-            logInfo("Set custom track rates: RA=" + std::to_string(raRate) + 
+
+            logInfo("Set custom track rates: RA=" + std::to_string(raRate) +
                    " arcsec/s, DEC=" + std::to_string(decRate) + " arcsec/s");
             return true;
         } else {
             logError("Failed to set track rates");
             return false;
         }
-        
+
     } catch (const std::exception& e) {
         logError("Exception during set track rates: " + std::string(e.what()));
         return false;
@@ -273,11 +273,11 @@ bool TrackingManager::setTrackRates(const MotionRates& rates) {
 
 std::optional<MotionRates> TrackingManager::getTrackRates() const {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         return std::nullopt;
     }
-    
+
     return currentRates_;
 }
 
@@ -335,25 +335,25 @@ bool TrackingManager::isTrackingAccurate(double toleranceArcsec) const {
 
 bool TrackingManager::applyTrackingCorrection(double raCorrection, double decCorrection) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     try {
         if (hardware_->applyGuideCorrection(raCorrection, decCorrection)) {
             statistics_.trackingCorrectionCount++;
             updateTrackingStatistics();
-            
-            logInfo("Applied tracking correction: RA=" + std::to_string(raCorrection) + 
+
+            logInfo("Applied tracking correction: RA=" + std::to_string(raCorrection) +
                    " arcsec, DEC=" + std::to_string(decCorrection) + " arcsec");
             return true;
         } else {
             logError("Failed to apply tracking correction");
             return false;
         }
-        
+
     } catch (const std::exception& e) {
         logError("Exception during tracking correction: " + std::string(e.what()));
         return false;
@@ -362,12 +362,12 @@ bool TrackingManager::applyTrackingCorrection(double raCorrection, double decCor
 
 bool TrackingManager::enableAutoGuiding(bool enable) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     try {
         if (hardware_->setAutoGuidingEnabled(enable)) {
             autoGuidingEnabled_ = enable;
@@ -377,7 +377,7 @@ bool TrackingManager::enableAutoGuiding(bool enable) {
             logError("Failed to " + std::string(enable ? "enable" : "disable") + " auto-guiding");
             return false;
         }
-        
+
     } catch (const std::exception& e) {
         logError("Exception during auto-guiding control: " + std::string(e.what()));
         return false;
@@ -390,12 +390,12 @@ bool TrackingManager::isAutoGuidingEnabled() const {
 
 bool TrackingManager::enablePEC(bool enable) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     try {
         if (hardware_->setPECEnabled(enable)) {
             pecEnabled_ = enable;
@@ -405,7 +405,7 @@ bool TrackingManager::enablePEC(bool enable) {
             logError("Failed to " + std::string(enable ? "enable" : "disable") + " PEC");
             return false;
         }
-        
+
     } catch (const std::exception& e) {
         logError("Exception during PEC control: " + std::string(e.what()));
         return false;
@@ -418,12 +418,12 @@ bool TrackingManager::isPECEnabled() const {
 
 bool TrackingManager::calibratePEC() {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     try {
         if (hardware_->calibratePEC()) {
             pecCalibrated_ = true;
@@ -433,7 +433,7 @@ bool TrackingManager::calibratePEC() {
             logError("PEC calibration failed");
             return false;
         }
-        
+
     } catch (const std::exception& e) {
         logError("Exception during PEC calibration: " + std::string(e.what()));
         return false;
@@ -446,21 +446,21 @@ bool TrackingManager::isPECCalibrated() const {
 
 double TrackingManager::calculateTrackingQuality() const {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!trackingEnabled_ || statistics_.trackingCorrectionCount == 0) {
         return 0.0;
     }
-    
+
     // Quality based on tracking error (0.0 = poor, 1.0 = excellent)
     double errorThreshold = 10.0; // arcsec
     double quality = 1.0 - std::min(statistics_.avgTrackingError / errorThreshold, 1.0);
-    
+
     return std::max(0.0, std::min(1.0, quality));
 }
 
 std::string TrackingManager::getTrackingQualityDescription() const {
     double quality = calculateTrackingQuality();
-    
+
     if (quality >= 0.9) return "Excellent";
     if (quality >= 0.7) return "Good";
     if (quality >= 0.5) return "Fair";
@@ -474,27 +474,27 @@ bool TrackingManager::needsTrackingImprovement() const {
 
 bool TrackingManager::setTrackingLimits(double maxRARate, double maxDECRate) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     if (maxRARate <= 0 || maxDECRate <= 0) {
         logError("Invalid tracking limits");
         return false;
     }
-    
+
     try {
         // Store limits and validate current rates
         if (std::abs(trackRateRA_) > maxRARate || std::abs(trackRateDEC_) > maxDECRate) {
             logWarning("Current track rates exceed new limits");
         }
-        
-        logInfo("Set tracking limits: RA=" + std::to_string(maxRARate) + 
+
+        logInfo("Set tracking limits: RA=" + std::to_string(maxRARate) +
                " arcsec/s, DEC=" + std::to_string(maxDECRate) + " arcsec/s");
         return true;
-        
+
     } catch (const std::exception& e) {
         logError("Exception during set tracking limits: " + std::string(e.what()));
         return false;
@@ -503,23 +503,23 @@ bool TrackingManager::setTrackingLimits(double maxRARate, double maxDECRate) {
 
 bool TrackingManager::resetTrackingStatistics() {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     statistics_ = TrackingStatistics{};
     statistics_.trackingStartTime = std::chrono::steady_clock::now();
     currentTrackingError_ = 0.0;
-    
+
     logInfo("Tracking statistics reset");
     return true;
 }
 
 bool TrackingManager::saveTrackingProfile(const std::string& profileName) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     // TODO: Implement profile saving to configuration file
     logInfo("Tracking profile saved: " + profileName);
     return true;
@@ -527,12 +527,12 @@ bool TrackingManager::saveTrackingProfile(const std::string& profileName) {
 
 bool TrackingManager::loadTrackingProfile(const std::string& profileName) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         logError("Tracking manager not initialized");
         return false;
     }
-    
+
     // TODO: Implement profile loading from configuration file
     logInfo("Tracking profile loaded: " + profileName);
     return true;
@@ -542,22 +542,22 @@ bool TrackingManager::loadTrackingProfile(const std::string& profileName) {
 
 void TrackingManager::updateTrackingStatus() {
     auto now = std::chrono::steady_clock::now();
-    
+
     currentStatus_.isEnabled = trackingEnabled_;
     currentStatus_.mode = currentMode_;
     currentStatus_.trackRateRA = trackRateRA_;
     currentStatus_.trackRateDEC = trackRateDEC_;
     currentStatus_.trackingError = currentTrackingError_;
     currentStatus_.lastUpdate = now;
-    
+
     // Update status message
     if (trackingEnabled_) {
-        currentStatus_.statusMessage = "Tracking active (" + 
+        currentStatus_.statusMessage = "Tracking active (" +
             std::to_string(static_cast<int>(currentMode_)) + ")";
     } else {
         currentStatus_.statusMessage = "Tracking disabled";
     }
-    
+
     calculateTrackingError();
     updateTrackingStatistics();
 }
@@ -567,12 +567,12 @@ void TrackingManager::calculateTrackingError() {
     auto error = hardware_->getCurrentTrackingError();
     if (error.has_value()) {
         currentTrackingError_ = error.value();
-        
+
         // Update statistics
         if (currentTrackingError_ > statistics_.maxTrackingError) {
             statistics_.maxTrackingError = currentTrackingError_;
         }
-        
+
         // Trigger error callback if needed
         if (trackingErrorCallback_) {
             trackingErrorCallback_(currentTrackingError_);
@@ -584,18 +584,18 @@ void TrackingManager::updateTrackingStatistics() {
     if (!trackingEnabled_) {
         return;
     }
-    
+
     auto now = std::chrono::steady_clock::now();
-    
+
     // Update average tracking error
     if (statistics_.trackingCorrectionCount > 0) {
-        statistics_.avgTrackingError = 
-            (statistics_.avgTrackingError * (statistics_.trackingCorrectionCount - 1) + 
+        statistics_.avgTrackingError =
+            (statistics_.avgTrackingError * (statistics_.trackingCorrectionCount - 1) +
              currentTrackingError_) / statistics_.trackingCorrectionCount;
     } else {
         statistics_.avgTrackingError = currentTrackingError_;
     }
-    
+
     // Update total tracking time if currently tracking
     auto sessionTime = std::chrono::duration_cast<std::chrono::seconds>(
         now - statistics_.trackingStartTime);
@@ -624,7 +624,7 @@ void TrackingManager::handlePropertyUpdate(const std::string& propertyName) {
             pecEnabled_ = pecState.value();
         }
     }
-    
+
     updateTrackingStatus();
 }
 
@@ -652,18 +652,18 @@ MotionRates TrackingManager::calculateLunarRates() const {
 bool TrackingManager::validateTrackRates(double raRate, double decRate) const {
     // Check for reasonable rate limits (±60 arcsec/sec)
     const double MAX_RATE = 60.0;
-    
+
     if (std::abs(raRate) > MAX_RATE || std::abs(decRate) > MAX_RATE) {
         return false;
     }
-    
+
     return true;
 }
 
 bool TrackingManager::isValidTrackMode(TrackMode mode) const {
-    return mode == TrackMode::SIDEREAL || 
-           mode == TrackMode::SOLAR || 
-           mode == TrackMode::LUNAR || 
+    return mode == TrackMode::SIDEREAL ||
+           mode == TrackMode::SOLAR ||
+           mode == TrackMode::LUNAR ||
            mode == TrackMode::CUSTOM;
 }
 

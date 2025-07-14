@@ -18,7 +18,7 @@ auto MosaicImagingTask::taskName() -> std::string { return "MosaicImaging"; }
 void MosaicImagingTask::execute(const json& params) { executeImpl(params); }
 
 void MosaicImagingTask::executeImpl(const json& params) {
-    LOG_F(INFO, "Executing MosaicImaging task '{}' with params: {}", 
+    LOG_F(INFO, "Executing MosaicImaging task '{}' with params: {}",
           getName(), params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
@@ -32,11 +32,11 @@ void MosaicImagingTask::executeImpl(const json& params) {
         int tilesX = params.value("tiles_x", 2);
         int tilesY = params.value("tiles_y", 2);
         double overlapPercent = params.value("overlap_percent", 20.0);
-        
+
         // Exposure parameters
         int exposuresPerTile = params.value("exposures_per_tile", 10);
         double exposureTime = params.value("exposure_time", 300.0);
-        std::vector<std::string> filters = 
+        std::vector<std::string> filters =
             params.value("filters", std::vector<std::string>{"L"});
         bool dithering = params.value("dithering", true);
         int binning = params.value("binning", 1);
@@ -50,25 +50,25 @@ void MosaicImagingTask::executeImpl(const json& params) {
         std::vector<json> mosaicTiles = calculateMosaicTiles(params);
         int totalTiles = mosaicTiles.size();
 
-        LOG_F(INFO, "Mosaic will capture {} tiles with {:.1f}% overlap", 
+        LOG_F(INFO, "Mosaic will capture {} tiles with {:.1f}% overlap",
               totalTiles, overlapPercent);
 
         // Capture each tile
         for (size_t tileIndex = 0; tileIndex < mosaicTiles.size(); ++tileIndex) {
             const json& tile = mosaicTiles[tileIndex];
-            
+
             LOG_F(INFO, "Starting tile {} of {} - Position: {:.3f}h, {:.3f}°",
-                  tileIndex + 1, totalTiles, 
+                  tileIndex + 1, totalTiles,
                   tile["ra"].get<double>(), tile["dec"].get<double>());
 
             try {
                 captureMosaicTile(tile, tileIndex + 1, totalTiles);
-                
+
                 LOG_F(INFO, "Tile {} completed successfully", tileIndex + 1);
-                
+
             } catch (const std::exception& e) {
                 LOG_F(ERROR, "Failed to capture tile {}: {}", tileIndex + 1, e.what());
-                
+
                 // Ask user if they want to continue with remaining tiles
                 LOG_F(WARNING, "Continuing with remaining tiles...");
             }
@@ -104,7 +104,7 @@ std::vector<json> MosaicImagingTask::calculateMosaicTiles(const json& params) {
     // Calculate tile size with overlap
     double tileWidth = mosaicWidth / tilesX;
     double tileHeight = mosaicHeight / tilesY;
-    
+
     // Calculate step size (accounting for overlap)
     double stepX = tileWidth * (1.0 - overlapPercent / 100.0);
     double stepY = tileHeight * (1.0 - overlapPercent / 100.0);
@@ -137,7 +137,7 @@ std::vector<json> MosaicImagingTask::calculateMosaicTiles(const json& params) {
 
             tiles.push_back(tile);
 
-            LOG_F(INFO, "Tile {},{}: RA={:.3f}h, Dec={:.3f}°", 
+            LOG_F(INFO, "Tile {},{}: RA={:.3f}h, Dec={:.3f}°",
                   x, y, tileRA, tileDec);
         }
     }
@@ -184,9 +184,9 @@ void MosaicImagingTask::captureMosaicTile(const json& tile, int tileNumber, int 
     LOG_F(INFO, "Tile {}/{} capture completed", tileNumber, totalTiles);
 }
 
-json MosaicImagingTask::calculateTileCoordinates(double centerRA, double centerDec, 
-                                                double width, double height, 
-                                                int tilesX, int tilesY, 
+json MosaicImagingTask::calculateTileCoordinates(double centerRA, double centerDec,
+                                                double width, double height,
+                                                int tilesX, int tilesY,
                                                 double overlapPercent) {
     // This is a helper function for more complex coordinate calculations
     // For now, delegate to the main calculation method

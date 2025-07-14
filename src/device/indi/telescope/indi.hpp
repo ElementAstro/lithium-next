@@ -10,7 +10,7 @@
 
 /**
  * @brief INDI-specific implementations for telescope interface
- * 
+ *
  * Handles INDI protocol-specific methods and property handling
  */
 class TelescopeINDI {
@@ -235,16 +235,16 @@ public:
 private:
     std::string name_;
     INDI::BaseDevice device_;
-    
+
     // INDI state
     std::atomic_bool indiConnected_{false};
     std::atomic_bool indiInitialized_{false};
-    
+
     // Telescope capabilities
     uint32_t telescopeCapability_{0};
     uint8_t slewRateCount_{4};
     TelescopeParkData parkDataType_{PARK_NONE};
-    
+
     // Helper methods
     auto processCoordinateUpdate() -> void;
     auto processTrackingUpdate() -> void;

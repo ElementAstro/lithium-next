@@ -32,7 +32,7 @@ class AutoUpdaterSync:
     def __init__(
         self,
         config: Dict[str, Any],
-        progress_callback: Optional[Callable[[str, float, str], None]] = None
+        progress_callback: Optional[Callable[[str, float, str], None]] = None,
     ):
         """
         Initialize the synchronous auto updater.

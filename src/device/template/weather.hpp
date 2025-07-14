@@ -48,27 +48,27 @@ struct WeatherParameters {
     std::optional<double> humidity;         // Percentage 0-100
     std::optional<double> pressure;         // hPa
     std::optional<double> dewPoint;         // Celsius
-    
+
     // Wind
     std::optional<double> windSpeed;        // m/s
     std::optional<double> windDirection;    // degrees
     std::optional<double> windGust;         // m/s
-    
+
     // Precipitation
     std::optional<double> rainRate;         // mm/hr
     std::optional<double> cloudCover;       // Percentage 0-100
     std::optional<double> skyTemperature;   // Celsius
-    
+
     // Light and sky quality
     std::optional<double> skyBrightness;    // mag/arcsec²
     std::optional<double> seeing;           // arcseconds
     std::optional<double> transparency;     // Percentage 0-100
-    
+
     // Additional sensors
     std::optional<double> uvIndex;
     std::optional<double> solarRadiation;   // W/m²
     std::optional<double> lightLevel;       // lux
-    
+
     std::chrono::system_clock::time_point timestamp;
 } ATOM_ALIGNAS(128);
 
@@ -77,23 +77,23 @@ struct WeatherLimits {
     // Temperature limits
     std::optional<double> minTemperature{-20.0};
     std::optional<double> maxTemperature{50.0};
-    
+
     // Humidity limits
     std::optional<double> maxHumidity{95.0};
-    
+
     // Wind limits
     std::optional<double> maxWindSpeed{15.0};      // m/s
     std::optional<double> maxWindGust{20.0};       // m/s
-    
+
     // Precipitation limits
     std::optional<double> maxRainRate{0.1};        // mm/hr
-    
+
     // Cloud cover limits
     std::optional<double> maxCloudCover{80.0};     // Percentage
-    
+
     // Sky temperature limits
     std::optional<double> minSkyTemperature{-40.0}; // Celsius
-    
+
     // Seeing limits
     std::optional<double> maxSeeing{5.0};          // arcseconds
     std::optional<double> minTransparency{30.0};   // Percentage
@@ -122,7 +122,7 @@ public:
         setType("Weather");
         weather_parameters_.timestamp = std::chrono::system_clock::now();
     }
-    
+
     ~AtomWeatherStation() override = default;
 
     // Capabilities
@@ -220,22 +220,22 @@ protected:
     WeatherCapabilities weather_capabilities_;
     WeatherLimits weather_limits_;
     WeatherParameters weather_parameters_;
-    
+
     // Configuration
     std::chrono::seconds update_interval_{30};
     bool data_logging_enabled_{false};
     bool alerts_enabled_{true};
     std::string log_file_path_;
-    
+
     // Historical data storage
     std::vector<WeatherParameters> historical_data_;
     static constexpr size_t MAX_HISTORICAL_RECORDS = 2880; // 24 hours at 30s intervals
-    
+
     // Callbacks
     WeatherCallback weather_callback_;
     StateCallback state_callback_;
     AlertCallback alert_callback_;
-    
+
     // Utility methods
     virtual void updateWeatherState(WeatherState state) { weather_state_ = state; }
     virtual void updateWeatherCondition(WeatherCondition condition) { weather_condition_ = condition; }

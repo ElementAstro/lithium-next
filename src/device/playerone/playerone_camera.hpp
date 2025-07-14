@@ -34,7 +34,7 @@ namespace lithium::device::playerone::camera {
 
 /**
  * @brief PlayerOne Camera implementation using PlayerOne SDK
- * 
+ *
  * Supports PlayerOne astronomical cameras with advanced features including
  * cooling, high-speed readout, and excellent image quality.
  */
@@ -203,18 +203,18 @@ private:
     std::string serial_number_;
     std::string firmware_version_;
     std::string camera_type_;
-    
+
     // Connection state
     std::atomic<bool> is_connected_;
     std::atomic<bool> is_initialized_;
-    
+
     // Exposure state
     std::atomic<bool> is_exposing_;
     std::atomic<bool> exposure_abort_requested_;
     std::chrono::system_clock::time_point exposure_start_time_;
     double current_exposure_duration_;
     std::thread exposure_thread_;
-    
+
     // Video state
     std::atomic<bool> is_video_running_;
     std::atomic<bool> is_video_recording_;
@@ -222,12 +222,12 @@ private:
     std::string video_recording_file_;
     double video_exposure_;
     int video_gain_;
-    
+
     // Temperature control
     std::atomic<bool> cooler_enabled_;
     double target_temperature_;
     std::thread temperature_thread_;
-    
+
     // Sequence control
     std::atomic<bool> sequence_running_;
     int sequence_current_frame_;
@@ -235,7 +235,7 @@ private:
     double sequence_exposure_;
     double sequence_interval_;
     std::thread sequence_thread_;
-    
+
     // Camera parameters
     int current_gain_;
     int current_offset_;
@@ -252,7 +252,7 @@ private:
     bool pixel_bin_sum_;
     bool hardware_binning_;
     std::string sensor_pattern_;
-    
+
     // Frame parameters
     int roi_x_, roi_y_, roi_width_, roi_height_;
     int bin_x_, bin_y_;
@@ -262,12 +262,12 @@ private:
     BayerPattern bayer_pattern_;
     bool is_color_camera_;
     bool has_shutter_;
-    
+
     // Statistics
     uint64_t total_frames_;
     uint64_t dropped_frames_;
     std::chrono::system_clock::time_point last_frame_time_;
-    
+
     // Thread safety
     mutable std::mutex camera_mutex_;
     mutable std::mutex exposure_mutex_;
@@ -275,7 +275,7 @@ private:
     mutable std::mutex temperature_mutex_;
     mutable std::mutex sequence_mutex_;
     mutable std::condition_variable exposure_cv_;
-    
+
     // Private helper methods
     auto initializePlayerOneSDK() -> bool;
     auto shutdownPlayerOneSDK() -> bool;

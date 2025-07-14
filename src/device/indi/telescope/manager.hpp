@@ -17,7 +17,7 @@
 
 /**
  * @brief Enhanced INDI telescope implementation with component-based architecture
- * 
+ *
  * This class orchestrates multiple specialized components to provide comprehensive
  * telescope control functionality following INDI protocol standards.
  */
@@ -102,7 +102,7 @@ public:
     auto setTargetRADECJNow(double raHours, double decDegrees) -> bool override;
     auto slewToRADECJNow(double raHours, double decDegrees, bool enableTracking = true) -> bool override;
     auto syncToRADECJNow(double raHours, double decDegrees) -> bool override;
-    
+
     auto getAZALT() -> std::optional<HorizontalCoordinates> override;
     auto setAZALT(double azDegrees, double altDegrees) -> bool override;
     auto slewToAZALT(double azDegrees, double altDegrees) -> bool override;
@@ -117,7 +117,7 @@ public:
     // Alignment
     auto getAlignmentMode() -> AlignmentMode override;
     auto setAlignmentMode(AlignmentMode mode) -> bool override;
-    auto addAlignmentPoint(const EquatorialCoordinates& measured, 
+    auto addAlignmentPoint(const EquatorialCoordinates& measured,
                            const EquatorialCoordinates& target) -> bool override;
     auto clearAlignment() -> bool override;
 
@@ -152,16 +152,16 @@ public:
     auto ReadScopeParameters() -> bool override;
     auto SetCurrentPark() -> bool override;
     auto SetDefaultPark() -> bool override;
-    
+
     // INDI callback overrides
     auto saveConfigItems(void* fp) -> bool override;
-    auto ISNewNumber(const char *dev, const char *name, double values[], 
+    auto ISNewNumber(const char *dev, const char *name, double values[],
                    char *names[], int n) -> bool override;
-    auto ISNewSwitch(const char *dev, const char *name, ISState *states, 
+    auto ISNewSwitch(const char *dev, const char *name, ISState *states,
                    char *names[], int n) -> bool override;
-    auto ISNewText(const char *dev, const char *name, char *texts[], 
+    auto ISNewText(const char *dev, const char *name, char *texts[],
                  char *names[], int n) -> bool override;
-    auto ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
+    auto ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[],
                  char *blobs[], char *formats[], char *names[], int n) -> bool override;
     auto getProperties(const char *dev) -> void override;
     auto TimerHit() -> void override;
@@ -173,7 +173,7 @@ public:
 
 private:
     std::string name_;
-    
+
     // Component instances
     std::shared_ptr<TelescopeConnection> connection_;
     std::shared_ptr<TelescopeMotion> motion_;
@@ -181,14 +181,14 @@ private:
     std::shared_ptr<TelescopeCoordinates> coordinates_;
     std::shared_ptr<TelescopeParking> parking_;
     std::shared_ptr<TelescopeINDI> indi_;
-    
+
     // State management
     std::atomic_bool initialized_{false};
     AlignmentMode alignmentMode_{AlignmentMode::EQ_NORTH_POLE};
-    
+
     // Telescope parameters
     TelescopeParameters telescopeParams_{};
-    
+
     // Helper methods
     auto initializeComponents() -> bool;
     auto destroyComponents() -> bool;

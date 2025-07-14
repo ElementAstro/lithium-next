@@ -15,7 +15,7 @@ class StatisticsManager : public DomeComponentBase {
 public:
     explicit StatisticsManager(std::shared_ptr<INDIDomeCore> core)
         : DomeComponentBase(std::move(core), "StatisticsManager") {}
-    
+
     auto initialize() -> bool override { return true; }
     auto cleanup() -> bool override { return true; }
     void handlePropertyUpdate(const INDI::Property& property) override {}

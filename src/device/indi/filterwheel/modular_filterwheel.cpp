@@ -4,7 +4,7 @@ namespace lithium::device::indi::filterwheel {
 
 ModularINDIFilterWheel::ModularINDIFilterWheel(std::string name)
     : AtomFilterWheel(std::move(name)), core_(std::make_shared<INDIFilterWheelCore>(name_)) {
-    
+
     core_->getLogger()->info("Creating modular INDI filterwheel: {}", name_);
 
     // Create component managers with shared core

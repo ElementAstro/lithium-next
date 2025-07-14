@@ -23,7 +23,7 @@ All focus tasks now fully utilize the enhanced Task class features:
 Focus Task Suite
 ├── Core Focus Tasks
 │   ├── AutoFocusTask - Enhanced automatic focusing with HFR measurement
-│   ├── FocusSeriesTask - Multi-position focus analysis 
+│   ├── FocusSeriesTask - Multi-position focus analysis
 │   └── TemperatureFocusTask - Temperature-based focus compensation
 └── Specialized Tasks
     ├── FocusValidationTask - Focus quality validation and analysis
@@ -230,7 +230,7 @@ task->setErrorType(TaskErrorType::Timeout);          // Task execution timeout
 task->setExceptionCallback([](const std::exception& e) {
     // Custom error handling
     spdlog::error("Task failed: {}", e.what());
-    
+
     // Trigger recovery procedures
     // Send notifications
     // Update system state
@@ -247,7 +247,7 @@ auto executionTime = task->getExecutionTime();
 auto memoryUsage = task->getMemoryUsage();
 auto cpuUsage = task->getCPUUsage();
 
-spdlog::info("Task completed in {} ms, used {} bytes, {}% CPU", 
+spdlog::info("Task completed in {} ms, used {} bytes, {}% CPU",
              executionTime.count(), memoryUsage, cpuUsage);
 ```
 
@@ -342,7 +342,7 @@ Implement comprehensive error handling:
 task->setExceptionCallback([](const std::exception& e) {
     // Log the error
     spdlog::error("Task failed: {}", e.what());
-    
+
     // Implement recovery logic
     // Notify operators
     // Update system state

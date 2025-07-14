@@ -34,7 +34,7 @@ class HardwareInterface;
 
 /**
  * @brief Coordinate Manager for INDI Telescope
- * 
+ *
  * Manages all coordinate system operations including coordinate transformations,
  * location and time management, alignment, and coordinate validation.
  */
@@ -128,7 +128,7 @@ public:
     bool isWithinSlewLimits(const EquatorialCoordinates& coords) const;
 
     // Alignment System
-    bool addAlignmentPoint(const EquatorialCoordinates& measured, 
+    bool addAlignmentPoint(const EquatorialCoordinates& measured,
                           const EquatorialCoordinates& target);
     bool addAlignmentPoint(const AlignmentPoint& point);
     bool removeAlignmentPoint(size_t index);
@@ -160,9 +160,9 @@ public:
     double hmsToDecimal(int hours, int minutes, double seconds) const;
 
     // Angular Calculations
-    double angularSeparation(const EquatorialCoordinates& coord1, 
+    double angularSeparation(const EquatorialCoordinates& coord1,
                            const EquatorialCoordinates& coord2) const;
-    double positionAngle(const EquatorialCoordinates& from, 
+    double positionAngle(const EquatorialCoordinates& from,
                         const EquatorialCoordinates& to) const;
 
     // Callback Registration
@@ -204,42 +204,42 @@ private:
     void updateCoordinateStatus();
     void handlePropertyUpdate(const std::string& propertyName);
     void calculateDerivedCoordinates();
-    
+
     // Time calculations
     double calculateJulianDate(const std::chrono::system_clock::time_point& time) const;
     double calculateLocalSiderealTime(double jd, double longitude) const;
     double calculateGreenwichSiderealTime(double jd) const;
-    
+
     // Coordinate transformation implementations
     HorizontalCoordinates equatorialToHorizontal(const EquatorialCoordinates& eq,
                                                 double lst, double latitude) const;
     EquatorialCoordinates horizontalToEquatorial(const HorizontalCoordinates& hz,
                                                double lst, double latitude) const;
-    
+
     // Precession and nutation
     EquatorialCoordinates applyPrecession(const EquatorialCoordinates& coords,
                                         double fromEpoch, double toEpoch) const;
-    
+
     // Alignment calculations
     void calculateAlignmentModel();
     double calculateAlignmentRMS() const;
-    
+
     // Validation helpers
     bool isValidRA(double ra) const;
     bool isValidDEC(double dec) const;
     bool isValidAzimuth(double az) const;
     bool isValidAltitude(double alt) const;
-    
+
     // Hardware synchronization
     void syncCoordinatesToHardware();
     void syncLocationToHardware();
     void syncTimeToHardware();
-    
+
     // Utility methods
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);
     void logError(const std::string& message);
-    
+
     // Mathematical constants
     static constexpr double DEGREES_PER_HOUR = 15.0;
     static constexpr double ARCSEC_PER_DEGREE = 3600.0;

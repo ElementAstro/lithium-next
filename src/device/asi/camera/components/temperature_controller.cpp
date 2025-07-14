@@ -40,18 +40,18 @@ bool TemperatureController::startCooling(const CoolingSettings& settings) {
     updateState(CoolerState::STARTING);
     currentSettings_ = settings;
     coolerEnabled_ = true;
-    
+
     // Reset PID controller
     resetPIDController();
-    
+
     // Start worker threads
     stopRequested_ = false;
     monitoringThread_ = std::thread(&TemperatureController::monitoringWorker, this);
     controlThread_ = std::thread(&TemperatureController::controlWorker, this);
-    
+
     coolingStartTime_ = std::chrono::steady_clock::now();
     updateState(CoolerState::COOLING);
-    
+
     return true;
 }
 
@@ -61,11 +61,11 @@ bool TemperatureController::stopCooling() {
     }
 
     updateState(CoolerState::STOPPING);
-    
+
     // Signal threads to stop
     stopRequested_ = true;
     stateCondition_.notify_all();
-    
+
     // Wait for threads to finish
     if (monitoringThread_.joinable()) {
         monitoringThread_.join();
@@ -73,11 +73,11 @@ bool TemperatureController::stopCooling() {
     if (controlThread_.joinable()) {
         controlThread_.join();
     }
-    
+
     // Turn off cooler
     applyCoolerPower(0.0);
     coolerEnabled_ = false;
-    
+
     updateState(CoolerState::OFF);
     return true;
 }
@@ -121,26 +121,26 @@ bool TemperatureController::hasReachedTarget() const {
 
 double TemperatureController::getTemperatureStability() const {
     std::lock_guard<std::mutex> lock(temperatureMutex_);
-    
+
     if (temperatureHistory_.size() < 2) {
         return 0.0;
     }
-    
+
     // Calculate standard deviation of recent temperatures
     auto now = std::chrono::steady_clock::now();
     std::vector<double> recentTemps;
-    
+
     for (const auto& info : temperatureHistory_) {
         auto age = std::chrono::duration_cast<std::chrono::minutes>(now - info.timestamp);
         if (age < std::chrono::minutes(5)) { // Last 5 minutes
             recentTemps.push_back(info.currentTemperature);
         }
     }
-    
+
     if (recentTemps.size() < 2) {
         return 0.0;
     }
-    
+
     double mean = std::accumulate(recentTemps.begin(), recentTemps.end(), 0.0) / recentTemps.size();
     double sq_sum = std::inner_product(recentTemps.begin(), recentTemps.end(), recentTemps.begin(), 0.0);
     return std::sqrt(sq_sum / recentTemps.size() - mean * mean);
@@ -150,11 +150,11 @@ bool TemperatureController::updateSettings(const CoolingSettings& settings) {
     if (state_ == CoolerState::COOLING) {
         return false; // Cannot update while actively cooling
     }
-    
+
     if (!validateCoolingSettings(settings)) {
         return false;
     }
-    
+
     currentSettings_ = settings;
     return true;
 }
@@ -163,13 +163,13 @@ bool TemperatureController::updateTargetTemperature(double temperature) {
     if (!validateTargetTemperature(temperature)) {
         return false;
     }
-    
+
     currentSettings_.targetTemperature = temperature;
-    
+
     if (coolerEnabled_) {
         resetPIDController(); // Reset PID when target changes
     }
-    
+
     return true;
 }
 
@@ -192,19 +192,19 @@ void TemperatureController::resetPIDController() {
     lastControlUpdate_ = std::chrono::steady_clock::time_point{};
 }
 
-std::vector<TemperatureController::TemperatureInfo> 
+std::vector<TemperatureController::TemperatureInfo>
 TemperatureController::getTemperatureHistory(std::chrono::seconds duration) const {
     std::lock_guard<std::mutex> lock(temperatureMutex_);
-    
+
     std::vector<TemperatureInfo> result;
     auto cutoff = std::chrono::steady_clock::now() - duration;
-    
+
     for (const auto& info : temperatureHistory_) {
         if (info.timestamp >= cutoff) {
             result.push_back(info);
         }
     }
-    
+
     return result;
 }
 
@@ -239,10 +239,10 @@ void TemperatureController::monitoringWorker() {
                 notifyTemperatureChange(currentInfo_);
             }
         } catch (const std::exception& e) {
-            notifyStateChange(CoolerState::ERROR, 
+            notifyStateChange(CoolerState::ERROR,
                             formatTemperatureError("Monitoring", e.what()));
         }
-        
+
         std::this_thread::sleep_for(monitoringInterval_);
     }
 }
@@ -252,22 +252,22 @@ void TemperatureController::controlWorker() {
         try {
             if (coolerEnabled_ && state_ != CoolerState::ERROR) {
                 double output = calculatePIDOutput(
-                    currentInfo_.currentTemperature, 
+                    currentInfo_.currentTemperature,
                     currentSettings_.targetTemperature);
-                
+
                 output = clampCoolerPower(output);
                 applyCoolerPower(output);
-                
+
                 currentInfo_.coolerPower = output;
-                currentInfo_.hasReachedTarget = 
-                    std::abs(currentInfo_.currentTemperature - currentSettings_.targetTemperature) 
+                currentInfo_.hasReachedTarget =
+                    std::abs(currentInfo_.currentTemperature - currentSettings_.targetTemperature)
                     <= currentSettings_.temperatureTolerance;
             }
         } catch (const std::exception& e) {
-            notifyStateChange(CoolerState::ERROR, 
+            notifyStateChange(CoolerState::ERROR,
                             formatTemperatureError("Control", e.what()));
         }
-        
+
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
@@ -286,52 +286,52 @@ bool TemperatureController::applyCoolerPower(double power) {
 
 double TemperatureController::calculatePIDOutput(double currentTemp, double targetTemp) {
     std::lock_guard<std::mutex> lock(pidMutex_);
-    
+
     double error = targetTemp - currentTemp;
     auto now = std::chrono::steady_clock::now();
-    
+
     if (lastControlUpdate_ == std::chrono::steady_clock::time_point{}) {
         lastControlUpdate_ = now;
         previousError_ = error;
         return 0.0;
     }
-    
+
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(
         now - lastControlUpdate_).count() / 1000.0;
-    
+
     if (dt <= 0) {
         return 0.0;
     }
-    
+
     // Proportional term
     double proportional = pidParams_.kp * error;
-    
+
     // Integral term
     integralSum_ += error * dt;
     integralSum_ = std::clamp(integralSum_, -pidParams_.integralWindup, pidParams_.integralWindup);
     double integral = pidParams_.ki * integralSum_;
-    
+
     // Derivative term
     double derivative = pidParams_.kd * (error - previousError_) / dt;
-    
+
     // Calculate output
     double output = proportional + integral + derivative;
     output = std::clamp(output, pidParams_.minOutput, pidParams_.maxOutput);
-    
+
     previousError_ = error;
     lastControlUpdate_ = now;
-    
+
     return output;
 }
 
 void TemperatureController::updateTemperatureHistory(const TemperatureInfo& info) {
     std::lock_guard<std::mutex> lock(temperatureMutex_);
-    
+
     temperatureHistory_.push_back(info);
-    
+
     // Clean old history
     auto cutoff = std::chrono::steady_clock::now() - historyDuration_;
-    while (!temperatureHistory_.empty() && 
+    while (!temperatureHistory_.empty() &&
            temperatureHistory_.front().timestamp < cutoff) {
         temperatureHistory_.pop_front();
     }
@@ -341,10 +341,10 @@ void TemperatureController::checkTemperatureStability() {
     if (state_ != CoolerState::COOLING && state_ != CoolerState::STABILIZING) {
         return;
     }
-    
-    bool atTarget = std::abs(currentInfo_.currentTemperature - currentSettings_.targetTemperature) 
+
+    bool atTarget = std::abs(currentInfo_.currentTemperature - currentSettings_.targetTemperature)
                    <= currentSettings_.temperatureTolerance;
-    
+
     if (atTarget) {
         if (state_ == CoolerState::COOLING) {
             updateState(CoolerState::STABILIZING);
@@ -381,7 +381,7 @@ void TemperatureController::notifyTemperatureChange(const TemperatureInfo& info)
 
 void TemperatureController::notifyStateChange(CoolerState newState, const std::string& message) {
     updateState(newState);
-    
+
     std::lock_guard<std::mutex> lock(callbackMutex_);
     if (stateCallback_) {
         stateCallback_(newState, message);
@@ -406,7 +406,7 @@ double TemperatureController::clampCoolerPower(double power) {
     return std::clamp(power, 0.0, currentSettings_.maxCoolerPower);
 }
 
-std::string TemperatureController::formatTemperatureError(const std::string& operation, 
+std::string TemperatureController::formatTemperatureError(const std::string& operation,
                                                         const std::string& error) {
     return operation + " error: " + error;
 }
@@ -414,7 +414,7 @@ std::string TemperatureController::formatTemperatureError(const std::string& ope
 void TemperatureController::cleanupResources() {
     stopRequested_ = true;
     stateCondition_.notify_all();
-    
+
     if (monitoringThread_.joinable()) {
         monitoringThread_.join();
     }

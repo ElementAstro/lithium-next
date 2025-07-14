@@ -49,7 +49,7 @@ public:
      * @param core Shared pointer to the INDIFilterWheelCore
      */
     explicit FilterWheelProfiler(std::shared_ptr<INDIFilterWheelCore> core);
-    
+
     /**
      * @brief Virtual destructor.
      */
@@ -147,21 +147,21 @@ public:
 private:
     bool initialized_{false};
     std::atomic_bool profilingEnabled_{true};
-    
+
     // Current move tracking
     std::chrono::steady_clock::time_point moveStartTime_;
     int moveFromSlot_ = -1;
     int moveToSlot_ = -1;
     bool moveInProgress_ = false;
-    
+
     // Historical data
     std::vector<FilterProfileData> moveHistory_;
     static constexpr size_t MAX_HISTORY_SIZE = 10000;
     static constexpr size_t RECENT_MOVES_COUNT = 100;
-    
+
     // Performance analysis
     mutable std::mutex dataAccessMutex_;
-    
+
     // Helper methods
     void pruneOldData();
     double calculateSuccessRate() const;

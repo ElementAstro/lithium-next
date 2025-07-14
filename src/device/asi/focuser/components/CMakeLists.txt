@@ -28,7 +28,7 @@ add_library(asi_focuser_components STATIC
 
 # Target properties
 target_include_directories(asi_focuser_components
-    PUBLIC 
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/..

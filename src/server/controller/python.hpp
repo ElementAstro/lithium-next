@@ -19,7 +19,7 @@
 
 /**
  * @brief Controller for managing Python script operations via HTTP API
- * 
+ *
  * This controller provides comprehensive Python script management including:
  * - Script loading/unloading/reloading
  * - Function calling and variable management
@@ -35,7 +35,7 @@ private:
 
     /**
      * @brief Generic handler for Python operations
-     * 
+     *
      * @param req HTTP request object
      * @param body Parsed JSON request body
      * @param command Command name for logging
@@ -94,154 +94,154 @@ public:
 
         // Basic Script Management
         CROW_ROUTE(app, "/python/load")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->loadScript(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->loadScript(req, res);
             });
         CROW_ROUTE(app, "/python/unload")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->unloadScript(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->unloadScript(req, res);
             });
         CROW_ROUTE(app, "/python/reload")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->reloadScript(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->reloadScript(req, res);
             });
         CROW_ROUTE(app, "/python/list")
-            .methods("GET"_method)([this](const crow::request& req, crow::response& res) { 
-                this->listScripts(req, res); 
+            .methods("GET"_method)([this](const crow::request& req, crow::response& res) {
+                this->listScripts(req, res);
             });
 
         // Function and Variable Management
         CROW_ROUTE(app, "/python/call")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->callFunction(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->callFunction(req, res);
             });
         CROW_ROUTE(app, "/python/callAsync")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->callFunctionAsync(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->callFunctionAsync(req, res);
             });
         CROW_ROUTE(app, "/python/batchExecute")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->batchExecute(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->batchExecute(req, res);
             });
         CROW_ROUTE(app, "/python/getVariable")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->getVariable(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->getVariable(req, res);
             });
         CROW_ROUTE(app, "/python/setVariable")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->setVariable(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->setVariable(req, res);
             });
         CROW_ROUTE(app, "/python/functions")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->getFunctionList(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->getFunctionList(req, res);
             });
 
         // Expression and Code Execution
         CROW_ROUTE(app, "/python/eval")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->evalExpression(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->evalExpression(req, res);
             });
         CROW_ROUTE(app, "/python/inject")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->injectCode(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->injectCode(req, res);
             });
         CROW_ROUTE(app, "/python/executeWithLogging")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->executeWithLogging(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->executeWithLogging(req, res);
             });
         CROW_ROUTE(app, "/python/executeWithProfiling")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->executeWithProfiling(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->executeWithProfiling(req, res);
             });
 
         // Object-Oriented Programming Support
         CROW_ROUTE(app, "/python/callMethod")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->callMethod(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->callMethod(req, res);
             });
         CROW_ROUTE(app, "/python/getObjectAttribute")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->getObjectAttribute(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->getObjectAttribute(req, res);
             });
         CROW_ROUTE(app, "/python/setObjectAttribute")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->setObjectAttribute(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->setObjectAttribute(req, res);
             });
         CROW_ROUTE(app, "/python/manageObjectLifecycle")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->manageObjectLifecycle(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->manageObjectLifecycle(req, res);
             });
 
         // System and Environment Management
         CROW_ROUTE(app, "/python/addSysPath")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->addSysPath(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->addSysPath(req, res);
             });
         CROW_ROUTE(app, "/python/syncVariableToGlobal")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->syncVariableToGlobal(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->syncVariableToGlobal(req, res);
             });
         CROW_ROUTE(app, "/python/syncVariableFromGlobal")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->syncVariableFromGlobal(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->syncVariableFromGlobal(req, res);
             });
 
         // Performance and Memory Management
         CROW_ROUTE(app, "/python/getMemoryUsage")
-            .methods("GET"_method)([this](const crow::request& req, crow::response& res) { 
-                this->getMemoryUsage(req, res); 
+            .methods("GET"_method)([this](const crow::request& req, crow::response& res) {
+                this->getMemoryUsage(req, res);
             });
         CROW_ROUTE(app, "/python/optimizeMemory")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->optimizeMemory(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->optimizeMemory(req, res);
             });
         CROW_ROUTE(app, "/python/clearUnusedResources")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->clearUnusedResources(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->clearUnusedResources(req, res);
             });
         CROW_ROUTE(app, "/python/configurePerformance")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->configurePerformance(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->configurePerformance(req, res);
             });
 
         // Package Management
         CROW_ROUTE(app, "/python/installPackage")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->installPackage(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->installPackage(req, res);
             });
         CROW_ROUTE(app, "/python/uninstallPackage")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->uninstallPackage(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->uninstallPackage(req, res);
             });
 
         // Virtual Environment Management
         CROW_ROUTE(app, "/python/createVenv")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->createVirtualEnvironment(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->createVirtualEnvironment(req, res);
             });
         CROW_ROUTE(app, "/python/activateVenv")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->activateVirtualEnvironment(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->activateVirtualEnvironment(req, res);
             });
 
         // Debugging Support
         CROW_ROUTE(app, "/python/enableDebug")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->enableDebugMode(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->enableDebugMode(req, res);
             });
         CROW_ROUTE(app, "/python/setBreakpoint")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->setBreakpoint(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->setBreakpoint(req, res);
             });
 
         // Advanced Features
         CROW_ROUTE(app, "/python/registerFunction")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->registerFunction(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->registerFunction(req, res);
             });
         CROW_ROUTE(app, "/python/setErrorHandlingStrategy")
-            .methods("POST"_method)([this](const crow::request& req, crow::response& res) { 
-                this->setErrorHandlingStrategy(req, res); 
+            .methods("POST"_method)([this](const crow::request& req, crow::response& res) {
+                this->setErrorHandlingStrategy(req, res);
             });
     }
 
@@ -369,12 +369,12 @@ public:
                 }
                 auto results = pythonWrapper->template batch_execute<py::object>(
                     std::string(body["alias"].s()), function_names);
-                
+
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
                 response["results"] = crow::json::wvalue::list();
-                
+
                 for (size_t i = 0; i < results.size(); ++i) {
                     response["results"][i] = std::string(py::str(results[i]));
                 }
@@ -522,7 +522,7 @@ public:
                 std::string(body["class_name"].s()),
                 std::string(body["method_name"].s()),
                 args);
-            
+
             crow::json::wvalue response;
             response["status"] = "success";
             response["code"] = 200;
@@ -543,7 +543,7 @@ public:
                 std::string(body["alias"].s()),
                 std::string(body["class_name"].s()),
                 std::string(body["attr_name"].s()));
-            
+
             crow::json::wvalue response;
             response["status"] = "success";
             response["code"] = 200;
@@ -620,7 +620,7 @@ public:
         auto body = crow::json::load(req.body);
         res = handlePythonAction(req, body, "syncVariableFromGlobal", [&](auto pythonWrapper) {
             auto result = pythonWrapper->sync_variable_from_python(std::string(body["name"].s()));
-            
+
             crow::json::wvalue response;
             response["status"] = "success";
             response["code"] = 200;
@@ -638,7 +638,7 @@ public:
     void getMemoryUsage(const crow::request& req, crow::response& res) {
         res = handlePythonAction(req, crow::json::rvalue{}, "getMemoryUsage", [&](auto pythonWrapper) {
             auto memory_info = pythonWrapper->get_memory_usage();
-            
+
             crow::json::wvalue response;
             response["status"] = "success";
             response["code"] = 200;
@@ -680,7 +680,7 @@ public:
             config.enable_gil_optimization = body["enable_gil_optimization"].b();
             config.thread_pool_size = body["thread_pool_size"].i();
             config.enable_caching = body["enable_caching"].b();
-            
+
             pythonWrapper->configure_performance(config);
             return true;
         });
@@ -696,7 +696,7 @@ public:
         auto body = crow::json::load(req.body);
         res = handlePythonAction(req, body, "installPackage", [&](auto pythonWrapper) {
             bool success = pythonWrapper->install_package(std::string(body["package_name"].s()));
-            
+
             crow::json::wvalue response;
             response["status"] = success ? "success" : "error";
             response["code"] = success ? 200 : 500;
@@ -714,7 +714,7 @@ public:
         auto body = crow::json::load(req.body);
         res = handlePythonAction(req, body, "uninstallPackage", [&](auto pythonWrapper) {
             bool success = pythonWrapper->uninstall_package(std::string(body["package_name"].s()));
-            
+
             crow::json::wvalue response;
             response["status"] = success ? "success" : "error";
             response["code"] = success ? 200 : 500;
@@ -789,8 +789,8 @@ public:
         res = handlePythonAction(req, body, "registerFunction", [&](auto pythonWrapper) {
             // Note: This is a simplified implementation
             // In practice, you'd need to handle function registration more carefully
-            std::function<void()> dummy_func = []() { 
-                spdlog::info("Registered function called"); 
+            std::function<void()> dummy_func = []() {
+                spdlog::info("Registered function called");
             };
             pythonWrapper->register_function(std::string(body["name"].s()), dummy_func);
             return true;

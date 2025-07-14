@@ -73,7 +73,7 @@ AtikCamera::AtikCamera(const std::string& name)
     , dropped_frames_(0)
     , last_frame_time_()
     , last_frame_result_(nullptr) {
-    
+
     LOG_F(INFO, "Created Atik camera instance: {}", name);
 }
 
@@ -89,7 +89,7 @@ AtikCamera::~AtikCamera() {
 
 auto AtikCamera::initialize() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_initialized_) {
         LOG_F(WARNING, "Atik camera already initialized");
         return true;
@@ -111,7 +111,7 @@ auto AtikCamera::initialize() -> bool {
 
 auto AtikCamera::destroy() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_initialized_) {
         return true;
     }
@@ -131,7 +131,7 @@ auto AtikCamera::destroy() -> bool {
 
 auto AtikCamera::connect(const std::string& deviceName, int timeout, int maxRetry) -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_connected_) {
         LOG_F(WARNING, "Atik camera already connected");
         return true;
@@ -198,10 +198,10 @@ auto AtikCamera::connect(const std::string& deviceName, int timeout, int maxRetr
         bit_depth_ = 16;
         is_color_camera_ = false;
         has_shutter_ = true;
-        
+
         roi_width_ = max_width_;
         roi_height_ = max_height_;
-        
+
         is_connected_ = true;
         LOG_F(INFO, "Connected to Atik camera simulator");
         return true;
@@ -218,7 +218,7 @@ auto AtikCamera::connect(const std::string& deviceName, int timeout, int maxRetr
 
 auto AtikCamera::disconnect() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_connected_) {
         return true;
     }
@@ -257,7 +257,7 @@ auto AtikCamera::scan() -> std::vector<std::string> {
     try {
         // Implementation would use Atik SDK to enumerate cameras
         int cameraCount = 0;  // AtikGetCameraCount() or similar
-        
+
         for (int i = 0; i < cameraCount; ++i) {
             std::string cameraName = "Atik Camera " + std::to_string(i);
             devices.push_back(cameraName);
@@ -278,7 +278,7 @@ auto AtikCamera::scan() -> std::vector<std::string> {
 
 auto AtikCamera::startExposure(double duration) -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -311,13 +311,13 @@ auto AtikCamera::startExposure(double duration) -> bool {
 
 auto AtikCamera::abortExposure() -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_exposing_) {
         return true;
     }
 
     exposure_abort_requested_ = true;
-    
+
 #ifdef LITHIUM_ATIK_CAMERA_ENABLED
     // Call Atik SDK abort function
     // AtikAbortExposure(atik_handle_);
@@ -359,7 +359,7 @@ auto AtikCamera::getExposureRemaining() const -> double {
 
 auto AtikCamera::getExposureResult() -> std::shared_ptr<AtomCameraFrame> {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (is_exposing_) {
         LOG_F(WARNING, "Exposure still in progress");
         return nullptr;
@@ -381,7 +381,7 @@ auto AtikCamera::saveImage(const std::string& path) -> bool {
 // Temperature control implementation
 auto AtikCamera::startCooling(double targetTemp) -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -408,7 +408,7 @@ auto AtikCamera::startCooling(double targetTemp) -> bool {
 
 auto AtikCamera::stopCooling() -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     cooler_enabled_ = false;
 
 #ifdef LITHIUM_ATIK_CAMERA_ENABLED
@@ -661,7 +661,7 @@ auto AtikCamera::setupCameraParameters() -> bool {
 
     roi_width_ = max_width_;
     roi_height_ = max_height_;
-    
+
     return readCameraCapabilities();
 }
 
@@ -747,7 +747,7 @@ auto AtikCamera::exposureThreadFunction() -> void {
 
 auto AtikCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
     auto frame = std::make_shared<AtomCameraFrame>();
-    
+
     frame->resolution.width = roi_width_ / bin_x_;
     frame->resolution.height = roi_height_ / bin_y_;
     frame->binning.horizontal = bin_x_;
@@ -776,7 +776,7 @@ auto AtikCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
     // Generate simulated image data
     auto data_buffer = std::make_unique<uint8_t[]>(frame->size);
     frame->data = data_buffer.release();
-    
+
     // Fill with simulated star field
     if (bit_depth_ <= 8) {
         uint8_t* data8 = static_cast<uint8_t*>(frame->data);
@@ -831,9 +831,9 @@ auto AtikCamera::isValidGain(int gain) const -> bool {
 }
 
 auto AtikCamera::isValidResolution(int x, int y, int width, int height) const -> bool {
-    return x >= 0 && y >= 0 && 
+    return x >= 0 && y >= 0 &&
            width > 0 && height > 0 &&
-           x + width <= max_width_ && 
+           x + width <= max_width_ &&
            y + height <= max_height_;
 }
 

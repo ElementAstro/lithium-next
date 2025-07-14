@@ -36,7 +36,7 @@ find_library(ASI_FOCUSER_LIBRARY
 )
 
 # Find and link ASI EAF SDK if available
-find_library(ASI_EAF_LIBRARY 
+find_library(ASI_EAF_LIBRARY
     NAMES EAF_focuser libEAF_focuser
     PATHS
         /usr/local/lib
@@ -49,7 +49,7 @@ if(ASI_EAF_LIBRARY)
     message(STATUS "Found ASI EAF SDK: ${ASI_EAF_LIBRARY}")
     add_compile_definitions(LITHIUM_ASI_EAF_ENABLED)
     target_link_libraries(asi_focuser PRIVATE ${ASI_EAF_LIBRARY})
-    
+
     # Find EAF headers
     find_path(ASI_EAF_INCLUDE_DIR
         NAMES EAF_focuser.h
@@ -59,7 +59,7 @@ if(ASI_EAF_LIBRARY)
             ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/include
         DOC "ASI EAF SDK headers"
     )
-    
+
     if(ASI_EAF_INCLUDE_DIR)
         target_include_directories(asi_focuser PRIVATE ${ASI_EAF_INCLUDE_DIR})
     endif()

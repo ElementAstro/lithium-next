@@ -60,17 +60,17 @@ struct SwitchInfo {
     std::string group;
     bool enabled{true};
     uint32_t index{0};
-    
+
     // Timer functionality
     bool hasTimer{false};
     uint32_t timerDuration{0}; // in milliseconds
     std::chrono::steady_clock::time_point timerStart;
-    
+
     // Power consumption (for monitoring)
     double powerConsumption{0.0}; // watts
-    
+
     SwitchInfo() = default;
-    SwitchInfo(std::string n, std::string l, std::string d = "", SwitchType t = SwitchType::TOGGLE) 
+    SwitchInfo(std::string n, std::string l, std::string d = "", SwitchType t = SwitchType::TOGGLE)
         : name(std::move(n)), label(std::move(l)), description(std::move(d)), type(t) {}
 } ATOM_ALIGNAS(32);
 
@@ -82,7 +82,7 @@ struct SwitchGroup {
     SwitchType type{SwitchType::RADIO};
     std::vector<uint32_t> switchIndices;
     bool exclusive{false}; // Only one switch can be on at a time
-    
+
     SwitchGroup() = default;
     SwitchGroup(std::string n, std::string l, SwitchType t = SwitchType::RADIO, bool excl = false)
         : name(std::move(n)), label(std::move(l)), type(t), exclusive(excl) {}
@@ -93,7 +93,7 @@ public:
     explicit AtomSwitch(std::string name) : AtomDriver(std::move(name)) {
         setType("Switch");
     }
-    
+
     ~AtomSwitch() override = default;
 
     // Capabilities
@@ -197,35 +197,35 @@ protected:
     std::vector<SwitchGroup> groups_;
     std::unordered_map<std::string, uint32_t> switch_name_to_index_;
     std::unordered_map<std::string, uint32_t> group_name_to_index_;
-    
+
     // Power monitoring
     double power_limit_{1000.0}; // watts
     double total_power_consumption_{0.0};
-    
+
     // Safety
     bool safety_mode_enabled_{false};
     bool emergency_stop_active_{false};
-    
+
     // Statistics
     std::vector<uint64_t> switch_operation_counts_;
     std::vector<std::chrono::steady_clock::time_point> switch_on_times_;
     std::vector<uint64_t> switch_uptimes_;
     uint64_t total_operation_count_{0};
-    
+
     // Callbacks
     SwitchStateCallback switch_state_callback_;
     GroupStateCallback group_state_callback_;
     TimerCallback timer_callback_;
     PowerCallback power_callback_;
     EmergencyCallback emergency_callback_;
-    
+
     // Utility methods
     virtual void notifySwitchStateChange(uint32_t index, SwitchState state);
     virtual void notifyGroupStateChange(const std::string& groupName, uint32_t switchIndex, SwitchState state);
     virtual void notifyTimerEvent(uint32_t index, bool expired);
     virtual void notifyPowerEvent(double totalPower, bool limitExceeded);
     virtual void notifyEmergencyEvent(bool active);
-    
+
     virtual void updatePowerConsumption();
     virtual void updateStatistics(uint32_t index, SwitchState state);
     virtual void processTimers();

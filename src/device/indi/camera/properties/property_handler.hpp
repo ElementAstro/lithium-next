@@ -12,7 +12,7 @@ namespace lithium::device::indi::camera {
 
 /**
  * @brief INDI property handling component
- * 
+ *
  * This component coordinates INDI property handling across all
  * camera components and provides centralized property management.
  */
@@ -28,9 +28,9 @@ public:
     auto handleProperty(INDI::Property property) -> bool override;
 
     // Property registration for components
-    auto registerPropertyHandler(const std::string& propertyName, 
+    auto registerPropertyHandler(const std::string& propertyName,
                                 ComponentBase* component) -> void;
-    auto unregisterPropertyHandler(const std::string& propertyName, 
+    auto unregisterPropertyHandler(const std::string& propertyName,
                                  ComponentBase* component) -> void;
 
     // Property utilities
@@ -39,7 +39,7 @@ public:
     auto setPropertyText(const std::string& propertyName, const std::string& value) -> bool;
 
     // Property monitoring
-    auto watchProperty(const std::string& propertyName, 
+    auto watchProperty(const std::string& propertyName,
                       std::function<void(INDI::Property)> callback) -> void;
     auto unwatchProperty(const std::string& propertyName) -> void;
 
@@ -50,13 +50,13 @@ public:
 private:
     // Property to component mapping
     std::map<std::string, std::vector<ComponentBase*>> propertyHandlers_;
-    
+
     // Property watchers
     std::map<std::string, std::function<void(INDI::Property)>> propertyWatchers_;
-    
+
     // Available properties cache
     std::vector<std::string> availableProperties_;
-    
+
     // Helper methods
     void updateAvailableProperties();
     void distributePropertyToComponents(INDI::Property property);

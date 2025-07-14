@@ -13,7 +13,7 @@ namespace lithium::device::indi::camera {
 
 /**
  * @brief Image processing and analysis component for INDI cameras
- * 
+ *
  * This component handles image format conversion, compression,
  * quality analysis, and image processing operations.
  */

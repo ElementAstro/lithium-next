@@ -35,7 +35,7 @@ src/device/
 │   └── CMakeLists.txt          # ✅ Build configuration
 ├── asi/
 │   ├── camera/
-│   │   ├── asi_camera.hpp/.cpp # ✅ ASI implementation  
+│   │   ├── asi_camera.hpp/.cpp # ✅ ASI implementation
 │   │   └── asi_sdk_stub.hpp    # ✅ SDK interface stub
 │   └── CMakeLists.txt          # ✅ Build configuration
 ├── atik/
@@ -75,16 +75,16 @@ class AtomCamera {
     virtual auto startExposure(double duration) -> bool = 0;
     virtual auto abortExposure() -> bool = 0;
     virtual auto getExposureProgress() const -> double = 0;
-    
+
     // Temperature management
     virtual auto startCooling(double targetTemp) -> bool = 0;
     virtual auto getTemperature() const -> std::optional<double> = 0;
-    
+
     // Advanced features
     virtual auto startVideo() -> bool = 0;
     virtual auto startSequence(int frames, double exposure, double interval) -> bool = 0;
     virtual auto getImageQuality() -> ImageQuality = 0;
-    
+
     // Frame control
     virtual auto setResolution(int x, int y, int width, int height) -> bool = 0;
     virtual auto setBinning(int horizontal, int vertical) -> bool = 0;
@@ -198,7 +198,7 @@ while (camera->isSequenceRunning()) {
 
 - **Moravian Instruments** cameras
 - **Altair Astro** cameras
-- **ToupTek** cameras  
+- **ToupTek** cameras
 - **Canon/Nikon DSLR** via gPhoto2
 - **Raspberry Pi HQ Camera**
 
@@ -221,7 +221,7 @@ sudo apt install indi-full  # For INDI support
 
 # Download and install manufacturer SDKs:
 # - QHY: Download from qhyccd.com
-# - ASI: Download from zwoastro.com  
+# - ASI: Download from zwoastro.com
 # - Atik: Download from atik-cameras.com
 # - SBIG: Download from sbig.com
 # - FLI: Download from flicamera.com

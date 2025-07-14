@@ -532,6 +532,7 @@ class CompilationError(CompilerException):
 
 class CompilerNotFoundError(CompilerException):
     """Exception raised when a requested compiler is not available."""
+
     pass
 
 

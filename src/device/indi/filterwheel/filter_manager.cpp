@@ -14,7 +14,7 @@ Description: Filter management operations implementation
 
 #include "filter_manager.hpp"
 
-INDIFilterwheelFilterManager::INDIFilterwheelFilterManager(std::string name) 
+INDIFilterwheelFilterManager::INDIFilterwheelFilterManager(std::string name)
     : INDIFilterwheelBase(name) {
 }
 
@@ -23,12 +23,12 @@ auto INDIFilterwheelFilterManager::getSlotName(int slot) -> std::optional<std::s
         logger_->error("Invalid slot index: {}", slot);
         return std::nullopt;
     }
-    
+
     if (slot >= static_cast<int>(slotNames_.size())) {
         logger_->warn("Slot {} not yet populated with name", slot);
         return std::nullopt;
     }
-    
+
     return slotNames_[slot];
 }
 
@@ -50,7 +50,7 @@ auto INDIFilterwheelFilterManager::setSlotName(int slot, const std::string& name
     }
 
     logger_->info("Setting slot {} name to: {}", slot, name);
-    
+
     property[slot].setText(name.c_str());
     sendNewProperty(property);
 
@@ -87,12 +87,12 @@ auto INDIFilterwheelFilterManager::getFilterInfo(int slot) -> std::optional<Filt
 
     if (slot < MAX_FILTERS) {
         FilterInfo info = filters_[slot];
-        
+
         // If we have a cached name but the filter info name is empty, use the cached name
         if (info.name.empty() && slot < static_cast<int>(slotNames_.size())) {
             info.name = slotNames_[slot];
         }
-        
+
         // Provide default values if not set
         if (info.type.empty()) {
             info.type = "Unknown";
@@ -100,7 +100,7 @@ auto INDIFilterwheelFilterManager::getFilterInfo(int slot) -> std::optional<Filt
         if (info.description.empty()) {
             info.description = "Filter at slot " + std::to_string(slot);
         }
-        
+
         return info;
     }
 
@@ -118,7 +118,7 @@ auto INDIFilterwheelFilterManager::setFilterInfo(int slot, const FilterInfo& inf
         return false;
     }
 
-    logger_->info("Setting filter info for slot {}: name={}, type={}", 
+    logger_->info("Setting filter info for slot {}: name={}, type={}",
                   slot, info.name, info.type);
 
     // Store the filter info
@@ -150,20 +150,20 @@ auto INDIFilterwheelFilterManager::findFilterByName(const std::string& name) -> 
             return i;
         }
     }
-    
+
     logger_->debug("Filter '{}' not found", name);
     return std::nullopt;
 }
 
 auto INDIFilterwheelFilterManager::findFilterByType(const std::string& type) -> std::vector<int> {
     std::vector<int> matches;
-    
+
     for (int i = 0; i < MAX_FILTERS && i < static_cast<int>(slotNames_.size()); ++i) {
         if (filters_[i].type == type) {
             matches.push_back(i);
         }
     }
-    
+
     logger_->debug("Found {} filters of type '{}'", matches.size(), type);
     return matches;
 }
@@ -177,7 +177,7 @@ auto INDIFilterwheelFilterManager::selectFilterByName(const std::string& name) -
         currentSlot_ = *slot;
         return true;
     }
-    
+
     logger_->error("Filter '{}' not found", name);
     return false;
 }
@@ -192,7 +192,7 @@ auto INDIFilterwheelFilterManager::selectFilterByType(const std::string& type) -
         currentSlot_ = selectedSlot;
         return true;
     }
-    
+
     logger_->error("No filter of type '{}' found", type);
     return false;
 }
@@ -209,12 +209,12 @@ void INDIFilterwheelFilterManager::updateFilterCache() {
 
 void INDIFilterwheelFilterManager::notifyFilterChange(int slot, const std::string& name) {
     logger_->info("Filter change notification: slot {} -> '{}'", slot, name);
-    
+
     // If this is the current slot, update the current name
     if (slot == currentSlot_.load()) {
         currentSlotName_ = name;
     }
-    
+
     // Call position callback if set and this is the current position
     if (position_callback_ && slot == currentSlot_.load()) {
         position_callback_(slot, name);

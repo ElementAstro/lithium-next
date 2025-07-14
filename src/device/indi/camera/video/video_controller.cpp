@@ -6,7 +6,7 @@
 
 namespace lithium::device::indi::camera {
 
-VideoController::VideoController(std::shared_ptr<INDICameraCore> core) 
+VideoController::VideoController(std::shared_ptr<INDICameraCore> core)
     : ComponentBase(core) {
     spdlog::debug("Creating video controller");
     setupVideoFormats();
@@ -14,34 +14,34 @@ VideoController::VideoController(std::shared_ptr<INDICameraCore> core)
 
 auto VideoController::initialize() -> bool {
     spdlog::debug("Initializing video controller");
-    
+
     // Reset video state
     isVideoRunning_.store(false);
     isVideoRecording_.store(false);
     videoExposure_.store(0.033); // 30 FPS default
     videoGain_.store(0);
-    
+
     // Reset statistics
     totalFramesReceived_.store(0);
     droppedFrames_.store(0);
     averageFrameRate_.store(0.0);
-    
+
     return true;
 }
 
 auto VideoController::destroy() -> bool {
     spdlog::debug("Destroying video controller");
-    
+
     // Stop video if running
     if (isVideoRunning()) {
         stopVideo();
     }
-    
+
     // Stop recording if active
     if (isVideoRecording()) {
         stopVideoRecording();
     }
-    
+
     return true;
 }
 
@@ -53,9 +53,9 @@ auto VideoController::handleProperty(INDI::Property property) -> bool {
     if (!property.isValid()) {
         return false;
     }
-    
+
     std::string propertyName = property.getName();
-    
+
     if (propertyName == "CCD_VIDEO_STREAM") {
         handleVideoStreamProperty(property);
         return true;
@@ -63,7 +63,7 @@ auto VideoController::handleProperty(INDI::Property property) -> bool {
         handleVideoFormatProperty(property);
         return true;
     }
-    
+
     return false;
 }
 
@@ -85,7 +85,7 @@ auto VideoController::startVideo() -> bool {
         ccdVideo[0].setState(ISS_ON);
         getCore()->sendNewProperty(ccdVideo);
         isVideoRunning_.store(true);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to start video: {}", e.what());
@@ -111,7 +111,7 @@ auto VideoController::stopVideo() -> bool {
         ccdVideo[0].setState(ISS_OFF);
         getCore()->sendNewProperty(ccdVideo);
         isVideoRunning_.store(false);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to stop video: {}", e.what());
@@ -143,7 +143,7 @@ auto VideoController::setVideoFormat(const std::string& format) -> bool {
 
     currentVideoFormat_ = format;
     spdlog::info("Video format set to: {}", format);
-    
+
     // Here we could set INDI property if the driver supports it
     return true;
 }
@@ -157,15 +157,15 @@ auto VideoController::startVideoRecording(const std::string& filename) -> bool {
         spdlog::error("Video streaming not active");
         return false;
     }
-    
+
     if (isVideoRecording()) {
         spdlog::warn("Video recording already active");
         return false;
     }
-    
+
     videoRecordingFile_ = filename;
     isVideoRecording_.store(true);
-    
+
     spdlog::info("Started video recording to: {}", filename);
     return true;
 }
@@ -175,12 +175,12 @@ auto VideoController::stopVideoRecording() -> bool {
         spdlog::warn("Video recording not active");
         return false;
     }
-    
+
     isVideoRecording_.store(false);
-    
+
     spdlog::info("Stopped video recording: {}", videoRecordingFile_);
     videoRecordingFile_.clear();
-    
+
     return true;
 }
 
@@ -193,10 +193,10 @@ auto VideoController::setVideoExposure(double exposure) -> bool {
         spdlog::error("Invalid video exposure value: {}", exposure);
         return false;
     }
-    
+
     videoExposure_.store(exposure);
     spdlog::info("Video exposure set to: {} seconds", exposure);
-    
+
     // Here we could set INDI property if the driver supports it
     return true;
 }
@@ -210,10 +210,10 @@ auto VideoController::setVideoGain(int gain) -> bool {
         spdlog::error("Invalid video gain value: {}", gain);
         return false;
     }
-    
+
     videoGain_.store(gain);
     spdlog::info("Video gain set to: {}", gain);
-    
+
     // Here we could set INDI property if the driver supports it
     return true;
 }
@@ -239,12 +239,12 @@ void VideoController::handleVideoStreamProperty(INDI::Property property) {
     if (property.getType() != INDI_SWITCH) {
         return;
     }
-    
+
     INDI::PropertySwitch videoProperty = property;
     if (!videoProperty.isValid()) {
         return;
     }
-    
+
     if (videoProperty[0].getState() == ISS_ON) {
         isVideoRunning_.store(true);
         spdlog::debug("Video stream started");
@@ -258,17 +258,17 @@ void VideoController::handleVideoFormatProperty(INDI::Property property) {
     if (property.getType() != INDI_SWITCH) {
         return;
     }
-    
+
     INDI::PropertySwitch formatProperty = property;
     if (!formatProperty.isValid()) {
         return;
     }
-    
+
     // Find which format is selected
     for (int i = 0; i < formatProperty.size(); i++) {
         if (formatProperty[i].getState() == ISS_ON) {
             std::string format = formatProperty[i].getName();
-            if (std::find(videoFormats_.begin(), videoFormats_.end(), format) 
+            if (std::find(videoFormats_.begin(), videoFormats_.end(), format)
                 != videoFormats_.end()) {
                 currentVideoFormat_ = format;
                 spdlog::debug("Video format changed to: {}", format);
@@ -303,7 +303,7 @@ void VideoController::recordVideoFrame(std::shared_ptr<AtomCameraFrame> frame) {
     if (!isVideoRecording() || !frame) {
         return;
     }
-    
+
     // Here we would implement actual video recording to file
     // For now, just log that a frame was recorded
     spdlog::debug("Recording video frame: {} bytes", frame->size);

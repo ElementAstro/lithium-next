@@ -84,7 +84,7 @@ install(
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )
-        
+
         target_link_libraries(lithium_sbig_camera
             PUBLIC
                 ${SBIG_LIBRARY}
@@ -93,7 +93,7 @@ install(
             PRIVATE
                 Threads::Threads
         )
-        
+
         # Set properties
         set_target_properties(lithium_sbig_camera PROPERTIES
             CXX_STANDARD 20
@@ -101,18 +101,18 @@ install(
             VERSION ${PROJECT_VERSION}
             SOVERSION ${PROJECT_VERSION_MAJOR}
         )
-        
+
         # Install library
         install(TARGETS lithium_sbig_camera
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         )
-        
+
         # Install headers
         install(FILES sbig_camera.hpp
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/sbig
         )
-        
+
     else()
         message(WARNING "SBIG Universal Driver not found. SBIG camera support will be disabled.")
         set(SBIG_FOUND FALSE)

@@ -9,7 +9,7 @@ namespace lithium::device::indi::filterwheel {
 
 /**
  * @brief Base class for all INDI FilterWheel components
- * 
+ *
  * This follows the ASCOM modular architecture pattern, providing a consistent
  * interface for all filterwheel components. Each component holds a shared reference
  * to the filterwheel core for state management and INDI communication.
@@ -17,9 +17,9 @@ namespace lithium::device::indi::filterwheel {
 template<typename CoreType = INDIFilterWheelCore>
 class ComponentBase {
 public:
-    explicit ComponentBase(std::shared_ptr<CoreType> core) 
+    explicit ComponentBase(std::shared_ptr<CoreType> core)
         : core_(std::move(core)) {}
-    
+
     virtual ~ComponentBase() = default;
 
     // Non-copyable, movable

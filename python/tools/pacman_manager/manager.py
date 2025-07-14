@@ -244,6 +244,7 @@ class PacmanManager:
         Returns:
             Path to pacman executable
 
+
         Raises:
             ConfigError: If pacman is not found
         """
@@ -443,6 +444,7 @@ class PacmanManager:
 
         Returns:
             CommandResult with execution results and metadata
+
 
         Raises:
             CommandError: If the command execution fails
@@ -740,6 +742,7 @@ class PacmanManager:
         Args:
             query: The search query string
 
+
         Returns:
             List of PackageInfo objects matching the query
         """
@@ -846,6 +849,7 @@ class PacmanManager:
 
         Args:
             refresh: Force refreshing the cached package list
+
 
         Returns:
             Dictionary mapping package names to PackageInfo objects

@@ -19,27 +19,27 @@ Description: Enhanced AtomFocuser following INDI architecture
 #include <optional>
 #include "device.hpp"
 
-enum class BAUD_RATE { 
-    B9600, 
-    B19200, 
-    B38400, 
-    B57600, 
-    B115200, 
-    B230400, 
-    NONE 
+enum class BAUD_RATE {
+    B9600,
+    B19200,
+    B38400,
+    B57600,
+    B115200,
+    B230400,
+    NONE
 };
 
-enum class FocusMode { 
-    ALL, 
-    ABSOLUTE, 
-    RELATIVE, 
-    NONE 
+enum class FocusMode {
+    ALL,
+    ABSOLUTE,
+    RELATIVE,
+    NONE
 };
 
-enum class FocusDirection { 
-    IN, 
-    OUT, 
-    NONE 
+enum class FocusDirection {
+    IN,
+    OUT,
+    NONE
 };
 
 enum class FocuserState {
@@ -75,7 +75,7 @@ public:
     explicit AtomFocuser(std::string name) : AtomDriver(std::move(name)) {
         setType("Focuser");
     }
-    
+
     ~AtomFocuser() override = default;
 
     // Capabilities
@@ -165,27 +165,27 @@ protected:
     FocuserState focuser_state_{FocuserState::IDLE};
     FocuserCapabilities focuser_capabilities_;
     TemperatureCompensation temperature_compensation_;
-    
+
     // Current state
     int current_position_{0};
     int target_position_{0};
     double current_speed_{50.0};
     bool is_reversed_{false};
     int backlash_steps_{0};
-    
+
     // Statistics
     uint64_t total_steps_{0};
     int last_move_steps_{0};
     int last_move_duration_{0};
-    
+
     // Presets
     std::array<std::optional<int>, 10> presets_;
-    
+
     // Callbacks
     PositionCallback position_callback_;
     TemperatureCallback temperature_callback_;
     MoveCompleteCallback move_complete_callback_;
-    
+
     // Utility methods
     virtual void updateFocuserState(FocuserState state) { focuser_state_ = state; }
     virtual void notifyPositionChange(int position);

@@ -92,7 +92,7 @@ public:
     // Property Management
     bool waitForProperty(const std::string& propertyName, int timeout = 5000);
     std::vector<PropertyInfo> getAvailableProperties() const;
-    
+
     // Number Properties
     bool setNumberProperty(const std::string& propertyName, const std::string& elementName, double value);
     bool setNumberProperty(const std::string& propertyName, const std::vector<std::pair<std::string, double>>& values);
@@ -146,29 +146,29 @@ private:
     std::atomic<bool> initialized_{false};
     std::atomic<bool> connected_{false};
     std::atomic<bool> serverConnected_{false};
-    
+
     std::string deviceName_;
     INDI::BaseDevice device_;
-    
+
     // Thread safety
     mutable std::recursive_mutex propertyMutex_;
     mutable std::recursive_mutex deviceMutex_;
-    
+
     // Callbacks
     ConnectionCallback connectionCallback_;
     PropertyUpdateCallback propertyUpdateCallback_;
     MessageCallback messageCallback_;
-    
+
     // Internal methods
     bool waitForConnection(int timeout);
     void updateDeviceInfo();
     void handlePropertyUpdate(const INDI::Property& property);
-    
+
     // Property helpers
     INDI::PropertyNumber getNumberPropertyHandle(const std::string& propertyName) const;
     INDI::PropertySwitch getSwitchPropertyHandle(const std::string& propertyName) const;
     INDI::PropertyText getTextPropertyHandle(const std::string& propertyName) const;
-    
+
     // Utility methods
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);

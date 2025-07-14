@@ -9,7 +9,7 @@ namespace lithium::task::custom::focuser {
 
 /**
  * @brief Task for validating and monitoring focus quality
- * 
+ *
  * This task continuously monitors focus quality metrics and can
  * trigger corrective actions when focus degrades beyond acceptable
  * thresholds.
@@ -108,14 +108,14 @@ public:
             CorrectionFailed,
             InsufficientStars
         };
-        
+
         Type type;
         std::chrono::steady_clock::time_point timestamp;
         std::string message;
         double severity; // 0.0 to 1.0
         std::optional<ValidationResult> related_validation;
     };
-    
+
     std::vector<Alert> getActiveAlerts() const;
     void clearAlerts();
 
@@ -125,31 +125,31 @@ private:
     double calculateFocusScore(const FocusQuality& quality) const;
     bool isFocusAcceptable(const FocusQuality& quality) const;
     std::optional<int> calculateRecommendedCorrection(const FocusQuality& quality) const;
-    
+
     // Monitoring implementation
     TaskResult monitoringLoop();
     void processValidationResult(const ValidationResult& result);
-    
+
     // Drift analysis
     FocusDriftInfo performDriftAnalysis() const;
     double calculateDriftRate(const std::vector<ValidationResult>& recent_results) const;
     bool isSignificantDrift(double drift_rate, double confidence) const;
-    
+
     // Correction logic
     TaskResult attemptFocusCorrection(const ValidationResult& validation);
     TaskResult performCoarseFocusCorrection();
     TaskResult performFineFocusCorrection(int base_position);
-    
+
     // Alert management
     void checkForAlerts(const ValidationResult& result);
     void addAlert(Alert::Type type, const std::string& message, double severity,
                   const std::optional<ValidationResult>& validation = std::nullopt);
     void pruneOldAlerts();
-    
+
     // Data management
     void addValidationResult(const ValidationResult& result);
     void pruneOldValidations();
-    
+
     // Quality assessment helpers
     bool hasMinimumStars(const FocusQuality& quality) const;
     double normalizeHFR(double hfr) const;
@@ -159,30 +159,30 @@ private:
 private:
     std::shared_ptr<device::Camera> camera_;
     Config config_;
-    
+
     // Validation data
     std::deque<ValidationResult> validation_history_;
     ValidationResult last_validation_;
-    
+
     // Monitoring state
     bool monitoring_active_ = false;
     std::chrono::steady_clock::time_point monitoring_start_time_;
-    
+
     // Correction state
     int correction_attempts_ = 0;
     std::chrono::steady_clock::time_point last_correction_time_;
-    
+
     // Alerts
     std::vector<Alert> active_alerts_;
-    
+
     // Statistics cache
     mutable Statistics cached_statistics_;
     mutable std::chrono::steady_clock::time_point statistics_cache_time_;
-    
+
     // Thread safety
     mutable std::mutex validation_mutex_;
     mutable std::mutex alert_mutex_;
-    
+
     // Constants
     static constexpr size_t MAX_VALIDATION_HISTORY = 1000;
     static constexpr size_t MAX_ALERTS = 100;
@@ -219,7 +219,7 @@ protected:
 public:
     void setConfig(const Config& config);
     Config getConfig() const;
-    
+
     FocusQuality getLastQuality() const;
     double getLastScore() const;
 
@@ -244,28 +244,28 @@ public:
     };
 
     void recordFocusEvent(const FocusEvent& event);
-    void recordFocusEvent(int position, const FocusQuality& quality, 
+    void recordFocusEvent(int position, const FocusQuality& quality,
                          const std::string& event_type, const std::string& notes = "");
-    
+
     std::vector<FocusEvent> getHistory() const;
     std::vector<FocusEvent> getHistory(std::chrono::steady_clock::time_point since) const;
-    
+
     // Analysis functions
     std::optional<int> getBestFocusPosition() const;
     double getAverageFocusQuality() const;
     std::pair<int, int> getFocusRange() const; // min, max positions used
-    
+
     // Export/import
     void exportToCSV(const std::string& filename) const;
     void importFromCSV(const std::string& filename);
-    
+
     void clear();
     size_t size() const;
 
 private:
     std::vector<FocusEvent> history_;
     mutable std::mutex history_mutex_;
-    
+
     static constexpr size_t MAX_HISTORY_SIZE = 10000;
 };
 

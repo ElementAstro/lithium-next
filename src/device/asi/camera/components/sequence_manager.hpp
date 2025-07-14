@@ -38,7 +38,7 @@ class PropertyManager;
 
 /**
  * @brief Sequence Manager for ASI Camera
- * 
+ *
  * Manages automated imaging sequences with support for various
  * sequence types, progress tracking, and result collection.
  */
@@ -141,56 +141,56 @@ public:
     bool resumeSequence();
     bool stopSequence();
     bool abortSequence();
-    
+
     // State and Progress
     SequenceState getState() const { return state_; }
     std::string getStateString() const;
     SequenceProgress getProgress() const;
     bool isRunning() const { return state_ == SequenceState::RUNNING; }
     bool isPaused() const { return state_ == SequenceState::PAUSED; }
-    
+
     // Results
     SequenceResult getLastResult() const;
     std::vector<SequenceResult> getAllResults() const;
     bool hasResult() const;
     void clearResults();
-    
+
     // Sequence Templates
-    SequenceSettings createSimpleSequence(double exposure, int count, 
+    SequenceSettings createSimpleSequence(double exposure, int count,
                                          std::chrono::seconds interval = std::chrono::seconds{0});
-    SequenceSettings createBracketingSequence(double baseExposure, 
+    SequenceSettings createBracketingSequence(double baseExposure,
                                              const std::vector<double>& exposureMultipliers,
                                              int repeatCount = 1);
-    SequenceSettings createTimeLapseSequence(double exposure, int count, 
+    SequenceSettings createTimeLapseSequence(double exposure, int count,
                                             std::chrono::seconds interval);
     SequenceSettings createCalibrationSequence(const std::string& frameType,
                                               double exposure, int count);
-    
+
     // Custom Sequences
     bool addExposureStep(SequenceSettings& settings, const ExposureStep& step);
     bool removeExposureStep(SequenceSettings& settings, int index);
     bool updateExposureStep(SequenceSettings& settings, int index, const ExposureStep& step);
-    
+
     // Sequence Validation
     bool validateSequence(const SequenceSettings& settings) const;
     std::chrono::seconds estimateSequenceDuration(const SequenceSettings& settings) const;
     int calculateTotalExposures(const SequenceSettings& settings) const;
-    
+
     // Callbacks
     void setProgressCallback(ProgressCallback callback);
     void setStepCallback(StepCallback callback);
     void setCompletionCallback(CompletionCallback callback);
     void setErrorCallback(ErrorCallback callback);
-    
+
     // Configuration
     void setMaxConcurrentSequences(int max) { maxConcurrentSequences_ = max; }
     void setDefaultOutputDirectory(const std::string& directory) { defaultOutputDirectory_ = directory; }
     void setDefaultFilenameTemplate(const std::string& template_str) { defaultFilenameTemplate_ = template_str; }
-    
+
     // Sequence Management
     std::vector<std::string> getRunningSequences() const;
     bool isSequenceRunning(const std::string& sequenceName) const;
-    
+
     // Presets
     bool saveSequencePreset(const std::string& name, const SequenceSettings& settings);
     bool loadSequencePreset(const std::string& name, SequenceSettings& settings);
@@ -201,13 +201,13 @@ private:
     // Component references
     std::shared_ptr<ExposureManager> exposureManager_;
     std::shared_ptr<PropertyManager> propertyManager_;
-    
+
     // State management
     std::atomic<SequenceState> state_{SequenceState::IDLE};
     SequenceSettings currentSettings_;
     SequenceProgress currentProgress_;
     SequenceResult currentResult_;
-    
+
     // Threading
     std::thread sequenceThread_;
     std::atomic<bool> pauseRequested_{false};
@@ -215,27 +215,27 @@ private:
     std::atomic<bool> abortRequested_{false};
     std::mutex stateMutex_;
     std::condition_variable stateCondition_;
-    
+
     // Results storage
     std::vector<SequenceResult> results_;
     mutable std::mutex resultsMutex_;
-    
+
     // Callbacks
     ProgressCallback progressCallback_;
     StepCallback stepCallback_;
     CompletionCallback completionCallback_;
     ErrorCallback errorCallback_;
     std::mutex callbackMutex_;
-    
+
     // Configuration
     int maxConcurrentSequences_ = 1;
     std::string defaultOutputDirectory_;
     std::string defaultFilenameTemplate_ = "{name}_{step:03d}_{timestamp}";
-    
+
     // Sequence presets
     std::map<std::string, SequenceSettings> sequencePresets_;
     mutable std::mutex presetsMutex_;
-    
+
     // Worker methods
     void sequenceWorker();
     bool executeSequence(const SequenceSettings& settings, SequenceResult& result);
@@ -248,33 +248,33 @@ private:
     bool performDithering(int pixels);
     bool performAutoFocus();
     bool waitForTemperatureStabilization(double targetTemp);
-    
+
     // File management
     std::string generateFilename(const SequenceSettings& settings, int step, int repeat) const;
     bool saveFrame(std::shared_ptr<AtomCameraFrame> frame, const std::string& filename);
     bool createOutputDirectory(const std::string& directory);
-    
+
     // Progress and notification
     void updateState(SequenceState newState);
     void notifyProgress(const SequenceProgress& progress);
     void notifyStepStart(int step, const ExposureStep& stepSettings);
     void notifyCompletion(const SequenceResult& result);
     void notifyError(const std::string& error);
-    
+
     // Helper methods
-    std::string replaceFilenameTokens(const std::string& template_str, 
+    std::string replaceFilenameTokens(const std::string& template_str,
                                      const SequenceSettings& settings,
                                      int step, int repeat) const;
     std::string getCurrentTimestamp() const;
     bool validateExposureStep(const ExposureStep& step) const;
     void copyOriginalSettings();
     std::string formatSequenceError(const std::string& operation, const std::string& error);
-    
+
     // Preset management
     bool savePresetToFile(const std::string& name, const SequenceSettings& settings);
     bool loadPresetFromFile(const std::string& name, SequenceSettings& settings);
     std::string getPresetFilename(const std::string& name) const;
-    
+
     // Original settings storage (for restoration)
     std::map<std::string, double> originalSettings_;
     bool originalSettingsStored_ = false;

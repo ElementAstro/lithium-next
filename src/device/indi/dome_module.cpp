@@ -78,7 +78,7 @@ void* create_indi_dome(const char* name) {
     if (!name) {
         return nullptr;
     }
-    
+
     try {
         auto dome = lithium::device::indi::createINDIDome(std::string(name));
         if (dome) {
@@ -88,7 +88,7 @@ void* create_indi_dome(const char* name) {
     } catch (...) {
         spdlog::error("Exception in create_indi_dome");
     }
-    
+
     return nullptr;
 }
 

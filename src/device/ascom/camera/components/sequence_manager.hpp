@@ -32,7 +32,7 @@ class HardwareInterface;
 
 /**
  * @brief Sequence Manager for ASCOM Camera
- * 
+ *
  * Manages batch image capture sequences, automated shooting,
  * and sequence progress tracking.
  */
@@ -169,21 +169,21 @@ public:
 
 private:
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // Sequence state
     std::atomic<bool> sequenceRunning_{false};
     std::atomic<bool> sequencePaused_{false};
     std::atomic<int> currentImage_{0};
     std::atomic<int> totalImages_{0};
-    
+
     SequenceSettings currentSettings_;
     mutable std::mutex settingsMutex_;
-    
+
     // Callbacks
     ProgressCallback progressCallback_;
     CompletionCallback completionCallback_;
     std::mutex callbackMutex_;
-    
+
     // Statistics
     std::chrono::steady_clock::time_point sequenceStartTime_;
     std::atomic<uint64_t> successfulImages_{0};

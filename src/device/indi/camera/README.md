@@ -126,7 +126,7 @@ exposure->setSequenceCallback([](int frame, auto image) {
 Components communicate through:
 
 1. **Core Hub**: All components have access to the core
-2. **Property System**: Properties are routed to interested components  
+2. **Property System**: Properties are routed to interested components
 3. **Callbacks**: Components can register callbacks for events
 4. **Shared State**: Some state is managed by the core
 

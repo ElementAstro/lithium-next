@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.20)
 project(lithium_config VERSION 1.0.0 LANGUAGES C CXX)
 
 # Project sources and headers
-set(PROJECT_SOURCES 
+set(PROJECT_SOURCES
     configor.cpp
     config_cache.cpp
     config_validator.cpp
@@ -12,7 +12,7 @@ set(PROJECT_SOURCES
     config_watcher.cpp
 )
 
-set(PROJECT_HEADERS 
+set(PROJECT_HEADERS
     configor.hpp
     config_cache.hpp
     config_validator.hpp

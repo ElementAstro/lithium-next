@@ -10,8 +10,8 @@ Date: 2024-12-18
 
 Description: Component-based INDI Camera Implementation
 
-This modular camera implementation orchestrates INDI camera components 
-following the ASCOM architecture pattern for clean, maintainable, 
+This modular camera implementation orchestrates INDI camera components
+following the ASCOM architecture pattern for clean, maintainable,
 and testable code.
 
 *************************************************/
@@ -38,7 +38,7 @@ namespace lithium::device::indi::camera {
 
 /**
  * @brief Component-based INDI camera implementation
- * 
+ *
  * This class aggregates all camera components to provide a unified
  * interface while maintaining modularity and separation of concerns.
  */
@@ -201,7 +201,7 @@ private:
 
 /**
  * @brief Factory class for creating INDI camera controllers
- * 
+ *
  * Following the ASCOM pattern, this factory provides methods for
  * creating modular INDI camera controller instances.
  */
@@ -212,7 +212,7 @@ public:
      * @param deviceName Camera device name/identifier
      * @return Unique pointer to controller instance
      */
-    static auto createModularController(const std::string& deviceName) 
+    static auto createModularController(const std::string& deviceName)
         -> std::unique_ptr<INDICamera>;
 
     /**
@@ -220,7 +220,7 @@ public:
      * @param deviceName Camera device name/identifier
      * @return Shared pointer to controller instance
      */
-    static auto createSharedController(const std::string& deviceName) 
+    static auto createSharedController(const std::string& deviceName)
         -> std::shared_ptr<INDICamera>;
 };
 

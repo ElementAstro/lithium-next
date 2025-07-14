@@ -373,7 +373,7 @@ sequence.push_back({{"task_id", focusId}});
 
 // 5. Imaging
 for (const auto& filter : {"Ha", "OIII", "SII"}) {
-    auto imagingTask = templates->createTask("imaging", 
+    auto imagingTask = templates->createTask("imaging",
         std::string("imaging_") + filter, {
         {"target", "M31"},
         {"filter", filter},

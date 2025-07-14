@@ -35,7 +35,7 @@ class HardwareInterface;
 
 /**
  * @brief Guide Manager for INDI Telescope
- * 
+ *
  * Manages all telescope guiding operations including guide pulses,
  * guiding calibration, pulse queuing, and autoguiding coordination.
  */
@@ -133,7 +133,7 @@ public:
     bool clearCalibration();
 
     // Advanced Calibration
-    bool calibrateDirection(GuideDirection direction, std::chrono::milliseconds pulseDuration, 
+    bool calibrateDirection(GuideDirection direction, std::chrono::milliseconds pulseDuration,
                            int pulseCount = 5);
     bool autoCalibrate(std::chrono::milliseconds basePulseDuration = std::chrono::milliseconds(1000));
     double calculateCalibrationAccuracy() const;
@@ -209,38 +209,38 @@ private:
     void executePulse(const GuidePulse& pulse);
     void updateGuideStatistics(const GuidePulse& pulse);
     void handlePropertyUpdate(const std::string& propertyName);
-    
+
     // Pulse management
     std::string generatePulseId();
     bool validatePulseDuration(std::chrono::milliseconds duration) const;
     GuideDirection convertMotionToDirection(int nsDirection, int ewDirection) const;
-    
+
     // Calibration helpers
     void performCalibrationSequence();
-    bool calibrateDirectionSequence(GuideDirection direction, 
-                                   std::chrono::milliseconds pulseDuration, 
+    bool calibrateDirectionSequence(GuideDirection direction,
+                                   std::chrono::milliseconds pulseDuration,
                                    int pulseCount);
     void calculateCalibrationRates();
-    
+
     // Rate calculations
     double calculateEffectiveGuideRate(GuideDirection direction) const;
     std::chrono::milliseconds calculatePulseDuration(double arcsec, double rateArcsecPerMs) const;
-    
+
     // Validation methods
     bool isValidGuideDirection(GuideDirection direction) const;
     bool isValidPulseParameters(GuideDirection direction, std::chrono::milliseconds duration) const;
-    
+
     // Hardware interaction
     bool sendGuidePulseToHardware(GuideDirection direction, std::chrono::milliseconds duration);
     void syncGuideRatesToHardware();
-    
+
     // Utility methods
     std::string directionToString(GuideDirection direction) const;
     GuideDirection stringToDirection(const std::string& directionStr) const;
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);
     void logError(const std::string& message);
-    
+
     // Constants
     static constexpr double DEFAULT_GUIDE_RATE = 0.5;  // arcsec/sec
     static constexpr size_t MAX_RECENT_PULSES = 100;

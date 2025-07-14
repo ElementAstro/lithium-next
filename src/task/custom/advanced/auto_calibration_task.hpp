@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Automated Calibration Task
- * 
+ *
  * Performs comprehensive calibration sequence including dark frames,
  * bias frames, and flat fields with intelligent automation.
  * Inspired by NINA's calibration automation features.

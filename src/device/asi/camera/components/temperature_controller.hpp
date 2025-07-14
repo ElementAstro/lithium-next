@@ -33,7 +33,7 @@ class HardwareInterface;
 
 /**
  * @brief Temperature Controller for ASI Camera
- * 
+ *
  * Manages cooling operations, temperature monitoring, and thermal
  * protection with PID control and temperature history tracking.
  */
@@ -72,7 +72,7 @@ public:
 
     struct PIDParams {
         double kp = 1.0;                       // Proportional gain
-        double ki = 0.1;                       // Integral gain  
+        double ki = 0.1;                       // Integral gain
         double kd = 0.05;                      // Derivative gain
         double maxOutput = 100.0;              // Maximum output (%)
         double minOutput = 0.0;                // Minimum output (%)
@@ -97,40 +97,40 @@ public:
     bool startCooling(const CoolingSettings& settings);
     bool stopCooling();
     bool isCoolerOn() const { return coolerEnabled_; }
-    
+
     // State and Status
     CoolerState getState() const { return state_; }
     std::string getStateString() const;
     TemperatureInfo getCurrentTemperatureInfo() const;
     bool hasCooler() const;
-    
+
     // Temperature Access
     double getCurrentTemperature() const;
     double getTargetTemperature() const { return currentSettings_.targetTemperature; }
     double getCoolerPower() const;
     bool hasReachedTarget() const;
     double getTemperatureStability() const; // Standard deviation of recent temps
-    
+
     // Settings Management
     CoolingSettings getCurrentSettings() const { return currentSettings_; }
     bool updateSettings(const CoolingSettings& settings);
     bool updateTargetTemperature(double temperature);
     bool updateMaxCoolerPower(double power);
-    
+
     // PID Control
     PIDParams getPIDParams() const { return pidParams_; }
     void setPIDParams(const PIDParams& params);
     void resetPIDController();
-    
+
     // Temperature History
     std::vector<TemperatureInfo> getTemperatureHistory(std::chrono::seconds duration) const;
     void clearTemperatureHistory();
     size_t getHistorySize() const;
-    
+
     // Callbacks
     void setTemperatureCallback(TemperatureCallback callback);
     void setStateCallback(StateCallback callback);
-    
+
     // Configuration
     void setMonitoringInterval(std::chrono::milliseconds interval) { monitoringInterval_ = interval; }
     void setHistoryDuration(std::chrono::minutes duration) { historyDuration_ = duration; }
@@ -139,43 +139,43 @@ public:
 private:
     // Hardware interface
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // State management
     std::atomic<CoolerState> state_{CoolerState::OFF};
     std::atomic<bool> coolerEnabled_{false};
     CoolingSettings currentSettings_;
-    
+
     // Threading
     std::thread monitoringThread_;
     std::thread controlThread_;
     std::atomic<bool> stopRequested_{false};
     std::mutex stateMutex_;
     std::condition_variable stateCondition_;
-    
+
     // Temperature monitoring
     TemperatureInfo currentInfo_;
     std::deque<TemperatureInfo> temperatureHistory_;
     mutable std::mutex temperatureMutex_;
     std::chrono::milliseconds monitoringInterval_{1000};
     std::chrono::minutes historyDuration_{60}; // Keep 1 hour of history
-    
+
     // PID Control
     PIDParams pidParams_;
     double previousError_ = 0.0;
     double integralSum_ = 0.0;
     std::chrono::steady_clock::time_point lastControlUpdate_;
     std::mutex pidMutex_;
-    
+
     // Timing and state tracking
     std::chrono::steady_clock::time_point coolingStartTime_;
     std::chrono::steady_clock::time_point lastStableTime_;
     bool hasBeenStable_ = false;
-    
+
     // Callbacks
     TemperatureCallback temperatureCallback_;
     StateCallback stateCallback_;
     std::mutex callbackMutex_;
-    
+
     // Worker methods
     void monitoringWorker();
     void controlWorker();
@@ -187,7 +187,7 @@ private:
     void checkCoolingTimeout();
     void notifyTemperatureChange(const TemperatureInfo& info);
     void notifyStateChange(CoolerState newState, const std::string& message = "");
-    
+
     // Helper methods
     void updateState(CoolerState newState);
     bool validateCoolingSettings(const CoolingSettings& settings);

@@ -18,7 +18,7 @@ Description: ASI Electronic Filter Wheel (EFW) implementation
 namespace lithium::device::asi::filterwheel {
 
 // ASIFilterWheel implementation
-ASIFilterWheel::ASIFilterWheel(const ::std::string& name) 
+ASIFilterWheel::ASIFilterWheel(const ::std::string& name)
     : AtomFilterWheel(name) {
     // Initialize ASI EFW specific capabilities
     FilterWheelCapabilities caps;
@@ -28,7 +28,7 @@ ASIFilterWheel::ASIFilterWheel(const ::std::string& name)
     caps.hasTemperature = false;
     caps.canAbort = true;
     setFilterWheelCapabilities(caps);
-    
+
     // Create controller with delayed initialization
     try {
         controller_ = ::std::make_unique<ASIFilterwheelController>();
@@ -133,14 +133,14 @@ auto ASIFilterWheel::getFilterInfo(int slot) -> std::optional<FilterInfo> {
     if (!isValidPosition(slot)) {
         return std::nullopt;
     }
-    
+
     FilterInfo info;
     info.name = controller_->getFilterName(slot);
     info.type = "Unknown";  // ASI EFW doesn't provide type info by default
     info.wavelength = 0.0;
     info.bandwidth = 0.0;
     info.description = "ASI EFW Filter";
-    
+
     return info;
 }
 
@@ -148,7 +148,7 @@ auto ASIFilterWheel::setFilterInfo(int slot, const FilterInfo& info) -> bool {
     if (!isValidPosition(slot)) {
         return false;
     }
-    
+
     // Store the filter info in our internal array
     if (slot >= 1 && slot <= MAX_FILTERS) {
         filters_[slot - 1] = info;
@@ -161,14 +161,14 @@ auto ASIFilterWheel::setFilterInfo(int slot, const FilterInfo& info) -> bool {
 auto ASIFilterWheel::getAllFilterInfo() -> std::vector<FilterInfo> {
     std::vector<FilterInfo> infos;
     int count = getFilterCount();
-    
+
     for (int i = 1; i <= count; ++i) {
         auto info = getFilterInfo(i);
         if (info.has_value()) {
             infos.push_back(info.value());
         }
     }
-    
+
     return infos;
 }
 
@@ -185,14 +185,14 @@ auto ASIFilterWheel::findFilterByName(const std::string& name) -> std::optional<
 auto ASIFilterWheel::findFilterByType(const std::string& type) -> std::vector<int> {
     std::vector<int> positions;
     int count = getFilterCount();
-    
+
     for (int i = 1; i <= count; ++i) {
         auto info = getFilterInfo(i);
         if (info.has_value() && info.value().type == type) {
             positions.push_back(i);
         }
     }
-    
+
     return positions;
 }
 

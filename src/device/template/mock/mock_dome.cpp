@@ -8,7 +8,7 @@
 
 #include <cmath>
 
-MockDome::MockDome(const std::string& name) 
+MockDome::MockDome(const std::string& name)
     : AtomDome(name), gen_(rd_()), noise_dist_(-0.1, 0.1) {
     // Set default capabilities
     DomeCapabilities caps;
@@ -23,7 +23,7 @@ MockDome::MockDome(const std::string& name)
     caps.minAzimuth = 0.0;
     caps.maxAzimuth = 360.0;
     setDomeCapabilities(caps);
-    
+
     // Set default parameters
     DomeParameters params;
     params.diameter = 3.0;
@@ -32,7 +32,7 @@ MockDome::MockDome(const std::string& name)
     params.slitHeight = 1.2;
     params.telescopeRadius = 0.5;
     setDomeParameters(params);
-    
+
     // Initialize state
     current_azimuth_ = 0.0;
     shutter_state_ = ShutterState::CLOSED;
@@ -60,11 +60,11 @@ bool MockDome::destroy() {
 
 bool MockDome::connect(const std::string& port, int timeout, int maxRetry) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
+
     if (!isSimulated()) {
         return false;
     }
-    
+
     connected_ = true;
     setState(DeviceState::IDLE);
     updateDomeState(DomeState::IDLE);
@@ -101,7 +101,7 @@ bool MockDome::isParked() const {
 
 auto MockDome::getAzimuth() -> std::optional<double> {
     if (!isConnected()) return std::nullopt;
-    
+
     addPositionNoise();
     return current_azimuth_;
 }
@@ -113,30 +113,30 @@ auto MockDome::setAzimuth(double azimuth) -> bool {
 auto MockDome::moveToAzimuth(double azimuth) -> bool {
     if (!isConnected()) return false;
     if (isMoving()) return false;
-    
+
     double normalized_azimuth = normalizeAzimuth(azimuth);
     target_azimuth_ = normalized_azimuth;
-    
+
     updateDomeState(DomeState::MOVING);
-    
+
     if (dome_move_thread_.joinable()) {
         dome_move_thread_.join();
     }
-    
+
     dome_move_thread_ = std::thread(&MockDome::simulateDomeMove, this, normalized_azimuth);
     return true;
 }
 
 auto MockDome::rotateClockwise() -> bool {
     if (!isConnected()) return false;
-    
+
     double new_azimuth = normalizeAzimuth(current_azimuth_ + 10.0);
     return moveToAzimuth(new_azimuth);
 }
 
 auto MockDome::rotateCounterClockwise() -> bool {
     if (!isConnected()) return false;
-    
+
     double new_azimuth = normalizeAzimuth(current_azimuth_ - 10.0);
     return moveToAzimuth(new_azimuth);
 }
@@ -147,16 +147,16 @@ auto MockDome::stopRotation() -> bool {
 
 auto MockDome::abortMotion() -> bool {
     if (!isConnected()) return false;
-    
+
     {
         std::lock_guard<std::mutex> lock(move_mutex_);
         is_dome_moving_ = false;
     }
-    
+
     if (dome_move_thread_.joinable()) {
         dome_move_thread_.join();
     }
-    
+
     updateDomeState(DomeState::IDLE);
     return true;
 }
@@ -164,16 +164,16 @@ auto MockDome::abortMotion() -> bool {
 auto MockDome::syncAzimuth(double azimuth) -> bool {
     if (!isConnected()) return false;
     if (isMoving()) return false;
-    
+
     current_azimuth_ = normalizeAzimuth(azimuth);
     return true;
 }
 
 auto MockDome::park() -> bool {
     if (!isConnected()) return false;
-    
+
     updateDomeState(DomeState::PARKING);
-    
+
     // Move to park position and close shutter
     bool success = moveToAzimuth(park_position_);
     if (success) {
@@ -182,26 +182,26 @@ auto MockDome::park() -> bool {
         closeShutter();
         is_parked_ = true;
         updateDomeState(DomeState::PARKED);
-        
+
         if (park_callback_) {
             park_callback_(true);
         }
     }
-    
+
     return success;
 }
 
 auto MockDome::unpark() -> bool {
     if (!isConnected()) return false;
     if (!is_parked_) return true;
-    
+
     is_parked_ = false;
     updateDomeState(DomeState::IDLE);
-    
+
     if (park_callback_) {
         park_callback_(false);
     }
-    
+
     return true;
 }
 
@@ -212,7 +212,7 @@ auto MockDome::getParkPosition() -> std::optional<double> {
 
 auto MockDome::setParkPosition(double azimuth) -> bool {
     if (!isConnected()) return false;
-    
+
     park_position_ = normalizeAzimuth(azimuth);
     return true;
 }
@@ -225,15 +225,15 @@ auto MockDome::openShutter() -> bool {
     if (!isConnected()) return false;
     if (!dome_capabilities_.hasShutter) return false;
     if (!checkWeatherSafety()) return false;
-    
+
     if (shutter_state_ == ShutterState::OPEN) return true;
-    
+
     updateShutterState(ShutterState::OPENING);
-    
+
     if (shutter_thread_.joinable()) {
         shutter_thread_.join();
     }
-    
+
     shutter_thread_ = std::thread(&MockDome::simulateShutterOperation, this, ShutterState::OPEN);
     return true;
 }
@@ -241,31 +241,31 @@ auto MockDome::openShutter() -> bool {
 auto MockDome::closeShutter() -> bool {
     if (!isConnected()) return false;
     if (!dome_capabilities_.hasShutter) return false;
-    
+
     if (shutter_state_ == ShutterState::CLOSED) return true;
-    
+
     updateShutterState(ShutterState::CLOSING);
-    
+
     if (shutter_thread_.joinable()) {
         shutter_thread_.join();
     }
-    
+
     shutter_thread_ = std::thread(&MockDome::simulateShutterOperation, this, ShutterState::CLOSED);
     return true;
 }
 
 auto MockDome::abortShutter() -> bool {
     if (!isConnected()) return false;
-    
+
     {
         std::lock_guard<std::mutex> lock(shutter_mutex_);
         is_shutter_moving_ = false;
     }
-    
+
     if (shutter_thread_.joinable()) {
         shutter_thread_.join();
     }
-    
+
     updateShutterState(ShutterState::ERROR);
     return true;
 }
@@ -286,7 +286,7 @@ auto MockDome::getRotationSpeed() -> std::optional<double> {
 auto MockDome::setRotationSpeed(double speed) -> bool {
     if (!isConnected()) return false;
     if (speed < getMinSpeed() || speed > getMaxSpeed()) return false;
-    
+
     rotation_speed_ = speed;
     return true;
 }
@@ -301,7 +301,7 @@ auto MockDome::getMinSpeed() -> double {
 
 auto MockDome::followTelescope(bool enable) -> bool {
     if (!isConnected()) return false;
-    
+
     is_following_telescope_ = enable;
     return true;
 }
@@ -318,22 +318,22 @@ auto MockDome::calculateDomeAzimuth(double telescopeAz, double telescopeAlt) -> 
 
 auto MockDome::setTelescopePosition(double az, double alt) -> bool {
     if (!isConnected()) return false;
-    
+
     telescope_azimuth_ = normalizeAzimuth(az);
     telescope_altitude_ = alt;
-    
+
     // If following telescope, move dome
     if (is_following_telescope_) {
         double dome_az = calculateDomeAzimuth(az, alt);
         return moveToAzimuth(dome_az);
     }
-    
+
     return true;
 }
 
 auto MockDome::findHome() -> bool {
     if (!isConnected()) return false;
-    
+
     // Simulate finding home position
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     home_position_ = 0.0;
@@ -342,14 +342,14 @@ auto MockDome::findHome() -> bool {
 
 auto MockDome::setHome() -> bool {
     if (!isConnected()) return false;
-    
+
     home_position_ = current_azimuth_;
     return true;
 }
 
 auto MockDome::gotoHome() -> bool {
     if (!isConnected()) return false;
-    
+
     return moveToAzimuth(home_position_);
 }
 
@@ -412,7 +412,7 @@ auto MockDome::resetShutterOperations() -> bool {
 
 auto MockDome::savePreset(int slot, double azimuth) -> bool {
     if (slot < 0 || slot >= static_cast<int>(presets_.size())) return false;
-    
+
     presets_[slot] = normalizeAzimuth(azimuth);
     return true;
 }
@@ -420,7 +420,7 @@ auto MockDome::savePreset(int slot, double azimuth) -> bool {
 auto MockDome::loadPreset(int slot) -> bool {
     if (slot < 0 || slot >= static_cast<int>(presets_.size())) return false;
     if (!presets_[slot].has_value()) return false;
-    
+
     return moveToAzimuth(*presets_[slot]);
 }
 
@@ -431,7 +431,7 @@ auto MockDome::getPreset(int slot) -> std::optional<double> {
 
 auto MockDome::deletePreset(int slot) -> bool {
     if (slot < 0 || slot >= static_cast<int>(presets_.size())) return false;
-    
+
     presets_[slot].reset();
     return true;
 }
@@ -441,47 +441,47 @@ void MockDome::simulateDomeMove(double target_azimuth) {
         std::lock_guard<std::mutex> lock(move_mutex_);
         is_dome_moving_ = true;
     }
-    
+
     double start_position = current_azimuth_;
     auto [total_distance, direction] = getShortestPath(current_azimuth_, target_azimuth);
-    
+
     // Calculate move duration based on speed
     double move_duration = total_distance / rotation_speed_;
     auto move_duration_ms = std::chrono::milliseconds(static_cast<int>(move_duration * 1000));
-    
+
     // Simulate gradual movement
     const int steps = 15;
     auto step_duration = move_duration_ms / steps;
     double step_azimuth = total_distance / steps;
-    
+
     if (direction == DomeMotion::COUNTER_CLOCKWISE) {
         step_azimuth = -step_azimuth;
     }
-    
+
     for (int i = 0; i < steps; ++i) {
         {
             std::lock_guard<std::mutex> lock(move_mutex_);
             if (!is_dome_moving_) break;
         }
-        
+
         std::this_thread::sleep_for(step_duration);
         current_azimuth_ = normalizeAzimuth(current_azimuth_ + step_azimuth);
-        
+
         if (azimuth_callback_) {
             azimuth_callback_(current_azimuth_);
         }
     }
-    
+
     current_azimuth_ = target_azimuth;
     total_rotation_ += getAzimuthalDistance(start_position, target_azimuth);
-    
+
     {
         std::lock_guard<std::mutex> lock(move_mutex_);
         is_dome_moving_ = false;
     }
-    
+
     updateDomeState(DomeState::IDLE);
-    
+
     if (move_complete_callback_) {
         move_complete_callback_(true, "Dome movement completed");
     }
@@ -492,17 +492,17 @@ void MockDome::simulateShutterOperation(ShutterState target_state) {
         std::lock_guard<std::mutex> lock(shutter_mutex_);
         is_shutter_moving_ = true;
     }
-    
+
     // Simulate shutter operation time
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-    
+
     {
         std::lock_guard<std::mutex> lock(shutter_mutex_);
         if (is_shutter_moving_) {
             shutter_state_ = target_state;
             shutter_operations_++;
             is_shutter_moving_ = false;
-            
+
             if (shutter_callback_) {
                 shutter_callback_(target_state);
             }

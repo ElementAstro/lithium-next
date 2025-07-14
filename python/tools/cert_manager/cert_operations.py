@@ -189,6 +189,7 @@ def revoke_certificate(options: RevokeOptions) -> Path:
 @log_operation
 def load_ssl_context(
     cert_path: Path, key_path: Path, ca_path: Optional[Path] = None
+    cert_path: Path, key_path: Path, ca_path: Optional[Path] = None
 ) -> ssl.SSLContext:
     """Loads a security-hardened SSL context."""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -304,3 +305,4 @@ def create_certificate_chain(cert_paths: List[Path], output_path: Path) -> Path:
     """Creates a certificate chain file."""
     create_certificate_chain_file(cert_paths, output_path)
     return output_path
+

@@ -30,18 +30,18 @@ set_target_properties(lithium_focuser_indi PROPERTIES
 )
 
 # Include directories
-target_include_directories(lithium_focuser_indi 
-    PUBLIC 
+target_include_directories(lithium_focuser_indi
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/..
         ${CMAKE_SOURCE_DIR}/src
 )
 
 # Required libraries (similar to the parent CMakeLists)
 set(FOCUSER_LIBS
-    atom-system 
-    atom-io 
-    atom-utils 
-    atom-component 
+    atom-system
+    atom-io
+    atom-utils
+    atom-component
     atom-error
     spdlog::spdlog
 )

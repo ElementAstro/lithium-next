@@ -41,7 +41,7 @@ class BazelBuilder(BuildHelperBase):
             bazel_options,
             env_vars,
             verbose,
-            parallel
+            parallel,
         )
         self.build_mode = build_mode
 
@@ -77,6 +77,7 @@ class BazelBuilder(BuildHelperBase):
     async def configure(self) -> BuildResult:
         """Configure the Bazel build system asynchronously."""
         self.status = BuildStatus.CONFIGURING
+        logger.info(f"Configuring Bazel build with output base in {self.build_dir}")
         logger.info(f"Configuring Bazel build with output base in {self.build_dir}")
 
         self.build_dir.mkdir(parents=True, exist_ok=True)
@@ -155,6 +156,8 @@ class BazelBuilder(BuildHelperBase):
                 logger.error(
                     f"Failed to query targets for installation: {query_result.error}"
                 )
+                    f"Failed to query targets for installation: {query_result.error}"
+                )
                 raise InstallationError(
                     f"Bazel target query failed: {query_result.error}"
                 )
@@ -174,10 +177,13 @@ class BazelBuilder(BuildHelperBase):
                     error="",
                     exit_code=0,
                     execution_time=0.0,
+                    execution_time=0.0,
                 )
 
                 self.status = BuildStatus.COMPLETED
                 logger.success(
+                    f"Project installed successfully to {self.install_prefix}"
+                )
                     f"Project installed successfully to {self.install_prefix}"
                 )
                 return build_result
@@ -237,6 +243,8 @@ class BazelBuilder(BuildHelperBase):
             result = await self.build(doc_target)
             if result.success:
                 logger.success(
+                    f"Documentation generated successfully with target '{doc_target}'"
+                )
                     f"Documentation generated successfully with target '{doc_target}'"
                 )
             return result

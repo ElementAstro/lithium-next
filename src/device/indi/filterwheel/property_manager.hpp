@@ -9,7 +9,7 @@ namespace lithium::device::indi::filterwheel {
 
 /**
  * @brief Manages INDI property watching and synchronization for FilterWheel
- * 
+ *
  * This component handles all INDI property interactions, including watching for
  * property updates and maintaining synchronization between INDI properties
  * and the internal state.

@@ -218,7 +218,7 @@ class BuildManager:
                             success=False,
                             errors=result.errors,
                             warnings=result.warnings,
-                            duration_ms=(time.time() - start_time) * 1000
+                            duration_ms=(time.time() - start_time) * 1000,
                         )
 
             metrics.compile_time = time.time() - compile_start

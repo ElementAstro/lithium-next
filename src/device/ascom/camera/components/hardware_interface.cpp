@@ -45,7 +45,7 @@ HardwareInterface::~HardwareInterface() {
 
 auto HardwareInterface::initialize() -> bool {
     std::lock_guard<std::mutex> lock(mutex_);
-    
+
     if (initialized_) {
         return true;
     }
@@ -77,7 +77,7 @@ auto HardwareInterface::initialize() -> bool {
 
 auto HardwareInterface::shutdown() -> bool {
     std::lock_guard<std::mutex> lock(mutex_);
-    
+
     if (!initialized_) {
         return true;
     }
@@ -216,7 +216,7 @@ auto HardwareInterface::disconnect() -> bool {
 
 auto HardwareInterface::getCameraInfo() const -> std::optional<CameraInfo> {
     std::lock_guard<std::mutex> lock(infoMutex_);
-    
+
     if (!connected_) {
         return std::nullopt;
     }
@@ -644,10 +644,10 @@ auto HardwareInterface::setSubFrame(int startX, int startY, int numX, int numY) 
         VARIANT value;
         VariantInit(&value);
         value.vt = VT_I4;
-        
+
         value.intVal = startX;
         if (!setCOMProperty("StartX", value)) return false;
-        
+
         value.intVal = startY;
         if (!setCOMProperty("StartY", value)) return false;
         
@@ -656,7 +656,7 @@ auto HardwareInterface::setSubFrame(int startX, int startY, int numX, int numY) 
         
         value.intVal = numY;
         if (!setCOMProperty("NumY", value)) return false;
-        
+
         return true;
     }
 #endif
@@ -682,13 +682,13 @@ auto HardwareInterface::setBinning(int binX, int binY) -> bool {
         VARIANT value;
         VariantInit(&value);
         value.vt = VT_I4;
-        
+
         value.intVal = binX;
         if (!setCOMProperty("BinX", value)) return false;
-        
+
         value.intVal = binY;
         if (!setCOMProperty("BinY", value)) return false;
-        
+
         return true;
     }
 #endif
@@ -741,7 +741,7 @@ auto HardwareInterface::shutdownCOM() -> void {
         comCamera_->Release();
         comCamera_ = nullptr;
     }
-    
+
     if (comInitialized_) {
         CoUninitialize();
         comInitialized_ = false;
@@ -929,7 +929,7 @@ auto HardwareInterface::updateCameraInfo() -> bool {
     }
 
     std::lock_guard<std::mutex> lock(infoMutex_);
-    
+
     CameraInfo info;
     info.name = deviceName_;
 
@@ -950,13 +950,13 @@ auto HardwareInterface::updateCameraInfo() -> bool {
             info.cameraXSize = widthResult->intVal;
             info.cameraYSize = heightResult->intVal;
         }
-        
+
         // Get other camera properties...
         auto canAbortResult = getCOMProperty("CanAbortExposure");
         if (canAbortResult) {
             info.canAbortExposure = canAbortResult->boolVal == VARIANT_TRUE;
         }
-        
+
         // ... get more properties as needed
     }
 #endif

@@ -20,7 +20,7 @@ Description: Base INDI FilterWheel implementation
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 INDIFilterwheelBase::INDIFilterwheelBase(std::string name) : AtomFilterWheel(name) {
-    logger_ = spdlog::get("filterwheel_indi") 
+    logger_ = spdlog::get("filterwheel_indi")
                   ? spdlog::get("filterwheel_indi")
                   : spdlog::stdout_color_mt("filterwheel_indi");
 }
@@ -35,7 +35,7 @@ auto INDIFilterwheelBase::initialize() -> bool {
     caps.hasTemperature = false;
     caps.canAbort = true;
     setFilterWheelCapabilities(caps);
-    
+
     return true;
 }
 
@@ -59,7 +59,7 @@ auto INDIFilterwheelBase::connect(const std::string &deviceName, int timeout, in
 
     deviceName_ = deviceName;
     logger_->info("Connecting to {}...", deviceName_);
-    
+
     // Watch for device and set up property watchers
     watchDevice(deviceName_.c_str(), [this](INDI::BaseDevice device) {
         device_ = device;
@@ -105,13 +105,13 @@ void INDIFilterwheelBase::setPropertyNumber(std::string_view propertyName, doubl
         logger_->error("Device not valid for property setting");
         return;
     }
-    
+
     INDI::PropertyNumber property = device_.getProperty(propertyName.data());
     if (!property.isValid()) {
         logger_->error("Property {} not found", propertyName);
         return;
     }
-    
+
     property[0].value = value;
     sendNewProperty(property);
 }
@@ -211,11 +211,11 @@ void INDIFilterwheelBase::handleDriverInfoProperty(const INDI::PropertyText &pro
         const auto *driverExec = property[1].getText();
         logger_->info("Driver executable: {}", driverExec);
         driverExec_ = driverExec;
-        
+
         const auto *driverVersion = property[2].getText();
         logger_->info("Driver version: {}", driverVersion);
         driverVersion_ = driverVersion;
-        
+
         const auto *driverInterface = property[3].getText();
         logger_->info("Driver interface: {}", driverInterface);
         driverInterface_ = driverInterface;
@@ -246,7 +246,7 @@ void INDIFilterwheelBase::handleFilterSlotProperty(const INDI::PropertyNumber &p
         currentSlot_ = static_cast<int>(property[0].getValue());
         maxSlot_ = static_cast<int>(property[0].getMax());
         minSlot_ = static_cast<int>(property[0].getMin());
-        
+
         int slotIndex = currentSlot_.load();
         if (slotIndex >= 0 && slotIndex < static_cast<int>(slotNames_.size())) {
             currentSlotName_ = slotNames_[slotIndex];

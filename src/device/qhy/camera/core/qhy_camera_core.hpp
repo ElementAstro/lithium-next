@@ -34,7 +34,7 @@ class ComponentBase;
 
 /**
  * @brief Core QHY camera functionality
- * 
+ *
  * This class provides the foundational QHY camera operations including
  * SDK management, device connection, and component coordination.
  * It serves as the central hub for all camera components.
@@ -105,29 +105,29 @@ private:
     std::string name_;
     std::string cameraId_;
     QHYCamHandle* cameraHandle_;
-    
+
     // Connection state
     std::atomic_bool isConnected_{false};
     std::atomic_bool isInitialized_{false};
     CameraState currentState_{CameraState::IDLE};
-    
+
     // Component management
     std::vector<std::shared_ptr<ComponentBase>> components_;
     mutable std::mutex componentsMutex_;
-    
+
     // Parameter storage
     std::map<std::string, double> parameters_;
     mutable std::mutex parametersMutex_;
-    
+
     // Current frame
     std::shared_ptr<AtomCameraFrame> currentFrame_;
     mutable std::mutex frameMutex_;
-    
+
     // Callbacks
     std::function<void(CameraState)> stateChangeCallback_;
     std::function<void(const std::string&, double)> parameterChangeCallback_;
     mutable std::mutex callbacksMutex_;
-    
+
     // Hardware capabilities
     bool hasColorCamera_{false};
     bool hasCooler_{false};
@@ -136,7 +136,7 @@ private:
     std::string cameraType_;
     std::string firmwareVersion_;
     std::string serialNumber_;
-    
+
     // Private helper methods
     auto initializeQHYSDK() -> bool;
     auto shutdownQHYSDK() -> bool;

@@ -59,7 +59,7 @@ static auto lrgb_sequence_registrar = TaskRegistrar<LRGBSequenceTask>(
 );
 
 static auto narrowband_sequence_registrar = TaskRegistrar<NarrowbandSequenceTask>(
-    "narrowband_sequence", 
+    "narrowband_sequence",
     TaskInfo{
         .name = "narrowband_sequence",
         .description = "Execute narrowband imaging sequences",
@@ -75,7 +75,7 @@ static auto narrowband_sequence_registrar = TaskRegistrar<NarrowbandSequenceTask
             {"gain", {{"type", "number"}, {"default", 200}}},
             {"offset", {{"type", "number"}, {"default", 10}}}
         },
-        .version = "1.0.0", 
+        .version = "1.0.0",
         .dependencies = {"filter_change"},
         .isEnabled = true
     },
@@ -87,7 +87,7 @@ static auto narrowband_sequence_registrar = TaskRegistrar<NarrowbandSequenceTask
 static auto filter_calibration_registrar = TaskRegistrar<FilterCalibrationTask>(
     "filter_calibration",
     TaskInfo{
-        .name = "filter_calibration", 
+        .name = "filter_calibration",
         .description = "Perform filter calibration sequences",
         .category = "calibration",
         .requiredParameters = {"calibration_type"},

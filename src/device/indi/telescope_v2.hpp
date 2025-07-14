@@ -30,7 +30,7 @@ testability, and separation of concerns.
 
 /**
  * @brief Modular INDI Telescope V2
- * 
+ *
  * This class provides a backward-compatible interface to the original INDITelescope
  * while using the new modular architecture internally. It delegates all operations
  * to the modular telescope controller.
@@ -144,7 +144,7 @@ public:
     auto setTargetRADECJNow(double raHours, double decDegrees) -> bool override;
     auto slewToRADECJNow(double raHours, double decDegrees, bool enableTracking = true) -> bool override;
     auto syncToRADECJNow(double raHours, double decDegrees) -> bool override;
-    
+
     auto getAZALT() -> std::optional<HorizontalCoordinates> override;
     auto setAZALT(double azDegrees, double altDegrees) -> bool override;
     auto slewToAZALT(double azDegrees, double altDegrees) -> bool override;
@@ -163,7 +163,7 @@ public:
     // =========================================================================
     auto getAlignmentMode() -> AlignmentMode override;
     auto setAlignmentMode(AlignmentMode mode) -> bool override;
-    auto addAlignmentPoint(const EquatorialCoordinates& measured, 
+    auto addAlignmentPoint(const EquatorialCoordinates& measured,
                            const EquatorialCoordinates& target) -> bool override;
     auto clearAlignment() -> bool override;
 
@@ -176,7 +176,7 @@ public:
     // =========================================================================
     // Legacy Compatibility Methods
     // =========================================================================
-    
+
     // Property setting methods for backward compatibility
     void setPropertyNumber(std::string_view propertyName, double value);
     auto setActionAfterPositionSet(std::string_view action) -> bool;
@@ -184,7 +184,7 @@ public:
     // =========================================================================
     // Advanced Component Access
     // =========================================================================
-    
+
     /**
      * @brief Get the underlying modular controller
      * @return Shared pointer to the telescope controller
@@ -201,7 +201,7 @@ public:
     template<typename T>
     std::shared_ptr<T> getComponent() const {
         if (!controller_) return nullptr;
-        
+
         // Map component types to controller methods
         if constexpr (std::is_same_v<T, lithium::device::indi::telescope::components::HardwareInterface>) {
             return controller_->getHardwareInterface();
@@ -240,22 +240,22 @@ public:
 private:
     // The modular telescope controller that does all the work
     std::shared_ptr<lithium::device::indi::telescope::INDITelescopeController> controller_;
-    
+
     // Thread safety for controller access
     mutable std::mutex controllerMutex_;
-    
+
     // Initialization state
     std::atomic<bool> initialized_{false};
-    
+
     // Error handling
     mutable std::string lastError_;
-    
+
     // Internal methods
     void ensureController();
     bool initializeController();
     void setLastError(const std::string& error);
     std::string getLastError() const;
-    
+
     // Helper methods for validation
     bool validateController() const;
     void logInfo(const std::string& message) const;

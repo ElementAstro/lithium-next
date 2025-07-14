@@ -217,19 +217,19 @@ for (size_t i = 0; i < filters.size(); ++i) {
     while (filterwheel->isMoving()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    
+
     // 对焦（如果需要）
     if (i == 0) {  // 只在第一个滤镜时对焦
         auto bestFocus = focuser->performCoarseFineAutofocus(200, 20, 1000);
         if (bestFocus) focuser->setPosition(*bestFocus);
     }
-    
+
     // 拍摄
     camera->startExposure(120.0);
     while (camera->isExposing()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    
+
     auto frame = camera->getImageData();
     // 保存图像...
 }
@@ -246,7 +246,7 @@ cmake -B build -S .
 cmake --build build
 
 # 只构建滤镜轮模块
-cd src/device/asi/filterwheel  
+cd src/device/asi/filterwheel
 cmake -B build -S .
 cmake --build build
 

@@ -26,7 +26,7 @@ class DomeComponentBase {
 public:
     explicit DomeComponentBase(std::shared_ptr<INDIDomeCore> core, std::string name)
         : core_(std::move(core)), component_name_(std::move(name)) {}
-    
+
     virtual ~DomeComponentBase() = default;
 
     // Non-copyable, non-movable

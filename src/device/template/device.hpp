@@ -79,16 +79,16 @@ class DeviceProperty {
 public:
     explicit DeviceProperty(std::string name, std::string label = "")
         : name_(std::move(name)), label_(std::move(label)), state_(PropertyState::IDLE) {}
-    
+
     virtual ~DeviceProperty() = default;
-    
+
     const std::string& getName() const { return name_; }
     const std::string& getLabel() const { return label_; }
     PropertyState getState() const { return state_; }
     void setState(PropertyState state) { state_ = state; }
     const std::string& getGroup() const { return group_; }
     void setGroup(const std::string& group) { group_ = group; }
-    
+
 protected:
     std::string name_;
     std::string label_;
@@ -99,12 +99,12 @@ protected:
 class AtomDriver {
 public:
     explicit AtomDriver(std::string name)
-        : name_(std::move(name)), 
+        : name_(std::move(name)),
           uuid_(atom::utils::UUID().toString()),
           state_(DeviceState::UNKNOWN),
           connected_(false),
           simulated_(false) {}
-          
+
     virtual ~AtomDriver() = default;
 
     // 核心接口
@@ -117,9 +117,9 @@ public:
 
     // 设备状态管理
     DeviceState getState() const { return state_; }
-    void setState(DeviceState state) { 
+    void setState(DeviceState state) {
         std::lock_guard<std::mutex> lock(state_mutex_);
-        state_ = state; 
+        state_ = state;
     }
 
     // 设备信息
@@ -128,11 +128,11 @@ public:
     void setName(const std::string &newName) { name_ = newName; }
     const std::string& getType() const { return type_; }
     void setType(const std::string& type) { type_ = type; }
-    
+
     // 设备详细信息
     const DeviceInfo& getDeviceInfo() const { return device_info_; }
     void setDeviceInfo(const DeviceInfo& info) { device_info_ = info; }
-    
+
     // 能力查询
     const DeviceCapabilities& getCapabilities() const { return capabilities_; }
     void setCapabilities(const DeviceCapabilities& caps) { capabilities_ = caps; }
@@ -169,16 +169,16 @@ protected:
     DeviceState state_;
     bool connected_;
     bool simulated_;
-    
+
     DeviceInfo device_info_;
     DeviceCapabilities capabilities_;
-    
+
     std::unordered_map<std::string, std::shared_ptr<DeviceProperty>> properties_;
     mutable std::mutex state_mutex_;
     mutable std::mutex properties_mutex_;
-    
+
     std::chrono::system_clock::time_point last_update_;
-    
+
     // 连接参数
     std::string connection_port_;
     ConnectionType connection_type_{ConnectionType::NONE};

@@ -13,7 +13,7 @@ namespace lithium::device::indi::camera {
 
 /**
  * @brief Hardware control component for INDI cameras
- * 
+ *
  * This component handles hardware-specific controls including
  * shutter, fan, gain, offset, ISO, and frame settings.
  */

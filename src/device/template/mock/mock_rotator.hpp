@@ -87,12 +87,12 @@ private:
     double move_speed_{10.0}; // degrees per second
     std::thread move_thread_;
     mutable std::mutex move_mutex_;
-    
+
     // Random number generation
     mutable std::random_device rd_;
     mutable std::mt19937 gen_;
     mutable std::uniform_real_distribution<> noise_dist_;
-    
+
     // Simulation methods
     void simulateMove(double target_angle);
     void addPositionNoise();

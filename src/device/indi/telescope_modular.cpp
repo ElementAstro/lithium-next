@@ -12,7 +12,7 @@ namespace lithium::device::indi {
 
 INDITelescopeModular::INDITelescopeModular(const std::string& name)
     : telescopeName_(name) {
-    
+
     // Create the modular controller
     controller_ = telescope::ControllerFactory::createModularController(
         telescope::ControllerFactory::getDefaultConfig());
@@ -23,12 +23,12 @@ bool INDITelescopeModular::initialize() {
         logError("Controller not created");
         return false;
     }
-    
+
     if (!controller_->initialize()) {
         logError("Failed to initialize modular controller: " + controller_->getLastError());
         return false;
     }
-    
+
     logInfo("Modular telescope initialized successfully");
     return true;
 }
@@ -37,14 +37,14 @@ bool INDITelescopeModular::destroy() {
     if (!controller_) {
         return true;
     }
-    
+
     bool result = controller_->destroy();
     if (result) {
         logInfo("Modular telescope destroyed successfully");
     } else {
         logError("Failed to destroy modular controller: " + controller_->getLastError());
     }
-    
+
     return result;
 }
 
@@ -53,14 +53,14 @@ bool INDITelescopeModular::connect(const std::string& deviceName, int timeout, i
         logError("Controller not available");
         return false;
     }
-    
+
     bool result = controller_->connect(deviceName, timeout, maxRetry);
     if (result) {
         logInfo("Connected to telescope: " + deviceName);
     } else {
         logError("Failed to connect to telescope: " + controller_->getLastError());
     }
-    
+
     return result;
 }
 
@@ -68,14 +68,14 @@ bool INDITelescopeModular::disconnect() {
     if (!controller_) {
         return true;
     }
-    
+
     bool result = controller_->disconnect();
     if (result) {
         logInfo("Disconnected from telescope");
     } else {
         logError("Failed to disconnect: " + controller_->getLastError());
     }
-    
+
     return result;
 }
 
@@ -84,10 +84,10 @@ std::vector<std::string> INDITelescopeModular::scan() {
         logError("Controller not available");
         return {};
     }
-    
+
     auto devices = controller_->scan();
     logInfo("Found " + std::to_string(devices.size()) + " telescope devices");
-    
+
     return devices;
 }
 
@@ -102,7 +102,7 @@ auto INDITelescopeModular::getTelescopeInfo() -> std::optional<TelescopeParamete
 
 auto INDITelescopeModular::setTelescopeInfo(double telescopeAperture, double telescopeFocal,
                                            double guiderAperture, double guiderFocal) -> bool {
-    return controller_ ? controller_->setTelescopeInfo(telescopeAperture, telescopeFocal, 
+    return controller_ ? controller_->setTelescopeInfo(telescopeAperture, telescopeFocal,
                                                       guiderAperture, guiderFocal) : false;
 }
 
@@ -329,7 +329,7 @@ bool INDITelescopeModular::configureController(const telescope::TelescopeControl
         logError("Controller not available");
         return false;
     }
-    
+
     // For now, this would require recreating the controller with new config
     // In a full implementation, we would add a reconfigure method to the controller
     logWarning("Controller reconfiguration not yet implemented");
@@ -345,7 +345,7 @@ bool INDITelescopeModular::resetToDefaults() {
         logError("Controller not available");
         return false;
     }
-    
+
     // Implementation would reset all components to default settings
     logInfo("Reset to defaults requested");
     return true;

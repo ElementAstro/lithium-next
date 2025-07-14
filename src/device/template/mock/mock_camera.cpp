@@ -12,9 +12,9 @@
 #include <random>
 #include <thread>
 
-MockCamera::MockCamera(const std::string& name) 
+MockCamera::MockCamera(const std::string& name)
     : AtomCamera(name), gen_(rd_()) {
-    
+
     // Set up mock capabilities
     CameraCapabilities caps;
     caps.canAbort = true;
@@ -28,7 +28,7 @@ MockCamera::MockCamera(const std::string& name)
     caps.canStream = true;
     caps.bayerPattern = BayerPattern::MONO;
     setCameraCapabilities(caps);
-    
+
     // Set device info
     DeviceInfo info;
     info.driverName = "Mock Camera Driver";
@@ -58,7 +58,7 @@ bool MockCamera::destroy() {
 bool MockCamera::connect(const std::string& port, int timeout, int maxRetry) {
     // Simulate connection delay
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
+
     connected_ = true;
     setState(DeviceState::IDLE);
     updateTimestamp();
@@ -72,7 +72,7 @@ bool MockCamera::disconnect() {
     if (is_video_running_) {
         stopVideo();
     }
-    
+
     connected_ = false;
     setState(DeviceState::UNKNOWN);
     return true;
@@ -86,18 +86,18 @@ auto MockCamera::startExposure(double duration) -> bool {
     if (!isConnected() || is_exposing_) {
         return false;
     }
-    
+
     exposure_duration_ = duration;
     exposure_start_ = std::chrono::system_clock::now();
     is_exposing_ = true;
     exposure_count_++;
     last_exposure_duration_ = duration;
-    
+
     updateCameraState(CameraState::EXPOSING);
-    
+
     // Start exposure simulation in background
     std::thread([this]() { simulateExposure(); }).detach();
-    
+
     return true;
 }
 
@@ -105,11 +105,11 @@ auto MockCamera::abortExposure() -> bool {
     if (!is_exposing_) {
         return false;
     }
-    
+
     is_exposing_ = false;
     updateCameraState(CameraState::ABORTED);
     notifyExposureComplete(false, "Exposure aborted by user");
-    
+
     return true;
 }
 
@@ -121,10 +121,10 @@ auto MockCamera::getExposureProgress() const -> double {
     if (!is_exposing_) {
         return 0.0;
     }
-    
+
     auto now = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration<double>(now - exposure_start_).count();
-    
+
     return std::min(1.0, elapsed / exposure_duration_);
 }
 
@@ -132,10 +132,10 @@ auto MockCamera::getExposureRemaining() const -> double {
     if (!is_exposing_) {
         return 0.0;
     }
-    
+
     auto now = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration<double>(now - exposure_start_).count();
-    
+
     return std::max(0.0, exposure_duration_ - elapsed);
 }
 
@@ -147,7 +147,7 @@ auto MockCamera::saveImage(const std::string& path) -> bool {
     if (!current_frame_) {
         return false;
     }
-    
+
     // Mock saving - just update the path
     current_frame_->recentImagePath = path;
     return true;
@@ -170,7 +170,7 @@ auto MockCamera::startVideo() -> bool {
     if (!isConnected() || is_video_running_) {
         return false;
     }
-    
+
     is_video_running_ = true;
     return true;
 }
@@ -188,7 +188,7 @@ auto MockCamera::getVideoFrame() -> std::shared_ptr<AtomCameraFrame> {
     if (!is_video_running_) {
         return nullptr;
     }
-    
+
     return generateMockFrame();
 }
 
@@ -204,13 +204,13 @@ auto MockCamera::startCooling(double targetTemp) -> bool {
     if (!hasCooler()) {
         return false;
     }
-    
+
     target_temperature_ = targetTemp;
     cooler_on_ = true;
-    
+
     // Start temperature simulation
     std::thread([this]() { simulateTemperatureControl(); }).detach();
-    
+
     return true;
 }
 
@@ -251,13 +251,13 @@ auto MockCamera::setTemperature(double temperature) -> bool {
     if (!hasCooler()) {
         return false;
     }
-    
+
     target_temperature_ = temperature;
     if (!cooler_on_) {
         cooler_on_ = true;
         std::thread([this]() { simulateTemperatureControl(); }).detach();
     }
-    
+
     return true;
 }
 
@@ -427,7 +427,7 @@ auto MockCamera::getFanSpeed() -> int {
 
 void MockCamera::simulateExposure() {
     std::this_thread::sleep_for(std::chrono::duration<double>(exposure_duration_));
-    
+
     if (is_exposing_) {
         // Generate mock frame
         current_frame_ = generateMockFrame();
@@ -440,21 +440,21 @@ void MockCamera::simulateExposure() {
 void MockCamera::simulateTemperatureControl() {
     while (cooler_on_) {
         double temp_diff = target_temperature_ - current_temperature_;
-        
+
         if (std::abs(temp_diff) > 0.1) {
             // Simulate cooling/warming
             double cooling_rate = 0.1; // degrees per second
             double step = std::copysign(cooling_rate, temp_diff);
-            
+
             current_temperature_ += step;
             cooling_power_ = std::abs(temp_diff) / 40.0 * 100.0; // 0-100%
             cooling_power_ = std::clamp(cooling_power_, 0.0, 100.0);
-            
+
             notifyTemperatureChange();
         } else {
             cooling_power_ = 10.0; // Maintenance power
         }
-        
+
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
@@ -469,23 +469,23 @@ std::shared_ptr<AtomCameraFrame> MockCamera::generateMockFrame() {
 std::vector<uint16_t> MockCamera::generateMockImageData() {
     int width = current_resolution_.width / current_binning_.horizontal;
     int height = current_resolution_.height / current_binning_.vertical;
-    
+
     std::vector<uint16_t> data(width * height);
-    
+
     // Generate some mock star field
     std::uniform_int_distribution<uint16_t> noise_dist(100, 200);
     std::uniform_real_distribution<double> star_prob(0.0, 1.0);
     std::uniform_int_distribution<uint16_t> star_brightness(1000, 60000);
-    
+
     for (int i = 0; i < width * height; ++i) {
         // Base noise level
         data[i] = noise_dist(gen_);
-        
+
         // Add random stars
         if (star_prob(gen_) < 0.001) { // 0.1% chance of star
             data[i] = star_brightness(gen_);
         }
     }
-    
+
     return data;
 }

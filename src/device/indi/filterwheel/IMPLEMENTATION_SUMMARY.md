@@ -225,7 +225,7 @@ filterwheel->setPositionCallback([](int pos, const std::string& name) {
 The INDI FilterWheel module has been successfully transformed from a monolithic implementation into a robust, modular, maintainable system with the following achievements:
 
 1. **🏆 Complete Feature Parity** - All original functionality preserved and enhanced
-2. **🔧 Modular Architecture** - Clean separation of concerns across 6 components  
+2. **🔧 Modular Architecture** - Clean separation of concerns across 6 components
 3. **📋 Modern Logging** - Complete spdlog integration with structured messages
 4. **📖 Comprehensive Documentation** - README, examples, and inline documentation
 5. **🚀 Production Ready** - Thread-safe, error-handled, and thoroughly tested design

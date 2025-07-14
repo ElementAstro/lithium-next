@@ -12,12 +12,12 @@ bool PropertyManager::initialize() {
     }
 
     core->getLogger()->info("Initializing PropertyManager");
-    
+
     if (core->isConnected()) {
         setupPropertyWatchers();
         syncFromProperties();
     }
-    
+
     initialized_ = true;
     return true;
 }
@@ -37,44 +37,44 @@ void PropertyManager::setupPropertyWatchers() {
     }
 
     auto& device = core->getDevice();
-    
+
     // Watch CONNECTION property
-    device.watchProperty("CONNECTION", 
+    device.watchProperty("CONNECTION",
         [this](const INDI::PropertySwitch& property) {
             handleConnectionProperty(property);
         },
         INDI::BaseDevice::WATCH_UPDATE);
 
     // Watch DRIVER_INFO property
-    device.watchProperty("DRIVER_INFO", 
+    device.watchProperty("DRIVER_INFO",
         [this](const INDI::PropertyText& property) {
             handleDriverInfoProperty(property);
         },
         INDI::BaseDevice::WATCH_NEW);
 
     // Watch DEBUG property
-    device.watchProperty("DEBUG", 
+    device.watchProperty("DEBUG",
         [this](const INDI::PropertySwitch& property) {
             handleDebugProperty(property);
         },
         INDI::BaseDevice::WATCH_UPDATE);
 
     // Watch POLLING_PERIOD property
-    device.watchProperty("POLLING_PERIOD", 
+    device.watchProperty("POLLING_PERIOD",
         [this](const INDI::PropertyNumber& property) {
             handlePollingProperty(property);
         },
         INDI::BaseDevice::WATCH_UPDATE);
 
     // Watch FILTER_SLOT property
-    device.watchProperty("FILTER_SLOT", 
+    device.watchProperty("FILTER_SLOT",
         [this](const INDI::PropertyNumber& property) {
             handleFilterSlotProperty(property);
         },
         INDI::BaseDevice::WATCH_UPDATE);
 
     // Watch FILTER_NAME property
-    device.watchProperty("FILTER_NAME", 
+    device.watchProperty("FILTER_NAME",
         [this](const INDI::PropertyText& property) {
             handleFilterNameProperty(property);
         },
@@ -123,7 +123,7 @@ void PropertyManager::handleConnectionProperty(const INDI::PropertySwitch& prope
     if (!core) return;
 
     if (property.getState() == IPS_OK) {
-        if (auto connectSwitch = property.findWidgetByName("CONNECT"); 
+        if (auto connectSwitch = property.findWidgetByName("CONNECT");
             connectSwitch && connectSwitch->getState() == ISS_ON) {
             core->setConnected(true);
             core->getLogger()->info("FilterWheel connected");
@@ -152,7 +152,7 @@ void PropertyManager::handleDriverInfoProperty(const INDI::PropertyText& propert
         }
     }
 
-    core->getLogger()->debug("Driver info updated: {} v{}", 
+    core->getLogger()->debug("Driver info updated: {} v{}",
                             core->getDriverExec(), core->getDriverVersion());
 }
 
@@ -160,7 +160,7 @@ void PropertyManager::handleDebugProperty(const INDI::PropertySwitch& property) 
     auto core = getCore();
     if (!core) return;
 
-    if (auto enableSwitch = property.findWidgetByName("ENABLE"); 
+    if (auto enableSwitch = property.findWidgetByName("ENABLE");
         enableSwitch && enableSwitch->getState() == ISS_ON) {
         core->setDebugEnabled(true);
         core->getLogger()->debug("Debug mode enabled");
@@ -188,17 +188,17 @@ void PropertyManager::handleFilterSlotProperty(const INDI::PropertyNumber& prope
     if (property.count() > 0) {
         int slot = static_cast<int>(property[0].getValue());
         core->setCurrentSlot(slot);
-        
+
         // Update movement state based on property state
         core->setMoving(property.getState() == IPS_BUSY);
-        
+
         // Update current slot name if available
         const auto& slotNames = core->getSlotNames();
         if (slot > 0 && slot <= static_cast<int>(slotNames.size())) {
             core->setCurrentSlotName(slotNames[slot - 1]);
         }
-        
-        core->getLogger()->debug("Filter slot changed to: {} ({})", 
+
+        core->getLogger()->debug("Filter slot changed to: {} ({})",
                                 slot, core->getCurrentSlotName());
     }
 }
@@ -209,14 +209,14 @@ void PropertyManager::handleFilterNameProperty(const INDI::PropertyText& propert
 
     std::vector<std::string> names;
     names.reserve(property.count());
-    
+
     for (int i = 0; i < property.count(); ++i) {
         names.emplace_back(property[i].getText());
     }
-    
+
     core->setSlotNames(names);
     core->setMaxSlot(static_cast<int>(names.size()));
-    
+
     core->getLogger()->debug("Filter names updated: {} filters", names.size());
 }
 

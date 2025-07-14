@@ -39,17 +39,17 @@ ASCOMCameraController::~ASCOMCameraController() {
 
 auto ASCOMCameraController::initialize() -> bool {
     LOG_F(INFO, "Initializing ASCOM Camera Controller");
-    
+
     if (initialized_) {
         LOG_F(WARNING, "Controller already initialized");
         return true;
     }
-    
+
     if (!initializeComponents()) {
         LOG_F(ERROR, "Failed to initialize components");
         return false;
     }
-    
+
     initialized_ = true;
     LOG_F(INFO, "ASCOM Camera Controller initialized successfully");
     return true;
@@ -57,22 +57,22 @@ auto ASCOMCameraController::initialize() -> bool {
 
 auto ASCOMCameraController::destroy() -> bool {
     LOG_F(INFO, "Destroying ASCOM Camera Controller");
-    
+
     if (!initialized_) {
         LOG_F(WARNING, "Controller not initialized");
         return true;
     }
-    
+
     // Disconnect if connected
     if (connected_) {
         disconnect();
     }
-    
+
     if (!shutdownComponents()) {
         LOG_F(ERROR, "Failed to shutdown components properly");
         return false;
     }
-    
+
     initialized_ = false;
     LOG_F(INFO, "ASCOM Camera Controller destroyed successfully");
     return true;
@@ -80,31 +80,31 @@ auto ASCOMCameraController::destroy() -> bool {
 
 auto ASCOMCameraController::connect(const std::string &deviceName, int timeout, int maxRetry) -> bool {
     LOG_F(INFO, "Connecting to ASCOM camera: {} (timeout: {}ms, retries: {})", deviceName, timeout, maxRetry);
-    
+
     if (!initialized_) {
         LOG_F(ERROR, "Controller not initialized");
         return false;
     }
-    
+
     if (connected_) {
         LOG_F(WARNING, "Already connected");
         return true;
     }
-    
+
     if (!validateComponentsReady()) {
         LOG_F(ERROR, "Components not ready for connection");
         return false;
     }
-    
+
     // Connect hardware interface
     components::HardwareInterface::ConnectionSettings settings;
     settings.deviceName = deviceName;
-    
+
     if (!hardwareInterface_->connect(settings)) {
         LOG_F(ERROR, "Failed to connect hardware interface");
         return false;
     }
-    
+
     connected_ = true;
     LOG_F(INFO, "Successfully connected to ASCOM camera: {}", deviceName);
     return true;
@@ -112,30 +112,30 @@ auto ASCOMCameraController::connect(const std::string &deviceName, int timeout, 
 
 auto ASCOMCameraController::disconnect() -> bool {
     LOG_F(INFO, "Disconnecting ASCOM camera");
-    
+
     if (!connected_) {
         LOG_F(WARNING, "Not connected");
         return true;
     }
-    
+
     // Stop any ongoing operations
     if (exposureManager_ && exposureManager_->isExposing()) {
         exposureManager_->abortExposure();
     }
-    
+
     if (videoManager_ && videoManager_->isRecording()) {
         videoManager_->stopRecording();
     }
-    
+
     if (sequenceManager_ && sequenceManager_->isSequenceRunning()) {
         sequenceManager_->stopSequence();
     }
-    
+
     // Disconnect hardware interface
     if (hardwareInterface_) {
         hardwareInterface_->disconnect();
     }
-    
+
     connected_ = false;
     LOG_F(INFO, "Disconnected from ASCOM camera");
     return true;
@@ -143,19 +143,19 @@ auto ASCOMCameraController::disconnect() -> bool {
 
 auto ASCOMCameraController::scan() -> std::vector<std::string> {
     LOG_F(INFO, "Scanning for ASCOM cameras");
-    
+
     if (!hardwareInterface_) {
         LOG_F(ERROR, "Hardware interface not available");
         return {};
     }
-    
+
     // Placeholder implementation
     return {"ASCOM.Simulator.Camera"};
 }
 
 auto ASCOMCameraController::isConnected() const -> bool {
-    return connected_.load() && 
-           hardwareInterface_ && 
+    return connected_.load() &&
+           hardwareInterface_ &&
            hardwareInterface_->isConnected();
 }
 
@@ -168,18 +168,18 @@ auto ASCOMCameraController::startExposure(double duration) -> bool {
         LOG_F(ERROR, "Exposure manager not available");
         return false;
     }
-    
+
     if (!isConnected()) {
         LOG_F(ERROR, "Camera not connected");
         return false;
     }
-    
+
     bool result = exposureManager_->startExposure(duration);
     if (result) {
         exposureCount_++;
         lastExposureDuration_ = duration;
     }
-    
+
     return result;
 }
 
@@ -188,7 +188,7 @@ auto ASCOMCameraController::abortExposure() -> bool {
         LOG_F(ERROR, "Exposure manager not available");
         return false;
     }
-    
+
     return exposureManager_->abortExposure();
 }
 
@@ -208,12 +208,12 @@ auto ASCOMCameraController::getExposureResult() -> std::shared_ptr<AtomCameraFra
     if (!exposureManager_) {
         return nullptr;
     }
-    
+
     // Use getLastFrame instead of getResult
     auto frame = exposureManager_->getLastFrame();
     if (frame) {
         totalFramesReceived_++;
-        
+
         // Apply image processing if enabled
         if (imageProcessor_) {
             auto processedFrame = imageProcessor_->processImage(frame);
@@ -222,7 +222,7 @@ auto ASCOMCameraController::getExposureResult() -> std::shared_ptr<AtomCameraFra
             }
         }
     }
-    
+
     return frame;
 }
 
@@ -293,14 +293,14 @@ auto ASCOMCameraController::getTemperature() const -> std::optional<double> {
     if (!temperatureController_) {
         return std::nullopt;
     }
-    
+
     double temp = temperatureController_->getCurrentTemperature();
     return std::optional<double>(temp);
 }
 
 auto ASCOMCameraController::getTemperatureInfo() const -> TemperatureInfo {
     TemperatureInfo info;
-    
+
     if (temperatureController_) {
         info.current = temperatureController_->getCurrentTemperature();
         info.target = temperatureController_->getTargetTemperature();
@@ -308,7 +308,7 @@ auto ASCOMCameraController::getTemperatureInfo() const -> TemperatureInfo {
         // info.power = temperatureController_->getCoolingPower();
         // info.enabled = temperatureController_->isCoolerOn();
     }
-    
+
     return info;
 }
 
@@ -316,7 +316,7 @@ auto ASCOMCameraController::getCoolingPower() const -> std::optional<double> {
     if (!temperatureController_) {
         return std::nullopt;
     }
-    
+
     // Placeholder - return a dummy value for now
     return std::optional<double>(50.0);
 }
@@ -486,13 +486,13 @@ auto ASCOMCameraController::startVideoRecording(const std::string &filename) -> 
     if (!videoManager_) {
         return false;
     }
-    
+
     // Create recording settings
     components::VideoManager::RecordingSettings settings;
     settings.filename = filename;
     settings.format = "AVI";
     settings.maxDuration = std::chrono::seconds(0); // unlimited
-    
+
     return videoManager_->startRecording(settings);
 }
 
@@ -567,7 +567,7 @@ auto ASCOMCameraController::getSupportedImageFormats() const -> std::vector<std:
 // Image quality and statistics
 auto ASCOMCameraController::getFrameStatistics() const -> std::map<std::string, double> {
     std::map<std::string, double> stats;
-    
+
     if (exposureManager_) {
         auto expStats = exposureManager_->getStatistics();
         stats["totalExposures"] = static_cast<double>(expStats.totalExposures);
@@ -577,7 +577,7 @@ auto ASCOMCameraController::getFrameStatistics() const -> std::map<std::string, 
         stats["totalExposureTime"] = expStats.totalExposureTime;
         stats["averageExposureTime"] = expStats.averageExposureTime;
     }
-    
+
     return stats;
 }
 
@@ -598,7 +598,7 @@ auto ASCOMCameraController::getLastImageQuality() const -> std::map<std::string,
     if (!imageProcessor_) {
         return {};
     }
-    
+
     auto quality = imageProcessor_->getLastImageQuality();
     return {
         {"snr", quality.snr},
@@ -686,7 +686,7 @@ auto ASCOMCameraController::getASCOMClientID() -> std::optional<std::string> {
 
 auto ASCOMCameraController::initializeComponents() -> bool {
     LOG_F(INFO, "Initializing ASCOM camera components");
-    
+
     try {
         // Create hardware interface first
         hardwareInterface_ = std::make_shared<components::HardwareInterface>();
@@ -694,52 +694,52 @@ auto ASCOMCameraController::initializeComponents() -> bool {
             LOG_F(ERROR, "Failed to initialize hardware interface");
             return false;
         }
-        
+
         // Create property manager
         propertyManager_ = std::make_shared<components::PropertyManager>(hardwareInterface_);
         if (!propertyManager_->initialize()) {
             LOG_F(ERROR, "Failed to initialize property manager");
             return false;
         }
-        
+
         // Create exposure manager
         exposureManager_ = std::make_shared<components::ExposureManager>(hardwareInterface_);
         if (!exposureManager_) {
             LOG_F(ERROR, "Failed to create exposure manager");
             return false;
         }
-        
+
         // Create temperature controller
         temperatureController_ = std::make_shared<components::TemperatureController>(hardwareInterface_);
         if (!temperatureController_) {
             LOG_F(ERROR, "Failed to create temperature controller");
             return false;
         }
-        
+
         // Create video manager
         videoManager_ = std::make_shared<components::VideoManager>(hardwareInterface_);
         if (!videoManager_) {
             LOG_F(ERROR, "Failed to create video manager");
             return false;
         }
-        
+
         // Create sequence manager
         sequenceManager_ = std::make_shared<components::SequenceManager>(hardwareInterface_);
         if (!sequenceManager_) {
             LOG_F(ERROR, "Failed to create sequence manager");
             return false;
         }
-        
+
         // Create image processor
         imageProcessor_ = std::make_shared<components::ImageProcessor>(hardwareInterface_);
         if (!imageProcessor_) {
             LOG_F(ERROR, "Failed to create image processor");
             return false;
         }
-        
+
         LOG_F(INFO, "All ASCOM camera components initialized successfully");
         return true;
-        
+
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Exception during component initialization: {}", e.what());
         return false;
@@ -748,7 +748,7 @@ auto ASCOMCameraController::initializeComponents() -> bool {
 
 auto ASCOMCameraController::shutdownComponents() -> bool {
     LOG_F(INFO, "Shutting down ASCOM camera components");
-    
+
     // Shutdown in reverse order
     imageProcessor_.reset();
     sequenceManager_.reset();
@@ -757,18 +757,18 @@ auto ASCOMCameraController::shutdownComponents() -> bool {
     exposureManager_.reset();
     propertyManager_.reset();
     hardwareInterface_.reset();
-    
+
     LOG_F(INFO, "ASCOM camera components shutdown complete");
     return true;
 }
 
 auto ASCOMCameraController::validateComponentsReady() const -> bool {
-    return hardwareInterface_ && 
-           exposureManager_ && 
-           temperatureController_ && 
-           propertyManager_ && 
-           videoManager_ && 
-           sequenceManager_ && 
+    return hardwareInterface_ &&
+           exposureManager_ &&
+           temperatureController_ &&
+           propertyManager_ &&
+           videoManager_ &&
+           sequenceManager_ &&
            imageProcessor_;
 }
 
@@ -776,12 +776,12 @@ auto ASCOMCameraController::validateComponentsReady() const -> bool {
 // Factory Implementation
 // =========================================================================
 
-auto ControllerFactory::createModularController(const std::string& name) 
+auto ControllerFactory::createModularController(const std::string& name)
     -> std::unique_ptr<ASCOMCameraController> {
     return std::make_unique<ASCOMCameraController>(name);
 }
 
-auto ControllerFactory::createSharedController(const std::string& name) 
+auto ControllerFactory::createSharedController(const std::string& name)
     -> std::shared_ptr<ASCOMCameraController> {
     return std::make_shared<ASCOMCameraController>(name);
 }

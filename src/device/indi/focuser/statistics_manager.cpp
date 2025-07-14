@@ -12,7 +12,7 @@ bool StatisticsManager::initialize() {
     if (!core) {
         return false;
     }
-    
+
     sessionStart_ = std::chrono::steady_clock::now();
     core->getLogger()->info("{}: Initializing statistics manager", getComponentName());
     return true;
@@ -36,7 +36,7 @@ uint64_t StatisticsManager::getTotalSteps() const {
 bool StatisticsManager::resetTotalSteps() {
     static uint64_t totalSteps = 0;
     totalSteps = 0;
-    
+
     auto core = getCore();
     if (core) {
         core->getLogger()->info("Reset total steps counter");
@@ -48,7 +48,7 @@ int StatisticsManager::getLastMoveSteps() const {
     if (historyCount_ == 0) {
         return 0;
     }
-    
+
     // Get the most recent entry
     size_t lastIndex = (historyIndex_ + HISTORY_SIZE - 1) % HISTORY_SIZE;
     return stepHistory_[lastIndex];
@@ -58,7 +58,7 @@ int StatisticsManager::getLastMoveDuration() const {
     if (historyCount_ == 0) {
         return 0;
     }
-    
+
     // Get the most recent entry
     size_t lastIndex = (historyIndex_ + HISTORY_SIZE - 1) % HISTORY_SIZE;
     return durationHistory_[lastIndex];
@@ -68,13 +68,13 @@ void StatisticsManager::recordMovement(int steps, int durationMs) {
     // Update static total steps
     static uint64_t totalSteps = 0;
     totalSteps += std::abs(steps);
-    
+
     // Update move count
     totalMoves_++;
-    
+
     // Update history
     updateHistory(steps, durationMs);
-    
+
     auto core = getCore();
     if (core) {
         core->getLogger()->debug("Recorded move: {} steps, {} ms", steps, durationMs);
@@ -85,17 +85,17 @@ double StatisticsManager::getAverageStepsPerMove() const {
     if (totalMoves_ == 0) {
         return 0.0;
     }
-    
+
     uint64_t validHistoryCount = std::min(historyCount_, HISTORY_SIZE);
     if (validHistoryCount == 0) {
         return 0.0;
     }
-    
+
     int totalSteps = 0;
     for (size_t i = 0; i < validHistoryCount; ++i) {
         totalSteps += std::abs(stepHistory_[i]);
     }
-    
+
     return static_cast<double>(totalSteps) / validHistoryCount;
 }
 
@@ -103,17 +103,17 @@ double StatisticsManager::getAverageMoveDuration() const {
     if (totalMoves_ == 0) {
         return 0.0;
     }
-    
+
     uint64_t validHistoryCount = std::min(historyCount_, HISTORY_SIZE);
     if (validHistoryCount == 0) {
         return 0.0;
     }
-    
+
     int totalDuration = 0;
     for (size_t i = 0; i < validHistoryCount; ++i) {
         totalDuration += durationHistory_[i];
     }
-    
+
     return static_cast<double>(totalDuration) / validHistoryCount;
 }
 
@@ -125,7 +125,7 @@ void StatisticsManager::startSession() {
     sessionStart_ = std::chrono::steady_clock::now();
     sessionStartSteps_ = getTotalSteps();
     sessionStartMoves_ = totalMoves_;
-    
+
     auto core = getCore();
     if (core) {
         core->getLogger()->info("Started new statistics session");
@@ -134,7 +134,7 @@ void StatisticsManager::startSession() {
 
 void StatisticsManager::endSession() {
     sessionEnd_ = std::chrono::steady_clock::now();
-    
+
     auto core = getCore();
     if (core) {
         auto duration = getSessionDuration();
@@ -159,9 +159,9 @@ std::chrono::milliseconds StatisticsManager::getSessionDuration() const {
 void StatisticsManager::updateHistory(int steps, int duration) {
     stepHistory_[historyIndex_] = steps;
     durationHistory_[historyIndex_] = duration;
-    
+
     historyIndex_ = (historyIndex_ + 1) % HISTORY_SIZE;
-    
+
     if (historyCount_ < HISTORY_SIZE) {
         historyCount_++;
     }

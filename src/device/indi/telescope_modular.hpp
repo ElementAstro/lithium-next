@@ -26,7 +26,7 @@ namespace lithium::device::indi {
 
 /**
  * @brief Modern modular INDI telescope implementation
- * 
+ *
  * This class wraps the new modular telescope controller while maintaining
  * compatibility with the existing AtomTelescope interface. It serves as
  * a drop-in replacement for the original INDITelescope class.

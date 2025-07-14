@@ -357,7 +357,7 @@ public:
     static std::unique_ptr<Task> createFromJson(const json& data);
 
     void setResult(const json& result) { result_ = result; }
-    
+
     json getResult() const { return result_; }
 
 private:

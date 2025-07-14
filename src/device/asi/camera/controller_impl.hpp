@@ -25,7 +25,7 @@ namespace lithium::device::asi::camera {
 
 /**
  * @brief Implementation details for ASI Camera Controller
- * 
+ *
  * This namespace contains internal implementation details that are
  * not part of the public interface.
  */
@@ -41,14 +41,14 @@ struct CameraState {
     bool video_active = false;
     bool sequence_active = false;
     bool cooling_enabled = false;
-    
+
     int camera_id = -1;
     double current_temperature = 20.0;
     double target_temperature = -10.0;
-    
+
     std::chrono::steady_clock::time_point exposure_start_time;
     double exposure_duration_ms = 0.0;
-    
+
     std::string last_error;
     std::chrono::steady_clock::time_point last_error_time;
 };
@@ -66,23 +66,23 @@ struct CameraConfig {
     int roi_y = 0;
     int roi_width = 0;
     int roi_height = 0;
-    
+
     // Exposure settings
     double gain = 0.0;
     double offset = 0.0;
     bool high_speed_mode = false;
     bool hardware_binning = false;
-    
+
     // USB settings
     int usb_traffic = 40;
-    
+
     // Image format
     std::string format = "RAW16";
-    
+
     // Flip settings
     bool flip_horizontal = false;
     bool flip_vertical = false;
-    
+
     // White balance (for color cameras)
     double wb_red = 1.0;
     double wb_green = 1.0;
@@ -155,14 +155,14 @@ struct Statistics {
     int successful_exposures = 0;
     int failed_exposures = 0;
     double total_exposure_time = 0.0;
-    
+
     int total_sequences = 0;
     int successful_sequences = 0;
     int failed_sequences = 0;
-    
+
     int total_video_sessions = 0;
     int total_video_frames = 0;
-    
+
     std::chrono::steady_clock::time_point session_start_time;
     std::chrono::steady_clock::time_point last_activity_time;
 };
@@ -175,7 +175,7 @@ struct PerformanceMetrics {
     double avg_download_speed_mbps = 0.0;
     double avg_temperature_stability = 0.0;
     int dropped_frames = 0;
-    
+
     std::chrono::steady_clock::time_point last_metric_update;
 };
 
@@ -183,7 +183,7 @@ struct PerformanceMetrics {
 
 /**
  * @brief Extended ASI Camera Controller with implementation details
- * 
+ *
  * This class extends the public ASI Camera Controller with additional
  * implementation-specific functionality and data members.
  */
@@ -207,11 +207,11 @@ public:
     void updateCameraState();
     void resetStatistics();
     void updatePerformanceMetrics();
-    
+
     // Internal error handling
     void recordError(const std::string& error);
     void clearErrorHistory();
-    
+
     // Internal monitoring
     void startInternalMonitoring();
     void stopInternalMonitoring();
@@ -241,10 +241,10 @@ private:
     void updateVideoStatsInternal();
     void updateSequenceProgressInternal();
     void updatePerformanceMetricsInternal();
-    
+
     void monitoringLoop();
     void handleInternalError(const std::string& error);
-    
+
     // Validation helpers
     bool validateCameraId(int camera_id) const;
     bool validateExposureParameters(double duration_ms) const;

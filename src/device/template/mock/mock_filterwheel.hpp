@@ -83,18 +83,18 @@ private:
     bool is_moving_{false};
     int filter_count_{8}; // Default 8-slot filter wheel
     double move_time_per_slot_{0.5}; // seconds per slot
-    
+
     std::thread move_thread_;
     mutable std::mutex move_mutex_;
-    
+
     // Configuration storage
     std::map<std::string, std::vector<FilterInfo>> saved_configurations_;
-    
+
     // Random number generation
     mutable std::random_device rd_;
     mutable std::mt19937 gen_;
     mutable std::uniform_real_distribution<> temp_dist_;
-    
+
     // Simulation methods
     void simulateMove(int target_position);
     void initializeDefaultFilters();

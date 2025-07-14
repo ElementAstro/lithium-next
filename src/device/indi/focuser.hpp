@@ -65,30 +65,30 @@ public:
     auto getSpeedRange() -> std::pair<int, int> override;
     auto getMinLimit() -> std::optional<int> override;
     auto setMinLimit(int minLimit) -> bool override;
-    
+
     auto moveInward(int steps) -> bool override;
     auto moveOutward(int steps) -> bool override;
-    
+
     auto getBacklash() -> int override;
     auto setBacklash(int backlash) -> bool override;
     auto enableBacklashCompensation(bool enable) -> bool override;
     auto isBacklashCompensationEnabled() -> bool override;
-    
+
     auto hasTemperatureSensor() -> bool override;
     auto getTemperatureCompensation() -> TemperatureCompensation override;
     auto setTemperatureCompensation(const TemperatureCompensation& comp) -> bool override;
     auto enableTemperatureCompensation(bool enable) -> bool override;
-    
+
     auto startAutoFocus() -> bool override;
     auto stopAutoFocus() -> bool override;
     auto isAutoFocusing() -> bool override;
     auto getAutoFocusProgress() -> double override;
-    
+
     auto savePreset(int slot, int position) -> bool override;
     auto loadPreset(int slot) -> bool override;
     auto getPreset(int slot) -> std::optional<int> override;
     auto deletePreset(int slot) -> bool override;
-    
+
     auto getTotalSteps() -> uint64_t override;
     auto resetTotalSteps() -> bool override;
     auto getLastMoveSteps() -> int override;
@@ -137,17 +137,17 @@ private:
     std::atomic<double> chipTemperature_;
 
     int delay_msec_;
-    
+
     // Additional state for missing features
     std::atomic_bool isAutoFocusing_{false};
     std::atomic<double> autoFocusProgress_{0.0};
     std::atomic<uint64_t> totalSteps_{0};
     std::atomic_int lastMoveSteps_{0};
     std::atomic_int lastMoveDuration_{0};
-    
+
     // Presets storage
     std::array<std::optional<int>, 10> presets_;
-    
+
     // Temperature compensation state
     TemperatureCompensation tempCompensation_;
     std::atomic_bool tempCompensationEnabled_{false};

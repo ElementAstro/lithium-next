@@ -71,7 +71,7 @@ PlayerOneCamera::PlayerOneCamera(const std::string& name)
     , total_frames_(0)
     , dropped_frames_(0)
     , last_frame_result_(nullptr) {
-    
+
     LOG_F(INFO, "Created PlayerOne camera instance: {}", name);
 }
 
@@ -87,7 +87,7 @@ PlayerOneCamera::~PlayerOneCamera() {
 
 auto PlayerOneCamera::initialize() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_initialized_) {
         LOG_F(WARNING, "PlayerOne camera already initialized");
         return true;
@@ -109,7 +109,7 @@ auto PlayerOneCamera::initialize() -> bool {
 
 auto PlayerOneCamera::destroy() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_initialized_) {
         return true;
     }
@@ -129,7 +129,7 @@ auto PlayerOneCamera::destroy() -> bool {
 
 auto PlayerOneCamera::connect(const std::string& deviceName, int timeout, int maxRetry) -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_connected_) {
         LOG_F(WARNING, "PlayerOne camera already connected");
         return true;
@@ -147,7 +147,7 @@ auto PlayerOneCamera::connect(const std::string& deviceName, int timeout, int ma
 #ifdef LITHIUM_PLAYERONE_CAMERA_ENABLED
         auto devices = scan();
         camera_index_ = -1;
-        
+
         if (deviceName.empty()) {
             if (!devices.empty()) {
                 camera_index_ = 0;
@@ -160,7 +160,7 @@ auto PlayerOneCamera::connect(const std::string& deviceName, int timeout, int ma
                 }
             }
         }
-        
+
         if (camera_index_ == -1) {
             LOG_F(ERROR, "PlayerOne camera not found: {}", deviceName);
             continue;
@@ -195,10 +195,10 @@ auto PlayerOneCamera::connect(const std::string& deviceName, int timeout, int ma
         bit_depth_ = 16;
         is_color_camera_ = true;
         bayer_pattern_ = BayerPattern::RGGB;
-        
+
         roi_width_ = max_width_;
         roi_height_ = max_height_;
-        
+
         is_connected_ = true;
         LOG_F(INFO, "Connected to PlayerOne camera simulator");
         return true;
@@ -215,7 +215,7 @@ auto PlayerOneCamera::connect(const std::string& deviceName, int timeout, int ma
 
 auto PlayerOneCamera::disconnect() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_connected_) {
         return true;
     }
@@ -274,7 +274,7 @@ auto PlayerOneCamera::scan() -> std::vector<std::string> {
 
 auto PlayerOneCamera::startExposure(double duration) -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -307,13 +307,13 @@ auto PlayerOneCamera::startExposure(double duration) -> bool {
 
 auto PlayerOneCamera::abortExposure() -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_exposing_) {
         return true;
     }
 
     exposure_abort_requested_ = true;
-    
+
 #ifdef LITHIUM_PLAYERONE_CAMERA_ENABLED
     POAStopExposure(camera_handle_);
 #endif
@@ -354,7 +354,7 @@ auto PlayerOneCamera::getExposureRemaining() const -> double {
 
 auto PlayerOneCamera::getExposureResult() -> std::shared_ptr<AtomCameraFrame> {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (is_exposing_) {
         LOG_F(WARNING, "Exposure still in progress");
         return nullptr;
@@ -376,7 +376,7 @@ auto PlayerOneCamera::saveImage(const std::string& path) -> bool {
 // Video streaming implementation (PlayerOne strength)
 auto PlayerOneCamera::startVideo() -> bool {
     std::lock_guard<std::mutex> lock(video_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -395,7 +395,7 @@ auto PlayerOneCamera::startVideo() -> bool {
 #endif
 
     is_video_running_ = true;
-    
+
     // Start video thread
     if (video_thread_.joinable()) {
         video_thread_.join();
@@ -408,7 +408,7 @@ auto PlayerOneCamera::startVideo() -> bool {
 
 auto PlayerOneCamera::stopVideo() -> bool {
     std::lock_guard<std::mutex> lock(video_mutex_);
-    
+
     if (!is_video_running_) {
         return true;
     }
@@ -418,7 +418,7 @@ auto PlayerOneCamera::stopVideo() -> bool {
 #endif
 
     is_video_running_ = false;
-    
+
     if (video_thread_.joinable()) {
         video_thread_.join();
     }
@@ -442,7 +442,7 @@ auto PlayerOneCamera::getVideoFrame() -> std::shared_ptr<AtomCameraFrame> {
 // Temperature control (if available)
 auto PlayerOneCamera::startCooling(double targetTemp) -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -473,7 +473,7 @@ auto PlayerOneCamera::startCooling(double targetTemp) -> bool {
 
 auto PlayerOneCamera::stopCooling() -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     cooler_enabled_ = false;
 
 #ifdef LITHIUM_PLAYERONE_CAMERA_ENABLED
@@ -750,18 +750,18 @@ auto PlayerOneCamera::setupCameraParameters() -> bool {
         pixel_size_y_ = camera_props.pixelSize;
         is_color_camera_ = (camera_props.isColorCamera == POA_TRUE);
         bit_depth_ = camera_props.bitDepth;
-        
+
         // Get serial number and firmware
         char serial[32];
         if (POAGetCameraSN(camera_handle_, serial) == POA_OK) {
             serial_number_ = std::string(serial);
         }
-        
+
         char firmware[32];
         if (POAGetCameraFirmwareVersion(camera_handle_, firmware) == POA_OK) {
             firmware_version_ = std::string(firmware);
         }
-        
+
         // Set Bayer pattern for color cameras
         if (is_color_camera_) {
             bayer_pattern_ = convertPlayerOneBayerPattern(camera_props.bayerPattern);
@@ -771,7 +771,7 @@ auto PlayerOneCamera::setupCameraParameters() -> bool {
 
     roi_width_ = max_width_;
     roi_height_ = max_height_;
-    
+
     return readCameraCapabilities();
 }
 
@@ -802,7 +802,7 @@ auto PlayerOneCamera::exposureThreadFunction() -> void {
             is_exposing_ = false;
             return;
         }
-        
+
         // Start single exposure
         if (POAStartExposure(camera_handle_, POA_FALSE) != POA_OK) {
             LOG_F(ERROR, "Failed to start exposure");
@@ -816,13 +816,13 @@ auto PlayerOneCamera::exposureThreadFunction() -> void {
             if (exposure_abort_requested_) {
                 break;
             }
-            
+
             if (POAImageReady(camera_handle_, &ready_status) != POA_OK) {
                 LOG_F(ERROR, "Failed to check exposure status");
                 is_exposing_ = false;
                 return;
             }
-            
+
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         } while (ready_status != POA_IMAGE_READY);
 
@@ -867,7 +867,7 @@ auto PlayerOneCamera::exposureThreadFunction() -> void {
 
 auto PlayerOneCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
     auto frame = std::make_shared<AtomCameraFrame>();
-    
+
     frame->resolution.width = roi_width_ / bin_x_;
     frame->resolution.height = roi_height_ / bin_y_;
     frame->binning.horizontal = bin_x_;
@@ -888,7 +888,7 @@ auto PlayerOneCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
 #ifdef LITHIUM_PLAYERONE_CAMERA_ENABLED
     // Download actual image data from camera
     auto data_buffer = std::make_unique<uint8_t[]>(frame->size);
-    
+
     if (POAGetImageData(camera_handle_, data_buffer.get(), frame->size, timeout) == POA_OK) {
         frame->data = data_buffer.release();
     } else {
@@ -899,14 +899,14 @@ auto PlayerOneCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
     // Generate simulated image data
     auto data_buffer = std::make_unique<uint8_t[]>(frame->size);
     frame->data = data_buffer.release();
-    
+
     // Fill with simulated data
     if (bit_depth_ <= 8) {
         uint8_t* data8 = static_cast<uint8_t*>(frame->data);
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> noise_dist(0, 20);
-        
+
         for (size_t i = 0; i < pixelCount * channels; ++i) {
             int noise = noise_dist(gen) - 10;  // ±10 ADU noise
             int star = 0;
@@ -920,7 +920,7 @@ auto PlayerOneCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> noise_dist(0, 100);
-        
+
         for (size_t i = 0; i < pixelCount * channels; ++i) {
             int noise = noise_dist(gen) - 50;  // ±50 ADU noise
             int star = 0;
@@ -948,7 +948,7 @@ auto PlayerOneCamera::videoThreadFunction() -> void {
                 total_frames_++;
                 // Store frame for getVideoFrame() calls
             }
-            
+
             // Video frame rate limiting
             std::this_thread::sleep_for(std::chrono::milliseconds(33));  // ~30 FPS
         } catch (const std::exception& e) {
@@ -976,7 +976,7 @@ auto PlayerOneCamera::updateTemperatureInfo() -> bool {
     POA_BOOL is_auto;
     if (POAGetConfig(camera_handle_, POA_TEMPERATURE, &temp_value, &is_auto) == POA_OK) {
         current_temperature_ = static_cast<double>(temp_value) / 10.0;
-        
+
         // Calculate cooling power
         long cooler_power;
         if (POAGetConfig(camera_handle_, POA_COOLER_POWER, &cooler_power, &is_auto) == POA_OK) {

@@ -57,7 +57,7 @@ auto calibrateEFWFilterWheel() -> bool;
 **Supported Models:**
 
 - ASI EFW-5 (5-position filter wheel)
-- ASI EFW-7 (7-position filter wheel)  
+- ASI EFW-7 (7-position filter wheel)
 - ASI EFW-8 (8-position filter wheel)
 
 ### **QHY Accessories Integration**
@@ -209,7 +209,7 @@ if (asi_camera->hasEAFFocuser()) {
     asi_camera->connectEAFFocuser();
     asi_camera->enableEAFFocuserBacklashCompensation(true);
     asi_camera->setEAFFocuserBacklashSteps(50);
-    
+
     // Move to specific position
     asi_camera->setEAFFocuserPosition(5000);
     while (asi_camera->isEAFFocuserMoving()) {
@@ -226,21 +226,21 @@ auto qhy_camera = CameraFactory::createCamera(CameraDriverType::QHY, "QHY268M");
 // Setup filter wheel
 if (qhy_camera->hasQHYFilterWheel()) {
     qhy_camera->connectQHYFilterWheel();
-    
+
     // Set custom filter names
     std::vector<std::string> filters = {
         "Luminance", "Red", "Green", "Blue", "H-Alpha", "OIII", "SII"
     };
-    
+
     // Automated narrowband sequence
     for (const auto& filter : {"H-Alpha", "OIII", "SII"}) {
         int position = getFilterPosition(filter);
         qhy_camera->setQHYFilterPosition(position);
-        
+
         while (qhy_camera->isQHYFilterWheelMoving()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        
+
         // Take multiple exposures
         for (int i = 0; i < 10; ++i) {
             qhy_camera->startExposure(300.0);  // 5-minute exposures
@@ -270,17 +270,17 @@ for (size_t i = 0; i < filters.size(); ++i) {
     while (camera->isEFWFilterWheelMoving()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    
+
     // Auto-focus for each filter
     performAutoFocus(camera);
-    
+
     // Take multiple frames
     for (int frame = 0; frame < 20; ++frame) {
         camera->startExposure(exposures[i]);
         while (camera->isExposing()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
-        
+
         std::string filename = filters[i] + "_" + std::to_string(frame) + ".fits";
         camera->saveImage(filename);
     }

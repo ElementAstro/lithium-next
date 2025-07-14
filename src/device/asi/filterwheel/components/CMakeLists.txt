@@ -52,7 +52,7 @@ target_link_libraries(asi_filterwheel_components
 if(LITHIUM_ASI_EFW_ENABLED)
     message(STATUS "ASI EFW support enabled for filterwheel components")
     target_compile_definitions(asi_filterwheel_components PRIVATE LITHIUM_ASI_EFW_ENABLED)
-    
+
     # Link EFW SDK if available
     if(TARGET EFW::EFW)
         target_link_libraries(asi_filterwheel_components PRIVATE EFW::EFW)
@@ -94,7 +94,7 @@ if(LITHIUM_INSTALL_COMPONENTS)
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
-    
+
     install(FILES ${ASI_FILTERWHEEL_COMPONENTS_HEADERS}
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/asi/filterwheel/components
     )

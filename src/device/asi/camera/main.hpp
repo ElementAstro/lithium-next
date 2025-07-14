@@ -96,11 +96,11 @@ public:
     auto setGain(int gain) -> bool override;
     [[nodiscard]] auto getGain() -> std::optional<int> override;
     [[nodiscard]] auto getGainRange() -> std::pair<int, int> override;
-    
+
     auto setOffset(int offset) -> bool override;
     [[nodiscard]] auto getOffset() -> std::optional<int> override;
     [[nodiscard]] auto getOffsetRange() -> std::pair<int, int> override;
-    
+
     auto setISO(int iso) -> bool override;
     [[nodiscard]] auto getISO() -> std::optional<int> override;
     [[nodiscard]] auto getISOList() -> std::vector<int> override;
@@ -109,11 +109,11 @@ public:
     auto getResolution() -> std::optional<AtomCameraFrame::Resolution> override;
     auto setResolution(int x, int y, int width, int height) -> bool override;
     auto getMaxResolution() -> AtomCameraFrame::Resolution override;
-    
+
     auto getBinning() -> std::optional<AtomCameraFrame::Binning> override;
     auto setBinning(int horizontal, int vertical) -> bool override;
     auto getMaxBinning() -> AtomCameraFrame::Binning override;
-    
+
     auto setFrameType(FrameType type) -> bool override;
     auto getFrameType() -> FrameType override;
     auto setUploadMode(UploadMode mode) -> bool override;
@@ -144,20 +144,20 @@ public:
     auto getVideoExposure() const -> double override;
     auto setVideoGain(int gain) -> bool override;
     auto getVideoGain() const -> int override;
-    
+
     // Image sequence capabilities
     auto startSequence(int count, double exposure, double interval) -> bool override;
     auto stopSequence() -> bool override;
     auto isSequenceRunning() const -> bool override;
     auto getSequenceProgress() const -> std::pair<int, int> override; // current, total
-    
+
     // Advanced image processing
     auto setImageFormat(const std::string& format) -> bool override;
     auto getImageFormat() const -> std::string override;
     auto enableImageCompression(bool enable) -> bool override;
     auto isImageCompressionEnabled() const -> bool override;
     auto getSupportedImageFormats() const -> std::vector<std::string> override;
-    
+
     // Image quality and statistics
     auto getFrameStatistics() const -> std::map<std::string, double> override;
     auto getTotalFramesReceived() const -> uint64_t override;
@@ -415,11 +415,11 @@ private:
     std::unique_ptr<ASICameraController> m_controller;
     std::string m_device_name;
     mutable std::mutex m_state_mutex;
-    
+
     // Statistics tracking
     double m_last_exposure_duration{0.0};
     uint32_t m_exposure_count{0};
-    
+
     // Internal state
     std::string m_current_frame_type{"Light"};
     std::pair<int, int> m_current_binning{1, 1};

@@ -29,27 +29,27 @@ MotionController::~MotionController() {
 
 bool MotionController::initialize() {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (initialized_) {
         return true;
     }
-    
+
     if (!hardware_->isInitialized()) {
         logError("Hardware interface not initialized");
         return false;
     }
-    
+
     // Initialize available slew rates
     availableSlewRates_ = {0.1, 0.5, 1.0, 2.0, 5.0}; // degrees per second
-    
+
     // Set up property update callback
     hardware_->setPropertyUpdateCallback([this](const std::string& propertyName, const INDI::Property& property) {
         handlePropertyUpdate(propertyName);
     });
-    
+
     // Initialize motion status
     updateMotionStatus();
-    
+
     initialized_ = true;
     logInfo("Motion controller initialized successfully");
     return true;
@@ -57,47 +57,47 @@ bool MotionController::initialize() {
 
 bool MotionController::shutdown() {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_) {
         return true;
     }
-    
+
     // Stop any ongoing motion
     abortSlew();
     stopAllMotion();
-    
+
     initialized_ = false;
     currentState_ = MotionState::IDLE;
-    
+
     logInfo("Motion controller shutdown successfully");
     return true;
 }
 
 bool MotionController::slewToCoordinates(double ra, double dec, bool enableTracking) {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_ || !hardware_->isConnected()) {
         logError("Motion controller not ready for slewing");
         return false;
     }
-    
+
     if (!validateCoordinates(ra, dec)) {
         logError("Invalid coordinates for slewing");
         return false;
     }
-    
+
     // Set target coordinates
     if (!hardware_->setTargetCoordinates(ra, dec)) {
         logError("Failed to set target coordinates");
         return false;
     }
-    
+
     // Start slewing
     if (!hardware_->setTelescopeAction("SLEW")) {
         logError("Failed to start slewing");
         return false;
     }
-    
+
     // Update internal state
     currentSlewCommand_.targetRA = ra;
     currentSlewCommand_.targetDEC = dec;
@@ -105,32 +105,32 @@ bool MotionController::slewToCoordinates(double ra, double dec, bool enableTrack
     currentSlewCommand_.isSync = false;
     currentSlewCommand_.timestamp = std::chrono::steady_clock::now();
     slewStartTime_ = currentSlewCommand_.timestamp;
-    
+
     currentState_ = MotionState::SLEWING;
-    
+
     logInfo("Started slewing to RA: " + std::to_string(ra) + ", DEC: " + std::to_string(dec));
     return true;
 }
 
 bool MotionController::abortSlew() {
     std::lock_guard<std::recursive_mutex> lock(stateMutex_);
-    
+
     if (!initialized_ || !hardware_->isConnected()) {
         return false;
     }
-    
+
     if (!hardware_->setTelescopeAction("ABORT")) {
         logError("Failed to abort slew");
         return false;
     }
-    
+
     currentState_ = MotionState::ABORTING;
     logInfo("Slew aborted");
-    
+
     if (motionCompleteCallback_) {
         motionCompleteCallback_(false, "Slew aborted by user");
     }
-    
+
     return true;
 }
 

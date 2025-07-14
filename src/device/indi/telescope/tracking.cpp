@@ -2,7 +2,7 @@
 
 TelescopeTracking::TelescopeTracking(const std::string& name) : name_(name) {
     spdlog::debug("Creating telescope tracking component for {}", name_);
-    
+
     // Initialize default sidereal tracking rates
     trackRates_.guideRateNS = 0.5;   // arcsec/sec
     trackRates_.guideRateEW = 0.5;   // arcsec/sec
@@ -29,7 +29,7 @@ auto TelescopeTracking::isTrackingEnabled() -> bool {
         spdlog::error("Unable to find TELESCOPE_TRACK_STATE property");
         return false;
     }
-    
+
     bool enabled = property[0].getState() == ISS_ON;
     isTrackingEnabled_.store(enabled);
     return enabled;
@@ -41,11 +41,11 @@ auto TelescopeTracking::enableTracking(bool enable) -> bool {
         spdlog::error("Unable to find TELESCOPE_TRACK_STATE property");
         return false;
     }
-    
+
     property[0].setState(enable ? ISS_ON : ISS_OFF);
     property[1].setState(enable ? ISS_OFF : ISS_ON);
     device_.getBaseClient()->sendNewProperty(property);
-    
+
     isTrackingEnabled_.store(enable);
     isTracking_.store(enable);
     spdlog::info("Tracking {}", enable ? "enabled" : "disabled");
@@ -58,7 +58,7 @@ auto TelescopeTracking::getTrackRate() -> std::optional<TrackMode> {
         spdlog::error("Unable to find TELESCOPE_TRACK_MODE property");
         return std::nullopt;
     }
-    
+
     if (property[0].getState() == ISS_ON) {
         return TrackMode::SIDEREAL;
     } else if (property[1].getState() == ISS_ON) {
@@ -68,7 +68,7 @@ auto TelescopeTracking::getTrackRate() -> std::optional<TrackMode> {
     } else if (property[3].getState() == ISS_ON) {
         return TrackMode::CUSTOM;
     }
-    
+
     return TrackMode::NONE;
 }
 
@@ -78,12 +78,12 @@ auto TelescopeTracking::setTrackRate(TrackMode rate) -> bool {
         spdlog::error("Unable to find TELESCOPE_TRACK_MODE property");
         return false;
     }
-    
+
     // Reset all states
     for (int i = 0; i < property.count(); ++i) {
         property[i].setState(ISS_OFF);
     }
-    
+
     switch (rate) {
     case TrackMode::SIDEREAL:
         if (property.count() > 0) property[0].setState(ISS_ON);
@@ -106,7 +106,7 @@ auto TelescopeTracking::setTrackRate(TrackMode rate) -> bool {
         trackRateRA_.store(0.0);
         break;
     }
-    
+
     device_.getBaseClient()->sendNewProperty(property);
     trackMode_ = rate;
     spdlog::info("Track mode set to: {}", static_cast<int>(rate));
@@ -120,7 +120,7 @@ auto TelescopeTracking::getTrackRates() -> MotionRates {
         trackRates_.slewRateRA = property[0].getValue();
         trackRates_.slewRateDEC = property[1].getValue();
     }
-    
+
     return trackRates_;
 }
 
@@ -130,18 +130,18 @@ auto TelescopeTracking::setTrackRates(const MotionRates& rates) -> bool {
         spdlog::error("Unable to find TELESCOPE_TRACK_RATE property");
         return false;
     }
-    
+
     if (property.count() >= 2) {
         property[0].setValue(rates.slewRateRA);
         property[1].setValue(rates.slewRateDEC);
         device_.getBaseClient()->sendNewProperty(property);
     }
-    
+
     trackRates_ = rates;
     trackRateRA_.store(rates.slewRateRA);
     trackRateDEC_.store(rates.slewRateDEC);
-    
-    spdlog::info("Custom track rates set: RA={:.6f}, DEC={:.6f}", 
+
+    spdlog::info("Custom track rates set: RA={:.6f}, DEC={:.6f}",
                 rates.slewRateRA, rates.slewRateDEC);
     return true;
 }
@@ -152,7 +152,7 @@ auto TelescopeTracking::getPierSide() -> std::optional<PierSide> {
         spdlog::debug("TELESCOPE_PIER_SIDE property not available");
         return std::nullopt;
     }
-    
+
     if (property[0].getState() == ISS_ON) {
         pierSide_ = PierSide::EAST;
         return PierSide::EAST;
@@ -160,7 +160,7 @@ auto TelescopeTracking::getPierSide() -> std::optional<PierSide> {
         pierSide_ = PierSide::WEST;
         return PierSide::WEST;
     }
-    
+
     pierSide_ = PierSide::UNKNOWN;
     return PierSide::UNKNOWN;
 }
@@ -171,7 +171,7 @@ auto TelescopeTracking::setPierSide(PierSide side) -> bool {
         spdlog::error("Unable to find TELESCOPE_PIER_SIDE property");
         return false;
     }
-    
+
     switch (side) {
     case PierSide::EAST:
         property[0].setState(ISS_ON);
@@ -187,7 +187,7 @@ auto TelescopeTracking::setPierSide(PierSide side) -> bool {
         property[1].setState(ISS_OFF);
         break;
     }
-    
+
     device_.getBaseClient()->sendNewProperty(property);
     pierSide_ = side;
     spdlog::info("Pier side set to: {}", static_cast<int>(side));
@@ -205,25 +205,25 @@ auto TelescopeTracking::flipPierSide() -> bool {
         spdlog::error("Pier side flipping not supported");
         return false;
     }
-    
+
     auto currentSide = getPierSide();
     if (!currentSide) {
         spdlog::error("Unable to determine current pier side");
         return false;
     }
-    
+
     PierSide newSide = (*currentSide == PierSide::EAST) ? PierSide::WEST : PierSide::EAST;
-    
-    spdlog::info("Performing meridian flip from {} to {}", 
-                static_cast<int>(*currentSide), 
+
+    spdlog::info("Performing meridian flip from {} to {}",
+                static_cast<int>(*currentSide),
                 static_cast<int>(newSide));
-    
+
     return setPierSide(newSide);
 }
 
 auto TelescopeTracking::watchTrackingProperties() -> void {
     spdlog::debug("Setting up tracking property watchers");
-    
+
     // Watch for tracking state changes
     device_.watchProperty("TELESCOPE_TRACK_STATE",
         [this](const INDI::PropertySwitch& property) {
@@ -233,7 +233,7 @@ auto TelescopeTracking::watchTrackingProperties() -> void {
                 spdlog::debug("Tracking state changed: {}", tracking ? "ON" : "OFF");
             }
         }, INDI::BaseDevice::WATCH_UPDATE);
-    
+
     // Watch for track mode changes
     device_.watchProperty("TELESCOPE_TRACK_MODE",
         [this](const INDI::PropertySwitch& property) {
@@ -241,7 +241,7 @@ auto TelescopeTracking::watchTrackingProperties() -> void {
                 updateTrackingState();
             }
         }, INDI::BaseDevice::WATCH_UPDATE);
-    
+
     // Watch for track rate changes
     device_.watchProperty("TELESCOPE_TRACK_RATE",
         [this](const INDI::PropertyNumber& property) {
@@ -256,7 +256,7 @@ auto TelescopeTracking::watchTrackingProperties() -> void {
 
 auto TelescopeTracking::watchPierSideProperties() -> void {
     spdlog::debug("Setting up pier side property watchers");
-    
+
     device_.watchProperty("TELESCOPE_PIER_SIDE",
         [this](const INDI::PropertySwitch& property) {
             if (property.isValid()) {

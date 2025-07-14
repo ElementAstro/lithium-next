@@ -10,7 +10,7 @@ namespace lithium::device::indi::focuser {
 
 /**
  * @brief Controls focuser movement operations
- * 
+ *
  * Following ASCOM modular architecture pattern with shared_ptr core access.
  */
 class MovementController : public FocuserComponentBase {
@@ -60,7 +60,7 @@ private:
     bool sendPropertyUpdate(const std::string& propertyName, double value);
     bool sendPropertyUpdate(const std::string& propertyName, const std::vector<bool>& states);
     void updateStatistics(int steps);
-    
+
     std::chrono::steady_clock::time_point lastMoveStart_;
 };
 

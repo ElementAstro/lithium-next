@@ -280,6 +280,7 @@ def validate_repository(func: F) -> F:
         GitRepositoryNotFound: If the repository directory doesn't exist or isn't a Git repository.
         ValueError: If no repository directory is specified.
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs) -> Any:
         # Extract repository directory from various sources

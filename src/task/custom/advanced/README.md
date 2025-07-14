@@ -113,7 +113,7 @@ Tasks are automatically registered with the task factory system and can be execu
 ### Deep Sky Sequence
 ```json
 {
-  "task": "DeepSkySequence", 
+  "task": "DeepSkySequence",
   "params": {
     "target_name": "M42",
     "total_exposures": 60,

@@ -21,7 +21,7 @@ public:
      * @param core Shared pointer to the INDIFilterWheelCore
      */
     explicit TemperatureManager(std::shared_ptr<INDIFilterWheelCore> core);
-    
+
     /**
      * @brief Virtual destructor.
      */
@@ -71,7 +71,7 @@ private:
     bool initialized_{false};
     bool hasSensor_ = false;
     std::optional<double> currentTemperature_;
-    
+
     // Temperature monitoring
     void checkTemperatureCapability();
 };

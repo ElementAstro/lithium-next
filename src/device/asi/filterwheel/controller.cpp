@@ -487,14 +487,14 @@ std::string ASIFilterwheelController::getDeviceInfo() const {
     if (deviceInfo.has_value()) {
         const auto& info = deviceInfo.value();
         std::ostringstream ss;
-        ss << "Device: " << info.name 
+        ss << "Device: " << info.name
            << " (ID: " << info.id << ")"
            << ", Slots: " << info.slotCount
            << ", FW: " << info.firmwareVersion
            << ", Driver: " << info.driverVersion;
         return ss.str();
     }
-    
+
     return "Device information unavailable";
 }
 

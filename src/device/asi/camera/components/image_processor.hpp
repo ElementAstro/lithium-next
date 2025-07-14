@@ -32,7 +32,7 @@ namespace lithium::device::asi::camera::components {
 
 /**
  * @brief Image Processor for ASI Camera
- * 
+ *
  * Provides comprehensive image processing capabilities including
  * format conversion, calibration, enhancement, and analysis operations.
  */
@@ -117,7 +117,7 @@ public:
     std::vector<std::future<ProcessingResult>> processImageBatch(
         const std::vector<std::shared_ptr<AtomCameraFrame>>& frames,
         const ProcessingSettings& settings);
-    
+
     // Calibration Management
     bool setCalibrationFrames(const CalibrationFrames& frames);
     CalibrationFrames getCalibrationFrames() const;
@@ -126,7 +126,7 @@ public:
     bool createMasterBias(const std::vector<std::shared_ptr<AtomCameraFrame>>& biasFrames);
     bool loadCalibrationFrames(const std::string& directory);
     bool saveCalibrationFrames(const std::string& directory);
-    
+
     // Format Conversion
     std::shared_ptr<AtomCameraFrame> convertFormat(std::shared_ptr<AtomCameraFrame> frame,
                                                    const std::string& targetFormat);
@@ -134,14 +134,14 @@ public:
     bool convertToTIFF(std::shared_ptr<AtomCameraFrame> frame, const std::string& filename);
     bool convertToJPEG(std::shared_ptr<AtomCameraFrame> frame, const std::string& filename, int quality = 95);
     bool convertToPNG(std::shared_ptr<AtomCameraFrame> frame, const std::string& filename);
-    
+
     // Image Analysis
     ImageStatistics analyzeImage(std::shared_ptr<AtomCameraFrame> frame);
     std::vector<ImageStatistics> analyzeImageBatch(const std::vector<std::shared_ptr<AtomCameraFrame>>& frames);
     double calculateFWHM(std::shared_ptr<AtomCameraFrame> frame);
     double calculateSNR(std::shared_ptr<AtomCameraFrame> frame);
     int countStars(std::shared_ptr<AtomCameraFrame> frame, double threshold = 3.0);
-    
+
     // Image Enhancement
     std::shared_ptr<AtomCameraFrame> removeHotPixels(std::shared_ptr<AtomCameraFrame> frame, double threshold = 3.0);
     std::shared_ptr<AtomCameraFrame> reduceNoise(std::shared_ptr<AtomCameraFrame> frame, int strength = 50);
@@ -150,13 +150,13 @@ public:
                                                   double brightness, double contrast, double gamma);
     std::shared_ptr<AtomCameraFrame> stretchHistogram(std::shared_ptr<AtomCameraFrame> frame,
                                                       double blackPoint = 0.0, double whitePoint = 100.0);
-    
+
     // Color Processing (for color cameras)
     std::shared_ptr<AtomCameraFrame> debayerImage(std::shared_ptr<AtomCameraFrame> frame, const std::string& pattern);
     std::shared_ptr<AtomCameraFrame> balanceColors(std::shared_ptr<AtomCameraFrame> frame,
                                                    double redGain = 1.0, double greenGain = 1.0, double blueGain = 1.0);
     std::shared_ptr<AtomCameraFrame> adjustSaturation(std::shared_ptr<AtomCameraFrame> frame, double saturation);
-    
+
     // Geometric Operations
     std::shared_ptr<AtomCameraFrame> cropImage(std::shared_ptr<AtomCameraFrame> frame,
                                               int x, int y, int width, int height);
@@ -164,19 +164,19 @@ public:
                                                  int newWidth, int newHeight);
     std::shared_ptr<AtomCameraFrame> rotateImage(std::shared_ptr<AtomCameraFrame> frame, double angle);
     std::shared_ptr<AtomCameraFrame> flipImage(std::shared_ptr<AtomCameraFrame> frame, bool horizontal, bool vertical);
-    
+
     // Stacking Operations
     std::shared_ptr<AtomCameraFrame> stackImages(const std::vector<std::shared_ptr<AtomCameraFrame>>& frames,
                                                  const std::string& method = "average");
     std::shared_ptr<AtomCameraFrame> alignAndStack(const std::vector<std::shared_ptr<AtomCameraFrame>>& frames);
-    
+
     // Settings and Configuration
     void setProcessingSettings(const ProcessingSettings& settings) { currentSettings_ = settings; }
     ProcessingSettings getProcessingSettings() const { return currentSettings_; }
     void setProgressCallback(ProgressCallback callback);
     void setCompletionCallback(CompletionCallback callback);
     void setMaxConcurrentProcessing(int max) { maxConcurrentTasks_ = max; }
-    
+
     // Presets
     bool saveProcessingPreset(const std::string& name, const ProcessingSettings& settings);
     bool loadProcessingPreset(const std::string& name, ProcessingSettings& settings);
@@ -187,21 +187,21 @@ private:
     // Current settings
     ProcessingSettings currentSettings_;
     CalibrationFrames calibrationFrames_;
-    
+
     // Threading and processing
     std::atomic<int> activeTasks_{0};
     int maxConcurrentTasks_ = 4;
     mutable std::mutex processingMutex_;
-    
+
     // Callbacks
     ProgressCallback progressCallback_;
     CompletionCallback completionCallback_;
     std::mutex callbackMutex_;
-    
+
     // Presets storage
     std::map<std::string, ProcessingSettings> processingPresets_;
     mutable std::mutex presetsMutex_;
-    
+
     // Core processing methods
     ProcessingResult processImageInternal(std::shared_ptr<AtomCameraFrame> frame,
                                          const ProcessingSettings& settings);
@@ -212,32 +212,32 @@ private:
                                                          std::shared_ptr<AtomCameraFrame> flat);
     std::shared_ptr<AtomCameraFrame> applyBiasSubtraction(std::shared_ptr<AtomCameraFrame> frame,
                                                           std::shared_ptr<AtomCameraFrame> bias);
-    
+
     // Image analysis helpers
     void calculateHistogram(std::shared_ptr<AtomCameraFrame> frame, uint32_t* histogram);
     double calculateMean(std::shared_ptr<AtomCameraFrame> frame);
     double calculateMedian(std::shared_ptr<AtomCameraFrame> frame);
     double calculateStdDev(std::shared_ptr<AtomCameraFrame> frame, double mean);
     std::pair<double, double> calculateMinMax(std::shared_ptr<AtomCameraFrame> frame);
-    
+
     // Utility methods
     std::shared_ptr<AtomCameraFrame> cloneFrame(std::shared_ptr<AtomCameraFrame> frame);
     bool validateFrame(std::shared_ptr<AtomCameraFrame> frame);
     bool isFrameCompatible(std::shared_ptr<AtomCameraFrame> frame1, std::shared_ptr<AtomCameraFrame> frame2);
     void notifyProgress(int progress, const std::string& operation);
     void notifyCompletion(const ProcessingResult& result);
-    
+
     // Preset management
     bool savePresetToFile(const std::string& name, const ProcessingSettings& settings);
     bool loadPresetFromFile(const std::string& name, ProcessingSettings& settings);
     std::string getPresetFilename(const std::string& name) const;
-    
+
     // Math utilities
     template<typename T>
     T clamp(T value, T min, T max) {
         return std::max(min, std::min(value, max));
     }
-    
+
     double bilinearInterpolate(double x, double y, const std::vector<std::vector<double>>& data);
 };
 

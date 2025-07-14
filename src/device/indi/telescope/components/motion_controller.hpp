@@ -33,7 +33,7 @@ class HardwareInterface;
 
 /**
  * @brief Motion Controller for INDI Telescope
- * 
+ *
  * Manages all telescope motion operations including slewing, directional
  * movement, speed control, abort operations, and motion state tracking.
  */
@@ -161,16 +161,16 @@ private:
     double calculateSlewProgress() const;
     double calculateAngularDistance(double ra1, double dec1, double ra2, double dec2) const;
     std::string stateToString(MotionState state) const;
-    
+
     // Property update handlers
     void onCoordinateUpdate();
     void onSlewStateUpdate();
     void onMotionStateUpdate();
-    
+
     // Validation methods
     bool validateCoordinates(double ra, double dec) const;
     bool validateAltAz(double azimuth, double altitude) const;
-    
+
     // Utility methods
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);

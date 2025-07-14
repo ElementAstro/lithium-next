@@ -6,31 +6,31 @@
 
 namespace lithium::device::indi::camera {
 
-ExposureController::ExposureController(std::shared_ptr<INDICameraCore> core) 
+ExposureController::ExposureController(std::shared_ptr<INDICameraCore> core)
     : ComponentBase(core) {
     spdlog::debug("Creating exposure controller");
 }
 
 auto ExposureController::initialize() -> bool {
     spdlog::debug("Initializing exposure controller");
-    
+
     // Reset exposure state
     isExposing_.store(false);
     currentExposureDuration_.store(0.0);
     lastExposureDuration_.store(0.0);
     exposureCount_.store(0);
-    
+
     return true;
 }
 
 auto ExposureController::destroy() -> bool {
     spdlog::debug("Destroying exposure controller");
-    
+
     // Abort any ongoing exposure
     if (isExposing()) {
         abortExposure();
     }
-    
+
     return true;
 }
 
@@ -42,9 +42,9 @@ auto ExposureController::handleProperty(INDI::Property property) -> bool {
     if (!property.isValid()) {
         return false;
     }
-    
+
     std::string propertyName = property.getName();
-    
+
     if (propertyName == "CCD_EXPOSURE") {
         handleExposureProperty(property);
         return true;
@@ -52,7 +52,7 @@ auto ExposureController::handleProperty(INDI::Property property) -> bool {
         handleBlobProperty(property);
         return true;
     }
-    
+
     return false;
 }
 
@@ -79,11 +79,11 @@ auto ExposureController::startExposure(double duration) -> bool {
         currentExposureDuration_.store(duration);
         exposureStartTime_ = std::chrono::system_clock::now();
         isExposing_.store(true);
-        
+
         exposureProperty[0].setValue(duration);
         getCore()->sendNewProperty(exposureProperty);
         getCore()->updateCameraState(CameraState::EXPOSING);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to start exposure: {}", e.what());
@@ -110,7 +110,7 @@ auto ExposureController::abortExposure() -> bool {
         getCore()->sendNewProperty(ccdAbort);
         getCore()->updateCameraState(CameraState::ABORTED);
         isExposing_.store(false);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to abort exposure: {}", e.what());
@@ -199,12 +199,12 @@ void ExposureController::handleExposureProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber exposureProperty = property;
     if (!exposureProperty.isValid()) {
         return;
     }
-    
+
     if (exposureProperty.getState() == IPS_BUSY) {
         if (!isExposing()) {
             // Exposure started
@@ -235,12 +235,12 @@ void ExposureController::handleBlobProperty(INDI::Property property) {
     if (property.getType() != INDI_BLOB) {
         return;
     }
-    
+
     INDI::PropertyBlob blobProperty = property;
     if (!blobProperty.isValid() || blobProperty[0].getBlobLen() == 0) {
         return;
     }
-    
+
     processReceivedImage(blobProperty);
 }
 
@@ -249,28 +249,28 @@ void ExposureController::processReceivedImage(const INDI::PropertyBlob& property
         spdlog::warn("Invalid image data received");
         return;
     }
-    
+
     size_t imageSize = property[0].getBlobLen();
     const void* imageData = property[0].getBlob();
     const char* format = property[0].getFormat();
-    
+
     spdlog::info("Processing exposure image: size={}, format={}", imageSize, format ? format : "unknown");
-    
+
     // Validate image data
     if (!validateImageData(imageData, imageSize)) {
         spdlog::error("Invalid image data received");
         return;
     }
-    
+
     // Create frame structure
     auto frame = std::make_shared<AtomCameraFrame>();
     frame->data = const_cast<void*>(imageData);
     frame->size = imageSize;
-    
+
     // Store the frame
     getCore()->setCurrentFrame(frame);
     getCore()->updateCameraState(CameraState::IDLE);
-    
+
     spdlog::info("Image received: {} bytes", frame->size);
 }
 
@@ -278,29 +278,29 @@ auto ExposureController::validateImageData(const void* data, size_t size) -> boo
     if (!data || size == 0) {
         return false;
     }
-    
+
     // Basic validation - check if data looks like a valid image
     // This is a simple check, more sophisticated validation could be added
     const auto* bytes = static_cast<const uint8_t*>(data);
-    
+
     // Check for common image format headers
     if (size >= 4) {
         // FITS format check
         if (std::memcmp(bytes, "SIMP", 4) == 0) {
             return true;
         }
-        
+
         // JPEG format check
         if (bytes[0] == 0xFF && bytes[1] == 0xD8) {
             return true;
         }
-        
+
         // PNG format check
         if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
             return true;
         }
     }
-    
+
     // If no specific format detected, assume it's valid raw data
     return true;
 }

@@ -34,7 +34,7 @@ auto ShutterController::initialize() -> bool {
         is_moving_.store(false);
         emergency_close_active_.store(false);
         shutter_operations_.store(0);
-        
+
         logInfo("Shutter controller initialized");
         setInitialized(true);
         return true;
@@ -72,20 +72,20 @@ void ShutterController::handlePropertyUpdate(const INDI::Property& property) {
 
 auto ShutterController::openShutter() -> bool {
     std::lock_guard<std::recursive_mutex> lock(shutter_mutex_);
-    
+
     if (!canOpenShutter()) {
         return false;
     }
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     startOperationTimer();
     bool success = prop_mgr->openShutter();
-    
+
     if (success) {
         updateMovingState(true);
         shutter_operations_.fetch_add(1);
@@ -94,26 +94,26 @@ auto ShutterController::openShutter() -> bool {
         logError("Failed to open shutter");
         stopOperationTimer();
     }
-    
+
     return success;
 }
 
 auto ShutterController::closeShutter() -> bool {
     std::lock_guard<std::recursive_mutex> lock(shutter_mutex_);
-    
+
     if (!canCloseShutter()) {
         return false;
     }
-    
+
     auto prop_mgr = property_manager_.lock();
     if (!prop_mgr) {
         logError("Property manager not available");
         return false;
     }
-    
+
     startOperationTimer();
     bool success = prop_mgr->closeShutter();
-    
+
     if (success) {
         updateMovingState(true);
         shutter_operations_.fetch_add(1);
@@ -122,7 +122,7 @@ auto ShutterController::closeShutter() -> bool {
         logError("Failed to close shutter");
         stopOperationTimer();
     }
-    
+
     return success;
 }
 
@@ -137,18 +137,18 @@ auto ShutterController::isShutterMoving() const -> bool {
 
 void ShutterController::updateShutterState(ShutterState state) {
     ShutterState old_state = static_cast<ShutterState>(shutter_state_.exchange(static_cast<int>(state)));
-    
+
     if (old_state != state) {
         updateMovingState(state == ShutterState::OPENING || state == ShutterState::CLOSING);
         notifyStateChange(state);
-        
+
         // Update open time tracking
         if (state == ShutterState::OPEN && old_state != ShutterState::OPEN) {
             open_time_start_ = std::chrono::steady_clock::now();
         } else if (state != ShutterState::OPEN && old_state == ShutterState::OPEN) {
             updateOpenTime();
         }
-        
+
         // Check for operation completion
         if ((old_state == ShutterState::OPENING && state == ShutterState::OPEN) ||
             (old_state == ShutterState::CLOSING && state == ShutterState::CLOSED)) {
@@ -164,7 +164,7 @@ void ShutterController::notifyStateChange(ShutterState state) {
     if (shutter_state_callback_) {
         shutter_state_callback_(state);
     }
-    
+
     auto core = getCore();
     if (core) {
         core->notifyShutterChange(state);
@@ -175,15 +175,15 @@ void ShutterController::handleShutterPropertyUpdate(const INDI::Property& proper
     if (property.getType() != INDI_SWITCH) {
         return;
     }
-    
+
     auto switch_prop = property.getSwitch();
     if (!switch_prop) {
         return;
     }
-    
+
     auto open_widget = switch_prop->findWidgetByName("SHUTTER_OPEN");
     auto close_widget = switch_prop->findWidgetByName("SHUTTER_CLOSE");
-    
+
     if (open_widget && open_widget->getState() == ISS_ON) {
         if (property.getState() == IPS_BUSY) {
             updateShutterState(ShutterState::OPENING);
@@ -225,15 +225,15 @@ auto ShutterController::performSafetyChecks() const -> bool {
     if (!safety_interlock_enabled_.load()) {
         return true;
     }
-    
+
     if (safety_callback_ && !safety_callback_()) {
         return false;
     }
-    
+
     if (weather_response_enabled_.load() && weather_callback_ && !weather_callback_()) {
         return false;
     }
-    
+
     return true;
 }
 

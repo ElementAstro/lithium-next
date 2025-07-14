@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Planetary imaging task.
- * 
+ *
  * Performs high-speed planetary imaging with lucky imaging support
  * for capturing planetary details through atmospheric turbulence.
  */

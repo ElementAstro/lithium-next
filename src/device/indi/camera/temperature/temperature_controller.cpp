@@ -5,38 +5,38 @@
 
 namespace lithium::device::indi::camera {
 
-TemperatureController::TemperatureController(std::shared_ptr<INDICameraCore> core) 
+TemperatureController::TemperatureController(std::shared_ptr<INDICameraCore> core)
     : ComponentBase(core) {
     spdlog::debug("Creating temperature controller");
 }
 
 auto TemperatureController::initialize() -> bool {
     spdlog::debug("Initializing temperature controller");
-    
+
     // Reset temperature state
     isCooling_.store(false);
     currentTemperature_.store(0.0);
     targetTemperature_.store(0.0);
     coolingPower_.store(0.0);
-    
+
     // Initialize temperature info
     temperatureInfo_.current = 0.0;
     temperatureInfo_.target = 0.0;
     temperatureInfo_.coolingPower = 0.0;
     temperatureInfo_.coolerOn = false;
     temperatureInfo_.canSetTemperature = false;
-    
+
     return true;
 }
 
 auto TemperatureController::destroy() -> bool {
     spdlog::debug("Destroying temperature controller");
-    
+
     // Stop cooling if active
     if (isCoolerOn()) {
         stopCooling();
     }
-    
+
     return true;
 }
 
@@ -48,9 +48,9 @@ auto TemperatureController::handleProperty(INDI::Property property) -> bool {
     if (!property.isValid()) {
         return false;
     }
-    
+
     std::string propertyName = property.getName();
-    
+
     if (propertyName == "CCD_TEMPERATURE") {
         handleTemperatureProperty(property);
         return true;
@@ -61,7 +61,7 @@ auto TemperatureController::handleProperty(INDI::Property property) -> bool {
         handleCoolerPowerProperty(property);
         return true;
     }
-    
+
     return false;
 }
 
@@ -87,11 +87,11 @@ auto TemperatureController::startCooling(double targetTemp) -> bool {
         spdlog::info("Starting cooler with target temperature: {} C", targetTemp);
         ccdCooler[0].setState(ISS_ON);
         getCore()->sendNewProperty(ccdCooler);
-        
+
         targetTemperature_.store(targetTemp);
         temperatureInfo_.target = targetTemp;
         isCooling_.store(true);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to start cooling: {}", e.what());
@@ -117,7 +117,7 @@ auto TemperatureController::stopCooling() -> bool {
         ccdCooler[0].setState(ISS_OFF);
         getCore()->sendNewProperty(ccdCooler);
         isCooling_.store(false);
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to stop cooling: {}", e.what());
@@ -146,10 +146,10 @@ auto TemperatureController::setTemperature(double temperature) -> bool {
         spdlog::info("Setting temperature to {} C...", temperature);
         ccdTemperature[0].setValue(temperature);
         getCore()->sendNewProperty(ccdTemperature);
-        
+
         targetTemperature_.store(temperature);
         temperatureInfo_.target = temperature;
-        
+
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to set temperature: {}", e.what());
@@ -179,7 +179,7 @@ auto TemperatureController::hasCooler() const -> bool {
     if (!getCore()->isConnected()) {
         return false;
     }
-    
+
     try {
         auto device = getCore()->getDevice();
         INDI::PropertySwitch ccdCooler = device.getProperty("CCD_COOLER");
@@ -194,16 +194,16 @@ void TemperatureController::handleTemperatureProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber tempProperty = property;
     if (!tempProperty.isValid()) {
         return;
     }
-    
+
     double temp = tempProperty[0].getValue();
     currentTemperature_.store(temp);
     temperatureInfo_.current = temp;
-    
+
     spdlog::debug("Temperature updated: {} C", temp);
     updateTemperatureInfo();
 }
@@ -212,16 +212,16 @@ void TemperatureController::handleCoolerProperty(INDI::Property property) {
     if (property.getType() != INDI_SWITCH) {
         return;
     }
-    
+
     INDI::PropertySwitch coolerProperty = property;
     if (!coolerProperty.isValid()) {
         return;
     }
-    
+
     bool coolerOn = (coolerProperty[0].getState() == ISS_ON);
     isCooling_.store(coolerOn);
     temperatureInfo_.canSetTemperature = true;
-    
+
     spdlog::debug("Cooler state: {}", coolerOn ? "ON" : "OFF");
 }
 
@@ -229,16 +229,16 @@ void TemperatureController::handleCoolerPowerProperty(INDI::Property property) {
     if (property.getType() != INDI_NUMBER) {
         return;
     }
-    
+
     INDI::PropertyNumber powerProperty = property;
     if (!powerProperty.isValid()) {
         return;
     }
-    
+
     double power = powerProperty[0].getValue();
     coolingPower_.store(power);
     temperatureInfo_.coolingPower = power;
-    
+
     spdlog::debug("Cooling power: {}%", power);
 }
 

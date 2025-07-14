@@ -19,7 +19,7 @@ auto AutoCalibrationTask::taskName() -> std::string { return "AutoCalibration"; 
 void AutoCalibrationTask::execute(const json& params) { executeImpl(params); }
 
 void AutoCalibrationTask::executeImpl(const json& params) {
-    LOG_F(INFO, "Executing AutoCalibration task '{}' with params: {}", 
+    LOG_F(INFO, "Executing AutoCalibration task '{}' with params: {}",
           getName(), params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
@@ -28,16 +28,16 @@ void AutoCalibrationTask::executeImpl(const json& params) {
         std::string outputDir = params.value("output_directory", "./calibration");
         bool skipExisting = params.value("skip_existing", true);
         bool organizeFolders = params.value("organize_folders", true);
-        std::vector<std::string> filters = 
+        std::vector<std::string> filters =
             params.value("filters", std::vector<std::string>{"L", "R", "G", "B"});
-        
+
         // Calibration frame counts
         int darkFrameCount = params.value("dark_frame_count", 20);
         int biasFrameCount = params.value("bias_frame_count", 50);
         int flatFrameCount = params.value("flat_frame_count", 20);
-        
+
         // Camera settings
-        std::vector<double> exposureTimes = 
+        std::vector<double> exposureTimes =
             params.value("exposure_times", std::vector<double>{300.0, 600.0});
         int binning = params.value("binning", 1);
         int gain = params.value("gain", 100);
@@ -66,7 +66,7 @@ void AutoCalibrationTask::executeImpl(const json& params) {
 
         // Capture dark frames for each exposure time
         for (double expTime : exposureTimes) {
-            LOG_F(INFO, "Capturing {} dark frames at {} seconds exposure", 
+            LOG_F(INFO, "Capturing {} dark frames at {} seconds exposure",
                   darkFrameCount, expTime);
             json darkParams = params;
             darkParams["exposure_time"] = expTime;
@@ -75,7 +75,7 @@ void AutoCalibrationTask::executeImpl(const json& params) {
 
         // Capture flat frames for each filter
         for (const std::string& filter : filters) {
-            LOG_F(INFO, "Capturing {} flat frames for filter {}", 
+            LOG_F(INFO, "Capturing {} flat frames for filter {}",
                   flatFrameCount, filter);
             json flatParams = params;
             flatParams["filter"] = filter;
@@ -115,7 +115,7 @@ void AutoCalibrationTask::captureDarkFrames(const json& params) {
 
     for (int i = 1; i <= darkFrameCount; ++i) {
         LOG_F(INFO, "Capturing dark frame {} of {}", i, darkFrameCount);
-        
+
         json exposureParams = {
             {"exposure", exposureTime},
             {"type", ExposureType::DARK},
@@ -144,7 +144,7 @@ void AutoCalibrationTask::captureBiasFrames(const json& params) {
 
     for (int i = 1; i <= biasFrameCount; ++i) {
         LOG_F(INFO, "Capturing bias frame {} of {}", i, biasFrameCount);
-        
+
         json exposureParams = {
             {"exposure", 0.001}, // Minimum exposure for bias
             {"type", ExposureType::BIAS},
@@ -170,13 +170,13 @@ void AutoCalibrationTask::captureFlatFrames(const json& params) {
     int gain = params.value("gain", 100);
     int offset = params.value("offset", 10);
     double targetADU = params.value("target_adu", 32000.0);
-    
-    LOG_F(INFO, "Starting flat frame capture: {} frames for filter {}", 
+
+    LOG_F(INFO, "Starting flat frame capture: {} frames for filter {}",
           flatFrameCount, filter);
 
     // Auto-determine optimal exposure time for flats
     double flatExposureTime = 1.0; // Start with 1 second
-    
+
     // Take test exposure to determine optimal exposure time
     LOG_F(INFO, "Taking test flat exposure to determine optimal exposure time");
     json testParams = {
@@ -186,13 +186,13 @@ void AutoCalibrationTask::captureFlatFrames(const json& params) {
         {"gain", gain},
         {"offset", offset}
     };
-    
+
     auto testTask = TakeExposureTask::createEnhancedTask();
     testTask->execute(testParams);
-    
+
     // In real implementation, analyze the test image to get actual ADU
     double actualADU = 20000.0; // Placeholder
-    
+
     // Adjust exposure time to reach target ADU
     flatExposureTime *= (targetADU / actualADU);
     flatExposureTime = std::clamp(flatExposureTime, 0.1, 10.0); // Reasonable limits
@@ -200,9 +200,9 @@ void AutoCalibrationTask::captureFlatFrames(const json& params) {
     LOG_F(INFO, "Optimal flat exposure time determined: {:.2f} seconds", flatExposureTime);
 
     for (int i = 1; i <= flatFrameCount; ++i) {
-        LOG_F(INFO, "Capturing flat frame {} of {} for filter {}", 
+        LOG_F(INFO, "Capturing flat frame {} of {} for filter {}",
               i, flatFrameCount, filter);
-        
+
         json exposureParams = {
             {"exposure", flatExposureTime},
             {"type", ExposureType::FLAT},
@@ -223,21 +223,21 @@ void AutoCalibrationTask::captureFlatFrames(const json& params) {
 
 void AutoCalibrationTask::organizeCalibratedFrames(const std::string& outputDir) {
     LOG_F(INFO, "Organizing calibration frames in directory structure");
-    
+
     // Create subdirectories for different frame types
     std::filesystem::create_directories(outputDir + "/Darks");
     std::filesystem::create_directories(outputDir + "/Bias");
     std::filesystem::create_directories(outputDir + "/Flats");
-    
+
     // In real implementation, this would move/organize actual FITS files
     // based on their frame type, exposure time, and filter
-    
+
     LOG_F(INFO, "Calibration frame organization completed");
 }
 
 bool AutoCalibrationTask::checkExistingCalibration(const json& params) {
     std::string outputDir = params.value("output_directory", "./calibration");
-    
+
     // Check if calibration directories exist and contain files
     bool darksExist = std::filesystem::exists(outputDir + "/Darks") &&
                      !std::filesystem::is_empty(outputDir + "/Darks");
@@ -245,7 +245,7 @@ bool AutoCalibrationTask::checkExistingCalibration(const json& params) {
                      !std::filesystem::is_empty(outputDir + "/Bias");
     bool flatsExist = std::filesystem::exists(outputDir + "/Flats") &&
                      !std::filesystem::is_empty(outputDir + "/Flats");
-    
+
     return darksExist && biasExists && flatsExist;
 }
 

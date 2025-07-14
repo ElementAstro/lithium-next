@@ -13,7 +13,7 @@ namespace lithium::device::indi::camera {
 
 /**
  * @brief Exposure control component for INDI cameras
- * 
+ *
  * This component handles all exposure-related operations including
  * starting/stopping exposures, tracking progress, and managing
  * exposure statistics.
@@ -50,15 +50,15 @@ private:
     std::atomic_bool isExposing_{false};
     std::atomic<double> currentExposureDuration_{0.0};
     std::chrono::system_clock::time_point exposureStartTime_;
-    
+
     // Exposure statistics
     std::atomic<double> lastExposureDuration_{0.0};
     std::atomic<uint32_t> exposureCount_{0};
-    
+
     // Property handlers
     void handleExposureProperty(INDI::Property property);
     void handleBlobProperty(INDI::Property property);
-    
+
     // Helper methods
     void processReceivedImage(const INDI::PropertyBlob& property);
     auto validateImageData(const void* data, size_t size) -> bool;

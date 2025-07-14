@@ -23,9 +23,9 @@ def parse_version(version_str: str) -> Tuple[int, ...]:
     """
     # Extract numeric components while handling non-numeric parts
     components = []
-    for part in version_str.split('.'):
+    for part in version_str.split("."):
         # Extract digits from the beginning of each part
-        digits = ''
+        digits = ""
         for char in part:
             if char.isdigit():
                 digits += char
@@ -73,7 +73,7 @@ def calculate_file_hash(file_path: Path, algorithm: HashType = "sha256") -> str:
     """
     hash_func = getattr(hashlib, algorithm)()
 
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_func.update(chunk)
 

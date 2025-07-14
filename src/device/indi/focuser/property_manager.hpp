@@ -22,7 +22,7 @@ public:
      * @param core Shared pointer to the INDIFocuserCore
      */
     explicit PropertyManager(std::shared_ptr<INDIFocuserCore> core);
-    
+
     /**
      * @brief Virtual destructor.
      */
@@ -65,27 +65,27 @@ private:
      * @brief Setup property watchers for connection-related properties.
      */
     void setupConnectionProperties();
-    
+
     /**
      * @brief Setup property watchers for driver information properties.
      */
     void setupDriverInfoProperties();
-    
+
     /**
      * @brief Setup property watchers for configuration properties.
      */
     void setupConfigurationProperties();
-    
+
     /**
      * @brief Setup property watchers for focus-related properties.
      */
     void setupFocusProperties();
-    
+
     /**
      * @brief Setup property watchers for temperature-related properties.
      */
     void setupTemperatureProperties();
-    
+
     /**
      * @brief Setup property watchers for backlash-related properties.
      */

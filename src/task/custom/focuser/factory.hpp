@@ -17,7 +17,7 @@ namespace lithium::task::custom::focuser {
 
 /**
  * @brief Factory for creating focuser tasks
- * 
+ *
  * Provides a centralized way to create and register focuser tasks,
  * following the same pattern as FilterTaskFactory.
  */
@@ -142,11 +142,11 @@ public:
     static std::vector<WorkflowStep> createQuickFocusWorkflow();
 
     // Custom workflow building
-    FocuserWorkflowBuilder& addStep(const std::string& task_name, 
+    FocuserWorkflowBuilder& addStep(const std::string& task_name,
                                    const Json::Value& parameters,
                                    bool required = true,
                                    const std::string& description = "");
-    
+
     FocuserWorkflowBuilder& addAutofocus(const Json::Value& config = Json::Value::null);
     FocuserWorkflowBuilder& addValidation(const Json::Value& config = Json::Value::null);
     FocuserWorkflowBuilder& addTemperatureCompensation(const Json::Value& config = Json::Value::null);
@@ -197,7 +197,7 @@ public:
     static bool validateStarAnalysisParameters(const Json::Value& params);
 
     // Get validation error messages
-    static std::vector<std::string> getValidationErrors(const std::string& task_name, 
+    static std::vector<std::string> getValidationErrors(const std::string& task_name,
                                                        const Json::Value& params);
 };
 

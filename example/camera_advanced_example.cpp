@@ -43,26 +43,26 @@ public:
 
     void demonstrateAdvancedFeatures() {
         LOG_F(INFO, "Starting advanced camera demonstration");
-        
+
         // Setup multiple cameras for different purposes
         setupCameraConfigurations();
-        
+
         // Initialize all cameras
         if (!initializeAllCameras()) {
             LOG_F(ERROR, "Failed to initialize cameras");
             return;
         }
-        
+
         // Demonstrate coordinated operations
         demonstrateCoordinatedCapture();
         demonstrateTemperatureMonitoring();
         demonstrateSequenceCapture();
         demonstrateVideoStreaming();
         demonstrateAdvancedAnalysis();
-        
+
         // Cleanup
         shutdownAllCameras();
-        
+
         LOG_F(INFO, "Advanced camera demonstration completed");
     }
 
@@ -123,7 +123,7 @@ private:
     bool initializeAllCameras() {
         for (const auto& [role, config] : camera_configs_) {
             LOG_F(INFO, "Initializing {} camera", role);
-            
+
             // Create camera instance
             auto camera = createCamera(config.driverType, config.name);
             if (!camera) {
@@ -154,7 +154,7 @@ private:
 
             // Apply configuration
             applyCameraConfiguration(camera, config);
-            
+
             cameras_[role] = camera;
             LOG_F(INFO, "Successfully initialized {} camera", role);
         }
@@ -167,23 +167,23 @@ private:
         // Set gain and offset
         camera->setGain(config.gain);
         camera->setOffset(config.offset);
-        
+
         // Set binning
         camera->setBinning(config.binning.first, config.binning.second);
-        
+
         // Enable cooling if requested
         if (config.enableCooling && camera->hasCooler()) {
             camera->startCooling(config.targetTemperature);
             LOG_F(INFO, "Started cooling to {} °C", config.targetTemperature);
         }
-        
-        LOG_F(INFO, "Applied configuration: gain={}, offset={}, binning={}x{}", 
+
+        LOG_F(INFO, "Applied configuration: gain={}, offset={}, binning={}x{}",
               config.gain, config.offset, config.binning.first, config.binning.second);
     }
 
     void demonstrateCoordinatedCapture() {
         std::cout << "\n=== Coordinated Multi-Camera Capture ===\n";
-        
+
         if (cameras_.empty()) {
             std::cout << "No cameras available for coordinated capture\n";
             return;
@@ -192,15 +192,15 @@ private:
         // Start exposures on all cameras simultaneously
         auto start_time = std::chrono::system_clock::now();
         std::map<std::string, std::future<bool>> exposure_futures;
-        
+
         for (const auto& [role, camera] : cameras_) {
             const auto& config = camera_configs_[role];
-            
+
             // Start exposure asynchronously
             exposure_futures[role] = std::async(std::launch::async, [camera, config]() {
                 return camera->startExposure(config.exposureTime);
             });
-            
+
             std::cout << "Started " << config.exposureTime << "s exposure on " << role << " camera\n";
         }
 
@@ -223,20 +223,20 @@ private:
         while (any_exposing) {
             any_exposing = false;
             std::cout << "Progress: ";
-            
+
             for (const auto& [role, camera] : cameras_) {
                 if (camera->isExposing()) {
                     any_exposing = true;
                     auto progress = camera->getExposureProgress();
                     auto remaining = camera->getExposureRemaining();
-                    std::cout << role << "=" << std::fixed << std::setprecision(1) 
+                    std::cout << role << "=" << std::fixed << std::setprecision(1)
                              << (progress * 100) << "% (" << remaining << "s) ";
                 } else {
                     std::cout << role << "=DONE ";
                 }
             }
             std::cout << "\r" << std::flush;
-            
+
             if (any_exposing) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
             }
@@ -247,12 +247,12 @@ private:
         for (const auto& [role, camera] : cameras_) {
             auto frame = camera->getExposureResult();
             if (frame) {
-                std::cout << role << " camera: captured " << frame->resolution.width 
-                         << "x" << frame->resolution.height << " frame (" 
+                std::cout << role << " camera: captured " << frame->resolution.width
+                         << "x" << frame->resolution.height << " frame ("
                          << frame->size << " bytes)\n";
-                
+
                 // Save to file
-                std::string filename = "capture_" + role + "_" + 
+                std::string filename = "capture_" + role + "_" +
                     std::to_string(std::chrono::duration_cast<std::chrono::seconds>(
                         start_time.time_since_epoch()).count()) + ".fits";
                 camera->saveImage(filename);
@@ -263,13 +263,13 @@ private:
 
     void demonstrateTemperatureMonitoring() {
         std::cout << "\n=== Temperature Monitoring ===\n";
-        
+
         std::map<std::string, bool> has_cooler;
         for (const auto& [role, camera] : cameras_) {
             has_cooler[role] = camera->hasCooler();
         }
 
-        if (std::none_of(has_cooler.begin(), has_cooler.end(), 
+        if (std::none_of(has_cooler.begin(), has_cooler.end(),
                         [](const auto& pair) { return pair.second; })) {
             std::cout << "No cameras with cooling capability\n";
             return;
@@ -279,17 +279,17 @@ private:
         auto start = std::chrono::steady_clock::now();
         while (std::chrono::steady_clock::now() - start < std::chrono::seconds(30)) {
             std::cout << "Temperatures: ";
-            
+
             for (const auto& [role, camera] : cameras_) {
                 if (has_cooler[role]) {
                     auto temp = camera->getTemperature();
                     auto info = camera->getTemperatureInfo();
-                    
+
                     std::cout << role << "=" << std::fixed << std::setprecision(1);
                     if (temp.has_value()) {
                         std::cout << temp.value() << "°C";
                         if (info.coolerOn) {
-                            std::cout << " (cooling to " << info.target << "°C, " 
+                            std::cout << " (cooling to " << info.target << "°C, "
                                      << info.coolingPower << "% power)";
                         }
                     } else {
@@ -299,7 +299,7 @@ private:
                 }
             }
             std::cout << "\r" << std::flush;
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(2));
         }
         std::cout << "\n";
@@ -307,7 +307,7 @@ private:
 
     void demonstrateSequenceCapture() {
         std::cout << "\n=== Sequence Capture ===\n";
-        
+
         auto main_camera = cameras_.find("main");
         if (main_camera == cameras_.end()) {
             std::cout << "Main camera not available for sequence capture\n";
@@ -321,14 +321,14 @@ private:
         }
 
         auto camera = main_camera->second;
-        std::cout << "Starting sequence: " << config.sequenceFrames 
-                 << " frames, " << config.exposureTime << "s exposure, " 
+        std::cout << "Starting sequence: " << config.sequenceFrames
+                 << " frames, " << config.exposureTime << "s exposure, "
                  << config.sequenceInterval << "s interval\n";
 
         if (camera->startSequence(config.sequenceFrames, config.exposureTime, config.sequenceInterval)) {
             while (camera->isSequenceRunning()) {
                 auto progress = camera->getSequenceProgress();
-                std::cout << "Sequence progress: " << progress.first << "/" << progress.second 
+                std::cout << "Sequence progress: " << progress.first << "/" << progress.second
                          << " frames completed\r" << std::flush;
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
@@ -340,7 +340,7 @@ private:
 
     void demonstrateVideoStreaming() {
         std::cout << "\n=== Video Streaming ===\n";
-        
+
         auto planetary_camera = cameras_.find("planetary");
         if (planetary_camera == cameras_.end()) {
             std::cout << "Planetary camera not available for video streaming\n";
@@ -349,27 +349,27 @@ private:
 
         auto camera = planetary_camera->second;
         std::cout << "Starting video stream for 10 seconds...\n";
-        
+
         if (camera->startVideo()) {
             auto start = std::chrono::steady_clock::now();
             int frame_count = 0;
-            
+
             while (std::chrono::steady_clock::now() - start < std::chrono::seconds(10)) {
                 auto frame = camera->getVideoFrame();
                 if (frame) {
                     frame_count++;
                     if (frame_count % 30 == 0) {  // Display every 30th frame info
-                        std::cout << "Received frame " << frame_count 
-                                 << ": " << frame->resolution.width << "x" << frame->resolution.height 
+                        std::cout << "Received frame " << frame_count
+                                 << ": " << frame->resolution.width << "x" << frame->resolution.height
                                  << " (" << frame->size << " bytes)\n";
                     }
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(33));  // ~30 FPS
             }
-            
+
             camera->stopVideo();
             std::cout << "Video streaming completed. Total frames: " << frame_count << "\n";
-            
+
             double fps = frame_count / 10.0;
             std::cout << "Average frame rate: " << std::fixed << std::setprecision(1) << fps << " FPS\n";
         } else {
@@ -379,17 +379,17 @@ private:
 
     void demonstrateAdvancedAnalysis() {
         std::cout << "\n=== Advanced Image Analysis ===\n";
-        
+
         for (const auto& [role, camera] : cameras_) {
             std::cout << "\nAnalyzing " << role << " camera:\n";
-            
+
             // Get frame statistics
             auto stats = camera->getFrameStatistics();
             std::cout << "Frame Statistics:\n";
             for (const auto& [key, value] : stats) {
                 std::cout << "  " << key << ": " << value << "\n";
             }
-            
+
             // Get camera capabilities
             auto caps = camera->getCameraCapabilities();
             std::cout << "Capabilities:\n";
@@ -399,13 +399,13 @@ private:
             std::cout << "  Has gain: " << (caps.hasGain ? "Yes" : "No") << "\n";
             std::cout << "  Can stream: " << (caps.canStream ? "Yes" : "No") << "\n";
             std::cout << "  Supports sequences: " << (caps.supportsSequences ? "Yes" : "No") << "\n";
-            
+
             // Performance metrics
             std::cout << "Performance:\n";
             std::cout << "  Total frames: " << camera->getTotalFramesReceived() << "\n";
             std::cout << "  Dropped frames: " << camera->getDroppedFrames() << "\n";
             std::cout << "  Average frame rate: " << camera->getAverageFrameRate() << " FPS\n";
-            
+
             // Get last image quality if available
             auto quality = camera->getLastImageQuality();
             if (!quality.empty()) {
@@ -419,7 +419,7 @@ private:
 
     void shutdownAllCameras() {
         LOG_F(INFO, "Shutting down all cameras");
-        
+
         for (auto& [role, camera] : cameras_) {
             if (camera->isExposing()) {
                 camera->abortExposure();
@@ -433,13 +433,13 @@ private:
             if (camera->isCoolerOn()) {
                 camera->stopCooling();
             }
-            
+
             camera->disconnect();
             camera->destroy();
-            
+
             LOG_F(INFO, "Shutdown {} camera", role);
         }
-        
+
         cameras_.clear();
     }
 };
@@ -448,7 +448,7 @@ int main() {
     // Initialize logging
     loguru::g_stderr_verbosity = loguru::Verbosity_INFO;
     loguru::init(0, nullptr);
-    
+
     try {
         AdvancedCameraController controller;
         controller.demonstrateAdvancedFeatures();

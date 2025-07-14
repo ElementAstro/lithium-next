@@ -356,12 +356,12 @@ bool ASIFocuserControllerV2::enableBeep(bool enable) {
             return false;
         }
     }
-    
+
     // Also update configuration manager if available
     if (configManager_) {
         configManager_->enableBeep(enable);
     }
-    
+
     return true;
 }
 
@@ -373,7 +373,7 @@ bool ASIFocuserControllerV2::isBeepEnabled() const {
             return enabled;
         }
     }
-    
+
     // Fallback to configuration manager
     return configManager_ ? configManager_->isBeepEnabled() : false;
 }
@@ -549,7 +549,7 @@ int ASIFocuserControllerV2::getMaxStep() const {
     if (!hardware_) {
         return 0;
     }
-    
+
     int maxStep = 0;
     return hardware_->getMaxStep(maxStep) ? maxStep : 0;
 }
@@ -558,7 +558,7 @@ int ASIFocuserControllerV2::getStepRange() const {
     if (!hardware_) {
         return 0;
     }
-    
+
     int range = 0;
     return hardware_->getStepRange(range) ? range : 0;
 }

@@ -37,7 +37,7 @@ function(create_qhy_camera_module NAME SOURCES)
     add_library(${NAME} SHARED ${SOURCES})
     set_property(TARGET ${NAME} PROPERTY POSITION_INDEPENDENT_CODE 1)
     target_link_libraries(${NAME} PUBLIC ${COMMON_LIBS})
-    
+
     if(QHY_FOUND)
         target_include_directories(${NAME} PRIVATE ${QHY_INCLUDE_DIR})
         target_link_libraries(${NAME} PRIVATE ${QHY_LIBRARY})

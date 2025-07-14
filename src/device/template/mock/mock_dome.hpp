@@ -107,20 +107,20 @@ private:
     double rotation_speed_{5.0}; // degrees per second
     double backlash_amount_{1.0}; // degrees
     bool backlash_enabled_{false};
-    
+
     std::thread dome_move_thread_;
     std::thread shutter_thread_;
     mutable std::mutex move_mutex_;
     mutable std::mutex shutter_mutex_;
-    
+
     // Weather simulation
     bool weather_safe_{true};
-    
+
     // Random number generation
     mutable std::random_device rd_;
     mutable std::mt19937 gen_;
     mutable std::uniform_real_distribution<> noise_dist_;
-    
+
     // Simulation methods
     void simulateDomeMove(double target_azimuth);
     void simulateShutterOperation(ShutterState target_state);

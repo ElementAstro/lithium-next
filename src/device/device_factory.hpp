@@ -74,20 +74,20 @@ public:
     std::unique_ptr<AtomFilterWheel> createFilterWheel(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
     std::unique_ptr<AtomRotator> createRotator(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
     std::unique_ptr<AtomDome> createDome(const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
-    
+
     // Generic device creation
     std::unique_ptr<AtomDriver> createDevice(DeviceType type, const std::string& name, DeviceBackend backend = DeviceBackend::MOCK);
-    
+
     // Device type utilities
     static DeviceType stringToDeviceType(const std::string& typeStr);
     static std::string deviceTypeToString(DeviceType type);
     static DeviceBackend stringToBackend(const std::string& backendStr);
     static std::string backendToString(DeviceBackend backend);
-    
+
     // Available device backends
     std::vector<DeviceBackend> getAvailableBackends(DeviceType type) const;
     bool isBackendAvailable(DeviceType type, DeviceBackend backend) const;
-    
+
     // Device discovery
     struct DeviceInfo {
         std::string name;
@@ -96,27 +96,27 @@ public:
         std::string description;
         std::string version;
     };
-    
+
     std::vector<DeviceInfo> discoverDevices(DeviceType type = DeviceType::UNKNOWN, DeviceBackend backend = DeviceBackend::MOCK) const;
-    
+
     // Registry for custom device creators
     using DeviceCreator = std::function<std::unique_ptr<AtomDriver>(const std::string&)>;
     void registerDeviceCreator(DeviceType type, DeviceBackend backend, DeviceCreator creator);
-    
+
 private:
     DeviceFactory() = default;
     ~DeviceFactory() = default;
-    
+
     // Disable copy and assignment
     DeviceFactory(const DeviceFactory&) = delete;
     DeviceFactory& operator=(const DeviceFactory&) = delete;
-    
+
     // Registry of custom device creators
     std::unordered_map<std::string, DeviceCreator> device_creators_;
-    
+
     // Helper methods
     std::string makeRegistryKey(DeviceType type, DeviceBackend backend) const;
-    
+
     // Backend availability checking
     bool isINDIAvailable() const;
     bool isASCOMAvailable() const;

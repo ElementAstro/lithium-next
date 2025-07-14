@@ -36,7 +36,7 @@ struct TelescopeControllerConfig {
     bool enableParking = true;
     bool enableAlignment = true;
     bool enableAdvancedFeatures = true;
-    
+
     // Component-specific configurations
     struct {
         int connectionTimeout = 30000;      // milliseconds
@@ -44,35 +44,35 @@ struct TelescopeControllerConfig {
         bool enablePropertyCaching = true;
         bool enableAutoReconnect = true;
     } hardware;
-    
+
     struct {
         double maxSlewSpeed = 5.0;          // degrees/sec
         double minSlewSpeed = 0.1;          // degrees/sec
         bool enableMotionLimits = true;
         bool enableSlewProgressTracking = true;
     } motion;
-    
+
     struct {
         bool enableAutoTracking = true;
         double defaultTrackingRate = 15.041067;  // arcsec/sec (sidereal)
         bool enableTrackingStatistics = true;
         bool enablePEC = false;
     } tracking;
-    
+
     struct {
         bool enableAutoPark = false;
         bool enableParkingConfirmation = true;
         double maxParkTime = 300.0;         // seconds
         bool saveParkPositions = true;
     } parking;
-    
+
     struct {
         bool enableAutoAlignment = false;
         bool enableLocationSync = true;
         bool enableTimeSync = true;
         double coordinateUpdateRate = 1.0;  // Hz
     } coordinates;
-    
+
     struct {
         double maxPulseDuration = 10000.0;  // milliseconds
         double minPulseDuration = 10.0;     // milliseconds
@@ -174,7 +174,7 @@ public:
      * @param configFile Path to configuration file
      * @return true if save successful, false otherwise
      */
-    static bool saveConfigToFile(const TelescopeControllerConfig& config, 
+    static bool saveConfigToFile(const TelescopeControllerConfig& config,
                                 const std::string& configFile);
 
     /**
@@ -207,17 +207,17 @@ private:
     static std::map<std::string, std::function<std::unique_ptr<INDITelescopeController>(const TelescopeControllerConfig&)>> controllerRegistry_;
 
     // Internal helper methods
-    static void applyHardwareConfig(INDITelescopeController& controller, 
+    static void applyHardwareConfig(INDITelescopeController& controller,
                                    const TelescopeControllerConfig& config);
-    static void applyMotionConfig(INDITelescopeController& controller, 
+    static void applyMotionConfig(INDITelescopeController& controller,
                                  const TelescopeControllerConfig& config);
-    static void applyTrackingConfig(INDITelescopeController& controller, 
+    static void applyTrackingConfig(INDITelescopeController& controller,
                                    const TelescopeControllerConfig& config);
-    static void applyParkingConfig(INDITelescopeController& controller, 
+    static void applyParkingConfig(INDITelescopeController& controller,
                                   const TelescopeControllerConfig& config);
-    static void applyCoordinateConfig(INDITelescopeController& controller, 
+    static void applyCoordinateConfig(INDITelescopeController& controller,
                                      const TelescopeControllerConfig& config);
-    static void applyGuidingConfig(INDITelescopeController& controller, 
+    static void applyGuidingConfig(INDITelescopeController& controller,
                                   const TelescopeControllerConfig& config);
 
     // Configuration validation helpers

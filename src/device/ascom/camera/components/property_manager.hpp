@@ -35,7 +35,7 @@ class HardwareInterface;
 
 /**
  * @brief Property Manager for ASCOM Camera
- * 
+ *
  * Manages camera properties, settings validation, and configuration
  * with support for property constraints and change notifications.
  */
@@ -494,18 +494,18 @@ private:
     bool updatePropertyFromCamera(const std::string& name);
     bool applyPropertyToCamera(const std::string& name, const PropertyValue& value);
     void notifyPropertyChange(const std::string& name, const PropertyValue& oldValue, const PropertyValue& newValue);
-    
+
     // Property type helpers
     template<typename T>
     std::optional<T> getTypedProperty(const std::string& name) const;
-    
+
     template<typename T>
     bool setTypedProperty(const std::string& name, const T& value);
-    
+
     // Validation helpers
     bool isValueInRange(const PropertyValue& value, const PropertyValue& min, const PropertyValue& max) const;
     bool isValueInAllowedList(const PropertyValue& value, const std::vector<PropertyValue>& allowedValues) const;
-    
+
     // Property name constants
     static const std::string PROPERTY_GAIN;
     static const std::string PROPERTY_OFFSET;

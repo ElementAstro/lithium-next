@@ -56,7 +56,7 @@ void GuiderConnectTask::execute(const json& params) {
         setErrorType(TaskErrorType::DeviceError);
         addHistoryEntry("Guider connection failed: " + std::string(e.what()));
         throw lithium::exception::SystemException(
-            1002, "Guider connection failed: {}", 
+            1002, "Guider connection failed: {}",
             {"GuiderConnect", "GuiderConnectTask", __FUNCTION__},
             e.what());
     }
@@ -66,7 +66,7 @@ void GuiderConnectTask::connectToPHD2(const json& params) {
     std::string host = params.value("host", "localhost");
     int port = params.value("port", 4400);
     int timeout = params.value("timeout", 30);
-    
+
     if (port < 1 || port > 65535) {
         throw lithium::exception::SystemException(
             1003, "Port must be between 1 and 65535 (got {})",

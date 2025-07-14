@@ -42,9 +42,9 @@ void MeridianFlipTask::executeImpl(const json& params) {
         while (!flipRequired) {
             // In real implementation, get current hour angle from mount
             double currentHA = 0.0; // Placeholder
-            
+
             flipRequired = checkMeridianFlipRequired(targetRA, currentHA);
-            
+
             if (!flipRequired) {
                 LOG_F(INFO, "Meridian flip not yet required, current HA: {:.2f}h", currentHA);
                 std::this_thread::sleep_for(std::chrono::minutes(1));
@@ -116,31 +116,31 @@ bool MeridianFlipTask::checkMeridianFlipRequired(double targetRA, double current
 
 void MeridianFlipTask::performFlip() {
     LOG_F(INFO, "Performing meridian flip");
-    
+
     // In real implementation, this would:
     // 1. Stop guiding
     // 2. Command mount to flip
     // 3. Wait for flip completion
     // 4. Update mount state
-    
+
     std::this_thread::sleep_for(std::chrono::seconds(30)); // Simulate flip time
     LOG_F(INFO, "Meridian flip completed");
 }
 
 void MeridianFlipTask::verifyFlip() {
     LOG_F(INFO, "Verifying meridian flip success");
-    
+
     // In real implementation, this would:
     // 1. Check mount side of pier
     // 2. Verify target is still accessible
     // 3. Check tracking status
-    
+
     LOG_F(INFO, "Meridian flip verification successful");
 }
 
 void MeridianFlipTask::recenterTarget() {
     LOG_F(INFO, "Recentering target after meridian flip");
-    
+
     // This would typically involve plate solving and slewing
     LOG_F(INFO, "Target recentered successfully");
 }

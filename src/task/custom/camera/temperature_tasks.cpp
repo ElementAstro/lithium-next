@@ -53,7 +53,7 @@ public:
             // Exponential cooling curve
             double coolingRate = 0.1; // K/s
             double ambientTemp = 25.0; // °C
-            currentTemperature_ = targetTemperature_ + 
+            currentTemperature_ = targetTemperature_ +
                 (ambientTemp - targetTemperature_) * std::exp(-coolingRate * elapsed);
         } else {
             // Gradual warming to ambient
@@ -64,7 +64,7 @@ public:
 
     auto getCoolingPower() -> double {
         if (!coolingEnabled_) return 0.0;
-        
+
         double tempDiff = std::abs(currentTemperature_ - targetTemperature_);
         // Higher power needed for larger temperature differences
         return std::min(100.0, tempDiff * 10.0); // 0-100%
@@ -99,39 +99,39 @@ auto CoolingControlTask::taskName() -> std::string {
 void CoolingControlTask::execute(const json& params) {
     try {
         validateCoolingParameters(params);
-        
+
         bool enable = params.value("enable", true);
         double targetTemp = params.value("target_temperature", -10.0);
-        
+
         spdlog::info("Cooling control: {} to {}°C", enable ? "Start" : "Stop", targetTemp);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockTemperatureController::getInstance();
-        
+
         if (enable) {
             if (!controller.startCooling(targetTemp)) {
                 throw atom::error::RuntimeError("Failed to start cooling system");
             }
-            
+
             // Optional: Wait for initial cooling
             if (params.value("wait_for_stabilization", false)) {
                 int maxWaitTime = params.value("max_wait_time", 300); // 5 minutes
                 int checkInterval = params.value("check_interval", 10); // 10 seconds
                 double tolerance = params.value("tolerance", 1.0);
-                
+
                 auto startTime = std::chrono::steady_clock::now();
                 while (std::chrono::duration_cast<std::chrono::seconds>(
                     std::chrono::steady_clock::now() - startTime).count() < maxWaitTime) {
-                    
+
                     double currentTemp = controller.getTemperature();
-                    spdlog::info("Current temperature: {:.2f}°C, Target: {:.2f}°C", 
+                    spdlog::info("Current temperature: {:.2f}°C, Target: {:.2f}°C",
                                 currentTemp, targetTemp);
-                    
+
                     if (controller.isStabilized(tolerance)) {
                         spdlog::info("Temperature stabilized within {:.1f}°C tolerance", tolerance);
                         break;
                     }
-                    
+
                     std::this_thread::sleep_for(std::chrono::seconds(checkInterval));
                 }
             }
@@ -139,9 +139,9 @@ void CoolingControlTask::execute(const json& params) {
             controller.stopCooling();
         }
 #endif
-        
+
         LOG_F(INFO, "Cooling control task completed successfully");
-        
+
     } catch (const std::exception& e) {
         handleCoolingError(*this, e);
         throw;
@@ -149,12 +149,12 @@ void CoolingControlTask::execute(const json& params) {
 }
 
 auto CoolingControlTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<CoolingControlTask>("CoolingControl", 
+    auto task = std::make_unique<CoolingControlTask>("CoolingControl",
         [](const json& params) {
             CoolingControlTask taskInstance("CoolingControl", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -167,7 +167,7 @@ void CoolingControlTask::defineParameters(Task& task) {
         .defaultValue = true,
         .description = "Enable or disable cooling"
     });
-    
+
     task.addParameter({
         .name = "target_temperature",
         .type = "number",
@@ -175,7 +175,7 @@ void CoolingControlTask::defineParameters(Task& task) {
         .defaultValue = -10.0,
         .description = "Target temperature in Celsius"
     });
-    
+
     task.addParameter({
         .name = "wait_for_stabilization",
         .type = "boolean",
@@ -183,7 +183,7 @@ void CoolingControlTask::defineParameters(Task& task) {
         .defaultValue = false,
         .description = "Wait for temperature to stabilize"
     });
-    
+
     task.addParameter({
         .name = "max_wait_time",
         .type = "integer",
@@ -191,7 +191,7 @@ void CoolingControlTask::defineParameters(Task& task) {
         .defaultValue = 300,
         .description = "Maximum time to wait for stabilization (seconds)"
     });
-    
+
     task.addParameter({
         .name = "tolerance",
         .type = "number",
@@ -208,7 +208,7 @@ void CoolingControlTask::validateCoolingParameters(const json& params) {
             throw atom::error::InvalidArgument("Target temperature must be between -50°C and 50°C");
         }
     }
-    
+
     if (params.contains("max_wait_time")) {
         int waitTime = params["max_wait_time"];
         if (waitTime < 0 || waitTime > 3600) {
@@ -231,23 +231,23 @@ auto TemperatureMonitorTask::taskName() -> std::string {
 void TemperatureMonitorTask::execute(const json& params) {
     try {
         validateMonitoringParameters(params);
-        
+
         int duration = params.value("duration", 60);
         int interval = params.value("interval", 5);
-        
+
         spdlog::info("Starting temperature monitoring for {} seconds", duration);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockTemperatureController::getInstance();
-        
+
         auto startTime = std::chrono::steady_clock::now();
         auto endTime = startTime + std::chrono::seconds(duration);
-        
+
         while (std::chrono::steady_clock::now() < endTime) {
             double currentTemp = controller.getTemperature();
             double coolingPower = controller.getCoolingPower();
             bool coolerOn = controller.isCoolerOn();
-            
+
             json statusReport = {
                 {"timestamp", std::chrono::duration_cast<std::chrono::seconds>(
                     std::chrono::steady_clock::now().time_since_epoch()).count()},
@@ -256,15 +256,15 @@ void TemperatureMonitorTask::execute(const json& params) {
                 {"cooler_enabled", coolerOn},
                 {"target_temperature", controller.getTargetTemperature()}
             };
-            
+
             spdlog::info("Temperature status: {}", statusReport.dump());
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(interval));
         }
 #endif
-        
+
         LOG_F(INFO, "Temperature monitoring completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("TemperatureMonitorTask failed: {}", e.what());
         throw;
@@ -272,12 +272,12 @@ void TemperatureMonitorTask::execute(const json& params) {
 }
 
 auto TemperatureMonitorTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<TemperatureMonitorTask>("TemperatureMonitor", 
+    auto task = std::make_unique<TemperatureMonitorTask>("TemperatureMonitor",
         [](const json& params) {
             TemperatureMonitorTask taskInstance("TemperatureMonitor", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -290,7 +290,7 @@ void TemperatureMonitorTask::defineParameters(Task& task) {
         .defaultValue = 60,
         .description = "Monitoring duration in seconds"
     });
-    
+
     task.addParameter({
         .name = "interval",
         .type = "integer",
@@ -307,7 +307,7 @@ void TemperatureMonitorTask::validateMonitoringParameters(const json& params) {
             throw atom::error::InvalidArgument("Duration must be between 1 and 86400 seconds");
         }
     }
-    
+
     if (params.contains("interval")) {
         int interval = params["interval"];
         if (interval < 1 || interval > 3600) {
@@ -325,48 +325,48 @@ auto TemperatureStabilizationTask::taskName() -> std::string {
 void TemperatureStabilizationTask::execute(const json& params) {
     try {
         validateStabilizationParameters(params);
-        
+
         double targetTemp = params.value("target_temperature", -10.0);
         double tolerance = params.value("tolerance", 1.0);
         int maxWaitTime = params.value("max_wait_time", 600);
         int checkInterval = params.value("check_interval", 10);
-        
-        spdlog::info("Waiting for temperature stabilization: {:.1f}°C ±{:.1f}°C", 
+
+        spdlog::info("Waiting for temperature stabilization: {:.1f}°C ±{:.1f}°C",
                     targetTemp, tolerance);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockTemperatureController::getInstance();
-        
+
         // Start cooling if not already running
         if (!controller.isCoolerOn()) {
             controller.startCooling(targetTemp);
         }
-        
+
         auto startTime = std::chrono::steady_clock::now();
         bool stabilized = false;
-        
+
         while (std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::steady_clock::now() - startTime).count() < maxWaitTime) {
-            
+
             double currentTemp = controller.getTemperature();
             spdlog::info("Current: {:.2f}°C, Target: {:.2f}°C", currentTemp, targetTemp);
-            
+
             if (std::abs(currentTemp - targetTemp) <= tolerance) {
                 stabilized = true;
                 spdlog::info("Temperature stabilized!");
                 break;
             }
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(checkInterval));
         }
-        
+
         if (!stabilized) {
             throw atom::error::RuntimeError("Temperature failed to stabilize within timeout period");
         }
 #endif
-        
+
         LOG_F(INFO, "Temperature stabilization completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("TemperatureStabilizationTask failed: {}", e.what());
         throw;
@@ -374,12 +374,12 @@ void TemperatureStabilizationTask::execute(const json& params) {
 }
 
 auto TemperatureStabilizationTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<TemperatureStabilizationTask>("TemperatureStabilization", 
+    auto task = std::make_unique<TemperatureStabilizationTask>("TemperatureStabilization",
         [](const json& params) {
             TemperatureStabilizationTask taskInstance("TemperatureStabilization", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -392,7 +392,7 @@ void TemperatureStabilizationTask::defineParameters(Task& task) {
         .defaultValue = -10.0,
         .description = "Target temperature for stabilization"
     });
-    
+
     task.addParameter({
         .name = "tolerance",
         .type = "number",
@@ -400,7 +400,7 @@ void TemperatureStabilizationTask::defineParameters(Task& task) {
         .defaultValue = 1.0,
         .description = "Temperature tolerance (±°C)"
     });
-    
+
     task.addParameter({
         .name = "max_wait_time",
         .type = "integer",
@@ -408,7 +408,7 @@ void TemperatureStabilizationTask::defineParameters(Task& task) {
         .defaultValue = 600,
         .description = "Maximum wait time in seconds"
     });
-    
+
     task.addParameter({
         .name = "check_interval",
         .type = "integer",
@@ -425,7 +425,7 @@ void TemperatureStabilizationTask::validateStabilizationParameters(const json& p
             throw atom::error::InvalidArgument("Target temperature must be between -50°C and 50°C");
         }
     }
-    
+
     if (params.contains("tolerance")) {
         double tolerance = params["tolerance"];
         if (tolerance <= 0 || tolerance > 20.0) {
@@ -443,51 +443,51 @@ auto CoolingOptimizationTask::taskName() -> std::string {
 void CoolingOptimizationTask::execute(const json& params) {
     try {
         validateOptimizationParameters(params);
-        
+
         double targetTemp = params.value("target_temperature", -10.0);
         int optimizationTime = params.value("optimization_time", 300);
-        
-        spdlog::info("Starting cooling optimization for {}°C over {} seconds", 
+
+        spdlog::info("Starting cooling optimization for {}°C over {} seconds",
                     targetTemp, optimizationTime);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockTemperatureController::getInstance();
-        
+
         if (!controller.isCoolerOn()) {
             controller.startCooling(targetTemp);
         }
-        
+
         auto startTime = std::chrono::steady_clock::now();
         auto endTime = startTime + std::chrono::seconds(optimizationTime);
-        
+
         double bestEfficiency = 0.0;
         double optimalPower = 50.0;
-        
+
         while (std::chrono::steady_clock::now() < endTime) {
             double currentTemp = controller.getTemperature();
             double currentPower = controller.getCoolingPower();
-            
+
             // Calculate efficiency (cooling per unit power)
             double tempDiff = std::abs(25.0 - currentTemp); // Cooling from ambient
             double efficiency = tempDiff / (currentPower + 1.0); // Avoid division by zero
-            
+
             if (efficiency > bestEfficiency) {
                 bestEfficiency = efficiency;
                 optimalPower = currentPower;
             }
-            
-            spdlog::info("Temp: {:.2f}°C, Power: {:.1f}%, Efficiency: {:.3f}", 
+
+            spdlog::info("Temp: {:.2f}°C, Power: {:.1f}%, Efficiency: {:.3f}",
                         currentTemp, currentPower, efficiency);
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(30));
         }
-        
-        spdlog::info("Optimization complete. Optimal power: {:.1f}%, Best efficiency: {:.3f}", 
+
+        spdlog::info("Optimization complete. Optimal power: {:.1f}%, Best efficiency: {:.3f}",
                     optimalPower, bestEfficiency);
 #endif
-        
+
         LOG_F(INFO, "Cooling optimization completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("CoolingOptimizationTask failed: {}", e.what());
         throw;
@@ -495,12 +495,12 @@ void CoolingOptimizationTask::execute(const json& params) {
 }
 
 auto CoolingOptimizationTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<CoolingOptimizationTask>("CoolingOptimization", 
+    auto task = std::make_unique<CoolingOptimizationTask>("CoolingOptimization",
         [](const json& params) {
             CoolingOptimizationTask taskInstance("CoolingOptimization", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -513,7 +513,7 @@ void CoolingOptimizationTask::defineParameters(Task& task) {
         .defaultValue = -10.0,
         .description = "Target temperature for optimization"
     });
-    
+
     task.addParameter({
         .name = "optimization_time",
         .type = "integer",
@@ -530,7 +530,7 @@ void CoolingOptimizationTask::validateOptimizationParameters(const json& params)
             throw atom::error::InvalidArgument("Target temperature must be between -50°C and 50°C");
         }
     }
-    
+
     if (params.contains("optimization_time")) {
         int time = params["optimization_time"];
         if (time < 60 || time > 3600) {
@@ -548,42 +548,42 @@ auto TemperatureAlertTask::taskName() -> std::string {
 void TemperatureAlertTask::execute(const json& params) {
     try {
         validateAlertParameters(params);
-        
+
         double maxTemp = params.value("max_temperature", 40.0);
         double minTemp = params.value("min_temperature", -30.0);
         int monitorTime = params.value("monitor_time", 300);
         int checkInterval = params.value("check_interval", 30);
-        
-        spdlog::info("Temperature alert monitoring: {:.1f}°C to {:.1f}°C for {} seconds", 
+
+        spdlog::info("Temperature alert monitoring: {:.1f}°C to {:.1f}°C for {} seconds",
                     minTemp, maxTemp, monitorTime);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockTemperatureController::getInstance();
-        
+
         auto startTime = std::chrono::steady_clock::now();
         auto endTime = startTime + std::chrono::seconds(monitorTime);
-        
+
         while (std::chrono::steady_clock::now() < endTime) {
             double currentTemp = controller.getTemperature();
-            
+
             if (currentTemp > maxTemp) {
-                spdlog::error("TEMPERATURE ALERT: {:.2f}°C exceeds maximum {:.1f}°C!", 
+                spdlog::error("TEMPERATURE ALERT: {:.2f}°C exceeds maximum {:.1f}°C!",
                              currentTemp, maxTemp);
                 // Could trigger emergency cooling or shutdown
             } else if (currentTemp < minTemp) {
-                spdlog::error("TEMPERATURE ALERT: {:.2f}°C below minimum {:.1f}°C!", 
+                spdlog::error("TEMPERATURE ALERT: {:.2f}°C below minimum {:.1f}°C!",
                              currentTemp, minTemp);
                 // Could trigger reduced cooling
             } else {
                 spdlog::info("Temperature OK: {:.2f}°C", currentTemp);
             }
-            
+
             std::this_thread::sleep_for(std::chrono::seconds(checkInterval));
         }
 #endif
-        
+
         LOG_F(INFO, "Temperature alert monitoring completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("TemperatureAlertTask failed: {}", e.what());
         throw;
@@ -591,12 +591,12 @@ void TemperatureAlertTask::execute(const json& params) {
 }
 
 auto TemperatureAlertTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<TemperatureAlertTask>("TemperatureAlert", 
+    auto task = std::make_unique<TemperatureAlertTask>("TemperatureAlert",
         [](const json& params) {
             TemperatureAlertTask taskInstance("TemperatureAlert", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -609,7 +609,7 @@ void TemperatureAlertTask::defineParameters(Task& task) {
         .defaultValue = 40.0,
         .description = "Maximum allowed temperature"
     });
-    
+
     task.addParameter({
         .name = "min_temperature",
         .type = "number",
@@ -617,7 +617,7 @@ void TemperatureAlertTask::defineParameters(Task& task) {
         .defaultValue = -30.0,
         .description = "Minimum allowed temperature"
     });
-    
+
     task.addParameter({
         .name = "monitor_time",
         .type = "integer",
@@ -625,7 +625,7 @@ void TemperatureAlertTask::defineParameters(Task& task) {
         .defaultValue = 300,
         .description = "Monitoring duration in seconds"
     });
-    
+
     task.addParameter({
         .name = "check_interval",
         .type = "integer",

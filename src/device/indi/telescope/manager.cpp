@@ -1,16 +1,16 @@
 #include "manager.hpp"
 
-INDITelescopeManager::INDITelescopeManager(std::string name) 
+INDITelescopeManager::INDITelescopeManager(std::string name)
     : AtomTelescope(std::move(name)), name_(getName()) {
     spdlog::info("Creating INDI telescope manager: {}", name_);
-    
+
     // Create component instances
     connection_ = std::make_shared<TelescopeConnection>(name_);
     motion_ = std::make_shared<TelescopeMotion>(name_);
     tracking_ = std::make_shared<TelescopeTracking>(name_);
     coordinates_ = std::make_shared<TelescopeCoordinates>(name_);
     parking_ = std::make_shared<TelescopeParking>(name_);
-    
+
     spdlog::debug("All telescope components created for {}", name_);
 }
 
@@ -19,31 +19,31 @@ auto INDITelescopeManager::initialize() -> bool {
         spdlog::warn("Telescope manager {} already initialized", name_);
         return true;
     }
-    
+
     spdlog::info("Initializing telescope manager: {}", name_);
-    
+
     if (!initializeComponents()) {
         spdlog::error("Failed to initialize telescope components");
         return false;
     }
-    
+
     initialized_.store(true);
     updateTelescopeState(TelescopeState::IDLE);
-    
+
     spdlog::info("Telescope manager {} initialized successfully", name_);
     return true;
 }
 
 auto INDITelescopeManager::destroy() -> bool {
     spdlog::info("Destroying telescope manager: {}", name_);
-    
+
     if (isConnected()) {
         disconnect();
     }
-    
+
     destroyComponents();
     initialized_.store(false);
-    
+
     spdlog::info("Telescope manager {} destroyed", name_);
     return true;
 }
@@ -53,28 +53,28 @@ auto INDITelescopeManager::connect(const std::string &deviceName, int timeout, i
         spdlog::error("Telescope manager not initialized");
         return false;
     }
-    
+
     spdlog::info("Connecting telescope manager {} to device: {}", name_, deviceName);
-    
+
     // Connect using the connection component
     if (!connection_->connect(deviceName, timeout, maxRetry)) {
         spdlog::error("Failed to connect to telescope device: {}", deviceName);
         return false;
     }
-    
+
     // Get the INDI device and initialize other components
     auto device = connection_->getDevice();
     if (!device.isValid()) {
         spdlog::error("Invalid device after connection");
         return false;
     }
-    
+
     // Initialize components with the device
     motion_->initialize(device);
     tracking_->initialize(device);
     coordinates_->initialize(device);
     parking_->initialize(device);
-    
+
     updateTelescopeState(TelescopeState::IDLE);
     spdlog::info("Telescope {} connected and components initialized", name_);
     return true;
@@ -82,12 +82,12 @@ auto INDITelescopeManager::connect(const std::string &deviceName, int timeout, i
 
 auto INDITelescopeManager::disconnect() -> bool {
     spdlog::info("Disconnecting telescope manager: {}", name_);
-    
+
     if (!connection_->disconnect()) {
         spdlog::error("Failed to disconnect telescope");
         return false;
     }
-    
+
     updateTelescopeState(TelescopeState::IDLE);
     spdlog::info("Telescope {} disconnected", name_);
     return true;
@@ -103,7 +103,7 @@ auto INDITelescopeManager::isConnected() const -> bool {
 
 auto INDITelescopeManager::getTelescopeInfo() -> std::optional<TelescopeParameters> {
     if (!ensureConnected()) return std::nullopt;
-    
+
     // Get telescope info from device or return stored parameters
     return telescopeParams_;
 }
@@ -111,12 +111,12 @@ auto INDITelescopeManager::getTelescopeInfo() -> std::optional<TelescopeParamete
 auto INDITelescopeManager::setTelescopeInfo(double aperture, double focalLength,
                                            double guiderAperture, double guiderFocalLength) -> bool {
     if (!ensureConnected()) return false;
-    
+
     telescopeParams_.aperture = aperture;
     telescopeParams_.focalLength = focalLength;
     telescopeParams_.guiderAperture = guiderAperture;
     telescopeParams_.guiderFocalLength = guiderFocalLength;
-    
+
     spdlog::info("Telescope info set: aperture={:.1f}mm, focal={:.1f}mm, guide_aperture={:.1f}mm, guide_focal={:.1f}mm",
                 aperture, focalLength, guiderAperture, guiderFocalLength);
     return true;
@@ -422,13 +422,13 @@ auto INDITelescopeManager::setAlignmentMode(AlignmentMode mode) -> bool {
     return true;
 }
 
-auto INDITelescopeManager::addAlignmentPoint(const EquatorialCoordinates& measured, 
+auto INDITelescopeManager::addAlignmentPoint(const EquatorialCoordinates& measured,
                                             const EquatorialCoordinates& target) -> bool {
     if (!ensureConnected()) return false;
-    
+
     spdlog::info("Adding alignment point: measured(RA={:.6f}h, DEC={:.6f}°) -> target(RA={:.6f}h, DEC={:.6f}°)",
                 measured.ra, measured.dec, target.ra, target.dec);
-    
+
     // In a full implementation, this would store alignment points
     // and apply pointing model corrections
     return true;
@@ -454,25 +454,25 @@ void INDITelescopeManager::newMessage(INDI::BaseDevice baseDevice, int messageID
 
 auto INDITelescopeManager::initializeComponents() -> bool {
     spdlog::debug("Initializing telescope components");
-    
+
     if (!connection_->initialize()) {
         spdlog::error("Failed to initialize connection component");
         return false;
     }
-    
+
     spdlog::debug("All telescope components initialized successfully");
     return true;
 }
 
 auto INDITelescopeManager::destroyComponents() -> bool {
     spdlog::debug("Destroying telescope components");
-    
+
     if (parking_) parking_->destroy();
     if (coordinates_) coordinates_->destroy();
     if (tracking_) tracking_->destroy();
     if (motion_) motion_->destroy();
     if (connection_) connection_->destroy();
-    
+
     spdlog::debug("All telescope components destroyed");
     return true;
 }

@@ -31,7 +31,7 @@ namespace lithium::device::qhy::camera {
 
 /**
  * @brief Filter wheel controller for QHY cameras
- * 
+ *
  * This component handles QHY CFW (Color Filter Wheel) operations
  * including position control, movement monitoring, and filter
  * management with comprehensive features.
@@ -84,7 +84,7 @@ public:
     auto clearMovementHistory() -> void;
 
     // Filter sequence automation
-    auto startFilterSequence(const std::vector<int>& positions, 
+    auto startFilterSequence(const std::vector<int>& positions,
                             std::function<void(int, bool)> callback = nullptr) -> bool;
     auto stopFilterSequence() -> bool;
     auto isFilterSequenceRunning() const -> bool;
@@ -101,30 +101,30 @@ private:
     std::string qhyFilterWheelModel_;
     std::vector<std::string> qhyFilterNames_;
     bool qhyFilterWheelClockwise_{true};
-    
+
     // Filter offsets for focus compensation
     std::map<int, double> filterOffsets_;
-    
+
     // Movement monitoring
     std::atomic_bool filterWheelMonitoringEnabled_{true};
     std::atomic_bool movementLoggingEnabled_{false};
     std::thread monitoringThread_;
     std::vector<std::pair<std::chrono::system_clock::time_point, int>> movementHistory_;
     static constexpr size_t MAX_HISTORY_SIZE = 500;
-    
+
     // Filter sequence automation
     std::atomic_bool filterSequenceRunning_{false};
     std::thread sequenceThread_;
     std::vector<int> sequencePositions_;
     int sequenceCurrentIndex_{0};
     std::function<void(int, bool)> sequenceCallback_;
-    
+
     // Callbacks and synchronization
     std::function<void(int, bool)> movementCallback_;
     mutable std::mutex filterWheelMutex_;
     mutable std::mutex historyMutex_;
     mutable std::mutex sequenceMutex_;
-    
+
     // Private helper methods
     auto detectQHYFilterWheel() -> bool;
     auto initializeQHYFilterWheel() -> bool;

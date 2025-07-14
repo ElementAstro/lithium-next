@@ -621,7 +621,7 @@ private:
     // Controller state
     std::atomic<bool> initialized_{false};
     std::atomic<bool> connected_{false};
-    
+
     // Error handling
     mutable std::string lastError_;
     mutable std::mutex errorMutex_;
@@ -631,15 +631,15 @@ private:
     bool shutdownComponents();
     void setupComponentCallbacks();
     void handleComponentError(const std::string& component, const std::string& error);
-    
+
     // Component coordination
     void coordinateComponentStates();
     void validateComponentDependencies();
-    
+
     // Error management
     void setLastError(const std::string& error);
     void clearLastError();
-    
+
     // Utility methods
     void logInfo(const std::string& message);
     void logWarning(const std::string& message);

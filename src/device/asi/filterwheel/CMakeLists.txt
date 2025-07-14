@@ -48,7 +48,7 @@ if(ASI_EFW_LIBRARY)
     message(STATUS "Found ASI EFW SDK: ${ASI_EFW_LIBRARY}")
     add_compile_definitions(LITHIUM_ASI_EFW_ENABLED)
     target_link_libraries(asi_filterwheel PRIVATE ${ASI_EFW_LIBRARY})
-    
+
     # Find EFW headers
     find_path(ASI_EFW_INCLUDE_DIR
         NAMES EFW_filter.h
@@ -58,7 +58,7 @@ if(ASI_EFW_LIBRARY)
             ${CMAKE_SOURCE_DIR}/libs/thirdparty/asi/include
         DOC "ASI EFW SDK headers"
     )
-    
+
     if(ASI_EFW_INCLUDE_DIR)
         target_include_directories(asi_filterwheel PRIVATE ${ASI_EFW_INCLUDE_DIR})
     endif()

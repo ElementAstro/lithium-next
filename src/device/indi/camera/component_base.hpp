@@ -30,10 +30,10 @@ class INDICameraCore;
 
 /**
  * @brief Base interface for all INDI camera components
- * 
+ *
  * This interface provides common functionality and access patterns
  * for all camera components, similar to ASCOM's component architecture.
- * Each component can access the core camera instance and INDI device 
+ * Each component can access the core camera instance and INDI device
  * through this interface.
  */
 class ComponentBase {

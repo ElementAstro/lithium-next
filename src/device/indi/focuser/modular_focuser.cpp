@@ -4,7 +4,7 @@ namespace lithium::device::indi::focuser {
 
 ModularINDIFocuser::ModularINDIFocuser(std::string name)
     : AtomFocuser(std::move(name)), core_(std::make_shared<INDIFocuserCore>(name_)) {
-    
+
     core_->getLogger()->info("Creating modular INDI focuser: {}", name_);
 
     // Create component managers with shared core

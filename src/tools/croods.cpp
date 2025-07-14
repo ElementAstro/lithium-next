@@ -17,7 +17,7 @@ namespace {
     constexpr double SECONDS_IN_DAY = 86400.0; // 24 * 60 * 60
     constexpr double MINUTES_IN_HOUR = 60.0;
     constexpr double HOURS_IN_DAY = 24.0;
-    
+
     // Angular constants
     constexpr double PI = std::numbers::pi;
     constexpr double DEGREES_IN_CIRCLE = 360.0;
@@ -31,12 +31,12 @@ double timeToJD(const std::chrono::system_clock::time_point& time) {
     return JD_EPOCH + (seconds / SECONDS_IN_DAY);
 }
 
-double jdToMJD(double jd) { 
-    return jd - MJD_OFFSET; 
+double jdToMJD(double jd) {
+    return jd - MJD_OFFSET;
 }
 
-double mjdToJD(double mjd) { 
-    return mjd + MJD_OFFSET; 
+double mjdToJD(double mjd) {
+    return mjd + MJD_OFFSET;
 }
 
 double calculateBJD(double jd, double ra, double dec, double longitude,
@@ -68,20 +68,20 @@ std::string formatTime(const std::chrono::system_clock::time_point& time,
 bool periodBelongs(double value, double minVal, double maxVal, double period,
                   bool minInclusive, bool maxInclusive) {
     spdlog::info("periodBelongs: value={:.6f}, min={:.6f}, max={:.6f}, period={:.6f}, "
-                "minInclusive={}, maxInclusive={}", 
+                "minInclusive={}, maxInclusive={}",
                 value, minVal, maxVal, period, minInclusive, maxInclusive);
 
     // Optimize by pre-calculating period indices
     int periodIndex = static_cast<int>((value - maxVal) / period);
-    
+
     // Check ranges with optimized comparisons
     for (int i = -1; i <= 1; ++i) {
         double rangeMin = minVal + (periodIndex + i) * period;
         double rangeMax = maxVal + (periodIndex + i) * period;
-        
+
         bool inRange = (minInclusive ? value >= rangeMin : value > rangeMin) &&
                        (maxInclusive ? value <= rangeMax : value < rangeMax);
-        
+
         if (inRange) {
             spdlog::info("Value belongs to range: [{:.6f}, {:.6f}]", rangeMin, rangeMax);
             return true;

@@ -66,7 +66,7 @@ void TimelapseTask::executeImpl(const json& params) {
                 std::chrono::seconds(static_cast<int>(interval)) - frameElapsed;
 
             if (remainingTime.count() > 0 && frame < totalFrames) {
-                LOG_F(INFO, "Waiting {} seconds until next frame", 
+                LOG_F(INFO, "Waiting {} seconds until next frame",
                       remainingTime.count());
                 std::this_thread::sleep_for(remainingTime);
             }

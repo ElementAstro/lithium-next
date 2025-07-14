@@ -59,7 +59,7 @@ class BuilderFactory:
         builder_type: str,
         source_dir: Union[Path, str],
         build_dir: Union[Path, str],
-        **kwargs: Any
+        **kwargs: Any,
     ) -> BuildHelperBase:
         """
         Create a builder instance for the specified build system.

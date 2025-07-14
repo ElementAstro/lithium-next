@@ -11,7 +11,7 @@ namespace lithium::device::indi::filterwheel {
 
 /**
  * @brief Manages statistics and usage tracking for INDI FilterWheel
- * 
+ *
  * This component tracks filter wheel usage statistics including position
  * changes, movement times, and filter usage patterns.
  */
@@ -37,7 +37,7 @@ public:
     std::chrono::milliseconds getTotalMoveTime() const;
     uint64_t getSessionPositionChanges() const;
     std::chrono::duration<double> getSessionDuration() const;
-    
+
     // Statistics management
     bool resetStatistics();
     bool resetSessionStatistics();
@@ -49,18 +49,18 @@ public:
 
 private:
     bool initialized_{false};
-    
+
     // Total statistics
     std::atomic<uint64_t> totalPositionChanges_{0};
     std::atomic<uint64_t> totalMoveTimeMs_{0};
     std::unordered_map<int, std::atomic<uint64_t>> positionUsage_;
-    
+
     // Session statistics
     std::atomic<uint64_t> sessionPositionChanges_{0};
     std::chrono::steady_clock::time_point sessionStartTime_;
     std::chrono::steady_clock::time_point sessionEndTime_;
     bool sessionActive_{false};
-    
+
     // Thread safety
     mutable std::mutex statisticsMutex_;
 };

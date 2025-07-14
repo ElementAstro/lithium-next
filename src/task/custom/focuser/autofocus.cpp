@@ -37,12 +37,12 @@ void AutofocusTask::execute(const json& params) {
         AutofocusMode mode = parseMode(modeStr);
         std::string algorithmStr = params.value("algorithm", "vcurve");
         AutofocusAlgorithm algorithm = parseAlgorithm(algorithmStr);
-        
+
         // Set parameters based on mode
         double exposureTime = params.value("exposure_time", 0.0);
         int stepSize = params.value("step_size", 0);
         int maxSteps = params.value("max_steps", 0);
-        
+
         // Apply mode defaults if parameters not explicitly set
         if (exposureTime <= 0 || stepSize <= 0 || maxSteps <= 0) {
             auto [defaultExp, defaultStep, defaultSteps] = getModeDefaults(mode);
@@ -50,7 +50,7 @@ void AutofocusTask::execute(const json& params) {
             if (stepSize <= 0) stepSize = defaultStep;
             if (maxSteps <= 0) maxSteps = defaultSteps;
         }
-        
+
         double tolerance = params.value("tolerance", 0.1);
         bool backlashComp = params.value("backlash_compensation", true);
         bool tempComp = params.value("temperature_compensation", false);
@@ -363,7 +363,7 @@ AutofocusMode AutofocusTask::parseMode(const std::string& modeStr) {
     if (modeStr == "fine") return AutofocusMode::Fine;
     if (modeStr == "starless") return AutofocusMode::Starless;
     if (modeStr == "high_precision") return AutofocusMode::HighPrecision;
-    
+
     spdlog::warn("Unknown mode '{}', defaulting to full", modeStr);
     return AutofocusMode::Full;
 }

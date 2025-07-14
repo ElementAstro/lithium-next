@@ -29,7 +29,7 @@ class INDISwitchClient;
 
 /**
  * @brief Switch timer management component
- * 
+ *
  * Handles automatic switch timers and time-based operations
  */
 class SwitchTimer {
@@ -55,7 +55,7 @@ public:
     void stopTimerThread();
     auto isTimerThreadRunning() -> bool;
     void processTimers();
-    
+
     // Timer callback registration
     using TimerCallback = std::function<void(uint32_t switchIndex, bool expired)>;
     void setTimerCallback(TimerCallback callback);
@@ -70,18 +70,18 @@ private:
 
     INDISwitchClient* client_;
     mutable std::mutex timer_mutex_;
-    
+
     // Timer data
     std::unordered_map<uint32_t, TimerInfo> active_timers_;
-    
+
     // Timer thread
     std::thread timer_thread_;
     std::atomic<bool> timer_active_{false};
     std::atomic<bool> timer_thread_running_{false};
-    
+
     // Timer callback
     TimerCallback timer_callback_;
-    
+
     // Timer processing
     void timerThreadFunction();
     void handleTimerExpired(uint32_t switchIndex);

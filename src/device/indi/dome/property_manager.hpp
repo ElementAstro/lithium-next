@@ -131,7 +131,7 @@ private:
     [[nodiscard]] auto getProperty(const std::string& name) const -> std::optional<INDI::Property>;
     void cacheProperty(const INDI::Property& property);
     void removeCachedProperty(const std::string& name);
-    
+
     // Validation helpers
     [[nodiscard]] auto validatePropertyAccess(const std::string& propertyName, const std::string& elementName) const -> bool;
     [[nodiscard]] auto validateNumberProperty(const INDI::PropertyNumber& prop, const std::string& elementName) const -> bool;

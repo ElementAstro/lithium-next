@@ -25,35 +25,35 @@ class CameraExample {
 public:
     void runExample() {
         LOG_F(INFO, "Starting camera usage example");
-        
+
         // Scan for available cameras
         demonstrateCameraScanning();
-        
+
         // Test QHY cameras
         testQHYCameras();
-        
+
         // Test ASI cameras
         testASICameras();
-        
+
         // Test automatic camera detection
         testAutomaticDetection();
-        
+
         // Test advanced camera features
         demonstrateAdvancedFeatures();
-        
+
         LOG_F(INFO, "Camera usage example completed");
     }
 
 private:
     void demonstrateCameraScanning() {
         std::cout << "\n=== Camera Scanning Demo ===\n";
-        
+
         // Scan for all available cameras
         auto cameras = scanCameras();
-        
+
         std::cout << "Found " << cameras.size() << " cameras:\n";
         for (const auto& camera : cameras) {
-            std::cout << "  - " << camera.name 
+            std::cout << "  - " << camera.name
                      << " (" << camera.manufacturer << ")"
                      << " [" << CameraFactory::driverTypeToString(camera.type) << "]\n";
             std::cout << "    Description: " << camera.description << "\n";
@@ -63,7 +63,7 @@ private:
 
     void testQHYCameras() {
         std::cout << "\n=== QHY Camera Test ===\n";
-        
+
         if (!CameraFactory::getInstance().isDriverSupported(CameraDriverType::QHY)) {
             std::cout << "QHY driver not available\n";
             return;
@@ -99,10 +99,10 @@ private:
         // Connect to first device
         if (qhyCamera->connect(devices[0])) {
             std::cout << "Connected to QHY camera: " << devices[0] << "\n";
-            
+
             testBasicCameraOperations(qhyCamera, "QHY");
             testQHYSpecificFeatures(qhyCamera);
-            
+
             qhyCamera->disconnect();
         } else {
             std::cout << "Failed to connect to QHY camera\n";
@@ -113,7 +113,7 @@ private:
 
     void testASICameras() {
         std::cout << "\n=== ASI Camera Test ===\n";
-        
+
         if (!CameraFactory::getInstance().isDriverSupported(CameraDriverType::ASI)) {
             std::cout << "ASI driver not available\n";
             return;
@@ -149,10 +149,10 @@ private:
         // Connect to first device
         if (asiCamera->connect(devices[0])) {
             std::cout << "Connected to ASI camera: " << devices[0] << "\n";
-            
+
             testBasicCameraOperations(asiCamera, "ASI");
             testASISpecificFeatures(asiCamera);
-            
+
             asiCamera->disconnect();
         } else {
             std::cout << "Failed to connect to ASI camera\n";
@@ -163,7 +163,7 @@ private:
 
     void testAutomaticDetection() {
         std::cout << "\n=== Automatic Camera Detection Test ===\n";
-        
+
         // Test automatic detection with different camera patterns
         std::vector<std::string> testNames = {
             "QHY5III462C",  // Should detect QHY
@@ -173,11 +173,11 @@ private:
 
         for (const auto& name : testNames) {
             std::cout << "Testing automatic detection for: " << name << "\n";
-            
+
             auto camera = createCamera(name);
             if (camera) {
                 std::cout << "  Successfully created camera instance\n";
-                
+
                 if (camera->initialize()) {
                     std::cout << "  Camera initialized successfully\n";
                     camera->destroy();
@@ -286,7 +286,7 @@ private:
 
     void demonstrateAdvancedFeatures() {
         std::cout << "\n=== Advanced Features Demo ===\n";
-        
+
         // Create a simulator camera for reliable testing
         auto camera = createCamera(CameraDriverType::SIMULATOR, "Advanced Demo Camera");
         if (!camera) {
@@ -306,7 +306,7 @@ private:
         if (camera->startVideo()) {
             std::cout << "    Video started\n";
             std::this_thread::sleep_for(std::chrono::seconds(2));
-            
+
             // Get a few video frames
             for (int i = 0; i < 5; ++i) {
                 auto frame = camera->getVideoFrame();
@@ -315,7 +315,7 @@ private:
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
             }
-            
+
             camera->stopVideo();
             std::cout << "    Video stopped\n";
         } else {
@@ -350,7 +350,7 @@ private:
 int main() {
     // Initialize logging
     loguru::g_stderr_verbosity = loguru::Verbosity_INFO;
-    
+
     try {
         CameraExample example;
         example.runExample();

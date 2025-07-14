@@ -40,6 +40,7 @@ def log_operation(func: Callable) -> Callable:
     Returns:
         The decorated function
     """
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         logger.debug(f"Calling {func.__name__}")
@@ -50,4 +51,5 @@ def log_operation(func: Callable) -> Callable:
         except Exception as e:
             logger.error(f"Error in {func.__name__}: {str(e)}")
             raise
+
     return wrapper

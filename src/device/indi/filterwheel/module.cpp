@@ -31,7 +31,7 @@ void registerFilterwheelMethods() {
     if (!logger) {
         logger = spdlog::stdout_color_mt("filterwheel_indi");
     }
-    
+
     logger->info("Modular INDI FilterWheel module initialized");
     logger->info("Available methods:");
     logger->info("  - Connection: connect, disconnect, scan, is_connected");

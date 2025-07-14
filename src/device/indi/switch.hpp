@@ -138,22 +138,22 @@ private:
     std::atomic<bool> is_connected_{false};
     std::atomic<bool> is_initialized_{false};
     std::atomic<bool> server_connected_{false};
-    
+
     // Device reference
     INDI::BaseDevice base_device_;
-    
+
     // Thread safety
     mutable std::recursive_mutex state_mutex_;
     mutable std::recursive_mutex device_mutex_;
-    
+
     // Timer thread for timer functionality
     std::thread timer_thread_;
     std::atomic<bool> timer_thread_running_{false};
-    
+
     // INDI property mappings
     std::unordered_map<std::string, std::string> property_mappings_;
     std::unordered_map<std::string, uint32_t> property_to_switch_index_;
-    
+
     // Internal methods
     void timerThreadFunction();
     auto findSwitchProperty(const std::string& switchName) -> INDI::PropertySwitch;
@@ -163,12 +163,12 @@ private:
     void handleSwitchProperty(const INDI::PropertySwitch& property);
     void setupPropertyMappings();
     void synchronizeWithDevice();
-    
+
     // Helper methods
     void updatePowerConsumption() override;
     void updateStatistics(uint32_t index, SwitchState state) override;
     void processTimers() override;
-    
+
     // Utility methods
     auto waitForConnection(int timeout) -> bool;
     auto waitForProperty(const std::string& propertyName, int timeout) -> bool;

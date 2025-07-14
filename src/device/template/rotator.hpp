@@ -52,7 +52,7 @@ public:
     explicit AtomRotator(std::string name) : AtomDriver(std::move(name)) {
         setType("Rotator");
     }
-    
+
     ~AtomRotator() override = default;
 
     // Capabilities
@@ -127,27 +127,27 @@ public:
 protected:
     RotatorState rotator_state_{RotatorState::IDLE};
     RotatorCapabilities rotator_capabilities_;
-    
+
     // Current state
     double current_position_{0.0};
     double target_position_{0.0};
     double current_speed_{10.0};
     bool is_reversed_{false};
     double backlash_angle_{0.0};
-    
+
     // Statistics
     double total_rotation_{0.0};
     double last_move_angle_{0.0};
     int last_move_duration_{0};
-    
+
     // Presets
     std::array<std::optional<double>, 10> presets_;
-    
+
     // Callbacks
     PositionCallback position_callback_;
     MoveCompleteCallback move_complete_callback_;
     TemperatureCallback temperature_callback_;
-    
+
     // Utility methods
     virtual void updateRotatorState(RotatorState state) { rotator_state_ = state; }
     virtual void notifyPositionChange(double position);
@@ -170,7 +170,7 @@ inline auto AtomRotator::getAngularDistance(double from, double to) -> double {
 inline auto AtomRotator::getShortestPath(double from, double to) -> std::pair<double, RotatorDirection> {
     double clockwise = normalizeAngle(to - from);
     double counter_clockwise = 360.0 - clockwise;
-    
+
     if (clockwise <= counter_clockwise) {
         return {clockwise, RotatorDirection::CLOCKWISE};
     } else {

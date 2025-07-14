@@ -41,22 +41,22 @@ public:
     auto setResolution(int x, int y, int width, int height) -> bool {
         if (x < 0 || y < 0 || width <= 0 || height <= 0) return false;
         if (x + width > settings_.maxWidth || y + height > settings_.maxHeight) return false;
-        
+
         settings_.startX = x;
         settings_.startY = y;
         settings_.width = width;
         settings_.height = height;
-        
+
         spdlog::info("Resolution set: {}x{} at ({}, {})", width, height, x, y);
         return true;
     }
 
     auto setBinning(int horizontal, int vertical) -> bool {
         if (horizontal < 1 || vertical < 1 || horizontal > 4 || vertical > 4) return false;
-        
+
         settings_.binX = horizontal;
         settings_.binY = vertical;
-        
+
         spdlog::info("Binning set: {}x{}", horizontal, vertical);
         return true;
     }
@@ -66,7 +66,7 @@ public:
         if (std::find(validTypes.begin(), validTypes.end(), type) == validTypes.end()) {
             return false;
         }
-        
+
         settings_.frameType = type;
         spdlog::info("Frame type set: {}", type);
         return true;
@@ -77,7 +77,7 @@ public:
         if (std::find(validModes.begin(), validModes.end(), mode) == validModes.end()) {
             return false;
         }
-        
+
         settings_.uploadMode = mode;
         spdlog::info("Upload mode set: {}", mode);
         return true;
@@ -120,16 +120,16 @@ public:
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<> dis(0.0, 1.0);
-        
+
         int effectiveWidth = settings_.width / settings_.binX;
         int effectiveHeight = settings_.height / settings_.binY;
         int totalPixels = effectiveWidth * effectiveHeight;
-        
+
         double mean = 1500.0 + dis(gen) * 500.0;
         double stddev = 50.0 + dis(gen) * 20.0;
         double min_val = mean - 3 * stddev;
         double max_val = mean + 3 * stddev;
-        
+
         return json{
             {"statistics", {
                 {"mean", mean},
@@ -170,35 +170,35 @@ auto FrameConfigTask::taskName() -> std::string {
 void FrameConfigTask::execute(const json& params) {
     try {
         validateFrameParameters(params);
-        
+
         spdlog::info("Configuring frame settings: {}", params.dump());
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockFrameController::getInstance();
-        
+
         // Set resolution if provided
         if (params.contains("width") && params.contains("height")) {
             int width = params["width"];
             int height = params["height"];
             int x = params.value("x", 0);
             int y = params.value("y", 0);
-            
+
             if (!controller.setResolution(x, y, width, height)) {
                 throw atom::error::RuntimeError("Failed to set resolution");
             }
         }
-        
+
         // Set binning if provided
         if (params.contains("binning")) {
             auto binning = params["binning"];
             int binX = binning.value("x", 1);
             int binY = binning.value("y", 1);
-            
+
             if (!controller.setBinning(binX, binY)) {
                 throw atom::error::RuntimeError("Failed to set binning");
             }
         }
-        
+
         // Set frame type if provided
         if (params.contains("frame_type")) {
             std::string frameType = params["frame_type"];
@@ -206,7 +206,7 @@ void FrameConfigTask::execute(const json& params) {
                 throw atom::error::RuntimeError("Failed to set frame type");
             }
         }
-        
+
         // Set upload mode if provided
         if (params.contains("upload_mode")) {
             std::string uploadMode = params["upload_mode"];
@@ -215,9 +215,9 @@ void FrameConfigTask::execute(const json& params) {
             }
         }
 #endif
-        
+
         LOG_F(INFO, "Frame configuration completed successfully");
-        
+
     } catch (const std::exception& e) {
         handleFrameError(*this, e);
         throw;
@@ -225,12 +225,12 @@ void FrameConfigTask::execute(const json& params) {
 }
 
 auto FrameConfigTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<FrameConfigTask>("FrameConfig", 
+    auto task = std::make_unique<FrameConfigTask>("FrameConfig",
         [](const json& params) {
             FrameConfigTask taskInstance("FrameConfig", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -243,7 +243,7 @@ void FrameConfigTask::defineParameters(Task& task) {
         .defaultValue = 1920,
         .description = "Frame width in pixels"
     });
-    
+
     task.addParameter({
         .name = "height",
         .type = "integer",
@@ -251,7 +251,7 @@ void FrameConfigTask::defineParameters(Task& task) {
         .defaultValue = 1080,
         .description = "Frame height in pixels"
     });
-    
+
     task.addParameter({
         .name = "x",
         .type = "integer",
@@ -259,7 +259,7 @@ void FrameConfigTask::defineParameters(Task& task) {
         .defaultValue = 0,
         .description = "Frame start X coordinate"
     });
-    
+
     task.addParameter({
         .name = "y",
         .type = "integer",
@@ -267,7 +267,7 @@ void FrameConfigTask::defineParameters(Task& task) {
         .defaultValue = 0,
         .description = "Frame start Y coordinate"
     });
-    
+
     task.addParameter({
         .name = "binning",
         .type = "object",
@@ -275,7 +275,7 @@ void FrameConfigTask::defineParameters(Task& task) {
         .defaultValue = json{{"x", 1}, {"y", 1}},
         .description = "Binning configuration"
     });
-    
+
     task.addParameter({
         .name = "frame_type",
         .type = "string",
@@ -283,7 +283,7 @@ void FrameConfigTask::defineParameters(Task& task) {
         .defaultValue = "FITS",
         .description = "Frame file format"
     });
-    
+
     task.addParameter({
         .name = "upload_mode",
         .type = "string",
@@ -300,14 +300,14 @@ void FrameConfigTask::validateFrameParameters(const json& params) {
             throw atom::error::InvalidArgument("Width must be between 1 and 10000 pixels");
         }
     }
-    
+
     if (params.contains("height")) {
         int height = params["height"];
         if (height <= 0 || height > 10000) {
             throw atom::error::InvalidArgument("Height must be between 1 and 10000 pixels");
         }
     }
-    
+
     if (params.contains("frame_type")) {
         std::string frameType = params["frame_type"];
         std::vector<std::string> validTypes = {"FITS", "NATIVE", "XISF", "JPG", "PNG", "TIFF"};
@@ -331,23 +331,23 @@ auto ROIConfigTask::taskName() -> std::string {
 void ROIConfigTask::execute(const json& params) {
     try {
         validateROIParameters(params);
-        
+
         int x = params["x"];
         int y = params["y"];
         int width = params["width"];
         int height = params["height"];
-        
+
         spdlog::info("Setting ROI: {}x{} at ({}, {})", width, height, x, y);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockFrameController::getInstance();
         if (!controller.setResolution(x, y, width, height)) {
             throw atom::error::RuntimeError("Failed to set ROI");
         }
 #endif
-        
+
         LOG_F(INFO, "ROI configuration completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("ROIConfigTask failed: {}", e.what());
         throw;
@@ -355,12 +355,12 @@ void ROIConfigTask::execute(const json& params) {
 }
 
 auto ROIConfigTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<ROIConfigTask>("ROIConfig", 
+    auto task = std::make_unique<ROIConfigTask>("ROIConfig",
         [](const json& params) {
             ROIConfigTask taskInstance("ROIConfig", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -373,7 +373,7 @@ void ROIConfigTask::defineParameters(Task& task) {
         .defaultValue = 0,
         .description = "ROI start X coordinate"
     });
-    
+
     task.addParameter({
         .name = "y",
         .type = "integer",
@@ -381,7 +381,7 @@ void ROIConfigTask::defineParameters(Task& task) {
         .defaultValue = 0,
         .description = "ROI start Y coordinate"
     });
-    
+
     task.addParameter({
         .name = "width",
         .type = "integer",
@@ -389,7 +389,7 @@ void ROIConfigTask::defineParameters(Task& task) {
         .defaultValue = 1920,
         .description = "ROI width in pixels"
     });
-    
+
     task.addParameter({
         .name = "height",
         .type = "integer",
@@ -406,16 +406,16 @@ void ROIConfigTask::validateROIParameters(const json& params) {
             throw atom::error::InvalidArgument("Missing required parameter: " + param);
         }
     }
-    
+
     int x = params["x"];
     int y = params["y"];
     int width = params["width"];
     int height = params["height"];
-    
+
     if (x < 0 || y < 0 || width <= 0 || height <= 0) {
         throw atom::error::InvalidArgument("Invalid ROI dimensions");
     }
-    
+
     if (x + width > 6000 || y + height > 4000) {
         throw atom::error::InvalidArgument("ROI exceeds maximum sensor dimensions");
     }
@@ -430,21 +430,21 @@ auto BinningConfigTask::taskName() -> std::string {
 void BinningConfigTask::execute(const json& params) {
     try {
         validateBinningParameters(params);
-        
+
         int binX = params.value("horizontal", 1);
         int binY = params.value("vertical", 1);
-        
+
         spdlog::info("Setting binning: {}x{}", binX, binY);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockFrameController::getInstance();
         if (!controller.setBinning(binX, binY)) {
             throw atom::error::RuntimeError("Failed to set binning");
         }
 #endif
-        
+
         LOG_F(INFO, "Binning configuration completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("BinningConfigTask failed: {}", e.what());
         throw;
@@ -452,12 +452,12 @@ void BinningConfigTask::execute(const json& params) {
 }
 
 auto BinningConfigTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<BinningConfigTask>("BinningConfig", 
+    auto task = std::make_unique<BinningConfigTask>("BinningConfig",
         [](const json& params) {
             BinningConfigTask taskInstance("BinningConfig", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -470,7 +470,7 @@ void BinningConfigTask::defineParameters(Task& task) {
         .defaultValue = 1,
         .description = "Horizontal binning factor"
     });
-    
+
     task.addParameter({
         .name = "vertical",
         .type = "integer",
@@ -487,7 +487,7 @@ void BinningConfigTask::validateBinningParameters(const json& params) {
             throw atom::error::InvalidArgument("Horizontal binning must be between 1 and 4");
         }
     }
-    
+
     if (params.contains("vertical")) {
         int binY = params["vertical"];
         if (binY < 1 || binY > 4) {
@@ -505,16 +505,16 @@ auto FrameInfoTask::taskName() -> std::string {
 void FrameInfoTask::execute(const json& params) {
     try {
         spdlog::info("Retrieving frame information");
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockFrameController::getInstance();
         auto frameInfo = controller.getFrameInfo();
-        
+
         spdlog::info("Current frame info: {}", frameInfo.dump(2));
 #endif
-        
+
         LOG_F(INFO, "Frame information retrieved successfully");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("FrameInfoTask failed: {}", e.what());
         throw;
@@ -522,12 +522,12 @@ void FrameInfoTask::execute(const json& params) {
 }
 
 auto FrameInfoTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<FrameInfoTask>("FrameInfo", 
+    auto task = std::make_unique<FrameInfoTask>("FrameInfo",
         [](const json& params) {
             FrameInfoTask taskInstance("FrameInfo", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -545,19 +545,19 @@ auto UploadModeTask::taskName() -> std::string {
 void UploadModeTask::execute(const json& params) {
     try {
         validateUploadParameters(params);
-        
+
         std::string mode = params["mode"];
         spdlog::info("Setting upload mode: {}", mode);
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockFrameController::getInstance();
         if (!controller.setUploadMode(mode)) {
             throw atom::error::RuntimeError("Failed to set upload mode");
         }
 #endif
-        
+
         LOG_F(INFO, "Upload mode configuration completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("UploadModeTask failed: {}", e.what());
         throw;
@@ -565,12 +565,12 @@ void UploadModeTask::execute(const json& params) {
 }
 
 auto UploadModeTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<UploadModeTask>("UploadMode", 
+    auto task = std::make_unique<UploadModeTask>("UploadMode",
         [](const json& params) {
             UploadModeTask taskInstance("UploadMode", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -589,7 +589,7 @@ void UploadModeTask::validateUploadParameters(const json& params) {
     if (!params.contains("mode")) {
         throw atom::error::InvalidArgument("Missing required parameter: mode");
     }
-    
+
     std::string mode = params["mode"];
     std::vector<std::string> validModes = {"CLIENT", "LOCAL", "BOTH", "CLOUD"};
     if (std::find(validModes.begin(), validModes.end(), mode) == validModes.end()) {
@@ -606,16 +606,16 @@ auto FrameStatsTask::taskName() -> std::string {
 void FrameStatsTask::execute(const json& params) {
     try {
         spdlog::info("Analyzing frame statistics");
-        
+
 #ifdef MOCK_CAMERA
         auto& controller = MockFrameController::getInstance();
         auto stats = controller.generateFrameStats();
-        
+
         spdlog::info("Frame statistics: {}", stats.dump(2));
 #endif
-        
+
         LOG_F(INFO, "Frame statistics analysis completed");
-        
+
     } catch (const std::exception& e) {
         spdlog::error("FrameStatsTask failed: {}", e.what());
         throw;
@@ -623,12 +623,12 @@ void FrameStatsTask::execute(const json& params) {
 }
 
 auto FrameStatsTask::createEnhancedTask() -> std::unique_ptr<Task> {
-    auto task = std::make_unique<FrameStatsTask>("FrameStats", 
+    auto task = std::make_unique<FrameStatsTask>("FrameStats",
         [](const json& params) {
             FrameStatsTask taskInstance("FrameStats", nullptr);
             taskInstance.execute(params);
         });
-    
+
     defineParameters(*task);
     return task;
 }
@@ -641,7 +641,7 @@ void FrameStatsTask::defineParameters(Task& task) {
         .defaultValue = false,
         .description = "Include histogram data in statistics"
     });
-    
+
     task.addParameter({
         .name = "region",
         .type = "object",

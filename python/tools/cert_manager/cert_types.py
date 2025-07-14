@@ -589,11 +589,13 @@ class CertificateError(CertificateException):
 
 class KeyGenerationError(CertificateException):
     """Raised when key generation fails."""
+
     pass
 
 
 class CertificateGenerationError(CertificateException):
     """Raised when certificate generation fails."""
+
     pass
 
 

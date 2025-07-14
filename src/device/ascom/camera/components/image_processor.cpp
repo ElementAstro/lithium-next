@@ -29,27 +29,27 @@ ImageProcessor::ImageProcessor(std::shared_ptr<HardwareInterface> hardware)
 
 bool ImageProcessor::initialize() {
     LOG_F(INFO, "Initializing image processor");
-    
+
     if (!hardware_) {
         LOG_F(ERROR, "Hardware interface not available");
         return false;
     }
-    
+
     // Initialize default settings
     settings_.mode = ProcessingMode::NONE;
     settings_.enableCompression = false;
     settings_.compressionFormat = "AUTO";
     settings_.compressionQuality = 95;
-    
+
     currentFormat_ = "FITS";
     compressionEnabled_ = false;
     processingEnabled_ = true;
-    
+
     // Reset statistics
     processedImages_ = 0;
     failedProcessing_ = 0;
     avgProcessingTime_ = 0.0;
-    
+
     LOG_F(INFO, "Image processor initialized successfully");
     return true;
 }
@@ -59,7 +59,7 @@ bool ImageProcessor::setImageFormat(const std::string& format) {
         LOG_F(ERROR, "Invalid image format: {}", format);
         return false;
     }
-    
+
     currentFormat_ = format;
     LOG_F(INFO, "Image format set to: {}", format);
     return true;
@@ -86,8 +86,8 @@ bool ImageProcessor::isImageCompressionEnabled() const {
 bool ImageProcessor::setProcessingSettings(const ProcessingSettings& settings) {
     std::lock_guard<std::mutex> lock(settingsMutex_);
     settings_ = settings;
-    
-    LOG_F(INFO, "Processing settings updated: mode={}, compression={}", 
+
+    LOG_F(INFO, "Processing settings updated: mode={}, compression={}",
           static_cast<int>(settings.mode), settings.enableCompression);
     return true;
 }
@@ -103,13 +103,13 @@ std::shared_ptr<AtomCameraFrame> ImageProcessor::processImage(std::shared_ptr<At
         failedProcessing_++;
         return nullptr;
     }
-    
+
     if (!processingEnabled_) {
         return frame; // Pass through without processing
     }
-    
+
     auto startTime = std::chrono::steady_clock::now();
-    
+
     try {
         // Apply format conversion if needed
         auto processedFrame = convertFormat(frame, currentFormat_);
@@ -118,7 +118,7 @@ std::shared_ptr<AtomCameraFrame> ImageProcessor::processImage(std::shared_ptr<At
             failedProcessing_++;
             return nullptr;
         }
-        
+
         // Apply compression if enabled
         if (compressionEnabled_) {
             processedFrame = applyCompression(processedFrame);
@@ -127,17 +127,17 @@ std::shared_ptr<AtomCameraFrame> ImageProcessor::processImage(std::shared_ptr<At
                 processedFrame = frame;
             }
         }
-        
+
         // Update statistics
         auto endTime = std::chrono::steady_clock::now();
         auto processingTime = std::chrono::duration<double>(endTime - startTime).count();
-        
+
         processedImages_++;
         avgProcessingTime_ = (avgProcessingTime_ * (processedImages_ - 1) + processingTime) / processedImages_;
-        
+
         LOG_F(INFO, "Image processed successfully in {:.3f}s", processingTime);
         return processedFrame;
-        
+
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Image processing failed: {}", e.what());
         failedProcessing_++;
@@ -149,27 +149,27 @@ ImageProcessor::ImageQuality ImageProcessor::analyzeImageQuality(std::shared_ptr
     if (!frame) {
         return ImageQuality{};
     }
-    
+
     ImageQuality quality = performQualityAnalysis(frame);
-    
+
     // Store as last analysis result
     {
         std::lock_guard<std::mutex> lock(qualityMutex_);
         lastQuality_ = quality;
     }
-    
+
     return quality;
 }
 
 std::map<std::string, double> ImageProcessor::getProcessingStatistics() const {
     std::map<std::string, double> stats;
-    
+
     stats["processed_images"] = processedImages_.load();
     stats["failed_processing"] = failedProcessing_.load();
     stats["average_processing_time"] = avgProcessingTime_.load();
-    stats["success_rate"] = processedImages_ > 0 ? 
+    stats["success_rate"] = processedImages_ > 0 ?
         (static_cast<double>(processedImages_ - failedProcessing_) / processedImages_) : 0.0;
-    
+
     return stats;
 }
 
@@ -180,11 +180,11 @@ ImageProcessor::ImageQuality ImageProcessor::getLastImageQuality() const {
 
 std::map<std::string, double> ImageProcessor::getPerformanceMetrics() const {
     auto stats = getProcessingStatistics();
-    
+
     // Add performance-specific metrics
     stats["compression_enabled"] = compressionEnabled_.load() ? 1.0 : 0.0;
     stats["processing_enabled"] = processingEnabled_.load() ? 1.0 : 0.0;
-    
+
     return stats;
 }
 
@@ -218,7 +218,7 @@ std::shared_ptr<AtomCameraFrame> ImageProcessor::applyCompression(std::shared_pt
 ImageProcessor::ImageQuality ImageProcessor::performQualityAnalysis(std::shared_ptr<AtomCameraFrame> frame) {
     // Stub implementation - in a real implementation, this would analyze the image
     ImageQuality quality;
-    
+
     // Return some dummy values for now
     quality.snr = 25.0;
     quality.fwhm = 2.5;
@@ -226,7 +226,7 @@ ImageProcessor::ImageQuality ImageProcessor::performQualityAnalysis(std::shared_
     quality.contrast = 0.3;
     quality.noise = 10.0;
     quality.stars = 150;
-    
+
     return quality;
 }
 

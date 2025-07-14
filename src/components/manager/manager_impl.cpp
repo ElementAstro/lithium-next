@@ -223,11 +223,11 @@ auto ComponentManagerImpl::unloadComponent(const ParamsType& params) -> std::exp
         
         // Remove from dependency graph
         dependencyGraph_.removeNode(name);
-        
+
         notifyListeners(name, ComponentEvent::PostUnload);
         logger_->info("Component {} unloaded successfully", name);
         return true;
-        
+
     } catch (const json::exception& e) {
         auto error = std::format("JSON error while unloading component: {}", e.what());
         logger_->error(error);
@@ -246,7 +246,7 @@ auto ComponentManagerImpl::scanComponents(std::string_view path) -> std::vector<
         fileTracker_->scan();
         fileTracker_->compare();
         auto differences = fileTracker_->getDifferences();
-        
+
         std::vector<std::string> newFiles;
         
         // Traditional iteration since json doesn't support ranges yet
@@ -294,7 +294,7 @@ auto ComponentManagerImpl::getComponentInfo(std::string_view component_name) con
         if (!mutable_components.find(componentKey).has_value()) {
             return std::nullopt;
         }
-        
+
         json info;
         info["name"] = component_name;
         if (auto stateResult = mutable_states.find(componentKey); stateResult.has_value()) {
@@ -383,7 +383,7 @@ auto ComponentManagerImpl::initializeComponent(std::string_view name) -> std::ex
             logger_->error(error);
             return std::unexpected(error);
         }
-        
+
         auto comp = getComponent(name);
         if (comp.has_value()) {
             auto component = comp->lock();

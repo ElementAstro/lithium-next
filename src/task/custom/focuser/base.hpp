@@ -141,8 +141,8 @@ public:
      * @param compensationRate Steps per degree Celsius.
      * @return Number of steps to compensate.
      */
-    int calculateTemperatureCompensation(double currentTemp, 
-                                       double referenceTemp, 
+    int calculateTemperatureCompensation(double currentTemp,
+                                       double referenceTemp,
                                        double compensationRate = 2.0);
 
     /**

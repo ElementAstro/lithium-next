@@ -93,7 +93,7 @@ struct CameraCapabilities {
     bool hasOffset{false};
     bool hasTemperature{false};
     BayerPattern bayerPattern{BayerPattern::MONO};
-    
+
     // Enhanced capabilities
     bool canRecordVideo{false};
     bool supportsSequences{false};
@@ -223,11 +223,11 @@ public:
     virtual auto setGain(int gain) -> bool = 0;
     [[nodiscard]] virtual auto getGain() -> std::optional<int> = 0;
     [[nodiscard]] virtual auto getGainRange() -> std::pair<int, int> = 0;
-    
+
     virtual auto setOffset(int offset) -> bool = 0;
     [[nodiscard]] virtual auto getOffset() -> std::optional<int> = 0;
     [[nodiscard]] virtual auto getOffsetRange() -> std::pair<int, int> = 0;
-    
+
     virtual auto setISO(int iso) -> bool = 0;
     [[nodiscard]] virtual auto getISO() -> std::optional<int> = 0;
     [[nodiscard]] virtual auto getISOList() -> std::vector<int> = 0;
@@ -236,11 +236,11 @@ public:
     virtual auto getResolution() -> std::optional<AtomCameraFrame::Resolution> = 0;
     virtual auto setResolution(int x, int y, int width, int height) -> bool = 0;
     virtual auto getMaxResolution() -> AtomCameraFrame::Resolution = 0;
-    
+
     virtual auto getBinning() -> std::optional<AtomCameraFrame::Binning> = 0;
     virtual auto setBinning(int horizontal, int vertical) -> bool = 0;
     virtual auto getMaxBinning() -> AtomCameraFrame::Binning = 0;
-    
+
     virtual auto setFrameType(FrameType type) -> bool = 0;
     virtual auto getFrameType() -> FrameType = 0;
     virtual auto setUploadMode(UploadMode mode) -> bool = 0;
@@ -271,20 +271,20 @@ public:
     virtual auto getVideoExposure() const -> double = 0;
     virtual auto setVideoGain(int gain) -> bool = 0;
     virtual auto getVideoGain() const -> int = 0;
-    
+
     // Image sequence capabilities (new)
     virtual auto startSequence(int count, double exposure, double interval) -> bool = 0;
     virtual auto stopSequence() -> bool = 0;
     virtual auto isSequenceRunning() const -> bool = 0;
     virtual auto getSequenceProgress() const -> std::pair<int, int> = 0; // current, total
-    
+
     // Advanced image processing (new)
     virtual auto setImageFormat(const std::string& format) -> bool = 0;
     virtual auto getImageFormat() const -> std::string = 0;
     virtual auto enableImageCompression(bool enable) -> bool = 0;
     virtual auto isImageCompressionEnabled() const -> bool = 0;
     virtual auto getSupportedImageFormats() const -> std::vector<std::string> = 0;
-    
+
     // Image quality and statistics (new)
     virtual auto getFrameStatistics() const -> std::map<std::string, double> = 0;
     virtual auto getTotalFramesReceived() const -> uint64_t = 0;
@@ -311,28 +311,28 @@ protected:
     CameraCapabilities camera_capabilities_;
     TemperatureInfo temperature_info_;
     CameraState camera_state_{CameraState::IDLE};
-    
+
     // 曝光参数
     double current_exposure_duration_{0.0};
     std::chrono::system_clock::time_point exposure_start_time_;
-    
+
     // 统计信息
     uint32_t exposure_count_{0};
     double last_exposure_duration_{0.0};
-    
+
     // 回调函数
     ExposureCallback exposure_callback_;
     TemperatureCallback temperature_callback_;
     VideoFrameCallback video_callback_;
     SequenceCallback sequence_callback_;
     ImageQualityCallback image_quality_callback_;
-    
+
     // Enhanced information structures
     VideoInfo video_info_;
     SequenceInfo sequence_info_;
     ImageQuality last_image_quality_;
     FrameStatistics frame_statistics_;
-    
+
     // 辅助方法
     virtual void updateCameraState(CameraState state) { camera_state_ = state; }
     virtual void notifyExposureComplete(bool success, const std::string& message = "");
@@ -340,7 +340,7 @@ protected:
     virtual void notifyVideoFrame(std::shared_ptr<AtomCameraFrame> frame);
     virtual void notifySequenceProgress(SequenceState state, int current, int total);
     virtual void notifyImageQuality(const ImageQuality& quality);
-    
+
     // Enhanced getter methods for information structures
     const VideoInfo& getVideoInfo() const { return video_info_; }
     const SequenceInfo& getSequenceInfo() const { return sequence_info_; }

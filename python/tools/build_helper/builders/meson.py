@@ -41,7 +41,7 @@ class MesonBuilder(BuildHelperBase):
             meson_options,
             env_vars,
             verbose,
-            parallel
+            parallel,
         )
         self.build_type = build_type
 
@@ -95,8 +95,7 @@ class MesonBuilder(BuildHelperBase):
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Meson configuration failed: {result.error}")
-            raise ConfigurationError(
-                f"Meson configuration failed: {result.error}")
+            raise ConfigurationError(f"Meson configuration failed: {result.error}")
 
         return result
 
@@ -104,14 +103,15 @@ class MesonBuilder(BuildHelperBase):
         """Build the project using Meson asynchronously."""
         self.status = BuildStatus.BUILDING
         logger.info(
-            f"Building {'target ' + target if target else 'project'} using Meson")
+            f"Building {'target ' + target if target else 'project'} using Meson"
+        )
 
         build_cmd = [
             "meson",
             "compile",
             "-C",
             str(self.build_dir),
-            f"-j{self.parallel}"
+            f"-j{self.parallel}",
         ]
 
         if target:
@@ -126,7 +126,8 @@ class MesonBuilder(BuildHelperBase):
         if result.success:
             self.status = BuildStatus.COMPLETED
             logger.success(
-                f"Build of {'target ' + target if target else 'project'} successful")
+                f"Build of {'target ' + target if target else 'project'} successful"
+            )
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Build failed: {result.error}")
@@ -149,13 +150,11 @@ class MesonBuilder(BuildHelperBase):
 
         if result.success:
             self.status = BuildStatus.COMPLETED
-            logger.success(
-                f"Project installed successfully to {self.install_prefix}")
+            logger.success(f"Project installed successfully to {self.install_prefix}")
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Installation failed: {result.error}")
-            raise InstallationError(
-                f"Meson installation failed: {result.error}")
+            raise InstallationError(f"Meson installation failed: {result.error}")
 
         return result
 
@@ -197,7 +196,8 @@ class MesonBuilder(BuildHelperBase):
             result = await self.build(doc_target)
             if result.success:
                 logger.success(
-                    f"Documentation generated successfully with target '{doc_target}'")
+                    f"Documentation generated successfully with target '{doc_target}'"
+                )
             return result
         except BuildError as e:
             logger.error(f"Documentation generation failed: {str(e)}")

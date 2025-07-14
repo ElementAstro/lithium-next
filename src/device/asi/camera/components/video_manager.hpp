@@ -35,7 +35,7 @@ class HardwareInterface;
 
 /**
  * @brief Video Manager for ASI Camera
- * 
+ *
  * Manages video capture, streaming, and recording operations with
  * frame buffering, real-time processing, and format conversion.
  */
@@ -92,38 +92,38 @@ public:
     bool startVideo(const VideoSettings& settings);
     bool stopVideo();
     bool isStreaming() const { return state_ == VideoState::STREAMING; }
-    
+
     // State and Status
     VideoState getState() const { return state_; }
     std::string getStateString() const;
     VideoStatistics getStatistics() const;
     void resetStatistics();
-    
+
     // Frame Access
     std::shared_ptr<AtomCameraFrame> getLatestFrame();
     bool hasFrameAvailable() const;
     size_t getBufferSize() const;
     size_t getBufferUsage() const;
-    
+
     // Settings Management
     VideoSettings getCurrentSettings() const;
     bool updateSettings(const VideoSettings& settings);
     bool updateExposure(int exposureUs);
     bool updateGain(int gain);
     bool updateFrameRate(double fps);
-    
+
     // Recording Control
     bool startRecording(const std::string& filename, const std::string& codec = "H264");
     bool stopRecording();
     bool isRecording() const { return recording_; }
     std::string getRecordingFilename() const;
     uint64_t getRecordedFrames() const { return recordedFrames_; }
-    
+
     // Callbacks
     void setFrameCallback(FrameCallback callback);
     void setStatisticsCallback(StatisticsCallback callback);
     void setErrorCallback(ErrorCallback callback);
-    
+
     // Configuration
     void setFrameBufferSize(size_t size);
     void setStatisticsUpdateInterval(std::chrono::milliseconds interval) { statisticsInterval_ = interval; }
@@ -132,41 +132,41 @@ public:
 private:
     // Hardware interface
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // State management
     std::atomic<VideoState> state_{VideoState::IDLE};
     VideoSettings currentSettings_;
     VideoStatistics statistics_;
-    
+
     // Threading
     std::thread captureThread_;
     std::thread processingThread_;
     std::atomic<bool> stopRequested_{false};
-    
+
     // Frame buffering
     std::queue<std::shared_ptr<AtomCameraFrame>> frameBuffer_;
     mutable std::mutex bufferMutex_;
     std::condition_variable bufferCondition_;
     size_t maxBufferSize_ = 10;
     bool dropFramesWhenFull_ = true;
-    
+
     // Statistics and monitoring
     std::chrono::steady_clock::time_point lastStatisticsUpdate_;
     std::chrono::milliseconds statisticsInterval_{1000};
     std::thread statisticsThread_;
-    
+
     // Recording
     std::atomic<bool> recording_{false};
     std::string recordingFilename_;
     std::string recordingCodec_;
     std::atomic<uint64_t> recordedFrames_{0};
-    
+
     // Callbacks
     FrameCallback frameCallback_;
     StatisticsCallback statisticsCallback_;
     ErrorCallback errorCallback_;
     std::mutex callbackMutex_;
-    
+
     // Worker methods
     void captureWorker();
     void processingWorker();
@@ -180,11 +180,11 @@ private:
     void notifyFrame(std::shared_ptr<AtomCameraFrame> frame);
     void notifyStatistics(const VideoStatistics& stats);
     void notifyError(const std::string& error);
-    
+
     // Helper methods
     void updateState(VideoState newState);
     bool validateVideoSettings(const VideoSettings& settings);
-    std::shared_ptr<AtomCameraFrame> createFrameFromBuffer(const unsigned char* buffer, 
+    std::shared_ptr<AtomCameraFrame> createFrameFromBuffer(const unsigned char* buffer,
                                                            const VideoSettings& settings);
     size_t calculateFrameSize(const VideoSettings& settings);
     bool saveFrameToFile(std::shared_ptr<AtomCameraFrame> frame);

@@ -39,7 +39,7 @@ public:
 protected:
     void recordMove();
     void updateTemperature(double temp);
-    
+
 private:
     std::chrono::steady_clock::time_point startTime_;
     std::vector<std::chrono::milliseconds> moveTimes_;

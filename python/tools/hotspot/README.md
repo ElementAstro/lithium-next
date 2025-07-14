@@ -210,10 +210,10 @@ namespace py = pybind11;
 PYBIND11_MODULE(my_cpp_module, m) {
     py::object wifi_hotspot = py::module::import("wifi_hotspot_manager");
     py::object create_module = wifi_hotspot.attr("create_pybind11_module")();
-    
+
     py::object HotspotManager = create_module["HotspotManager"];
     py::object AuthenticationType = create_module["AuthenticationType"];
-    
+
     // Expose to C++
     m.attr("HotspotManager") = HotspotManager;
     m.attr("AuthenticationType") = AuthenticationType;

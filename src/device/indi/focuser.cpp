@@ -14,9 +14,9 @@ ATOM_MODULE(focuser_indi, [](Component &component) {
         logger = spdlog::default_logger();
     }
     logger->info("Registering modular focuser_indi module...");
-    
+
     component.doc("INDI Focuser - Modular Implementation");
-    
+
     // Device lifecycle
     component.def("initialize", &ModularFocuser::initialize, "device",
                   "Initialize a focuser device.");
@@ -151,7 +151,7 @@ ATOM_MODULE(focuser_indi, [](Component &component) {
             return instance;
         },
         "device", "Create a new modular focuser instance.");
-    
+
     component.defType<ModularFocuser>("focuser_indi", "device",
                                    "Define a new modular focuser instance.");
 

@@ -48,7 +48,7 @@ enum class ASCOMDriveRate {
     SIDEREAL = 0,
     LUNAR = 1,
     SOLAR = 2,
-    KING = 3  
+    KING = 3
 };
 
 // ASCOM Alpaca REST API constants
@@ -269,7 +269,7 @@ protected:
     auto monitoringLoop() -> void;
 
 #ifdef _WIN32
-    auto invokeCOMMethod(const std::string &method, VARIANT* params = nullptr, 
+    auto invokeCOMMethod(const std::string &method, VARIANT* params = nullptr,
                         int param_count = 0) -> std::optional<VARIANT>;
     auto getCOMProperty(const std::string &property) -> std::optional<VARIANT>;
     auto setCOMProperty(const std::string &property, const VARIANT &value) -> bool;

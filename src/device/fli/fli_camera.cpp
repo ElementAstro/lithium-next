@@ -81,7 +81,7 @@ FLICamera::FLICamera(const std::string& name)
     , total_frames_(0)
     , dropped_frames_(0)
     , last_frame_result_(nullptr) {
-    
+
     LOG_F(INFO, "Created FLI camera instance: {}", name);
 }
 
@@ -97,7 +97,7 @@ FLICamera::~FLICamera() {
 
 auto FLICamera::initialize() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_initialized_) {
         LOG_F(WARNING, "FLI camera already initialized");
         return true;
@@ -119,7 +119,7 @@ auto FLICamera::initialize() -> bool {
 
 auto FLICamera::destroy() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_initialized_) {
         return true;
     }
@@ -139,7 +139,7 @@ auto FLICamera::destroy() -> bool {
 
 auto FLICamera::connect(const std::string& deviceName, int timeout, int maxRetry) -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_connected_) {
         LOG_F(WARNING, "FLI camera already connected");
         return true;
@@ -200,10 +200,10 @@ auto FLICamera::connect(const std::string& deviceName, int timeout, int maxRetry
         is_color_camera_ = false;
         has_shutter_ = true;
         has_focuser_ = true;
-        
+
         roi_width_ = max_width_;
         roi_height_ = max_height_;
-        
+
         is_connected_ = true;
         LOG_F(INFO, "Connected to FLI camera simulator");
         return true;
@@ -220,7 +220,7 @@ auto FLICamera::connect(const std::string& deviceName, int timeout, int maxRetry
 
 auto FLICamera::disconnect() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_connected_) {
         return true;
     }
@@ -259,7 +259,7 @@ auto FLICamera::scan() -> std::vector<std::string> {
     try {
         char **names;
         long domain = FLIDOMAIN_USB | FLIDEVICE_CAMERA;
-        
+
         if (FLIList(domain, &names) == 0) {
             for (int i = 0; names[i] != nullptr; ++i) {
                 devices.push_back(std::string(names[i]));
@@ -283,7 +283,7 @@ auto FLICamera::scan() -> std::vector<std::string> {
 
 auto FLICamera::startExposure(double duration) -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -316,13 +316,13 @@ auto FLICamera::startExposure(double duration) -> bool {
 
 auto FLICamera::abortExposure() -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_exposing_) {
         return true;
     }
 
     exposure_abort_requested_ = true;
-    
+
 #ifdef LITHIUM_FLI_CAMERA_ENABLED
     FLICancelExposure(fli_device_);
 #endif
@@ -363,7 +363,7 @@ auto FLICamera::getExposureRemaining() const -> double {
 
 auto FLICamera::getExposureResult() -> std::shared_ptr<AtomCameraFrame> {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (is_exposing_) {
         LOG_F(WARNING, "Exposure still in progress");
         return nullptr;
@@ -385,7 +385,7 @@ auto FLICamera::saveImage(const std::string& path) -> bool {
 // Temperature control implementation
 auto FLICamera::startCooling(double targetTemp) -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -410,7 +410,7 @@ auto FLICamera::startCooling(double targetTemp) -> bool {
 
 auto FLICamera::stopCooling() -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     cooler_enabled_ = false;
 
 #ifdef LITHIUM_FLI_CAMERA_ENABLED
@@ -662,7 +662,7 @@ auto FLICamera::openCamera(int cameraIndex) -> bool {
 #ifdef LITHIUM_FLI_CAMERA_ENABLED
     char **names;
     long domain = FLIDOMAIN_USB | FLIDEVICE_CAMERA;
-    
+
     if (FLIList(domain, &names) == 0) {
         if (cameraIndex >= 0 && names[cameraIndex] != nullptr) {
             if (FLIOpen(&fli_device_, names[cameraIndex], domain) == 0) {
@@ -674,7 +674,7 @@ auto FLICamera::openCamera(int cameraIndex) -> bool {
                 return true;
             }
         }
-        
+
         // Cleanup on failure
         for (int i = 0; names[i] != nullptr; ++i) {
             delete[] names[i];
@@ -705,18 +705,18 @@ auto FLICamera::setupCameraParameters() -> bool {
         max_width_ = lr_x - ul_x;
         max_height_ = lr_y - ul_y;
     }
-    
+
     double pixel_x, pixel_y;
     if (FLIGetPixelSize(fli_device_, &pixel_x, &pixel_y) == 0) {
         pixel_size_x_ = pixel_x;
         pixel_size_y_ = pixel_y;
     }
-    
+
     char model[256];
     if (FLIGetModel(fli_device_, model, sizeof(model)) == 0) {
         camera_model_ = std::string(model);
     }
-    
+
     // Check for focuser
     long focuser_extent;
     if (FLIGetFocuserExtent(fli_device_, &focuser_extent) == 0) {
@@ -727,7 +727,7 @@ auto FLICamera::setupCameraParameters() -> bool {
 
     roi_width_ = max_width_;
     roi_height_ = max_height_;
-    
+
     return readCameraCapabilities();
 }
 
@@ -757,7 +757,7 @@ auto FLICamera::exposureThreadFunction() -> void {
             is_exposing_ = false;
             return;
         }
-        
+
         // Set exposure time
         if (FLISetExposureTime(fli_device_, duration_ms) != 0) {
             LOG_F(ERROR, "Failed to set exposure time");
@@ -771,13 +771,13 @@ auto FLICamera::exposureThreadFunction() -> void {
             if (exposure_abort_requested_) {
                 break;
             }
-            
+
             if (FLIGetExposureStatus(fli_device_, &time_left) != 0) {
                 LOG_F(ERROR, "Failed to get exposure status");
                 is_exposing_ = false;
                 return;
             }
-            
+
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         } while (time_left > 0);
 
@@ -822,7 +822,7 @@ auto FLICamera::exposureThreadFunction() -> void {
 
 auto FLICamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
     auto frame = std::make_shared<AtomCameraFrame>();
-    
+
     frame->resolution.width = roi_width_ / bin_x_;
     frame->resolution.height = roi_height_ / bin_y_;
     frame->binning.horizontal = bin_x_;
@@ -842,7 +842,7 @@ auto FLICamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
 #ifdef LITHIUM_FLI_CAMERA_ENABLED
     // Download actual image data from camera
     auto data_buffer = std::make_unique<uint8_t[]>(frame->size);
-    
+
     if (FLIGrabRow(fli_device_, data_buffer.get(), frame->resolution.width) == 0) {
         frame->data = data_buffer.release();
     } else {
@@ -853,7 +853,7 @@ auto FLICamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
     // Generate simulated image data
     auto data_buffer = std::make_unique<uint8_t[]>(frame->size);
     frame->data = data_buffer.release();
-    
+
     // Fill with simulated star field (16-bit)
     uint16_t* data16 = static_cast<uint16_t*>(frame->data);
     for (size_t i = 0; i < pixelCount; ++i) {
@@ -886,7 +886,7 @@ auto FLICamera::updateTemperatureInfo() -> bool {
     double temp;
     if (FLIGetTemperature(fli_device_, &temp) == 0) {
         current_temperature_ = temp;
-        
+
         // Calculate cooling power (estimation)
         double temp_diff = std::abs(target_temperature_ - current_temperature_);
         cooling_power_ = std::min(temp_diff * 10.0, 100.0);
@@ -909,9 +909,9 @@ auto FLICamera::isValidGain(int gain) const -> bool {
 }
 
 auto FLICamera::isValidResolution(int x, int y, int width, int height) const -> bool {
-    return x >= 0 && y >= 0 && 
+    return x >= 0 && y >= 0 &&
            width > 0 && height > 0 &&
-           x + width <= max_width_ && 
+           x + width <= max_width_ &&
            y + height <= max_height_;
 }
 

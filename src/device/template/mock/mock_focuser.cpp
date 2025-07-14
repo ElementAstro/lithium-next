@@ -10,9 +10,9 @@
 #include <cmath>
 #include <thread>
 
-MockFocuser::MockFocuser(const std::string& name) 
+MockFocuser::MockFocuser(const std::string& name)
     : AtomFocuser(name), gen_(rd_()) {
-    
+
     // Set up mock capabilities
     FocuserCapabilities caps;
     caps.canAbsoluteMove = true;
@@ -26,7 +26,7 @@ MockFocuser::MockFocuser(const std::string& name)
     caps.maxPosition = MOCK_MAX_POSITION;
     caps.minPosition = MOCK_MIN_POSITION;
     setFocuserCapabilities(caps);
-    
+
     // Set device info
     DeviceInfo info;
     info.driverName = "Mock Focuser Driver";
@@ -53,7 +53,7 @@ bool MockFocuser::destroy() {
 bool MockFocuser::connect(const std::string& port, int timeout, int maxRetry) {
     // Simulate connection delay
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    
+
     connected_ = true;
     setState(DeviceState::IDLE);
     updateTimestamp();
@@ -64,7 +64,7 @@ bool MockFocuser::disconnect() {
     if (is_moving_) {
         abortMove();
     }
-    
+
     connected_ = false;
     setState(DeviceState::UNKNOWN);
     return true;
@@ -141,27 +141,27 @@ auto MockFocuser::moveSteps(int steps) -> bool {
     if (is_moving_ || !isConnected()) {
         return false;
     }
-    
+
     int direction_multiplier = is_reversed_ ? -1 : 1;
     int actual_steps = steps * direction_multiplier;
-    
+
     // Apply backlash compensation if needed
     if (backlash_enabled_) {
         actual_steps = applyBacklashCompensation(actual_steps);
     }
-    
+
     int new_position = current_position_ + actual_steps;
-    
+
     if (!validatePosition(new_position)) {
         return false;
     }
-    
+
     target_position_ = new_position;
     last_move_steps_ = steps;
-    
+
     // Start movement simulation
     std::thread([this, actual_steps]() { simulateMovement(actual_steps); }).detach();
-    
+
     return true;
 }
 
@@ -169,23 +169,23 @@ auto MockFocuser::moveToPosition(int position) -> bool {
     if (is_moving_ || !isConnected()) {
         return false;
     }
-    
+
     if (!validatePosition(position)) {
         return false;
     }
-    
+
     int steps = position - current_position_;
     target_position_ = position;
     last_move_steps_ = std::abs(steps);
-    
+
     // Apply backlash compensation if needed
     if (backlash_enabled_) {
         steps = applyBacklashCompensation(steps);
     }
-    
+
     // Start movement simulation
     std::thread([this, steps]() { simulateMovement(steps); }).detach();
-    
+
     return true;
 }
 
@@ -197,15 +197,15 @@ auto MockFocuser::moveForDuration(int durationMs) -> bool {
     if (is_moving_ || !isConnected()) {
         return false;
     }
-    
+
     // Calculate steps based on duration and speed
     double steps_per_ms = current_speed_ / 1000.0;
     int steps = static_cast<int>(durationMs * steps_per_ms);
-    
+
     if (current_direction_ == FocusDirection::IN) {
         steps = -steps;
     }
-    
+
     return moveSteps(steps);
 }
 
@@ -213,11 +213,11 @@ auto MockFocuser::abortMove() -> bool {
     if (!is_moving_) {
         return false;
     }
-    
+
     is_moving_ = false;
     updateFocuserState(FocuserState::IDLE);
     notifyMoveComplete(false, "Movement aborted by user");
-    
+
     return true;
 }
 
@@ -225,7 +225,7 @@ auto MockFocuser::syncPosition(int position) -> bool {
     if (is_moving_) {
         return false;
     }
-    
+
     current_position_ = position;
     notifyPositionChange(position);
     return true;
@@ -264,7 +264,7 @@ auto MockFocuser::getExternalTemperature() -> std::optional<double> {
     std::uniform_real_distribution<double> temp_dist(-0.5, 0.5);
     external_temperature_ += temp_dist(gen_);
     external_temperature_ = std::clamp(external_temperature_, -20.0, 40.0);
-    
+
     return external_temperature_;
 }
 
@@ -284,22 +284,22 @@ auto MockFocuser::getTemperatureCompensation() -> TemperatureCompensation {
 
 auto MockFocuser::setTemperatureCompensation(const TemperatureCompensation& comp) -> bool {
     temperature_compensation_ = comp;
-    
+
     if (comp.enabled) {
         // Start temperature compensation simulation
         std::thread([this]() { simulateTemperatureCompensation(); }).detach();
     }
-    
+
     return true;
 }
 
 auto MockFocuser::enableTemperatureCompensation(bool enable) -> bool {
     temperature_compensation_.enabled = enable;
-    
+
     if (enable) {
         std::thread([this]() { simulateTemperatureCompensation(); }).detach();
     }
-    
+
     return true;
 }
 
@@ -307,19 +307,19 @@ auto MockFocuser::startAutoFocus() -> bool {
     if (is_moving_ || is_auto_focusing_) {
         return false;
     }
-    
+
     is_auto_focusing_ = true;
     auto_focus_progress_ = 0.0;
-    
+
     // Set up auto focus parameters
     af_start_position_ = current_position_ - 1000;
     af_end_position_ = current_position_ + 1000;
     af_current_step_ = 0;
     af_total_steps_ = 20;
-    
+
     // Start auto focus simulation
     std::thread([this]() { simulateAutoFocus(); }).detach();
-    
+
     return true;
 }
 
@@ -387,33 +387,33 @@ auto MockFocuser::getLastMoveDuration() -> int {
 void MockFocuser::simulateMovement(int steps) {
     is_moving_ = true;
     updateFocuserState(FocuserState::MOVING);
-    
+
     auto start_time = std::chrono::steady_clock::now();
-    
+
     // Calculate movement duration based on speed and steps
     double movement_time = std::abs(steps) / current_speed_; // seconds
     auto movement_duration = std::chrono::duration<double>(movement_time);
-    
+
     // Simulate gradual movement
     int total_steps = std::abs(steps);
     int step_direction = (steps > 0) ? 1 : -1;
-    
+
     for (int i = 0; i < total_steps && is_moving_; ++i) {
         std::this_thread::sleep_for(movement_duration / total_steps);
         current_position_ += step_direction;
-        
+
         // Update direction tracking for backlash
         last_direction_ = (step_direction > 0) ? FocusDirection::OUT : FocusDirection::IN;
-        
+
         // Notify position change periodically
         if (i % 10 == 0) {
             notifyPositionChange(current_position_);
         }
     }
-    
+
     auto end_time = std::chrono::steady_clock::now();
     last_move_duration_ = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    
+
     if (is_moving_) {
         total_steps_ += std::abs(steps);
         is_moving_ = false;
@@ -425,21 +425,21 @@ void MockFocuser::simulateMovement(int steps) {
 
 void MockFocuser::simulateTemperatureCompensation() {
     double last_temp = external_temperature_;
-    
+
     while (temperature_compensation_.enabled && isConnected()) {
         std::this_thread::sleep_for(std::chrono::seconds(30));
-        
+
         double current_temp = getExternalTemperature().value_or(20.0);
         double temp_change = current_temp - last_temp;
-        
+
         if (std::abs(temp_change) > 0.1) {
             int compensation_steps = static_cast<int>(temp_change * temperature_compensation_.coefficient);
-            
+
             if (std::abs(compensation_steps) > 0 && !is_moving_) {
                 moveSteps(compensation_steps);
                 temperature_compensation_.compensationOffset += compensation_steps;
             }
-            
+
             last_temp = current_temp;
         }
     }
@@ -448,28 +448,28 @@ void MockFocuser::simulateTemperatureCompensation() {
 void MockFocuser::simulateAutoFocus() {
     // Simulate auto focus process
     int step_size = (af_end_position_ - af_start_position_) / af_total_steps_;
-    
+
     for (af_current_step_ = 0; af_current_step_ < af_total_steps_ && is_auto_focusing_; ++af_current_step_) {
         int target_pos = af_start_position_ + (af_current_step_ * step_size);
-        
+
         if (moveToPosition(target_pos)) {
             // Wait for movement to complete
             while (is_moving_ && is_auto_focusing_) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            
+
             // Simulate image capture and analysis delay
             std::this_thread::sleep_for(std::chrono::seconds(2));
-            
+
             auto_focus_progress_ = static_cast<double>(af_current_step_ + 1) / af_total_steps_;
         }
     }
-    
+
     if (is_auto_focusing_) {
         // Move to best focus position (simulate finding it in the middle)
         int best_position = (af_start_position_ + af_end_position_) / 2;
         moveToPosition(best_position);
-        
+
         is_auto_focusing_ = false;
         auto_focus_progress_ = 1.0;
     }
@@ -483,14 +483,14 @@ int MockFocuser::applyBacklashCompensation(int steps) {
     if (!backlash_enabled_ || backlash_steps_ == 0) {
         return steps;
     }
-    
+
     FocusDirection new_direction = (steps > 0) ? FocusDirection::OUT : FocusDirection::IN;
-    
+
     // If changing direction, add backlash compensation
     if (last_direction_ != FocusDirection::NONE && last_direction_ != new_direction) {
         int backlash_compensation = (new_direction == FocusDirection::OUT) ? backlash_steps_ : -backlash_steps_;
         return steps + backlash_compensation;
     }
-    
+
     return steps;
 }

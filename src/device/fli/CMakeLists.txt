@@ -39,7 +39,7 @@ endif()
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )
-        
+
         target_link_libraries(lithium_fli_camera
             PUBLIC
                 ${FLI_LIBRARY}
@@ -48,7 +48,7 @@ endif()
             PRIVATE
                 Threads::Threads
         )
-        
+
         # Set properties
         set_target_properties(lithium_fli_camera PROPERTIES
             CXX_STANDARD 20
@@ -56,18 +56,18 @@ endif()
             VERSION ${PROJECT_VERSION}
             SOVERSION ${PROJECT_VERSION_MAJOR}
         )
-        
+
         # Install library
         install(TARGETS lithium_fli_camera
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         )
-        
+
         # Install headers
         install(FILES fli_camera.hpp
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/fli
         )
-        
+
     else()
         message(WARNING "FLI SDK not found. FLI camera support will be disabled.")
         set(FLI_FOUND FALSE)

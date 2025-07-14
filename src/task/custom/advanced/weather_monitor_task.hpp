@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Weather Monitoring and Response Task
- * 
+ *
  * Continuously monitors weather conditions and takes appropriate actions
  * such as closing equipment, pausing sequences, or parking telescopes.
  */

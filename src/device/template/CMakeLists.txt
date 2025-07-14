@@ -32,7 +32,7 @@ install(TARGETS lithium_device_template
     RUNTIME DESTINATION bin
 )
 
-install(FILES 
+install(FILES
     telescope.hpp
     device.hpp
     camera.hpp

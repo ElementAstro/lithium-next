@@ -8,7 +8,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Advanced Focus Optimization Task
- * 
+ *
  * Performs comprehensive focus optimization using multiple algorithms
  * including temperature compensation and periodic refocusing.
  */

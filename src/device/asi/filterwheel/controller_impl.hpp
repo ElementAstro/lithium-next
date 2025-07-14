@@ -10,7 +10,7 @@ Date: 2024-12-18
 
 Description: Implementation header for ASI Filter Wheel Controller V2
 
-This file provides the complete implementation details needed for 
+This file provides the complete implementation details needed for
 compilation in main.cpp
 
 *************************************************/

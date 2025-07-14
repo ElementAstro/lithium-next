@@ -21,7 +21,7 @@
 
 namespace lithium::device::indi {
 
-lithium::device::indi::INDIDomeCore::INDIDomeCore(std::string name) 
+lithium::device::indi::INDIDomeCore::INDIDomeCore(std::string name)
     : is_initialized_(false), is_connected_(false) {
     // Note: We don't store the name here as it's typically set during connection
 }
@@ -35,18 +35,18 @@ lithium::device::indi::INDIDomeCore::~INDIDomeCore() {
 
 auto lithium::device::indi::INDIDomeCore::initialize() -> bool {
     std::lock_guard<std::recursive_mutex> lock(state_mutex_);
-    
+
     if (is_initialized_.load()) {
         logWarning("Already initialized");
         return true;
     }
-    
+
     try {
         setServer("localhost", 7624);
-        
+
         // Note: Components are registered by ModularINDIDome, not created here
         // This initialization just sets up the INDI client
-        
+
         is_initialized_ = true;
         logInfo("Core initialized successfully");
         return true;
@@ -58,11 +58,11 @@ auto lithium::device::indi::INDIDomeCore::initialize() -> bool {
 
 auto lithium::device::indi::INDIDomeCore::destroy() -> bool {
     std::lock_guard<std::recursive_mutex> lock(state_mutex_);
-    
+
     if (!is_initialized_.load()) {
         return true;
     }
-    
+
     try {
         // Cleanup components
         profiler_.reset();
@@ -74,7 +74,7 @@ auto lithium::device::indi::INDIDomeCore::destroy() -> bool {
         shutter_controller_.reset();
         motion_controller_.reset();
         property_manager_.reset();
-        
+
         is_initialized_ = false;
         logInfo("Core destroyed successfully");
         return true;
@@ -86,39 +86,39 @@ auto lithium::device::indi::INDIDomeCore::destroy() -> bool {
 
 auto lithium::device::indi::INDIDomeCore::connect(const std::string& deviceName, int timeout, int maxRetry) -> bool {
     std::lock_guard<std::recursive_mutex> lock(state_mutex_);
-    
+
     if (!is_initialized_.load()) {
         logError("Core not initialized");
         return false;
     }
-    
+
     if (is_connected_.load()) {
         logWarning("Already connected");
         return true;
     }
-    
+
     device_name_ = deviceName;
-    
+
     // Connect to INDI server
     if (!connectServer()) {
         logError("Failed to connect to INDI server");
         return false;
     }
-    
+
     // Wait for server connection
     if (!waitForConnection(timeout)) {
         logError("Timeout waiting for server connection");
         disconnectServer();
         return false;
     }
-    
+
     // Wait for device
     for (int i = 0; i < maxRetry; ++i) {
         // Note: getDevice() in INDI client takes no parameters and returns the device
         // You need to call watchDevice() first to watch a specific device
         watchDevice(device_name_.c_str());
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        
+
         auto devices = getDevices();
         for (auto& device : devices) {
             if (device.getDeviceName() == device_name_) {
@@ -126,27 +126,27 @@ auto lithium::device::indi::INDIDomeCore::connect(const std::string& deviceName,
                 break;
             }
         }
-        
+
         if (base_device_.isValid()) {
             break;
         }
     }
-    
+
     if (!base_device_.isValid()) {
         logError("Device not found: " + device_name_);
         disconnectServer();
         return false;
     }
-    
+
     // Connect device
     base_device_.getDriverExec();
-    
+
     // Enable BLOBs for this device
     setBLOBMode(B_ALSO, device_name_.c_str());
-    
+
     // Wait for connection property and connect
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    
+
     auto connection_prop = base_device_.getProperty("CONNECTION");
     if (connection_prop.isValid() && connection_prop.getType() == INDI_SWITCH) {
         auto switch_prop_ptr = connection_prop.getSwitch();
@@ -157,7 +157,7 @@ auto lithium::device::indi::INDIDomeCore::connect(const std::string& deviceName,
             sendNewProperty(connection_prop);
         }
     }
-    
+
     // Wait for actual connection
     for (int i = 0; i < maxRetry; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -168,7 +168,7 @@ auto lithium::device::indi::INDIDomeCore::connect(const std::string& deviceName,
             return true;
         }
     }
-    
+
     logError("Failed to connect to device after retries");
     disconnectServer();
     return false;
@@ -176,11 +176,11 @@ auto lithium::device::indi::INDIDomeCore::connect(const std::string& deviceName,
 
 auto lithium::device::indi::INDIDomeCore::disconnect() -> bool {
     std::lock_guard<std::recursive_mutex> lock(state_mutex_);
-    
+
     if (!is_connected_.load()) {
         return true;
     }
-    
+
     try {
         if (base_device_.isValid()) {
             auto connection_prop = base_device_.getProperty("CONNECTION");
@@ -194,7 +194,7 @@ auto lithium::device::indi::INDIDomeCore::disconnect() -> bool {
                 }
             }
         }
-        
+
         disconnectServer();
         is_connected_ = false;
         notifyConnectionChange(false);
@@ -271,11 +271,11 @@ void lithium::device::indi::INDIDomeCore::registerProfiler(std::shared_ptr<DomeP
 // Internal monitoring and property handling methods
 void lithium::device::indi::INDIDomeCore::monitoringThreadFunction() {
     logInfo("Monitoring thread started");
-    
+
     while (monitoring_running_.load()) {
         try {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
+
             // Monitor device state, check for timeouts, etc.
             if (is_connected_.load()) {
                 // Update component states from cached properties
@@ -285,42 +285,42 @@ void lithium::device::indi::INDIDomeCore::monitoringThreadFunction() {
             logError("Monitoring thread error: " + std::string(ex.what()));
         }
     }
-    
+
     logInfo("Monitoring thread stopped");
 }
 
 auto lithium::device::indi::INDIDomeCore::waitForConnection(int timeout) -> bool {
     auto start = std::chrono::steady_clock::now();
     auto timeout_duration = std::chrono::milliseconds(timeout);
-    
+
     while (!server_connected_.load()) {
         if (std::chrono::steady_clock::now() - start > timeout_duration) {
             return false;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    
+
     return true;
 }
 
 auto lithium::device::indi::INDIDomeCore::waitForDevice(int timeout) -> bool {
     auto start = std::chrono::steady_clock::now();
     auto timeout_duration = std::chrono::milliseconds(timeout);
-    
+
     while (!base_device_ || !base_device_.isConnected()) {
         if (std::chrono::steady_clock::now() - start > timeout_duration) {
             return false;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    
+
     return true;
 }
 
 void lithium::device::indi::INDIDomeCore::updateComponentsFromProperty(const INDI::Property& property) {
     // Update internal state based on property changes
     std::string propName = property.getName();
-    
+
     if (propName == "DOME_ABSOLUTE_POSITION" && property.getType() == INDI_NUMBER) {
         auto number_prop = property.getNumber();
         if (number_prop) {
@@ -336,7 +336,7 @@ void lithium::device::indi::INDIDomeCore::updateComponentsFromProperty(const IND
         if (switch_prop) {
             auto open_widget = switch_prop->findWidgetByName("SHUTTER_OPEN");
             auto close_widget = switch_prop->findWidgetByName("SHUTTER_CLOSE");
-            
+
             if (open_widget && open_widget->getState() == ISS_ON) {
                 setShutterState(ShutterState::OPEN);
                 notifyShutterChange(ShutterState::OPEN);
@@ -362,28 +362,28 @@ void lithium::device::indi::INDIDomeCore::updateComponentsFromProperty(const IND
 
 void lithium::device::indi::INDIDomeCore::distributePropertyToComponents(const INDI::Property& property) {
     // Distribute property updates to registered components
-    
+
     if (auto prop_mgr = property_manager_.lock()) {
         // Property manager handles all properties
         // This would call methods on the property manager
     }
-    
+
     if (auto motion_ctrl = motion_controller_.lock()) {
         // Motion controller handles motion-related properties
-        if (property.getName() == std::string("DOME_MOTION") || 
+        if (property.getName() == std::string("DOME_MOTION") ||
             property.getName() == std::string("DOME_ABSOLUTE_POSITION") ||
             property.getName() == std::string("DOME_RELATIVE_POSITION")) {
             // Forward to motion controller
         }
     }
-    
+
     if (auto shutter_ctrl = shutter_controller_.lock()) {
         // Shutter controller handles shutter-related properties
         if (property.getName() == std::string("DOME_SHUTTER")) {
             // Forward to shutter controller
         }
     }
-    
+
     // Similar forwarding for other components...
 }
 
@@ -407,7 +407,7 @@ void lithium::device::indi::INDIDomeCore::newProperty(INDI::Property property) {
     if (property.getDeviceName() != device_name_) {
         return;
     }
-    
+
     logInfo("New property: " + std::string(property.getName()));
     // Note: notifyPropertyChange doesn't exist, components handle their own property updates
 }
@@ -416,9 +416,9 @@ void lithium::device::indi::INDIDomeCore::updateProperty(INDI::Property property
     if (property.getDeviceName() != device_name_) {
         return;
     }
-    
+
     std::string prop_name = property.getName();
-    
+
     // Handle dome-specific property updates by notifying registered components
     if (prop_name == "DOME_ABSOLUTE_POSITION") {
         if (property.getType() == INDI_NUMBER) {
@@ -437,14 +437,14 @@ void lithium::device::indi::INDIDomeCore::updateProperty(INDI::Property property
             if (switch_prop) {
                 auto open_widget = switch_prop->findWidgetByName("SHUTTER_OPEN");
                 auto close_widget = switch_prop->findWidgetByName("SHUTTER_CLOSE");
-                
+
                 ShutterState state = ShutterState::UNKNOWN;
                 if (open_widget && open_widget->getState() == ISS_ON) {
                     state = ShutterState::OPEN;
                 } else if (close_widget && close_widget->getState() == ISS_ON) {
                     state = ShutterState::CLOSED;
                 }
-                
+
                 notifyShutterChange(state);
             }
         }
@@ -464,7 +464,7 @@ void lithium::device::indi::INDIDomeCore::removeProperty(INDI::Property property
     if (property.getDeviceName() != device_name_) {
         return;
     }
-    
+
     logInfo("Property removed: " + std::string(property.getName()));
 }
 
@@ -544,21 +544,21 @@ void lithium::device::indi::INDIDomeCore::setShutterState(ShutterState state) {
 
 auto lithium::device::indi::INDIDomeCore::scanForDevices() -> std::vector<std::string> {
     std::vector<std::string> devices;
-    
+
     // In a real implementation, this would scan the INDI server for available dome devices
     // For now, return empty vector - components will handle device discovery
     logInfo("Scanning for dome devices...");
-    
+
     return devices;
 }
 
 auto lithium::device::indi::INDIDomeCore::getAvailableDevices() -> std::vector<std::string> {
     std::vector<std::string> devices;
-    
+
     // In a real implementation, this would return currently available dome devices
     // For now, return empty vector - components will handle device management
     logInfo("Getting available dome devices...");
-    
+
     return devices;
 }
 

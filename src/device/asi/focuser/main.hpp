@@ -173,7 +173,7 @@ public:
     auto getMaxStepSize() const -> int;
     auto setDeviceAlias(const std::string& alias) -> bool;
     auto getSDKVersion() -> std::string;
-    
+
     // Enhanced hardware control
     auto resetFocuserPosition(int position = 0) -> bool;
     auto setMaxStepPosition(int maxStep) -> bool;

@@ -19,7 +19,7 @@ Description: FilterWheel control operations implementation
 
 #include "atom/utils/qtimer.hpp"
 
-INDIFilterwheelControl::INDIFilterwheelControl(std::string name) 
+INDIFilterwheelControl::INDIFilterwheelControl(std::string name)
     : INDIFilterwheelBase(name) {
 }
 
@@ -55,7 +55,7 @@ auto INDIFilterwheelControl::setPosition(int position) -> bool {
 
     logger_->info("Setting filter position to: {}", position);
     updateFilterWheelState(FilterWheelState::MOVING);
-    
+
     property[0].value = position;
     sendNewProperty(property);
 
@@ -73,14 +73,14 @@ auto INDIFilterwheelControl::setPosition(int position) -> bool {
 
     updateFilterWheelState(FilterWheelState::IDLE);
     logger_->info("Filter wheel successfully moved to position {}", position);
-    
+
     // Notify callback if set
     if (position_callback_) {
-        std::string filterName = position < static_cast<int>(slotNames_.size()) ? 
+        std::string filterName = position < static_cast<int>(slotNames_.size()) ?
                                 slotNames_[position] : "Unknown";
         position_callback_(position, filterName);
     }
-    
+
     return true;
 }
 
@@ -113,7 +113,7 @@ auto INDIFilterwheelControl::homeFilterWheel() -> bool {
 
     logger_->info("Homing filter wheel...");
     updateFilterWheelState(FilterWheelState::MOVING);
-    
+
     property[0].s = ISS_ON;
     sendNewProperty(property);
 
@@ -137,7 +137,7 @@ auto INDIFilterwheelControl::calibrateFilterWheel() -> bool {
 
     logger_->info("Calibrating filter wheel...");
     updateFilterWheelState(FilterWheelState::MOVING);
-    
+
     property[0].s = ISS_ON;
     sendNewProperty(property);
 
@@ -174,7 +174,7 @@ auto INDIFilterwheelControl::waitForMovementComplete(int timeoutMs) -> bool {
 
     while (timer.elapsed() < timeoutMs) {
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
-        
+
         INDI::PropertyNumber property = device_.getProperty("FILTER_SLOT");
         if (property.isValid() && property.getState() == IPS_OK) {
             return true;

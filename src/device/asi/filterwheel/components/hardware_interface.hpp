@@ -27,7 +27,7 @@ namespace lithium::device::asi::filterwheel::components {
 
 /**
  * @brief Hardware interface for ASI Filter Wheel devices
- * 
+ *
  * This component provides a high-level interface to the EFW SDK,
  * handling device discovery, connection, and basic hardware operations.
  */

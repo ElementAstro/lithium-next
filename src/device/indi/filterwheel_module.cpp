@@ -15,9 +15,9 @@ ATOM_EMBED_MODULE(filterwheel_indi, [](Component &component) {
         logger = spdlog::default_logger();
     }
     logger->info("Registering modular filterwheel_indi module...");
-    
+
     component.doc("INDI FilterWheel - Modular Implementation");
-    
+
     // Device lifecycle
     component.def("initialize", &ModularFilterWheel::initialize, "device",
                   "Initialize a filterwheel device.");
@@ -96,7 +96,7 @@ ATOM_EMBED_MODULE(filterwheel_indi, [](Component &component) {
             return instance;
         },
         "device", "Create a new modular filterwheel instance.");
-    
+
     component.defType<ModularFilterWheel>("filterwheel_indi", "device",
                                          "Define a new modular filterwheel instance.");
 

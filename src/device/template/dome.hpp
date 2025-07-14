@@ -73,7 +73,7 @@ public:
     explicit AtomDome(std::string name) : AtomDriver(std::move(name)) {
         setType("Dome");
     }
-    
+
     ~AtomDome() override = default;
 
     // Capabilities
@@ -175,7 +175,7 @@ protected:
     DomeCapabilities dome_capabilities_;
     DomeParameters dome_parameters_;
     ShutterState shutter_state_{ShutterState::UNKNOWN};
-    
+
     // Current state
     double current_azimuth_{0.0};
     double target_azimuth_{0.0};
@@ -183,24 +183,24 @@ protected:
     double home_position_{0.0};
     bool is_parked_{false};
     bool is_following_telescope_{false};
-    
+
     // Telescope position for following
     double telescope_azimuth_{0.0};
     double telescope_altitude_{0.0};
-    
+
     // Statistics
     double total_rotation_{0.0};
     uint64_t shutter_operations_{0};
-    
+
     // Presets
     std::array<std::optional<double>, 10> presets_;
-    
+
     // Callbacks
     AzimuthCallback azimuth_callback_;
     ShutterCallback shutter_callback_;
     ParkCallback park_callback_;
     MoveCompleteCallback move_complete_callback_;
-    
+
     // Utility methods
     virtual void updateDomeState(DomeState state) { dome_state_ = state; }
     virtual void updateShutterState(ShutterState state) { shutter_state_ = state; }
@@ -225,7 +225,7 @@ inline auto AtomDome::getAzimuthalDistance(double from, double to) -> double {
 inline auto AtomDome::getShortestPath(double from, double to) -> std::pair<double, DomeMotion> {
     double clockwise = normalizeAzimuth(to - from);
     double counter_clockwise = 360.0 - clockwise;
-    
+
     if (clockwise <= counter_clockwise) {
         return {clockwise, DomeMotion::CLOCKWISE};
     } else {

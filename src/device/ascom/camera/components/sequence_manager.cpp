@@ -29,12 +29,12 @@ SequenceManager::SequenceManager(std::shared_ptr<HardwareInterface> hardware)
 
 bool SequenceManager::initialize() {
     LOG_F(INFO, "Initializing sequence manager");
-    
+
     if (!hardware_) {
         LOG_F(ERROR, "Hardware interface not available");
         return false;
     }
-    
+
     // Reset state
     sequenceRunning_ = false;
     sequencePaused_ = false;
@@ -42,7 +42,7 @@ bool SequenceManager::initialize() {
     totalImages_ = 0;
     successfulImages_ = 0;
     failedImages_ = 0;
-    
+
     LOG_F(INFO, "Sequence manager initialized successfully");
     return true;
 }
@@ -52,33 +52,33 @@ bool SequenceManager::startSequence(int count, double exposure, double interval)
     settings.totalCount = count;
     settings.exposureTime = exposure;
     settings.intervalTime = interval;
-    
+
     return startSequence(settings);
 }
 
 bool SequenceManager::startSequence(const SequenceSettings& settings) {
     std::lock_guard<std::mutex> lock(settingsMutex_);
-    
+
     if (sequenceRunning_) {
         LOG_F(WARNING, "Sequence already running");
         return false;
     }
-    
+
     if (!hardware_ || !hardware_->isConnected()) {
         LOG_F(ERROR, "Hardware not connected");
         return false;
     }
-    
+
     currentSettings_ = settings;
     currentImage_ = 0;
     totalImages_ = settings.totalCount;
     sequenceRunning_ = true;
     sequencePaused_ = false;
     sequenceStartTime_ = std::chrono::steady_clock::now();
-    
-    LOG_F(INFO, "Sequence started: {} images, {}s exposure, {}s interval", 
+
+    LOG_F(INFO, "Sequence started: {} images, {}s exposure, {}s interval",
           settings.totalCount, settings.exposureTime, settings.intervalTime);
-    
+
     return true;
 }
 
@@ -87,17 +87,17 @@ bool SequenceManager::stopSequence() {
         LOG_F(WARNING, "No sequence running");
         return false;
     }
-    
+
     sequenceRunning_ = false;
     sequencePaused_ = false;
-    
+
     LOG_F(INFO, "Sequence stopped");
-    
+
     if (completionCallback_) {
         std::lock_guard<std::mutex> lock(callbackMutex_);
         completionCallback_(false, "Sequence manually stopped");
     }
-    
+
     return true;
 }
 
@@ -106,7 +106,7 @@ bool SequenceManager::pauseSequence() {
         LOG_F(WARNING, "No sequence running");
         return false;
     }
-    
+
     sequencePaused_ = true;
     LOG_F(INFO, "Sequence paused");
     return true;
@@ -117,7 +117,7 @@ bool SequenceManager::resumeSequence() {
         LOG_F(WARNING, "No sequence running");
         return false;
     }
-    
+
     sequencePaused_ = false;
     LOG_F(INFO, "Sequence resumed");
     return true;
@@ -152,12 +152,12 @@ std::chrono::seconds SequenceManager::getEstimatedTimeRemaining() const {
     if (!sequenceRunning_) {
         return std::chrono::seconds(0);
     }
-    
+
     int remaining = totalImages_.load() - currentImage_.load();
     if (remaining <= 0) {
         return std::chrono::seconds(0);
     }
-    
+
     std::lock_guard<std::mutex> lock(settingsMutex_);
     double timePerImage = currentSettings_.exposureTime + currentSettings_.intervalTime;
     return std::chrono::seconds(static_cast<long>(remaining * timePerImage));
@@ -165,19 +165,19 @@ std::chrono::seconds SequenceManager::getEstimatedTimeRemaining() const {
 
 std::map<std::string, double> SequenceManager::getSequenceStatistics() const {
     std::map<std::string, double> stats;
-    
+
     stats["current_image"] = currentImage_.load();
     stats["total_images"] = totalImages_.load();
     stats["successful_images"] = successfulImages_.load();
     stats["failed_images"] = failedImages_.load();
     stats["progress_percentage"] = getProgressPercentage();
-    
+
     if (sequenceRunning_) {
         auto elapsed = std::chrono::steady_clock::now() - sequenceStartTime_;
         stats["elapsed_time_seconds"] = std::chrono::duration<double>(elapsed).count();
         stats["estimated_remaining_seconds"] = getEstimatedTimeRemaining().count();
     }
-    
+
     return stats;
 }
 

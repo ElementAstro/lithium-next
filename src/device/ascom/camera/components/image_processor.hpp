@@ -33,7 +33,7 @@ class HardwareInterface;
 
 /**
  * @brief Image Processor for ASCOM Camera
- * 
+ *
  * Handles image processing tasks including format conversion,
  * compression, quality analysis, and post-processing operations.
  */
@@ -189,29 +189,29 @@ public:
 
 private:
     std::shared_ptr<HardwareInterface> hardware_;
-    
+
     // Processing settings
     ProcessingSettings settings_;
     mutable std::mutex settingsMutex_;
-    
+
     // State
     std::atomic<bool> processingEnabled_{false};
     std::string currentFormat_{"FITS"};
     std::atomic<bool> compressionEnabled_{false};
-    
+
     // Statistics
     std::atomic<uint64_t> processedImages_{0};
     std::atomic<uint64_t> failedProcessing_{0};
     std::atomic<double> avgProcessingTime_{0.0};
-    
+
     // Last analysis results
     ImageQuality lastQuality_;
     mutable std::mutex qualityMutex_;
-    
+
     // Callback
     ProcessingCallback processingCallback_;
     std::mutex callbackMutex_;
-    
+
     // Helper methods
     bool validateFormat(const std::string& format) const;
     std::shared_ptr<AtomCameraFrame> convertFormat(std::shared_ptr<AtomCameraFrame> frame, const std::string& targetFormat);

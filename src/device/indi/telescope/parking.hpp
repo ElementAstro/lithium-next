@@ -10,7 +10,7 @@
 
 /**
  * @brief Parking and homing component for INDI telescopes
- * 
+ *
  * Handles telescope parking, homing, and safety operations
  */
 class TelescopeParking {
@@ -98,20 +98,20 @@ public:
 private:
     std::string name_;
     INDI::BaseDevice device_;
-    
+
     // Parking state
     std::atomic_bool isParkEnabled_{false};
     std::atomic_bool isParked_{false};
     ParkOptions parkOption_{ParkOptions::CURRENT};
     EquatorialCoordinates parkPosition_{};
-    
+
     // Home state
     std::atomic_bool isHomed_{false};
     std::atomic_bool isHomeSet_{false};
     std::atomic_bool isHomeInitEnabled_{false};
     std::atomic_bool isHomeInitInProgress_{false};
     EquatorialCoordinates homePosition_{};
-    
+
     // Helper methods
     auto watchParkingProperties() -> void;
     auto watchHomeProperties() -> void;

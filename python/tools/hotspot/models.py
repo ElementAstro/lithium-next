@@ -57,7 +57,8 @@ class EncryptionType(StrEnum):
     These encryption methods are used to protect data transmitted over
     the wireless network.
     """
-    AES = "aes"    # Advanced Encryption Standard
+
+    AES = "aes"  # Advanced Encryption Standard
     TKIP = "tkip"  # Temporal Key Integrity Protocol
     CCMP = "ccmp"  # Counter Mode with CBC-MAC Protocol (AES-based)
 
@@ -302,6 +303,7 @@ class CommandResult:
 
     Uses slots for memory efficiency and frozen=True for immutability.
     """
+
     success: bool
     stdout: str = ""
     stderr: str = ""

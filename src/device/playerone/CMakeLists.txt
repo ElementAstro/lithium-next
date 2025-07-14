@@ -84,7 +84,7 @@ install(
             PRIVATE
                 ${CMAKE_SOURCE_DIR}/src
         )
-        
+
         target_link_libraries(lithium_playerone_camera
             PUBLIC
                 ${PLAYERONE_LIBRARY}
@@ -93,7 +93,7 @@ install(
             PRIVATE
                 Threads::Threads
         )
-        
+
         # Set properties
         set_target_properties(lithium_playerone_camera PROPERTIES
             CXX_STANDARD 20
@@ -101,18 +101,18 @@ install(
             VERSION ${PROJECT_VERSION}
             SOVERSION ${PROJECT_VERSION_MAJOR}
         )
-        
+
         # Install library
         install(TARGETS lithium_playerone_camera
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         )
-        
+
         # Install headers
         install(FILES playerone_camera.hpp
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/playerone
         )
-        
+
     else()
         message(WARNING "PlayerOne SDK not found. PlayerOne camera support will be disabled.")
         set(PLAYERONE_FOUND FALSE)

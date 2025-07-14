@@ -104,38 +104,38 @@ private:
     static constexpr double MOCK_MAX_SPEED = 100.0;
     static constexpr double MOCK_MIN_SPEED = 1.0;
     static constexpr int MOCK_STEPS_PER_REV = 200;
-    
+
     // State variables
     bool is_moving_{false};
     bool is_auto_focusing_{false};
     double auto_focus_progress_{0.0};
-    
+
     // Position tracking
     int target_position_{30000}; // Middle position
-    
+
     // Temperature simulation
     double external_temperature_{20.0};
     double chip_temperature_{25.0};
-    
+
     // Settings
     int max_limit_{MOCK_MAX_POSITION};
     int min_limit_{MOCK_MIN_POSITION};
     FocusDirection current_direction_{FocusDirection::OUT};
-    
+
     // Backlash compensation
     bool backlash_enabled_{false};
     FocusDirection last_direction_{FocusDirection::NONE};
-    
+
     // Auto focus state
     int af_start_position_{0};
     int af_end_position_{0};
     int af_current_step_{0};
     int af_total_steps_{0};
-    
+
     // Random number generation for simulation
     mutable std::random_device rd_;
     mutable std::mt19937 gen_;
-    
+
     // Helper methods
     void simulateMovement(int steps);
     void simulateTemperatureCompensation();

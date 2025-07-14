@@ -16,8 +16,11 @@ from typing import Dict, List, Any, Optional
 from loguru import logger
 
 from .core.errors import (
-    BuildSystemError, ConfigurationError,
-    BuildError, TestError, InstallationError
+    BuildSystemError,
+    ConfigurationError,
+    BuildError,
+    TestError,
+    InstallationError,
 )
 from .builders.cmake import CMakeBuilder
 from .builders.meson import MesonBuilder

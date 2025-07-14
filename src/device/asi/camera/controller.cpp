@@ -39,11 +39,11 @@ namespace {
         if (propertyName == "fan_on" || propertyName == "FanOn") return ASI_FAN_ON;
         if (propertyName == "pattern_adjust" || propertyName == "PatternAdjust") return ASI_PATTERN_ADJUST;
         if (propertyName == "anti_dew_heater" || propertyName == "AntiDewHeater") return ASI_ANTI_DEW_HEATER;
-        
+
         // Return a default value for unknown properties
         return ASI_GAIN; // or could return an invalid enum value
     }
-    
+
     std::string controlTypeToString(ASI_CONTROL_TYPE controlType) {
         switch (controlType) {
             case ASI_GAIN: return "gain";
@@ -82,7 +82,7 @@ ASICameraController::~ASICameraController() {
 
 auto ASICameraController::initialize() -> bool {
     std::lock_guard<std::mutex> lock(m_state_mutex);
-    
+
     if (m_initialized) {
         LOG_F(WARNING, "Camera controller already initialized");
         return true;
@@ -109,7 +109,7 @@ auto ASICameraController::initialize() -> bool {
 
 auto ASICameraController::shutdown() -> bool {
     std::lock_guard<std::mutex> lock(m_state_mutex);
-    
+
     if (!m_initialized) {
         return true;
     }
@@ -124,7 +124,7 @@ auto ASICameraController::shutdown() -> bool {
 
         shutdownComponents();
         m_initialized = false;
-        
+
         LOG_F(INFO, "ASI Camera Controller V2 shut down successfully");
         return true;
     } catch (const std::exception& e) {
@@ -242,7 +242,7 @@ auto ASICameraController::startExposure(double duration_ms, bool is_dark) -> boo
         setLastError("Exposure manager not available");
         return false;
     }
-    
+
     components::ExposureManager::ExposureSettings settings;
     settings.duration = duration_ms / 1000.0; // Convert ms to seconds
     settings.isDark = is_dark;
@@ -250,7 +250,7 @@ auto ASICameraController::startExposure(double duration_ms, bool is_dark) -> boo
     settings.height = 0; // Full frame
     settings.binning = 1;
     settings.format = "RAW16";
-    
+
     return m_exposure->startExposure(settings);
 }
 
@@ -290,7 +290,7 @@ auto ASICameraController::isImageReady() const -> bool {
     if (!m_image_processor) {
         return false;
     }
-    
+
     // For this simplified controller, assume that if the last exposure was successful,
     // an image is ready for processing. In a real implementation, this would check
     // the exposure manager's state and results.
@@ -301,19 +301,19 @@ auto ASICameraController::downloadImage() -> std::vector<uint8_t> {
     if (!m_exposure) {
         return {};
     }
-    
+
     // Get the last exposure result and extract the frame data
     auto result = m_exposure->getLastResult();
     if (!result.success || !result.frame) {
         return {};
     }
-    
+
     // Convert the frame data to a vector of bytes
     auto frame = result.frame;
     if (!frame->data || frame->size == 0) {
         return {};
     }
-    
+
     const uint8_t* data = reinterpret_cast<const uint8_t*>(frame->data);
     return std::vector<uint8_t>(data, data + frame->size);
 }
@@ -323,14 +323,14 @@ auto ASICameraController::saveImage(const std::string& filename, const std::stri
         setLastError("Image processor or exposure manager not available");
         return false;
     }
-    
+
     // Get the last exposure result
     auto result = m_exposure->getLastResult();
     if (!result.success || !result.frame) {
         setLastError("No image data available");
         return false;
     }
-    
+
     // Use the image processor to save the frame in the desired format
     if (format == "FITS") {
         return m_image_processor->convertToFITS(result.frame, filename);
@@ -341,7 +341,7 @@ auto ASICameraController::saveImage(const std::string& filename, const std::stri
     } else if (format == "PNG") {
         return m_image_processor->convertToPNG(result.frame, filename);
     }
-    
+
     setLastError("Unsupported image format: " + format);
     return false;
 }
@@ -393,7 +393,7 @@ auto ASICameraController::startVideo() -> bool {
         setLastError("Video manager not available");
         return false;
     }
-    
+
     // Create default video settings
     components::VideoManager::VideoSettings settings;
     settings.width = 0;  // Use full frame
@@ -402,7 +402,7 @@ auto ASICameraController::startVideo() -> bool {
     settings.format = "RAW16";
     settings.exposure = 33000; // 33ms
     settings.gain = 0;
-    
+
     return m_video->startVideo(settings);
 }
 
@@ -429,7 +429,7 @@ auto ASICameraController::startSequence(const std::string& sequence_config) -> b
         setLastError("Sequence manager not available");
         return false;
     }
-    
+
     // For simplicity, create a basic sequence from the config string
     // In a real implementation, this would parse the JSON config
     components::SequenceManager::SequenceSettings settings;
@@ -437,14 +437,14 @@ auto ASICameraController::startSequence(const std::string& sequence_config) -> b
     settings.type = components::SequenceManager::SequenceType::SIMPLE;
     settings.outputDirectory = "/tmp/images";
     settings.saveImages = true;
-    
+
     // Add a single exposure step (1 second, gain 0)
     components::SequenceManager::ExposureStep step;
     step.duration = 1.0;
     step.gain = 0;
     step.filename = "image_{counter}.fits";
     settings.steps.push_back(step);
-    
+
     return m_sequence->startSequence(settings);
 }
 
@@ -466,10 +466,10 @@ auto ASICameraController::getSequenceProgress() const -> std::string {
     if (!m_sequence) {
         return "Sequence manager not available";
     }
-    
+
     auto progress = m_sequence->getProgress();
-    return "Progress: " + std::to_string(progress.progress) + "% (" + 
-           std::to_string(progress.completedExposures) + "/" + 
+    return "Progress: " + std::to_string(progress.progress) + "% (" +
+           std::to_string(progress.completedExposures) + "/" +
            std::to_string(progress.totalExposures) + " exposures)";
 }
 
@@ -482,10 +482,10 @@ auto ASICameraController::setProperty(const std::string& property, const std::st
         setLastError("Property manager not available");
         return false;
     }
-    
+
     // Convert string property name to ASI_CONTROL_TYPE
     ASI_CONTROL_TYPE controlType = stringToControlType(property);
-    
+
     // Convert string value to long
     try {
         long longValue = std::stol(value);
@@ -500,16 +500,16 @@ auto ASICameraController::getProperty(const std::string& property) const -> std:
     if (!m_properties) {
         return "";
     }
-    
+
     // Convert string property name to ASI_CONTROL_TYPE
     ASI_CONTROL_TYPE controlType = stringToControlType(property);
-    
+
     long value;
     bool isAuto;
     if (m_properties->getProperty(controlType, value, isAuto)) {
         return std::to_string(value) + (isAuto ? " (auto)" : "");
     }
-    
+
     return "";
 }
 
@@ -517,15 +517,15 @@ auto ASICameraController::getAvailableProperties() const -> std::vector<std::str
     if (!m_properties) {
         return {};
     }
-    
+
     // Get available control types and convert to strings
     auto controlTypes = m_properties->getAvailableProperties();
     std::vector<std::string> propertyNames;
-    
+
     for (auto controlType : controlTypes) {
         propertyNames.push_back(controlTypeToString(controlType));
     }
-    
+
     return propertyNames;
 }
 
@@ -597,9 +597,9 @@ auto ASICameraController::initializeComponents() -> bool {
         auto hardware_shared = std::shared_ptr<components::HardwareInterface>(m_hardware.get(), [](components::HardwareInterface*){});
 
         m_exposure = std::make_unique<components::ExposureManager>(hardware_shared);
-        
+
         m_temperature = std::make_unique<components::TemperatureController>(hardware_shared);
-        
+
         m_properties = std::make_unique<components::PropertyManager>(hardware_shared);
 
         // SequenceManager needs ExposureManager and PropertyManager

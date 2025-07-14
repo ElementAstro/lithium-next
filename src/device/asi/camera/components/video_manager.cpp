@@ -24,7 +24,7 @@ bool VideoManager::startVideo(const VideoSettings& settings) {
     }
 
     updateState(VideoState::STARTING);
-    
+
     try {
         if (!configureVideoMode(settings)) {
             updateState(VideoState::ERROR);
@@ -33,19 +33,19 @@ bool VideoManager::startVideo(const VideoSettings& settings) {
 
         currentSettings_ = settings;
         maxBufferSize_ = static_cast<size_t>(settings.bufferSize);
-        
+
         // Reset statistics
         resetStatistics();
-        
+
         // Start worker threads
         stopRequested_ = false;
         captureThread_ = std::thread(&VideoManager::captureWorker, this);
         processingThread_ = std::thread(&VideoManager::processingWorker, this);
         statisticsThread_ = std::thread(&VideoManager::statisticsWorker, this);
-        
+
         updateState(VideoState::STREAMING);
         return true;
-        
+
     } catch (const std::exception&) {
         updateState(VideoState::ERROR);
         return false;
@@ -58,11 +58,11 @@ bool VideoManager::stopVideo() {
     }
 
     updateState(VideoState::STOPPING);
-    
+
     // Signal threads to stop
     stopRequested_ = true;
     bufferCondition_.notify_all();
-    
+
     // Wait for threads to finish
     if (captureThread_.joinable()) {
         captureThread_.join();
@@ -73,12 +73,12 @@ bool VideoManager::stopVideo() {
     if (statisticsThread_.joinable()) {
         statisticsThread_.join();
     }
-    
+
     // Stop recording if active
     if (recording_) {
         stopRecording();
     }
-    
+
     // Clear frame buffer
     {
         std::lock_guard<std::mutex> lock(bufferMutex_);
@@ -86,7 +86,7 @@ bool VideoManager::stopVideo() {
             frameBuffer_.pop();
         }
     }
-    
+
     updateState(VideoState::IDLE);
     return true;
 }
@@ -116,7 +116,7 @@ std::shared_ptr<AtomCameraFrame> VideoManager::getLatestFrame() {
     if (frameBuffer_.empty()) {
         return nullptr;
     }
-    
+
     auto frame = frameBuffer_.front();
     frameBuffer_.pop();
     return frame;
@@ -151,7 +151,7 @@ bool VideoManager::updateExposure(int exposureUs) {
     if (state_ != VideoState::STREAMING) {
         return false;
     }
-    
+
     currentSettings_.exposure = exposureUs;
     return true; // Would update hardware in real implementation
 }
@@ -160,7 +160,7 @@ bool VideoManager::updateGain(int gain) {
     if (state_ != VideoState::STREAMING) {
         return false;
     }
-    
+
     currentSettings_.gain = gain;
     return true; // Would update hardware in real implementation
 }
@@ -169,7 +169,7 @@ bool VideoManager::updateFrameRate(double fps) {
     if (state_ != VideoState::STREAMING) {
         return false;
     }
-    
+
     currentSettings_.fps = fps;
     return true; // Would update hardware in real implementation
 }
@@ -178,12 +178,12 @@ bool VideoManager::startRecording(const std::string& filename, const std::string
     if (recording_ || state_ != VideoState::STREAMING) {
         return false;
     }
-    
+
     recordingFilename_ = filename;
     recordingCodec_ = codec;
     recordedFrames_ = 0;
     recording_ = true;
-    
+
     return true;
 }
 
@@ -191,11 +191,11 @@ bool VideoManager::stopRecording() {
     if (!recording_) {
         return false;
     }
-    
+
     recording_ = false;
     recordingFilename_.clear();
     recordingCodec_.clear();
-    
+
     return true;
 }
 
@@ -239,19 +239,19 @@ void VideoManager::captureWorker() {
 void VideoManager::processingWorker() {
     while (!stopRequested_ && state_ == VideoState::STREAMING) {
         std::unique_lock<std::mutex> lock(bufferMutex_);
-        bufferCondition_.wait(lock, [this] { 
-            return !frameBuffer_.empty() || stopRequested_; 
+        bufferCondition_.wait(lock, [this] {
+            return !frameBuffer_.empty() || stopRequested_;
         });
-        
+
         if (stopRequested_) break;
-        
+
         if (!frameBuffer_.empty()) {
             auto frame = frameBuffer_.front();
             frameBuffer_.pop();
             lock.unlock();
-            
+
             notifyFrame(frame);
-            
+
             if (recording_) {
                 saveFrameToFile(frame);
                 recordedFrames_++;
@@ -264,7 +264,7 @@ void VideoManager::statisticsWorker() {
     while (!stopRequested_ && state_ == VideoState::STREAMING) {
         updateStatistics();
         notifyStatistics(statistics_);
-        
+
         std::this_thread::sleep_for(statisticsInterval_);
     }
 }
@@ -281,9 +281,9 @@ std::shared_ptr<AtomCameraFrame> VideoManager::captureFrame() {
 
 void VideoManager::processFrame(std::shared_ptr<AtomCameraFrame> frame) {
     if (!frame) return;
-    
+
     std::lock_guard<std::mutex> lock(bufferMutex_);
-    
+
     if (frameBuffer_.size() >= maxBufferSize_) {
         if (dropFramesWhenFull_) {
             frameBuffer_.pop(); // Drop oldest frame
@@ -292,7 +292,7 @@ void VideoManager::processFrame(std::shared_ptr<AtomCameraFrame> frame) {
             return; // Skip this frame
         }
     }
-    
+
     frameBuffer_.push(frame);
     statistics_.framesReceived++;
     bufferCondition_.notify_one();
@@ -302,11 +302,11 @@ void VideoManager::updateStatistics() {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         now - statistics_.startTime).count();
-    
+
     if (elapsed > 0) {
         statistics_.actualFPS = static_cast<double>(statistics_.framesProcessed) * 1000.0 / elapsed;
     }
-    
+
     statistics_.lastFrameTime = now;
 }
 
@@ -337,7 +337,7 @@ void VideoManager::updateState(VideoState newState) {
 }
 
 bool VideoManager::validateVideoSettings(const VideoSettings& settings) {
-    return settings.width >= 0 && settings.height >= 0 && 
+    return settings.width >= 0 && settings.height >= 0 &&
            settings.fps > 0 && settings.bufferSize > 0;
 }
 
@@ -350,13 +350,13 @@ std::shared_ptr<AtomCameraFrame> VideoManager::createFrameFromBuffer(
 size_t VideoManager::calculateFrameSize(const VideoSettings& settings) {
     // Calculate based on format and dimensions
     size_t pixelCount = static_cast<size_t>(settings.width * settings.height);
-    
+
     if (settings.format == "RAW16") {
         return pixelCount * 2;
     } else if (settings.format == "RGB24") {
         return pixelCount * 3;
     }
-    
+
     return pixelCount; // RAW8 or Y8
 }
 
@@ -369,7 +369,7 @@ void VideoManager::cleanupResources() {
     // Clean up any remaining resources
 }
 
-std::string VideoManager::formatVideoError(const std::string& operation, 
+std::string VideoManager::formatVideoError(const std::string& operation,
                                          const std::string& error) {
     return operation + " error: " + error;
 }

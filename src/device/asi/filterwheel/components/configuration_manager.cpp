@@ -10,7 +10,7 @@ ConfigurationManager::ConfigurationManager()
     , move_timeout_ms_(30000)
     , auto_focus_correction_(true)
     , auto_exposure_correction_(false) {
-    
+
     initializeDefaultSettings();
     spdlog::info( "ConfigurationManager initialized");
 }
@@ -48,7 +48,7 @@ bool ConfigurationManager::deleteProfile(const std::string& name) {
     }
 
     profiles_.erase(it);
-    
+
     // Switch to default if current profile was deleted
     if (current_profile_ == name) {
         current_profile_ = "Default";
@@ -105,7 +105,7 @@ bool ConfigurationManager::setFilterSlot(int slot_id, const FilterSlotConfig& co
     profile->slots[slot_id] = config;
     profile->slots[slot_id].slot_id = slot_id; // Ensure slot ID is correct
 
-    spdlog::info( "Set filter slot {}: name='{}', offset={:.2f}", 
+    spdlog::info( "Set filter slot {}: name='{}', offset={:.2f}",
           slot_id, config.name.c_str(), config.focus_offset);
     return true;
 }
@@ -131,7 +131,7 @@ bool ConfigurationManager::setFilterName(int slot_id, const std::string& name) {
     } else {
         slot_config->name = name;
     }
-    
+
     return setFilterSlot(slot_id, *slot_config);
 }
 
@@ -148,7 +148,7 @@ bool ConfigurationManager::setFocusOffset(int slot_id, double offset) {
     if (!slot_config) {
         slot_config = FilterSlotConfig(slot_id);
     }
-    
+
     slot_config->focus_offset = offset;
     return setFilterSlot(slot_id, *slot_config);
 }
@@ -166,7 +166,7 @@ bool ConfigurationManager::setExposureMultiplier(int slot_id, double multiplier)
     if (!slot_config) {
         slot_config = FilterSlotConfig(slot_id);
     }
-    
+
     slot_config->exposure_multiplier = multiplier;
     return setFilterSlot(slot_id, *slot_config);
 }
@@ -184,7 +184,7 @@ bool ConfigurationManager::setSlotEnabled(int slot_id, bool enabled) {
     if (!slot_config) {
         slot_config = FilterSlotConfig(slot_id);
     }
-    
+
     slot_config->enabled = enabled;
     return setFilterSlot(slot_id, *slot_config);
 }
@@ -227,7 +227,7 @@ bool ConfigurationManager::isAutoExposureCorrectionEnabled() const {
 std::vector<int> ConfigurationManager::getEnabledSlots() const {
     std::vector<int> enabled_slots;
     const FilterProfile* profile = getCurrentProfile();
-    
+
     if (profile) {
         for (size_t i = 0; i < profile->slots.size(); ++i) {
             if (profile->slots[i].enabled) {
@@ -235,7 +235,7 @@ std::vector<int> ConfigurationManager::getEnabledSlots() const {
             }
         }
     }
-    
+
     return enabled_slots;
 }
 
@@ -258,55 +258,55 @@ int ConfigurationManager::findSlotByName(const std::string& name) const {
             return static_cast<int>(i);
         }
     }
-    
+
     return -1;
 }
 
 std::vector<std::string> ConfigurationManager::getFilterNames() const {
     std::vector<std::string> names;
     const FilterProfile* profile = getCurrentProfile();
-    
+
     if (profile) {
         for (const auto& slot : profile->slots) {
             names.push_back(slot.name.empty() ? "Slot " + std::to_string(slot.slot_id) : slot.name);
         }
     }
-    
+
     return names;
 }
 
 bool ConfigurationManager::saveConfiguration(const std::string& filepath) {
     std::string path = filepath.empty() ? getDefaultConfigPath() : filepath;
-    
+
     try {
         // Create directory if it doesn't exist
         std::filesystem::path file_path(path);
         std::filesystem::create_directories(file_path.parent_path());
-        
+
         // Write to file in simple format
         std::ofstream file(path);
         if (!file.is_open()) {
             spdlog::error( "Failed to open config file for writing: {}", path.c_str());
             return false;
         }
-        
+
         // Write header
         file << "# ASI Filterwheel Configuration\n";
         file << "# Generated automatically - do not edit manually\n\n";
-        
+
         // Write settings
         file << "[settings]\n";
         file << "move_timeout_ms=" << move_timeout_ms_ << "\n";
         file << "auto_focus_correction=" << (auto_focus_correction_ ? "true" : "false") << "\n";
         file << "auto_exposure_correction=" << (auto_exposure_correction_ ? "true" : "false") << "\n";
         file << "current_profile=" << current_profile_ << "\n\n";
-        
+
         // Write profiles
         for (const auto& [name, profile] : profiles_) {
             file << "[profile:" << name << "]\n";
             file << "name=" << profile.name << "\n";
             file << "description=" << profile.description << "\n";
-            
+
             // Write slots
             for (const auto& slot : profile.slots) {
                 file << "slot_" << slot.slot_id << "_name=" << slot.name << "\n";
@@ -317,10 +317,10 @@ bool ConfigurationManager::saveConfiguration(const std::string& filepath) {
             }
             file << "\n";
         }
-        
+
         spdlog::info( "Configuration saved to: {}", path.c_str());
         return true;
-        
+
     } catch (const std::exception& e) {
         spdlog::error( "Failed to save configuration: {}", e.what());
         return false;
@@ -329,33 +329,33 @@ bool ConfigurationManager::saveConfiguration(const std::string& filepath) {
 
 bool ConfigurationManager::loadConfiguration(const std::string& filepath) {
     std::string path = filepath.empty() ? getDefaultConfigPath() : filepath;
-    
+
     if (!std::filesystem::exists(path)) {
         spdlog::warn( "Configuration file not found: {}", path.c_str());
         return false;
     }
-    
+
     try {
         std::ifstream file(path);
         if (!file.is_open()) {
             spdlog::error( "Failed to open config file for reading: {}", path.c_str());
             return false;
         }
-        
+
         std::string line;
         std::string current_section;
         FilterProfile* current_profile = nullptr;
-        
+
         while (std::getline(file, line)) {
             // Skip comments and empty lines
             if (line.empty() || line[0] == '#') {
                 continue;
             }
-            
+
             // Check for section headers
             if (line[0] == '[' && line.back() == ']') {
                 current_section = line.substr(1, line.length() - 2);
-                
+
                 if (current_section.starts_with("profile:")) {
                     std::string profile_name = current_section.substr(8);
                     profiles_[profile_name] = FilterProfile(profile_name);
@@ -365,16 +365,16 @@ bool ConfigurationManager::loadConfiguration(const std::string& filepath) {
                 }
                 continue;
             }
-            
+
             // Parse key=value pairs
             size_t pos = line.find('=');
             if (pos == std::string::npos) {
                 continue;
             }
-            
+
             std::string key = line.substr(0, pos);
             std::string value = line.substr(pos + 1);
-            
+
             // Handle settings section
             if (current_section == "settings") {
                 if (key == "move_timeout_ms") {
@@ -399,13 +399,13 @@ bool ConfigurationManager::loadConfiguration(const std::string& filepath) {
                     if (first_underscore != std::string::npos) {
                         int slot_id = std::stoi(key.substr(5, first_underscore - 5));
                         std::string slot_key = key.substr(first_underscore + 1);
-                        
+
                         // Ensure slots vector is large enough
                         if (static_cast<size_t>(slot_id) >= current_profile->slots.size()) {
                             current_profile->slots.resize(slot_id + 1);
                             current_profile->slots[slot_id].slot_id = slot_id;
                         }
-                        
+
                         if (slot_key == "name") {
                             current_profile->slots[slot_id].name = value;
                         } else if (slot_key == "description") {
@@ -421,10 +421,10 @@ bool ConfigurationManager::loadConfiguration(const std::string& filepath) {
                 }
             }
         }
-        
+
         spdlog::info( "Configuration loaded from: {}", path.c_str());
         return true;
-        
+
     } catch (const std::exception& e) {
         spdlog::error( "Failed to load configuration: {}", e.what());
         return false;
@@ -443,25 +443,25 @@ bool ConfigurationManager::validateConfiguration() const {
     if (profiles_.empty()) {
         return false;
     }
-    
+
     if (profiles_.find(current_profile_) == profiles_.end()) {
         return false;
     }
-    
+
     return true;
 }
 
 std::vector<std::string> ConfigurationManager::getValidationErrors() const {
     std::vector<std::string> errors;
-    
+
     if (profiles_.empty()) {
         errors.push_back("No profiles defined");
     }
-    
+
     if (profiles_.find(current_profile_) == profiles_.end()) {
         errors.push_back("Current profile '" + current_profile_ + "' not found");
     }
-    
+
     return errors;
 }
 
@@ -471,23 +471,23 @@ void ConfigurationManager::resetToDefaults() {
     move_timeout_ms_ = 30000;
     auto_focus_correction_ = true;
     auto_exposure_correction_ = false;
-    
+
     initializeDefaultSettings();
     spdlog::info( "Configuration reset to defaults");
 }
 
 void ConfigurationManager::createDefaultProfile(int slot_count) {
     FilterProfile default_profile("Default", "Default filter profile");
-    
+
     for (int i = 0; i < slot_count; ++i) {
-        FilterSlotConfig slot(i, "Filter " + std::to_string(i + 1), 
+        FilterSlotConfig slot(i, "Filter " + std::to_string(i + 1),
                             "Default filter slot " + std::to_string(i + 1));
         default_profile.slots.push_back(slot);
     }
-    
+
     profiles_["Default"] = default_profile;
     current_profile_ = "Default";
-    
+
     spdlog::info( "Created default profile with {} slots", slot_count);
 }
 
@@ -513,7 +513,7 @@ void ConfigurationManager::initializeDefaultSettings() {
 
 std::string ConfigurationManager::generateConfigPath() const {
     std::filesystem::path config_dir;
-    
+
     // Try to use XDG config directory or fallback to home
     const char* xdg_config = std::getenv("XDG_CONFIG_HOME");
     if (xdg_config) {
@@ -526,7 +526,7 @@ std::string ConfigurationManager::generateConfigPath() const {
             config_dir = std::filesystem::current_path() / "config";
         }
     }
-    
+
     return (config_dir / "asi_filterwheel_config.json").string();
 }
 

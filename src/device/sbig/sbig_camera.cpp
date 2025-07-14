@@ -83,7 +83,7 @@ SBIGCamera::SBIGCamera(const std::string& name)
     , total_frames_(0)
     , dropped_frames_(0)
     , last_frame_result_(nullptr) {
-    
+
     LOG_F(INFO, "Created SBIG camera instance: {}", name);
 }
 
@@ -99,7 +99,7 @@ SBIGCamera::~SBIGCamera() {
 
 auto SBIGCamera::initialize() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_initialized_) {
         LOG_F(WARNING, "SBIG camera already initialized");
         return true;
@@ -121,7 +121,7 @@ auto SBIGCamera::initialize() -> bool {
 
 auto SBIGCamera::destroy() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_initialized_) {
         return true;
     }
@@ -141,7 +141,7 @@ auto SBIGCamera::destroy() -> bool {
 
 auto SBIGCamera::connect(const std::string& deviceName, int timeout, int maxRetry) -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (is_connected_) {
         LOG_F(WARNING, "SBIG camera already connected");
         return true;
@@ -159,7 +159,7 @@ auto SBIGCamera::connect(const std::string& deviceName, int timeout, int maxRetr
 #ifdef LITHIUM_SBIG_CAMERA_ENABLED
         auto devices = scan();
         device_index_ = -1;
-        
+
         if (deviceName.empty()) {
             if (!devices.empty()) {
                 device_index_ = 0;
@@ -172,7 +172,7 @@ auto SBIGCamera::connect(const std::string& deviceName, int timeout, int maxRetr
                 }
             }
         }
-        
+
         if (device_index_ == -1) {
             LOG_F(ERROR, "SBIG camera not found: {}", deviceName);
             continue;
@@ -203,18 +203,18 @@ auto SBIGCamera::connect(const std::string& deviceName, int timeout, int maxRetr
         has_dual_chip_ = true;
         has_cfw_ = true;
         has_mechanical_shutter_ = true;
-        
+
         // Setup guide chip
         guide_chip_width_ = 192;
         guide_chip_height_ = 165;
         guide_chip_pixel_size_ = 9.0;
-        
+
         // Setup CFW
         cfw_filter_count_ = 5;
-        
+
         roi_width_ = max_width_;
         roi_height_ = max_height_;
-        
+
         is_connected_ = true;
         LOG_F(INFO, "Connected to SBIG camera simulator");
         return true;
@@ -231,7 +231,7 @@ auto SBIGCamera::connect(const std::string& deviceName, int timeout, int maxRetr
 
 auto SBIGCamera::disconnect() -> bool {
     std::lock_guard<std::mutex> lock(camera_mutex_);
-    
+
     if (!is_connected_) {
         return true;
     }
@@ -274,7 +274,7 @@ auto SBIGCamera::scan() -> std::vector<std::string> {
                 devices.push_back(std::string(queryResults.usbInfo[i].name));
             }
         }
-        
+
         // Also check for Ethernet cameras
         QueryEthernetResults ethResults;
         if (SBIGUnivDrvCommand(CC_QUERY_ETHERNET, nullptr, &ethResults) == CE_NO_ERROR) {
@@ -298,7 +298,7 @@ auto SBIGCamera::scan() -> std::vector<std::string> {
 
 auto SBIGCamera::startExposure(double duration) -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -325,20 +325,20 @@ auto SBIGCamera::startExposure(double duration) -> bool {
     }
     exposure_thread_ = std::thread(&SBIGCamera::exposureThreadFunction, this);
 
-    LOG_F(INFO, "Started exposure: {} seconds on {} chip", duration, 
+    LOG_F(INFO, "Started exposure: {} seconds on {} chip", duration,
           (current_chip_ == ChipType::IMAGING) ? "imaging" : "guide");
     return true;
 }
 
 auto SBIGCamera::abortExposure() -> bool {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (!is_exposing_) {
         return true;
     }
 
     exposure_abort_requested_ = true;
-    
+
 #ifdef LITHIUM_SBIG_CAMERA_ENABLED
     SBIGUnivDrvCommand(CC_END_EXPOSURE, nullptr, nullptr);
 #endif
@@ -379,7 +379,7 @@ auto SBIGCamera::getExposureRemaining() const -> double {
 
 auto SBIGCamera::getExposureResult() -> std::shared_ptr<AtomCameraFrame> {
     std::lock_guard<std::mutex> lock(exposure_mutex_);
-    
+
     if (is_exposing_) {
         LOG_F(WARNING, "Exposure still in progress");
         return nullptr;
@@ -401,7 +401,7 @@ auto SBIGCamera::saveImage(const std::string& path) -> bool {
 // Temperature control (excellent on SBIG cameras)
 auto SBIGCamera::startCooling(double targetTemp) -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     if (!is_connected_) {
         LOG_F(ERROR, "Camera not connected");
         return false;
@@ -429,7 +429,7 @@ auto SBIGCamera::startCooling(double targetTemp) -> bool {
 
 auto SBIGCamera::stopCooling() -> bool {
     std::lock_guard<std::mutex> lock(temperature_mutex_);
-    
+
     cooler_enabled_ = false;
 
 #ifdef LITHIUM_SBIG_CAMERA_ENABLED
@@ -520,7 +520,7 @@ auto SBIGCamera::getCFWPosition() -> int {
     CFWParams cfwParams;
     cfwParams.cfwModel = CFWSEL_CFW5;
     cfwParams.cfwCommand = CFWC_QUERY;
-    
+
     if (SBIGUnivDrvCommand(CC_CFW, &cfwParams, &cfwResults) == CE_NO_ERROR) {
         return cfwResults.cfwPosition;
     }
@@ -545,7 +545,7 @@ auto SBIGCamera::setCFWPosition(int position) -> bool {
     cfwParams.cfwModel = CFWSEL_CFW5;
     cfwParams.cfwCommand = CFWC_GOTO;
     cfwParams.cfwParam1 = position;
-    
+
     if (SBIGUnivDrvCommand(CC_CFW, &cfwParams, nullptr) != CE_NO_ERROR) {
         return false;
     }
@@ -570,7 +570,7 @@ auto SBIGCamera::homeCFW() -> bool {
     CFWParams cfwParams;
     cfwParams.cfwModel = CFWSEL_CFW5;
     cfwParams.cfwCommand = CFWC_INIT;
-    
+
     if (SBIGUnivDrvCommand(CC_CFW, &cfwParams, nullptr) != CE_NO_ERROR) {
         return false;
     }
@@ -602,7 +602,7 @@ auto SBIGCamera::setAOPosition(int x, int y) -> bool {
     AOTipTiltParams aoParams;
     aoParams.xDeflection = x;
     aoParams.yDeflection = y;
-    
+
     if (SBIGUnivDrvCommand(CC_AO_TIP_TILT, &aoParams, nullptr) != CE_NO_ERROR) {
         return false;
     }
@@ -766,7 +766,7 @@ auto SBIGCamera::initializeSBIGSDK() -> bool {
 #ifdef LITHIUM_SBIG_CAMERA_ENABLED
     GetDriverInfoParams driverParams;
     driverParams.request = DRIVER_STD;
-    
+
     GetDriverInfoResults driverResults;
     return (SBIGUnivDrvCommand(CC_GET_DRIVER_INFO, &driverParams, &driverResults) == CE_NO_ERROR);
 #else
@@ -787,7 +787,7 @@ auto SBIGCamera::openCamera(int cameraIndex) -> bool {
     openParams.deviceType = DEV_USB1;  // or DEV_USB2, DEV_ETH, etc.
     openParams.lptBaseAddress = 0;
     openParams.ipAddress = 0;
-    
+
     return (SBIGUnivDrvCommand(CC_OPEN_DEVICE, &openParams, nullptr) == CE_NO_ERROR);
 #else
     return true;
@@ -805,7 +805,7 @@ auto SBIGCamera::establishLink() -> bool {
 #ifdef LITHIUM_SBIG_CAMERA_ENABLED
     EstablishLinkParams linkParams;
     linkParams.sbigUseOnly = 0;
-    
+
     EstablishLinkResults linkResults;
     return (SBIGUnivDrvCommand(CC_ESTABLISH_LINK, &linkParams, &linkResults) == CE_NO_ERROR);
 #else
@@ -818,7 +818,7 @@ auto SBIGCamera::setupCameraParameters() -> bool {
     // Get camera information
     GetCCDInfoParams infoParams;
     infoParams.request = CCD_INFO_IMAGING;
-    
+
     GetCCDInfoResults0 infoResults;
     if (SBIGUnivDrvCommand(CC_GET_CCD_INFO, &infoParams, &infoResults) == CE_NO_ERROR) {
         max_width_ = infoResults.readoutInfo[0].width;
@@ -827,7 +827,7 @@ auto SBIGCamera::setupCameraParameters() -> bool {
         pixel_size_y_ = infoResults.readoutInfo[0].pixelHeight / 100.0;
         camera_model_ = std::string(infoResults.name);
     }
-    
+
     // Check for guide chip
     infoParams.request = CCD_INFO_TRACKING;
     GetCCDInfoResults0 guideInfo;
@@ -837,12 +837,12 @@ auto SBIGCamera::setupCameraParameters() -> bool {
         guide_chip_height_ = guideInfo.readoutInfo[0].height;
         guide_chip_pixel_size_ = guideInfo.readoutInfo[0].pixelWidth / 100.0;
     }
-    
+
     // Check for CFW
     CFWParams cfwParams;
     cfwParams.cfwModel = CFWSEL_CFW5;
     cfwParams.cfwCommand = CFWC_QUERY;
-    
+
     CFWResults cfwResults;
     if (SBIGUnivDrvCommand(CC_CFW, &cfwParams, &cfwResults) == CE_NO_ERROR) {
         has_cfw_ = true;
@@ -852,7 +852,7 @@ auto SBIGCamera::setupCameraParameters() -> bool {
 
     roi_width_ = max_width_;
     roi_height_ = max_height_;
-    
+
     return readCameraCapabilities();
 }
 
@@ -887,7 +887,7 @@ auto SBIGCamera::exposureThreadFunction() -> void {
         expParams.left = roi_x_;
         expParams.height = roi_height_;
         expParams.width = roi_width_;
-        
+
         if (SBIGUnivDrvCommand(CC_START_EXPOSURE2, &expParams, nullptr) != CE_NO_ERROR) {
             LOG_F(ERROR, "Failed to start exposure");
             is_exposing_ = false;
@@ -897,19 +897,19 @@ auto SBIGCamera::exposureThreadFunction() -> void {
         // Wait for exposure to complete
         QueryCommandStatusParams statusParams;
         statusParams.command = CC_START_EXPOSURE2;
-        
+
         QueryCommandStatusResults statusResults;
         do {
             if (exposure_abort_requested_) {
                 break;
             }
-            
+
             if (SBIGUnivDrvCommand(CC_QUERY_COMMAND_STATUS, &statusParams, &statusResults) != CE_NO_ERROR) {
                 LOG_F(ERROR, "Failed to query exposure status");
                 is_exposing_ = false;
                 return;
             }
-            
+
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         } while (statusResults.status != CS_IDLE);
 
@@ -918,7 +918,7 @@ auto SBIGCamera::exposureThreadFunction() -> void {
             EndExposureParams endParams;
             endParams.ccd = (current_chip_ == ChipType::IMAGING) ? CCD_IMAGING : CCD_TRACKING;
             SBIGUnivDrvCommand(CC_END_EXPOSURE, &endParams, nullptr);
-            
+
             // Download image data
             last_frame_result_ = captureFrame();
             if (last_frame_result_) {
@@ -959,7 +959,7 @@ auto SBIGCamera::exposureThreadFunction() -> void {
 
 auto SBIGCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
     auto frame = std::make_shared<AtomCameraFrame>();
-    
+
     if (current_chip_ == ChipType::IMAGING) {
         frame->resolution.width = roi_width_ / bin_x_;
         frame->resolution.height = roi_height_ / bin_y_;
@@ -971,7 +971,7 @@ auto SBIGCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
         frame->pixel.sizeX = guide_chip_pixel_size_ * bin_x_;
         frame->pixel.sizeY = guide_chip_pixel_size_ * bin_y_;
     }
-    
+
     frame->binning.horizontal = bin_x_;
     frame->binning.vertical = bin_y_;
     frame->pixel.size = frame->pixel.sizeX;  // Assuming square pixels
@@ -987,34 +987,34 @@ auto SBIGCamera::captureFrame() -> std::shared_ptr<AtomCameraFrame> {
 #ifdef LITHIUM_SBIG_CAMERA_ENABLED
     // Download actual image data from camera
     auto data_buffer = std::make_unique<uint8_t[]>(frame->size);
-    
+
     ReadoutLineParams readParams;
     readParams.ccd = (current_chip_ == ChipType::IMAGING) ? CCD_IMAGING : CCD_TRACKING;
     readParams.readoutMode = readout_mode_;
     readParams.pixelStart = 0;
     readParams.pixelLength = frame->resolution.width;
-    
+
     uint16_t* data16 = reinterpret_cast<uint16_t*>(data_buffer.get());
-    
+
     for (int row = 0; row < frame->resolution.height; ++row) {
         if (SBIGUnivDrvCommand(CC_READOUT_LINE, &readParams, &data16[row * frame->resolution.width]) != CE_NO_ERROR) {
             LOG_F(ERROR, "Failed to download image row {}", row);
             return nullptr;
         }
     }
-    
+
     frame->data = data_buffer.release();
 #else
     // Generate simulated image data
     auto data_buffer = std::make_unique<uint8_t[]>(frame->size);
     frame->data = data_buffer.release();
-    
+
     // Fill with simulated star field (16-bit)
     uint16_t* data16 = static_cast<uint16_t*>(frame->data);
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> noise_dist(0, 30);
-    
+
     for (size_t i = 0; i < pixelCount; ++i) {
         int noise = noise_dist(gen) - 15;  // ±15 ADU noise
         int star = 0;
@@ -1063,10 +1063,10 @@ auto SBIGCamera::isValidExposureTime(double duration) const -> bool {
 auto SBIGCamera::isValidResolution(int x, int y, int width, int height) const -> bool {
     int maxW = (current_chip_ == ChipType::IMAGING) ? max_width_ : guide_chip_width_;
     int maxH = (current_chip_ == ChipType::IMAGING) ? max_height_ : guide_chip_height_;
-    
-    return x >= 0 && y >= 0 && 
+
+    return x >= 0 && y >= 0 &&
            width > 0 && height > 0 &&
-           x + width <= maxW && 
+           x + width <= maxW &&
            y + height <= maxH;
 }
 

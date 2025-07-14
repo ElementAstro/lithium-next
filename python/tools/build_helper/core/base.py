@@ -285,10 +285,11 @@ class BuildHelperBase(ABC):
             output=f"Cleaned build directory: {self.build_dir}" if success else "",
             error=error_message,
             exit_code=0 if success else 1,
-            execution_time=end_time - start_time
+            execution_time=end_time - start_time,
         )
 
         if success:
+            logger.success(f"Successfully cleaned build directory: {self.build_dir}")
             logger.success(f"Successfully cleaned build directory: {self.build_dir}")
             self.status = BuildStatus.COMPLETED
         else:
