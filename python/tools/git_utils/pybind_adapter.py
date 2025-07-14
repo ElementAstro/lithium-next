@@ -4,8 +4,10 @@ PyBind11 adapter for Git utilities.
 This module provides simplified interfaces for C++ bindings via pybind11.
 """
 
+import json
 from loguru import logger
 from .git_utils import GitUtils
+from .models import StatusInfo, AheadBehindInfo
 
 
 class GitUtilsPyBindAdapter:
@@ -18,8 +20,7 @@ class GitUtilsPyBindAdapter:
     @staticmethod
     def clone_repository(repo_url: str, clone_dir: str) -> bool:
         """Simplified clone operation for C++ binding."""
-        logger.info(
-            f"C++ binding: Cloning repository {repo_url} to {clone_dir}")
+        logger.info(f"C++ binding: Cloning repository {repo_url} to {clone_dir}")
         git = GitUtils()
         result = git.clone_repository(repo_url, clone_dir)
         return result.success
@@ -39,8 +40,7 @@ class GitUtilsPyBindAdapter:
     @staticmethod
     def add_and_commit(repo_dir: str, message: str) -> bool:
         """Combined add and commit operation for C++ binding."""
-        logger.info(
-            f"C++ binding: Adding and committing changes in {repo_dir}")
+        logger.info(f"C++ binding: Adding and committing changes in {repo_dir}")
         git = GitUtils(repo_dir)
         try:
             add_result = git.add_changes()
@@ -66,22 +66,25 @@ class GitUtilsPyBindAdapter:
             return False
 
     @staticmethod
-    def get_repository_status(repo_dir: str) -> dict:
-        """Get repository status for C++ binding."""
+    def get_repository_status(repo_dir: str) -> str:
+        """Get repository status for C++ binding, returned as a JSON string."""
         logger.info(f"C++ binding: Getting status of repository {repo_dir}")
         git = GitUtils(repo_dir)
         try:
             result = git.view_status(porcelain=True)
-            status = {
-                "success": result.success,
-                "is_clean": result.success and not result.output.strip(),
-                "output": result.output
-            }
-            return status
+            if result.success:
+                files = git.parse_status(result.output)
+                branch = git.get_current_branch()
+                ahead_behind = git.get_ahead_behind_info(branch)
+                status_info = StatusInfo(
+                    branch=branch,
+                    is_clean=not bool(result.output),
+                    ahead_behind=ahead_behind,
+                    files=files,
+                )
+                return json.dumps(status_info.__dict__, default=lambda o: o.__dict__)
+            else:
+                return json.dumps({"success": False, "error": result.error})
         except Exception as e:
             logger.exception(f"Error in get_repository_status: {e}")
-            return {
-                "success": False,
-                "is_clean": False,
-                "output": str(e)
-            }
+            return json.dumps({"success": False, "error": str(e)})

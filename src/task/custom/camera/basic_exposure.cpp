@@ -1,5 +1,7 @@
 // ==================== Includes and Declarations ====================
 #include "basic_exposure.hpp"
+#include "common.hpp"
+
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -11,39 +13,29 @@
 #include "atom/function/concept.hpp"
 #include "atom/function/enum.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 
-#include "constant/constant.hpp"
 #include <spdlog/spdlog.h>
+#include "constant/constant.hpp"
 
 // ==================== Enum Traits and Formatters ====================
+
+// Outside any namespace - use full qualification for both
 template <>
-struct atom::meta::EnumTraits<ExposureType> {
-    static constexpr std::array<ExposureType, 5> values = {
-        ExposureType::LIGHT, ExposureType::DARK, ExposureType::BIAS,
-        ExposureType::FLAT, ExposureType::SNAPSHOT};
+struct atom::meta::EnumTraits<lithium::task::camera::ExposureType> {
+    static constexpr std::array<lithium::task::camera::ExposureType, 5> values =
+        {lithium::task::camera::ExposureType::LIGHT,
+         lithium::task::camera::ExposureType::DARK,
+         lithium::task::camera::ExposureType::BIAS,
+         lithium::task::camera::ExposureType::FLAT,
+         lithium::task::camera::ExposureType::SNAPSHOT};
     static constexpr std::array<std::string_view, 5> names = {
         "LIGHT", "DARK", "BIAS", "FLAT", "SNAPSHOT"};
 };
 
-template <Enum enumeration>
-struct std::formatter<enumeration> {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template <typename format_context>
-    auto format(enumeration const& e, format_context& ctx) const
-        -> decltype(ctx.out()) {
-        return std::format_to(ctx.out(), "{}", atom::meta::enum_name(e));
-    }
-};
-
 #define MOCK_CAMERA
-
-namespace lithium::task::task {
+namespace lithium::task::camera {
 
 // ==================== Mock Camera Class ====================
 #ifdef MOCK_CAMERA
@@ -111,7 +103,7 @@ void TakeExposureTask::execute(const json& params) {
         }
 
         spdlog::info("Starting {} exposure for {} seconds",
-              static_cast<int>(type), time);
+                     static_cast<int>(type), time);
 
 #ifdef MOCK_CAMERA
         // Mock camera implementation
@@ -144,7 +136,7 @@ void TakeExposureTask::execute(const json& params) {
             endTime - startTime);
 
         spdlog::info("TakeExposure task completed successfully in {} ms",
-              duration.count());
+                     duration.count());
 
     } catch (const std::exception& e) {
         spdlog::error("TakeExposure task failed: {}", e.what());
@@ -223,7 +215,7 @@ auto TakeManyExposureTask::taskName() -> std::string {
 
 void TakeManyExposureTask::execute(const json& params) {
     spdlog::info("Executing TakeManyExposure task with params: {}",
-          params.dump(4));
+                 params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
@@ -236,9 +228,9 @@ void TakeManyExposureTask::execute(const json& params) {
         int offset = params.at("offset").get<int>();
 
         spdlog::info(
-              "Starting {} exposures of {} seconds each with binning {} and "
-              "gain {} and offset {}",
-              count, time, binning, gain, offset);
+            "Starting {} exposures of {} seconds each with binning {} and "
+            "gain {} and offset {}",
+            count, time, binning, gain, offset);
 
         for (int i = 0; i < count; ++i) {
             spdlog::info("Taking exposure {} of {}", i + 1, count);
@@ -248,7 +240,7 @@ void TakeManyExposureTask::execute(const json& params) {
                 double delay = params["delay"].get<double>();
                 if (delay > 0) {
                     spdlog::info("Waiting {} seconds before next exposure",
-                          delay);
+                                 delay);
                     std::this_thread::sleep_for(std::chrono::milliseconds(
                         static_cast<int>(delay * 1000)));
                 }
@@ -264,14 +256,14 @@ void TakeManyExposureTask::execute(const json& params) {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
         spdlog::info("TakeManyExposure task completed {} exposures in {} ms",
-              count, duration.count());
+                     count, duration.count());
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
         spdlog::error("TakeManyExposure task failed after {} ms: {}",
-              duration.count(), e.what());
+                      duration.count(), e.what());
         throw;
     }
 }
@@ -283,7 +275,8 @@ auto TakeManyExposureTask::createEnhancedTask() -> std::unique_ptr<Task> {
                                                       [](const json&) {});
             takeManyExposureTask.execute(params);
         } catch (const std::exception& e) {
-            spdlog::error("Enhanced TakeManyExposure task failed: {}", e.what());
+            spdlog::error("Enhanced TakeManyExposure task failed: {}",
+                          e.what());
             throw;
         }
     });
@@ -358,7 +351,7 @@ auto SubframeExposureTask::taskName() -> std::string {
 
 void SubframeExposureTask::execute(const json& params) {
     spdlog::info("Executing SubframeExposure task with params: {}",
-          params.dump(4));
+                 params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
@@ -374,9 +367,9 @@ void SubframeExposureTask::execute(const json& params) {
         int offset = params.at("offset").get<int>();
 
         spdlog::info(
-              "Starting {} subframe exposure for {} seconds at ({},{}) size "
-              "{}x{} with binning {} and gain {} and offset {}",
-              type, time, x, y, width, height, binning, gain, offset);
+            "Starting {} subframe exposure for {} seconds at ({},{}) size "
+            "{}x{} with binning {} and gain {} and offset {}",
+            type, time, x, y, width, height, binning, gain, offset);
 
 #ifdef MOCK_CAMERA
         std::shared_ptr<MockCamera> camera = std::make_shared<MockCamera>();
@@ -401,7 +394,7 @@ void SubframeExposureTask::execute(const json& params) {
 
         // Set camera frame
         spdlog::info("Setting camera frame to ({},{}) size {}x{}", x, y, width,
-              height);
+                     height);
         if (!camera->setFrame(x, y, width, height)) {
             spdlog::error("Failed to set camera frame");
             THROW_RUNTIME_ERROR("Failed to set camera frame");
@@ -456,14 +449,14 @@ void SubframeExposureTask::execute(const json& params) {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
         spdlog::info("SubframeExposure task completed in {} ms",
-              duration.count());
+                     duration.count());
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
         spdlog::error("SubframeExposure task failed after {} ms: {}",
-              duration.count(), e.what());
+                      duration.count(), e.what());
         throw;
     }
 }
@@ -475,7 +468,8 @@ auto SubframeExposureTask::createEnhancedTask() -> std::unique_ptr<Task> {
                                                       [](const json&) {});
             subframeExposureTask.execute(params);
         } catch (const std::exception& e) {
-            spdlog::error("Enhanced SubframeExposure task failed: {}", e.what());
+            spdlog::error("Enhanced SubframeExposure task failed: {}",
+                          e.what());
             throw;
         }
     });
@@ -543,7 +537,7 @@ auto CameraSettingsTask::taskName() -> std::string { return "CameraSettings"; }
 
 void CameraSettingsTask::execute(const json& params) {
     spdlog::info("Executing CameraSettings task with params: {}",
-          params.dump(4));
+                 params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
@@ -557,8 +551,8 @@ void CameraSettingsTask::execute(const json& params) {
         bool coolingEnabled = params.value("cooling", false);
 
         spdlog::info(
-              "Setting camera: gain={}, offset={}, binning={}x{}, cooling={}",
-              gain, offset, binning, binning, coolingEnabled);
+            "Setting camera: gain={}, offset={}, binning={}x{}, cooling={}",
+            gain, offset, binning, binning, coolingEnabled);
 
 #ifdef MOCK_CAMERA
         std::shared_ptr<MockCamera> camera = std::make_shared<MockCamera>();
@@ -585,7 +579,7 @@ void CameraSettingsTask::execute(const json& params) {
         // Apply temperature settings if specified
         if (targetTemp > -999.0 && coolingEnabled) {
             spdlog::info("Setting camera target temperature to {} °C",
-                  targetTemp);
+                         targetTemp);
             // Note: MockCamera doesn't have temperature control
 #ifndef MOCK_CAMERA
             camera->setCoolerEnabled(true);
@@ -601,14 +595,15 @@ void CameraSettingsTask::execute(const json& params) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
-        spdlog::info("CameraSettings task completed in {} ms", duration.count());
+        spdlog::info("CameraSettings task completed in {} ms",
+                     duration.count());
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
         spdlog::error("CameraSettings task failed after {} ms: {}",
-              duration.count(), e.what());
+                      duration.count(), e.what());
         throw;
     }
 }
@@ -684,7 +679,8 @@ void CameraSettingsTask::validateSettingsParameters(const json& params) {
 auto CameraPreviewTask::taskName() -> std::string { return "CameraPreview"; }
 
 void CameraPreviewTask::execute(const json& params) {
-    spdlog::info("Executing CameraPreview task with params: {}", params.dump(4));
+    spdlog::info("Executing CameraPreview task with params: {}",
+                 params.dump(4));
 
     auto startTime = std::chrono::steady_clock::now();
 
@@ -696,9 +692,9 @@ void CameraPreviewTask::execute(const json& params) {
         bool autoStretch = params.value("auto_stretch", true);
 
         spdlog::info(
-              "Starting preview exposure for {} seconds with binning {}x{} and "
-              "gain {}",
-              time, binning, binning, gain);
+            "Starting preview exposure for {} seconds with binning {}x{} and "
+            "gain {}",
+            time, binning, binning, gain);
 
         // Create a modified params object for the exposure
         json exposureParams = {{"exposure", time},
@@ -727,7 +723,7 @@ void CameraPreviewTask::execute(const json& params) {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime - startTime);
         spdlog::error("CameraPreview task failed after {} ms: {}",
-              duration.count(), e.what());
+                      duration.count(), e.what());
         throw;
     }
 }
@@ -796,12 +792,12 @@ void CameraPreviewTask::validatePreviewParameters(const json& params) {
     }
 }
 
-}  // namespace lithium::task::task
+}  // namespace lithium::task::camera
 
 // ==================== Task Registration Section ====================
 namespace {
 using namespace lithium::task;
-using namespace lithium::task::task;
+using namespace lithium::task::camera;
 
 // Register TakeExposureTask
 AUTO_REGISTER_TASK(

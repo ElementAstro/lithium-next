@@ -1,4 +1,5 @@
 #include "task.hpp"
+#include "exception.hpp"
 
 #include "atom/async/packaged_task.hpp"
 #include "atom/error/exception.hpp"
@@ -11,25 +12,20 @@
 
 namespace lithium::task {
 
-/**
- * @class TaskTimeoutException
- * @brief Exception thrown when a task times out.
- */
-class TaskTimeoutException : public atom::error::RuntimeError {
-public:
-    using atom::error::RuntimeError::RuntimeError;
-};
-
-#define THROW_TASK_TIMEOUT_EXCEPTION(...)                                      \
-    throw TaskTimeoutException(ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, \
-                               __VA_ARGS__);
+// Using the exception class defined in exception.hpp
 
 Task::Task(std::string name, std::function<void(const json&)> action)
     : name_(std::move(name)),
       uuid_(atom::utils::UUID().toString()),
-      action_(std::move(action)) {
-    spdlog::info("Task created with name: {}, uuid: {}", name_, uuid_);
-}
+      taskType_("generic"),
+      action_(std::move(action)) {}
+
+Task::Task(std::string name, std::string taskType,
+           std::function<void(const json&)> action)
+    : name_(std::move(name)),
+      uuid_(atom::utils::UUID().toString()),
+      taskType_(std::move(taskType)),
+      action_(std::move(action)) {}
 
 void Task::execute(const json& params) {
     auto start = std::chrono::high_resolution_clock::now();
@@ -66,7 +62,10 @@ void Task::execute(const json& params) {
             auto future = task.getEnhancedFuture();
             task(params);
             if (!future.waitFor(timeout_)) {
-                THROW_TASK_TIMEOUT_EXCEPTION("Task timed out");
+                throw TaskTimeoutException(
+                    "Task '" + name_ + "' execution timed out after " +
+                        std::to_string(timeout_.count()) + " seconds",
+                    name_, timeout_);
             }
         } else {
             spdlog::info("Task {} with uuid {} executing without timeout",
@@ -360,16 +359,11 @@ void Task::clearExceptionCallback() {
     spdlog::info("Exception callback cleared for task {}", name_);
 }
 
-void Task::setTaskType(const std::string& type) {
-    taskType_ = type;
-    spdlog::info("Task '{}' type set to '{}'", name_, type);
-}
+void Task::setTaskType(const std::string& taskType) { taskType_ = taskType; }
 
-auto Task::getTaskType() const -> const std::string& {
-    return taskType_;
-}
+auto Task::getTaskType() const -> const std::string& { return taskType_; }
 
-json Task::toJson() const {
+json Task::toJson(bool includeRuntime) const {
     auto paramDefs = json::array();
     for (const auto& def : paramDefinitions_) {
         paramDefs.push_back({
@@ -380,7 +374,9 @@ json Task::toJson() const {
             {"description", def.description},
         });
     }
-    return {
+
+    json j = {
+        {"version", "2.0.0"},  // Version information for schema compatibility
         {"name", name_},
         {"uuid", uuid_},
         {"taskType", taskType_},
@@ -388,16 +384,147 @@ json Task::toJson() const {
         {"error", error_.value_or("")},
         {"priority", priority_},
         {"dependencies", dependencies_},
-        {"executionTime", executionTime_.count()},
-        {"memoryUsage", memoryUsage_},
-        {"logLevel", logLevel_},
-        {"errorType", static_cast<int>(errorType_)},
-        {"errorDetails", errorDetails_},
-        {"cpuUsage", cpuUsage_},
-        {"taskHistory", taskHistory_},
         {"paramDefinitions", paramDefs},
-        {"preTasks", json::array()},
-        {"postTasks", json::array()},
-    };
+        {"timeout", timeout_.count()}};
+
+    if (includeRuntime) {
+        j["executionTime"] = executionTime_.count();
+        j["memoryUsage"] = memoryUsage_;
+        j["logLevel"] = logLevel_;
+        j["errorType"] = static_cast<int>(errorType_);
+        j["errorDetails"] = errorDetails_;
+        j["cpuUsage"] = cpuUsage_;
+        j["taskHistory"] = taskHistory_;
+    }
+
+    // Serialize pre and post tasks (only UUIDs to avoid circular references)
+    json preTasks = json::array();
+    for (const auto& task : preTasks_) {
+        preTasks.push_back(task->getUUID());
+    }
+    j["preTasks"] = preTasks;
+
+    json postTasks = json::array();
+    for (const auto& task : postTasks_) {
+        postTasks.push_back(task->getUUID());
+    }
+    j["postTasks"] = postTasks;
+
+    return j;
+}
+
+void Task::fromJson(const json& data) {
+    try {
+        // Required fields
+        name_ = data.at("name").get<std::string>();
+
+        // Optional fields with defaults
+        if (data.contains("uuid")) {
+            uuid_ = data.at("uuid").get<std::string>();
+        } else {
+            uuid_ = atom::utils::UUID().toString();
+        }
+
+        if (data.contains("taskType")) {
+            taskType_ = data.at("taskType").get<std::string>();
+        } else {
+            taskType_ = "generic";
+        }
+
+        if (data.contains("status")) {
+            status_ = static_cast<TaskStatus>(data.at("status").get<int>());
+        } else {
+            status_ = TaskStatus::Pending;
+        }
+
+        if (data.contains("error") &&
+            !data.at("error").get<std::string>().empty()) {
+            error_ = data.at("error").get<std::string>();
+        }
+
+        if (data.contains("priority")) {
+            priority_ = data.at("priority").get<int>();
+        }
+
+        if (data.contains("dependencies")) {
+            dependencies_ =
+                data.at("dependencies").get<std::vector<std::string>>();
+        }
+
+        if (data.contains("timeout")) {
+            timeout_ = std::chrono::seconds(data.at("timeout").get<int64_t>());
+        }
+
+        if (data.contains("paramDefinitions") &&
+            data.at("paramDefinitions").is_array()) {
+            paramDefinitions_.clear();
+            for (const auto& defJson : data.at("paramDefinitions")) {
+                ParamDefinition def;
+                def.name = defJson.at("name").get<std::string>();
+                def.type = defJson.at("type").get<std::string>();
+                def.required = defJson.at("required").get<bool>();
+                def.defaultValue = defJson.at("defaultValue");
+                def.description = defJson.at("description").get<std::string>();
+                paramDefinitions_.push_back(def);
+            }
+        }
+
+        if (data.contains("executionTime")) {
+            executionTime_ = std::chrono::milliseconds(
+                data.at("executionTime").get<int64_t>());
+        }
+
+        if (data.contains("memoryUsage")) {
+            memoryUsage_ = data.at("memoryUsage").get<size_t>();
+        }
+
+        if (data.contains("logLevel")) {
+            logLevel_ = data.at("logLevel").get<int>();
+        }
+
+        if (data.contains("errorType")) {
+            errorType_ =
+                static_cast<TaskErrorType>(data.at("errorType").get<int>());
+        }
+
+        if (data.contains("errorDetails")) {
+            errorDetails_ = data.at("errorDetails").get<std::string>();
+        }
+
+        if (data.contains("cpuUsage")) {
+            cpuUsage_ = data.at("cpuUsage").get<double>();
+        }
+
+        if (data.contains("taskHistory") && data.at("taskHistory").is_array()) {
+            taskHistory_ =
+                data.at("taskHistory").get<std::vector<std::string>>();
+        }
+
+        // Pre-tasks and post-tasks are handled elsewhere to resolve references
+
+    } catch (const json::exception& e) {
+        spdlog::error("Failed to deserialize task from JSON: {}", e.what());
+        throw std::runtime_error(
+            std::string("Failed to deserialize task from JSON: ") + e.what());
+    }
+}
+
+std::unique_ptr<Task> Task::createFromJson(const json& data) {
+    try {
+        std::string name = data.at("name").get<std::string>();
+        std::string taskType = data.value("taskType", "generic");
+
+        // Create a task with a placeholder action
+        auto task = std::make_unique<Task>(name, taskType, [](const json&) {
+            // This will be replaced when loading the sequence
+        });
+
+        task->fromJson(data);
+        return task;
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to create task from JSON: {}", e.what());
+        throw std::runtime_error(
+            std::string("Failed to create task from JSON: ") + e.what());
+    }
 }
 }  // namespace lithium::task

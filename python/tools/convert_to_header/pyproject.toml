@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "convert_to_header"
+version = "2.2.0"
+description = "A highly flexible tool to convert binary files into C/C++ header files and back. Enhanced with modern Python features and robust error handling."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Max Qian", email = "astro_air@126.com" }]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Code Generators",
+]
+dependencies = [
+    "loguru>=0.7.0",
+    "typer[all]>=0.9.0",
+    "rich>=13.0.0",
+    "tqdm>=4.64.0",
+]
+
+[project.optional-dependencies]
+yaml = ["PyYAML>=6.0"]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/convert_to_header"
+"Bug Tracker" = "https://github.com/yourusername/convert_to_header/issues"
+
+[project.scripts]
+convert-to-header = "convert_to_header.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["convert_to_header"]

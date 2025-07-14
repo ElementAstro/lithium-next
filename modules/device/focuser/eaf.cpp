@@ -6,7 +6,7 @@
 #include <thread>
 
 #include "atom/async/timer.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 // 全局互斥锁保证线程安全
 std::mutex g_eafMutex;

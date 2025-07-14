@@ -1,4 +1,5 @@
 #include "dump.hpp"
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <array>
@@ -7,11 +8,10 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "atom/log/loguru.hpp"
 
 constexpr size_t ELF_IDENT_SIZE = 16;
 constexpr size_t NUM_REGISTERS = 27;
@@ -27,10 +27,10 @@ namespace lithium::addon {
 class CoreDumpAnalyzer::Impl {
 public:
     auto readFile(const std::string& filename) -> bool {
-        LOG_F(INFO, "Reading file: {}", filename);
+        spdlog::info("Reading file: {}", filename);
         std::ifstream file(filename, std::ios::binary);
         if (!file) {
-            LOG_F(ERROR, "Unable to open file: {}", filename);
+            spdlog::error("Unable to open file: {}", filename);
             return false;
         }
 
@@ -43,23 +43,23 @@ public:
                   static_cast<std::streamsize>(fileSize));
 
         if (!file) {
-            LOG_F(ERROR, "Error reading file: {}", filename);
+            spdlog::error("Error reading file: {}", filename);
             return false;
         }
 
         if (fileSize < sizeof(ElfHeader)) {
-            LOG_F(ERROR, "File too small to be a valid ELF format: {}",
-                  filename);
+            spdlog::error("File too small to be a valid ELF format: {}",
+                          filename);
             return false;
         }
 
         std::memcpy(&header_, data_.data(), sizeof(ElfHeader));
-        LOG_F(INFO, "Successfully read file: {}", filename);
+        spdlog::info("Successfully read file: {}", filename);
         return true;
     }
 
     [[nodiscard]] auto getElfHeaderInfo() const -> std::string {
-        LOG_F(INFO, "Getting ELF header info");
+        spdlog::info("Getting ELF header info");
         std::ostringstream oss;
         oss << "ELF Header:\n";
         oss << "  Type: " << header_.eType << "\n";
@@ -85,7 +85,7 @@ public:
     }
 
     [[nodiscard]] auto getProgramHeadersInfo() const -> std::string {
-        LOG_F(INFO, "Getting program headers info");
+        spdlog::info("Getting program headers info");
         std::ostringstream oss;
         oss << "Program Headers:\n";
         for (const auto& programHeader : programHeaders_) {
@@ -104,7 +104,7 @@ public:
     }
 
     [[nodiscard]] auto getSectionHeadersInfo() const -> std::string {
-        LOG_F(INFO, "Getting section headers info");
+        spdlog::info("Getting section headers info");
         std::ostringstream oss;
         oss << "Section Headers:\n";
         for (const auto& sectionHeader : sectionHeaders_) {
@@ -123,7 +123,7 @@ public:
     }
 
     [[nodiscard]] auto getNoteSectionInfo() const -> std::string {
-        LOG_F(INFO, "Getting note section info");
+        spdlog::info("Getting note section info");
         std::ostringstream oss;
         oss << "Note Sections:\n";
         for (const auto& section : sectionHeaders_) {
@@ -158,20 +158,31 @@ public:
     }
 
     [[nodiscard]] auto getThreadInfo(size_t offset) const -> std::string {
-        LOG_F(INFO, "Getting thread info at offset: {}", offset);
+        spdlog::info("Getting thread info at offset: {}", offset);
         std::ostringstream oss;
         ThreadInfo thread{};
+
+        if (offset + sizeof(uint64_t) > data_.size()) {
+            spdlog::error("Offset for thread ID is out of bounds.");
+            return "  Error: Incomplete thread info\n";
+        }
         std::memcpy(&thread.tid, data_.data() + offset, sizeof(uint64_t));
-        std::memcpy(thread.registers.data(),
-                    data_.data() + offset + sizeof(uint64_t),
+        offset += sizeof(uint64_t);
+
+        if (offset + sizeof(uint64_t) * NUM_REGISTERS > data_.size()) {
+            spdlog::error("Offset for registers is out of bounds.");
+            return "  Error: Incomplete register info\n";
+        }
+        std::memcpy(thread.registers.data(), data_.data() + offset,
                     sizeof(uint64_t) * NUM_REGISTERS);
 
         oss << "  Thread ID: " << thread.tid << "\n";
         oss << "  Registers:\n";
-        const std::array<const char*, NUM_GENERAL_REGISTERS> REG_NAMES = {
-            "RAX", "RBX",    "RCX", "RDX", "RSI", "RDI", "RBP", "RSP",
-            "R8",  "R9",     "R10", "R11", "R12", "R13", "R14", "R15",
-            "RIP", "EFLAGS", "CS",  "SS",  "DS",  "ES",  "FS",  "GS"};
+        static constexpr std::array<const char*, NUM_GENERAL_REGISTERS>
+            REG_NAMES = {"RAX", "RBX", "RCX", "RDX", "RSI", "RDI",
+                         "RBP", "RSP", "R8",  "R9",  "R10", "R11",
+                         "R12", "R13", "R14", "R15", "RIP", "EFLAGS",
+                         "CS",  "SS",  "DS",  "ES",  "FS",  "GS"};
         for (size_t i = 0; i < NUM_GENERAL_REGISTERS; ++i) {
             oss << "    " << REG_NAMES[i] << ": 0x" << std::hex
                 << thread.registers[i] << "\n";
@@ -180,20 +191,39 @@ public:
     }
 
     [[nodiscard]] auto getFileInfo(size_t offset) const -> std::string {
-        LOG_F(INFO, "Getting file info at offset: {}", offset);
+        spdlog::info("Getting file info at offset: {}", offset);
         std::ostringstream oss;
+
+        if (offset + sizeof(uint64_t) > data_.size()) {
+            spdlog::error("Offset for file count is out of bounds.");
+            return "  Error: Incomplete file info\n";
+        }
         uint64_t count =
             *reinterpret_cast<const uint64_t*>(data_.data() + offset);
         offset += sizeof(uint64_t);
 
         oss << "  Open File Descriptors:\n";
         for (uint64_t i = 0; i < count; ++i) {
+            if (offset + sizeof(int) > data_.size()) {
+                spdlog::error("Offset for file descriptor is out of bounds.");
+                break;
+            }
             int fileDescriptor =
                 *reinterpret_cast<const int*>(data_.data() + offset);
             offset += sizeof(int);
+
+            if (offset + sizeof(uint64_t) > data_.size()) {
+                spdlog::error("Offset for name size is out of bounds.");
+                break;
+            }
             uint64_t nameSize =
                 *reinterpret_cast<const uint64_t*>(data_.data() + offset);
             offset += sizeof(uint64_t);
+
+            if (offset + nameSize > data_.size()) {
+                spdlog::error("Offset for filename is out of bounds.");
+                break;
+            }
             std::string filename(
                 reinterpret_cast<const char*>(data_.data() + offset), nameSize);
             offset += nameSize;
@@ -205,7 +235,7 @@ public:
     }
 
     [[nodiscard]] auto getMemoryMapsInfo() const -> std::string {
-        LOG_F(INFO, "Getting memory maps info");
+        spdlog::info("Getting memory maps info");
         std::ostringstream oss;
         oss << "Memory Maps:\n";
         for (const auto& programHeader : programHeaders_) {
@@ -221,7 +251,7 @@ public:
     }
 
     [[nodiscard]] auto getSignalHandlersInfo() const -> std::string {
-        LOG_F(INFO, "Getting signal handlers info");
+        spdlog::info("Getting signal handlers info");
         std::ostringstream oss;
         oss << "Signal Handlers:\n";
         for (const auto& section : sectionHeaders_) {
@@ -239,7 +269,7 @@ public:
     }
 
     [[nodiscard]] auto getHeapUsageInfo() const -> std::string {
-        LOG_F(INFO, "Getting heap usage info");
+        spdlog::info("Getting heap usage info");
         std::ostringstream oss;
         oss << "Heap Usage:\n";
         auto heapSection =
@@ -261,23 +291,58 @@ public:
     }
 
     void analyze() {
-        LOG_F(INFO, "Analyzing core dump");
+        spdlog::info("Analyzing core dump");
         if (data_.empty()) {
-            LOG_F(WARNING, "No data to analyze");
+            spdlog::warn("No data to analyze");
             return;
         }
+
+        if (data_.size() < sizeof(ElfHeader)) {
+            spdlog::error("File too small to be a valid ELF format.");
+            return;
+        }
+
+        std::memcpy(&header_, data_.data(), sizeof(ElfHeader));
 
         if (std::memcmp(header_.eIdent.data(),
                         "\x7F"
                         "ELF",
                         4) != 0) {
-            LOG_F(ERROR, "Not a valid ELF file");
+            spdlog::error("Not a valid ELF file");
             return;
         }
 
-        LOG_F(INFO, "File size: {} bytes", data_.size());
-        LOG_F(INFO, "ELF header size: {} bytes", sizeof(ElfHeader));
-        LOG_F(INFO, "Analysis complete");
+        // Parse Program Headers
+        programHeaders_.resize(header_.ePhnum);
+        size_t ph_offset = header_.ePhoff;
+        for (int i = 0; i < header_.ePhnum; ++i) {
+            if (ph_offset + sizeof(ProgramHeader) > data_.size()) {
+                spdlog::error("Program header extends beyond file size.");
+                programHeaders_.clear();
+                return;
+            }
+            std::memcpy(&programHeaders_[i], data_.data() + ph_offset,
+                        sizeof(ProgramHeader));
+            ph_offset += sizeof(ProgramHeader);
+        }
+
+        // Parse Section Headers
+        sectionHeaders_.resize(header_.eShnum);
+        size_t sh_offset = header_.eShoff;
+        for (int i = 0; i < header_.eShnum; ++i) {
+            if (sh_offset + sizeof(SectionHeader) > data_.size()) {
+                spdlog::error("Section header extends beyond file size.");
+                sectionHeaders_.clear();
+                return;
+            }
+            std::memcpy(&sectionHeaders_[i], data_.data() + sh_offset,
+                        sizeof(SectionHeader));
+            sh_offset += sizeof(SectionHeader);
+        }
+
+        spdlog::info("File size: {} bytes", data_.size());
+        spdlog::info("ELF header size: {} bytes", sizeof(ElfHeader));
+        spdlog::info("Analysis complete");
     }
 
     struct AnalysisOptions {
@@ -388,21 +453,40 @@ private:
         return oss.str();
     }
 
+    [[nodiscard]] auto readMemory(uint64_t address) const
+        -> std::optional<uint64_t> {
+        // Find the program header that contains this address
+        for (const auto& ph : programHeaders_) {
+            if (ph.pType == PT_LOAD && address >= ph.pVaddr &&
+                address + sizeof(uint64_t) <= ph.pVaddr + ph.pMemsz) {
+                // Calculate the offset in the data_ vector
+                uint64_t offset_in_file = ph.pOffset + (address - ph.pVaddr);
+                if (offset_in_file + sizeof(uint64_t) <= data_.size()) {
+                    uint64_t value;
+                    std::memcpy(&value, data_.data() + offset_in_file,
+                                sizeof(uint64_t));
+                    return value;
+                }
+            }
+        }
+        return std::nullopt;
+    }
+
     [[nodiscard]] auto unwindStack(uint64_t rip, uint64_t rsp) const
         -> std::vector<uint64_t> {
         std::vector<uint64_t> frames;
         frames.push_back(rip);
 
-        // 基本的堆栈展开逻辑
+        // Basic stack unwinding logic
         const size_t MAX_FRAMES = 50;
-        while (frames.size() < MAX_FRAMES && isValidAddress(rsp)) {
-            auto* framePtr = reinterpret_cast<uint64_t*>(rsp);
-            if (!isValidAddress(reinterpret_cast<uint64_t>(framePtr))) {
-                break;
+        uint64_t current_rsp = rsp;
+        while (frames.size() < MAX_FRAMES) {
+            auto frame_value = readMemory(current_rsp);
+            if (!frame_value) {
+                break;  // Cannot read memory at this address
             }
-
-            frames.push_back(*framePtr);
-            rsp += sizeof(uint64_t);
+            frames.push_back(*frame_value);
+            current_rsp += sizeof(uint64_t);
         }
 
         return frames;
@@ -483,21 +567,21 @@ private:
 };
 
 CoreDumpAnalyzer::CoreDumpAnalyzer() : pImpl_(std::make_unique<Impl>()) {
-    LOG_F(INFO, "CoreDumpAnalyzer created");
+    spdlog::info("CoreDumpAnalyzer created");
 }
 
 CoreDumpAnalyzer::~CoreDumpAnalyzer() {
-    LOG_F(INFO, "CoreDumpAnalyzer destroyed");
+    spdlog::info("CoreDumpAnalyzer destroyed");
 }
 
 auto CoreDumpAnalyzer::readFile(const std::string& filename) -> bool {
-    LOG_F(INFO, "CoreDumpAnalyzer::readFile called with filename: {}",
-          filename);
+    spdlog::info("CoreDumpAnalyzer::readFile called with filename: {}",
+                 filename);
     return pImpl_->readFile(filename);
 }
 
 void CoreDumpAnalyzer::analyze() {
-    LOG_F(INFO, "CoreDumpAnalyzer::analyze called");
+    spdlog::info("CoreDumpAnalyzer::analyze called");
     pImpl_->analyze();
 }
 

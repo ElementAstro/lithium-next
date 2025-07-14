@@ -11,12 +11,14 @@ The Enhanced Sequence System provides a comprehensive framework for astronomical
 The core orchestration engine that manages task execution with multiple strategies:
 
 #### Execution Strategies
+
 - **Sequential**: Tasks execute one after another in order
 - **Parallel**: Independent tasks execute simultaneously with configurable concurrency limits
 - **Adaptive**: Dynamic strategy selection based on system resources and task characteristics
 - **Priority**: Tasks execute based on priority levels with preemption support
 
 #### Key Features
+
 - **Dependency Management**: Automatic resolution of task dependencies
 - **Resource Monitoring**: CPU, memory, and device usage tracking
 - **Script Integration**: Support for Python, JavaScript, and shell script execution
@@ -24,6 +26,7 @@ The core orchestration engine that manages task execution with multiple strategi
 - **Real-time Monitoring**: Live metrics and progress tracking
 
 #### Usage Example
+
 ```cpp
 #include "task/custom/enhanced_sequencer.hpp"
 
@@ -44,6 +47,7 @@ sequencer->executeSequence(sequence);
 Advanced task lifecycle management with parallel execution support:
 
 #### Features
+
 - **Parallel Task Execution**: Concurrent execution with dependency resolution
 - **Task Status Tracking**: Real-time status monitoring and history
 - **Cancellation Support**: Graceful task cancellation with cleanup
@@ -51,6 +55,7 @@ Advanced task lifecycle management with parallel execution support:
 - **Error Recovery**: Automatic retry and error handling strategies
 
 #### Usage Example
+
 ```cpp
 #include "task/custom/task_manager.hpp"
 
@@ -70,6 +75,7 @@ manager->executeTasksParallel({taskId1, taskId2});
 Pre-configured task templates for common astronomical operations:
 
 #### Available Templates
+
 - **Imaging**: Target imaging with configurable parameters
 - **Calibration**: Dark, flat, and bias frame acquisition
 - **Focus**: Automatic focusing with various algorithms
@@ -82,6 +88,7 @@ Pre-configured task templates for common astronomical operations:
 - **Complete Observation**: End-to-end observation workflows
 
 #### Usage Example
+
 ```cpp
 #include "task/custom/task_templates.hpp"
 
@@ -102,11 +109,13 @@ auto imagingTask = templates->createTask("imaging", "m31_imaging", params);
 Dynamic task creation with registration system:
 
 #### Registered Task Types
+
 - **script_task**: Python, JavaScript, and shell script execution
 - **device_task**: Astronomical device control and management
 - **config_task**: Configuration management and persistence
 
 #### Usage Example
+
 ```cpp
 #include "task/custom/factory.hpp"
 
@@ -126,11 +135,13 @@ auto scriptTask = factory.createTask("script_task", "my_script", {
 Executes external scripts with full parameter passing and output capture:
 
 #### Supported Script Types
+
 - **Python**: `.py` files with virtual environment support
 - **JavaScript**: `.js` files with Node.js execution
 - **Shell**: Shell scripts with environment variable support
 
 #### Parameters
+
 - `script_path`: Path to the script file
 - `script_type`: Type of script (python/javascript/shell)
 - `timeout`: Execution timeout in milliseconds
@@ -143,6 +154,7 @@ Executes external scripts with full parameter passing and output capture:
 Controls astronomical devices with comprehensive device management:
 
 #### Operations
+
 - **connect**: Establish device connection
 - **scan**: Discover available devices
 - **initialize**: Initialize device with configuration
@@ -150,6 +162,7 @@ Controls astronomical devices with comprehensive device management:
 - **test**: Run device diagnostics
 
 #### Parameters
+
 - `operation`: Device operation to perform
 - `deviceName`: Target device name
 - `deviceType`: Device type (camera, mount, filterwheel, etc.)
@@ -162,6 +175,7 @@ Controls astronomical devices with comprehensive device management:
 Manages system configuration with validation and backup:
 
 #### Operations
+
 - **set**: Set configuration values
 - **get**: Retrieve configuration values
 - **delete**: Remove configuration keys
@@ -171,6 +185,7 @@ Manages system configuration with validation and backup:
 - **list**: List configuration keys
 
 #### Parameters
+
 - `operation`: Configuration operation
 - `key_path`: Configuration key path (dot notation)
 - `value`: Configuration value to set
@@ -275,6 +290,7 @@ bool resourcesOk = TaskValidation::checkResourceRequirements(tasks);
 ## Error Handling
 
 ### Error Types
+
 - **TaskError**: Task execution failures
 - **ValidationError**: Parameter validation failures
 - **ResourceError**: Resource allocation failures
@@ -282,6 +298,7 @@ bool resourcesOk = TaskValidation::checkResourceRequirements(tasks);
 - **DependencyError**: Dependency resolution failures
 
 ### Recovery Strategies
+
 - **Automatic Retry**: Configurable retry attempts with exponential backoff
 - **Graceful Degradation**: Continue execution with failed tasks isolated
 - **Rollback**: Revert changes on critical failures
@@ -290,12 +307,14 @@ bool resourcesOk = TaskValidation::checkResourceRequirements(tasks);
 ## Performance Optimization
 
 ### Execution Strategies
+
 - **Load Balancing**: Distribute tasks across available resources
 - **Dependency Optimization**: Minimize wait times through intelligent scheduling
 - **Resource Pooling**: Efficient resource allocation and reuse
 - **Adaptive Scheduling**: Dynamic strategy adjustment based on performance metrics
 
 ### Monitoring and Metrics
+
 - **Real-time Metrics**: Task execution statistics and performance data
 - **Resource Usage**: CPU, memory, and device utilization tracking
 - **Bottleneck Detection**: Automatic identification of performance bottlenecks
@@ -354,7 +373,7 @@ sequence.push_back({{"task_id", focusId}});
 
 // 5. Imaging
 for (const auto& filter : {"Ha", "OIII", "SII"}) {
-    auto imagingTask = templates->createTask("imaging", 
+    auto imagingTask = templates->createTask("imaging",
         std::string("imaging_") + filter, {
         {"target", "M31"},
         {"filter", filter},

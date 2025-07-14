@@ -1,5 +1,5 @@
 #include "async_system_command.hpp"
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 #include "atom/system/command.hpp"
 
 #ifdef _WIN32

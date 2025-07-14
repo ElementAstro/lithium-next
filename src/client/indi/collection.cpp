@@ -6,7 +6,7 @@
 #include <tinyxml2.h>
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 #include "atom/type/json.hpp"
 
 namespace fs = std::filesystem;

@@ -31,7 +31,7 @@ enum class TargetStatus {
     InProgress,  ///< Target is currently in progress.
     Completed,   ///< Target has completed successfully.
     Failed,      ///< Target has failed.
-    Skipped      ///< Target has been skipped.
+    Skipped      ///< Target was skipped.
 };
 
 /**
@@ -57,23 +57,24 @@ using TargetModifier = std::function<void(Target&)>;
 class Target {
 public:
     /**
-     * @brief Constructs a Target with a given name, cooldown period, and
-     * maximum retries.
+     * @brief Constructs a Target with a name, cooldown time, and max retries.
      * @param name The name of the target.
-     * @param cooldown The cooldown period between task executions.
-     * @param maxRetries The maximum number of retries for each task.
+     * @param cooldown The cooldown time between retries.
+     * @param maxRetries The maximum number of retries.
      */
-    Target(std::string name,
-           std::chrono::seconds cooldown = std::chrono::seconds{0},
-           int maxRetries = 0);
+    explicit Target(std::string name,
+                    std::chrono::seconds cooldown = std::chrono::seconds(0),
+                    int maxRetries = 0);
 
     // Disable copy constructor and assignment operator
     Target(const Target&) = delete;
     Target& operator=(const Target&) = delete;
 
+    // Task Management Methods
+
     /**
      * @brief Adds a task to the target.
-     * @param task The task to be added.
+     * @param task The task to add.
      */
     void addTask(std::unique_ptr<Task> task);
 
@@ -200,16 +201,31 @@ public:
     [[nodiscard]] auto getParams() const -> const json&;
 
     /**
-     * @brief Converts the target to a JSON object.
-     * @return The JSON object representing the target.
+     * @brief Serializes the target to JSON.
+     * @param includeRuntime Whether to include runtime information.
+     * @return JSON representation of the target.
      */
-    [[nodiscard]] auto toJson() const -> json;
+    [[nodiscard]] auto toJson(bool includeRuntime = true) const -> json;
 
     /**
-     * @brief Converts a JSON object to a target.
-     * @param data The JSON object to convert.
+     * @brief Initializes a target from JSON.
+     * @param data The JSON data.
      */
     auto fromJson(const json& data) -> void;
+
+    /**
+     * @brief Creates a target from JSON.
+     * @param data The JSON data.
+     * @return A new Target instance.
+     */
+    static std::unique_ptr<Target> createFromJson(const json& data);
+
+    /**
+     * @brief Validates the JSON schema for target serialization.
+     * @param data The JSON data to validate.
+     * @return True if valid, false otherwise.
+     */
+    static bool validateJson(const json& data);
 
     /**
      * @brief Creates a new task group.

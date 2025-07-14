@@ -1,6 +1,6 @@
 #include "indiserver.hpp"
 
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 #include "atom/system/software.hpp"
 
 INDIManager::INDIManager(std::unique_ptr<Connector> conn,

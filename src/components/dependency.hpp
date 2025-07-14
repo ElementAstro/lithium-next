@@ -46,7 +46,8 @@ public:
      * @param version The version of the node.
      * @throws std::invalid_argument If the node is invalid.
      */
-    void addNode(const Node& node, const Version& version);
+    void addNode(const Node& node, Version version);
+    void addNode(Node&& node, Version version);
 
     /**
      * @brief Adds a directed dependency from one node to another.
@@ -60,7 +61,8 @@ public:
      * requirements aren't met.
      */
     void addDependency(const Node& from, const Node& to,
-                       const Version& requiredVersion);
+                       Version requiredVersion);
+    void addDependency(Node&& from, Node&& to, Version requiredVersion);
 
     /**
      * @brief Removes a node from the dependency graph.
@@ -78,6 +80,14 @@ public:
      * @param to The node that is being removed from the dependency list.
      */
     void removeDependency(const Node& from, const Node& to) noexcept;
+
+    /**
+     * @brief Checks if a node exists in the dependency graph.
+     *
+     * @param node The node to check for.
+     * @return True if the node exists, false otherwise.
+     */
+    [[nodiscard]] bool nodeExists(const Node& node) const noexcept;
 
     /**
      * @brief Retrieves the direct dependencies of a node.
@@ -134,17 +144,15 @@ public:
         std::invocable<const Node&> auto loadFunction) const;
 
     /**
-     * @brief Resolves dependencies for a given list of directories.
+     * @brief Builds the dependency graph from a given list of directories.
      *
-     * This function analyzes the specified directories and determines their
-     * dependencies.
+     * This function parses package files in the specified directories and
+     * populates the graph with nodes and dependencies.
      *
      * @param directories A view of directory paths to resolve.
-     * @return A vector containing resolved dependency paths.
      * @throws std::runtime_error If there is an error resolving dependencies.
      */
-    [[nodiscard]] auto resolveDependencies(std::span<const Node> directories)
-        -> std::vector<Node>;
+    void buildFromDirectories(std::span<const Node> directories);
 
     /**
      * @brief Resolves system dependencies for a given list of directories.
@@ -172,13 +180,11 @@ public:
         -> std::vector<std::tuple<Node, Node, Version, Version>>;
 
     /**
-     * @brief Resolves dependencies in parallel.
+     * @brief Builds the dependency graph from directories in parallel.
      * @param directories A view of directories to resolve dependencies from
-     * @return A vector of resolved dependency nodes
      * @throws std::runtime_error If there is an error resolving dependencies.
      */
-    [[nodiscard]] auto resolveParallelDependencies(
-        std::span<const Node> directories) -> std::vector<Node>;
+    void buildFromDirectoriesParallel(std::span<const Node> directories);
 
     /**
      * @brief Adds a group of dependencies.
@@ -229,7 +235,7 @@ public:
             void return_void() {}
             void unhandled_exception() { std::terminate(); }
             auto yield_value(Node v) {
-                value = v;
+                value = std::move(v);
                 return std::suspend_always{};
             }
         };
@@ -238,13 +244,30 @@ public:
             : coro_(std::coroutine_handle<promise_type>::from_promise(*p)) {}
 
         ~DependencyGenerator() {
-            if (coro_.address()) {
+            if (coro_) {
                 coro_.destroy();
             }
         }
 
+        DependencyGenerator(const DependencyGenerator&) = delete;
+        DependencyGenerator& operator=(const DependencyGenerator&) = delete;
+        DependencyGenerator(DependencyGenerator&& other) noexcept
+            : coro_(other.coro_) {
+            other.coro_ = {};
+        }
+        DependencyGenerator& operator=(DependencyGenerator&& other) noexcept {
+            if (this != &other) {
+                if (coro_) {
+                    coro_.destroy();
+                }
+                coro_ = other.coro_;
+                other.coro_ = {};
+            }
+            return *this;
+        }
+
         bool next() {
-            if (!coro_.done()) {
+            if (coro_ && !coro_.done()) {
                 coro_.resume();
                 return !coro_.done();
             }
@@ -254,7 +277,7 @@ public:
         const Node& value() const { return coro_.promise().value; }
 
     private:
-        std::coroutine_handle<promise_type> coro_;
+        std::coroutine_handle<promise_type> coro_{};
     };
 
     /**
@@ -265,6 +288,14 @@ public:
     [[nodiscard]] DependencyGenerator resolveDependenciesAsync(
         const Node& directory);
 
+    /**
+     * @brief Thread-safe getter for node version.
+     * @param node The node to get version for
+     * @return The version of the node, or nullopt if not found
+     */
+    [[nodiscard]] auto getNodeVersion(const Node& node) const noexcept
+        -> std::optional<Version>;
+
 private:
     mutable std::shared_mutex mutex_;
     std::unordered_map<Node, std::unordered_set<Node>> adjList_;
@@ -273,6 +304,12 @@ private:
     std::unordered_map<Node, int> priorities_;
     std::unordered_map<std::string, std::vector<Node>> groups_;
     mutable std::unordered_map<Node, std::vector<Node>> dependencyCache_;
+
+    struct ParsedInfo {
+        Node name;
+        Version version;
+        std::unordered_map<Node, Version> dependencies;
+    };
 
     /**
      * @brief Utility function to check for cycles in the graph.
@@ -329,7 +366,16 @@ private:
      * @throws std::runtime_error If there is an error parsing the file.
      */
     [[nodiscard]] static auto parsePackageYaml(std::string_view path)
-        -> std::pair<std::string, std::unordered_map<std::string, Version>>;
+        -> std::pair<Node, std::unordered_map<Node, Version>>;
+
+    /**
+     * @brief Parses a package.toml file.
+     * @param path The path to the package.toml file
+     * @return A pair containing the package name and a map of dependencies
+     * @throws std::runtime_error If there is an error parsing the file.
+     */
+    [[nodiscard]] static auto parsePackageToml(std::string_view path)
+        -> std::pair<Node, std::unordered_map<Node, Version>>;
 
     /**
      * @brief Validates the version compatibility between dependent and
@@ -343,29 +389,9 @@ private:
     void validateVersion(const Node& from, const Node& to,
                          const Version& requiredVersion) const;
 
-    /**
-     * @brief Resolves dependencies in parallel.
-     *
-     * @param batch A vector of nodes to resolve in parallel.
-     * @return A vector of resolved nodes.
-     */
-    [[nodiscard]] auto resolveParallelBatch(std::span<const Node> batch)
-        -> std::vector<Node>;
+    static std::optional<ParsedInfo> parseDirectory(const Node& directory);
 
-    /**
-     * @brief Validates if a node exists in the graph.
-     * @param node The node to check
-     * @return true if the node exists, false otherwise
-     */
-    [[nodiscard]] bool nodeExists(const Node& node) const noexcept;
-
-    /**
-     * @brief Thread-safe getter for node version.
-     * @param node The node to get version for
-     * @return The version of the node, or nullopt if not found
-     */
-    [[nodiscard]] auto getNodeVersion(const Node& node) const noexcept
-        -> std::optional<Version>;
+    void addParsedInfo(const ParsedInfo& info);
 };
 
 }  // namespace lithium

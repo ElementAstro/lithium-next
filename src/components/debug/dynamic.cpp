@@ -1,4 +1,5 @@
 #include "dynamic.hpp"
+#include <spdlog/spdlog.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -23,7 +24,7 @@
 #endif
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/system/command.hpp"
 #include "atom/type/json.hpp"
 
@@ -33,28 +34,28 @@ using json = nlohmann::json;
 class DynamicLibraryParser::Impl {
 public:
     explicit Impl(std::string executable) : executable_(std::move(executable)) {
-        LOG_F(INFO, "Initialized DynamicLibraryParser for executable: {}",
-              executable_);
+        spdlog::info("Initialized DynamicLibraryParser for executable: {}",
+                     executable_);
         loadCache();
     }
 
     void setJsonOutput(bool json_output) {
         json_output_ = json_output;
-        LOG_F(INFO, "Set JSON output to: {}", json_output_ ? "true" : "false");
+        spdlog::info("Set JSON output to: {}", json_output_ ? "true" : "false");
     }
 
     void setOutputFilename(const std::string& filename) {
         output_filename_ = filename;
-        LOG_F(INFO, "Set output filename to: {}", output_filename_);
+        spdlog::info("Set output filename to: {}", output_filename_);
     }
 
     void setConfig(const ParserConfig& config) {
         config_ = config;
-        LOG_F(INFO, "Updated parser configuration");
+        spdlog::info("Updated parser configuration");
     }
 
     void parse() {
-        LOG_SCOPE_FUNCTION(INFO);
+        spdlog::info("Starting parse process");
         try {
 #ifdef __linux__
             readDynamicLibraries();
@@ -65,9 +66,9 @@ public:
             }
             analyzeDependencies();
             saveCache();
-            LOG_F(INFO, "Parse process completed successfully.");
+            spdlog::info("Parse process completed successfully.");
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception caught during parsing: {}", e.what());
+            spdlog::error("Exception caught during parsing: {}", e.what());
             throw;
         }
     }
@@ -84,7 +85,7 @@ public:
 
     void clearCache() {
         cache_.clear();
-        LOG_F(INFO, "Cache cleared successfully");
+        spdlog::info("Cache cleared successfully");
     }
 
     void parseAsync(const std::function<void(bool)>& callback) {
@@ -93,7 +94,7 @@ public:
                 parse();
                 callback(true);
             } catch (const std::exception& e) {
-                LOG_F(ERROR, "Async parsing failed: {}", e.what());
+                spdlog::error("Async parsing failed: {}", e.what());
                 callback(false);
             }
         }).detach();
@@ -101,7 +102,7 @@ public:
 
     static auto verifyLibrary(const std::string& library_path) -> bool {
         if (!std::filesystem::exists(library_path)) {
-            LOG_F(WARNING, "Library not found: {}", library_path);
+            spdlog::warn("Library not found: {}", library_path);
             return false;
         }
 
@@ -131,10 +132,10 @@ private:
     std::unordered_map<std::string, time_t> cache_;
 
     void readDynamicLibraries() {
-        LOG_SCOPE_FUNCTION(INFO);
+        spdlog::info("Reading dynamic libraries");
         std::ifstream file(executable_, std::ios::binary);
         if (!file) {
-            LOG_F(ERROR, "Failed to open file: {}", executable_);
+            spdlog::error("Failed to open file: {}", executable_);
             THROW_FAIL_TO_OPEN_FILE("Failed to open file: " + executable_);
         }
 
@@ -142,7 +143,7 @@ private:
         Elf64_Ehdr elfHeader;
         file.read(reinterpret_cast<char*>(&elfHeader), sizeof(elfHeader));
         if (std::memcmp(elfHeader.e_ident, ELFMAG, SELFMAG) != 0) {
-            LOG_F(ERROR, "Not a valid ELF file: {}", executable_);
+            spdlog::error("Not a valid ELF file: {}", executable_);
             THROW_RUNTIME_ERROR("Not a valid ELF file: " + executable_);
         }
 
@@ -175,12 +176,12 @@ private:
                           static_cast<std::streamsize>(strtabHeader.sh_size));
 
                 // Collect needed libraries
-                LOG_F(INFO, "Needed libraries from ELF:");
+                spdlog::info("Needed libraries from ELF:");
                 for (const auto& entry : dynamic_entries) {
                     if (entry.d_tag == DT_NEEDED) {
                         std::string lib(&strtab[entry.d_un.d_val]);
                         libraries_.emplace_back(lib);
-                        LOG_F(INFO, " - {}", lib);
+                        spdlog::info(" - {}", lib);
                     }
                 }
                 break;
@@ -188,12 +189,12 @@ private:
         }
 
         if (libraries_.empty()) {
-            LOG_F(WARNING, "No dynamic libraries found in ELF file.");
+            spdlog::warn("No dynamic libraries found in ELF file.");
         }
     }
 
     void executePlatformCommand() {
-        LOG_SCOPE_FUNCTION(INFO);
+        spdlog::info("Executing platform-specific command");
         std::string command;
 
 #ifdef __APPLE__
@@ -207,42 +208,40 @@ private:
 #endif
 
         command += executable_;
-        LOG_F(INFO, "Running command: {}", command);
+        spdlog::info("Running command: {}", command);
 
         auto [output, status] = atom::system::executeCommandWithStatus(command);
 
         command_output_ = output;
-        LOG_F(INFO, "Command output: \n{}", command_output_);
+        spdlog::info("Command output: \n{}", command_output_);
+    }
+
+    [[nodiscard]] auto getDynamicLibrariesAsJson() const -> std::string {
+        json j;
+        j["executable"] = executable_;
+        j["libraries"] = libraries_;
+        return j.dump(4);
     }
 
     void handleJsonOutput() {
-        LOG_SCOPE_FUNCTION(INFO);
+        spdlog::info("Handling JSON output");
         std::string jsonContent = getDynamicLibrariesAsJson();
         if (!output_filename_.empty()) {
             writeOutputToFile(jsonContent);
         } else {
-            LOG_F(INFO, "JSON output:\n{}", jsonContent);
+            spdlog::info("JSON output:\n{}", jsonContent);
         }
     }
 
-    auto getDynamicLibrariesAsJson() const -> std::string {
-        LOG_SCOPE_FUNCTION(INFO);
-        json jsonOutput;
-        jsonOutput["executable"] = executable_;
-        jsonOutput["libraries"] = libraries_;
-        jsonOutput["command_output"] = command_output_;
-        return jsonOutput.dump(4);
-    }
-
     void writeOutputToFile(const std::string& content) const {
-        LOG_SCOPE_FUNCTION(INFO);
+        spdlog::info("Writing output to file");
         std::ofstream outFile(output_filename_);
         if (outFile) {
             outFile << content;
             outFile.close();
-            LOG_F(INFO, "Output successfully written to {}", output_filename_);
+            spdlog::info("Output successfully written to {}", output_filename_);
         } else {
-            LOG_F(ERROR, "Failed to write to file: {}", output_filename_);
+            spdlog::error("Failed to write to file: {}", output_filename_);
             throw std::runtime_error("Failed to write to file: " +
                                      output_filename_);
         }
@@ -260,10 +259,10 @@ private:
                 json cacheData = json::parse(f);
                 cache_ =
                     cacheData.get<std::unordered_map<std::string, time_t>>();
-                LOG_F(INFO, "Cache loaded successfully");
+                spdlog::info("Cache loaded successfully");
             }
         } catch (const std::exception& e) {
-            LOG_F(WARNING, "Failed to load cache: {}", e.what());
+            spdlog::warn("Failed to load cache: {}", e.what());
         }
     }
 
@@ -278,9 +277,9 @@ private:
             std::ofstream f(cacheFile);
             json cacheData(cache_);
             f << cacheData.dump(4);
-            LOG_F(INFO, "Cache saved successfully");
+            spdlog::info("Cache saved successfully");
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to save cache: {}", e.what());
+            spdlog::error("Failed to save cache: {}", e.what());
         }
     }
 
@@ -288,7 +287,7 @@ private:
         if (!config_.analyze_dependencies) {
             return;
         }
-        LOG_SCOPE_FUNCTION(INFO);
+        spdlog::info("Analyzing dependencies");
 
         for (const auto& lib : libraries_) {
             std::vector<std::string> subDeps;
@@ -299,8 +298,8 @@ private:
                 subDeps = parser.getDependencies();
                 dependency_graph_[lib] = subDeps;
             } catch (const std::exception& e) {
-                LOG_F(WARNING, "Failed to analyze dependencies for {}: {}", lib,
-                      e.what());
+                spdlog::warn("Failed to analyze dependencies for {}: {}", lib,
+                             e.what());
             }
         }
     }

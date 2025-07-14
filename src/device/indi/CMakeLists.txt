@@ -7,7 +7,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/ScanModule.cmake)
 
 # Common libraries
 set(COMMON_LIBS
-    loguru atom-system atom-io atom-utils atom-component atom-error)
+    spdlog::spdlog atom-system atom-io atom-utils atom-component atom-error)
 
 if (NOT WIN32)
     find_package(INDI 2.0 REQUIRED)
@@ -22,7 +22,20 @@ function(create_indi_module NAME SOURCE)
 endfunction()
 
 # Create modules
-# create_indi_module(lithium_client_indi_camera camera.cpp)
+# Add the new component-based camera subdirectory
+add_subdirectory(camera)
+
+# Add the new modular focuser subdirectory
+add_subdirectory(focuser)
+
+# Link the component-based camera to the compatibility layer
+create_indi_module(lithium_client_indi_camera camera.cpp)
+target_link_libraries(lithium_client_indi_camera PUBLIC indi_camera_components)
+
 create_indi_module(lithium_client_indi_telescope telescope.cpp)
+
+# Create legacy focuser module that uses the modular implementation
 create_indi_module(lithium_client_indi_focuser focuser.cpp)
+target_link_libraries(lithium_client_indi_focuser PUBLIC lithium_focuser_indi)
+
 create_indi_module(lithium_client_indi_filterwheel filterwheel.cpp)

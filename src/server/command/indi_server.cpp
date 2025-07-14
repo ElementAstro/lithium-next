@@ -13,7 +13,7 @@
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/io/file_permission.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/sysinfo/disk.hpp"
 #include "atom/system/command.hpp"
 #include "atom/system/env.hpp"

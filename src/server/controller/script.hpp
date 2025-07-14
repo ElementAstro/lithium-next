@@ -17,7 +17,7 @@
 
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/type/json.hpp"
 #include "constant/constant.hpp"
 #include "script/check.hpp"

@@ -6,9 +6,15 @@ High-level API for the compiler helper module.
 from pathlib import Path
 from typing import List, Optional, Union
 
-from .core_types import CompilationResult, CompileOptions, LinkOptions, CppVersion, PathLike
+from .core_types import (
+    CompilationResult,
+    CompileOptions,
+    LinkOptions,
+    CppVersion,
+    PathLike,
+)
 from .compiler_manager import CompilerManager
-from .compiler import Compiler
+from .compiler import EnhancedCompiler as Compiler
 from .build_manager import BuildManager
 
 
@@ -23,50 +29,38 @@ def get_compiler(name: Optional[str] = None) -> Compiler:
     return compiler_manager.get_compiler(name)
 
 
-def compile_file(source_file: PathLike,
-                 output_file: PathLike,
-                 compiler_name: Optional[str] = None,
-                 cpp_version: Union[str, CppVersion] = CppVersion.CPP17,
-                 options: Optional[CompileOptions] = None) -> CompilationResult:
+def compile_file(
+    source_file: PathLike,
+    output_file: PathLike,
+    compiler_name: Optional[str] = None,
+    cpp_version: Union[str, CppVersion] = CppVersion.CPP17,
+    options: Optional[CompileOptions] = None,
+) -> CompilationResult:
     """
     Compile a single source file.
     """
-    # Convert string cpp_version to enum if needed
-    if isinstance(cpp_version, str):
-        try:
-            cpp_version = CppVersion(cpp_version)
-        except ValueError:
-            try:
-                cpp_version = CppVersion["CPP" +
-                                         cpp_version.replace("++", "").replace("c", "")]
-            except KeyError:
-                raise ValueError(f"Invalid C++ version: {cpp_version}")
+    cpp_version = CppVersion.resolve_version(cpp_version)
 
     compiler = get_compiler(compiler_name)
-    return compiler.compile([Path(source_file)], Path(output_file), cpp_version, options)
+    return compiler.compile(
+        [Path(source_file)], Path(output_file), cpp_version, options
+    )
 
 
-def build_project(source_files: List[PathLike],
-                  output_file: PathLike,
-                  compiler_name: Optional[str] = None,
-                  cpp_version: Union[str, CppVersion] = CppVersion.CPP17,
-                  compile_options: Optional[CompileOptions] = None,
-                  link_options: Optional[LinkOptions] = None,
-                  build_dir: Optional[PathLike] = None,
-                  incremental: bool = True) -> CompilationResult:
+def build_project(
+    source_files: List[PathLike],
+    output_file: PathLike,
+    compiler_name: Optional[str] = None,
+    cpp_version: Union[str, CppVersion] = CppVersion.CPP17,
+    compile_options: Optional[CompileOptions] = None,
+    link_options: Optional[LinkOptions] = None,
+    build_dir: Optional[PathLike] = None,
+    incremental: bool = True,
+) -> CompilationResult:
     """
     Build a project from multiple source files.
     """
-    # Convert string cpp_version to enum if needed
-    if isinstance(cpp_version, str):
-        try:
-            cpp_version = CppVersion(cpp_version)
-        except ValueError:
-            try:
-                cpp_version = CppVersion["CPP" +
-                                         cpp_version.replace("++", "").replace("c", "")]
-            except KeyError:
-                raise ValueError(f"Invalid C++ version: {cpp_version}")
+    cpp_version = CppVersion.resolve_version(cpp_version)
 
     build_manager = BuildManager(build_dir=build_dir or "build")
     return build_manager.build(
@@ -76,5 +70,5 @@ def build_project(source_files: List[PathLike],
         cpp_version=cpp_version,
         compile_options=compile_options,
         link_options=link_options,
-        incremental=incremental
+        incremental=incremental,
     )

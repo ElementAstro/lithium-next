@@ -12,13 +12,17 @@
 #include <utility>
 
 #include "atom/error/exception.hpp"
-#include "spdlog/spdlog.h"
 #include "atom/type/json.hpp"
 #include "atom/utils/container.hpp"
 #include "extra/tinyxml2/tinyxml2.h"
+#include "spdlog/spdlog.h"
 
-#if __has_include(<yaml-cpp/yaml.h>)
+#if __has_include(<yaml-cpp/yaml.h>) && defined(ATOM_ENABLE_YAML)
 #include <yaml-cpp/yaml.h>
+#endif
+
+#if __has_include(<toml++/toml.h>) && defined(ATOM_ENABLE_TOML)
+#include <toml++/toml.h>
 #endif
 
 #include "constant/constant.hpp"
@@ -41,7 +45,7 @@ void DependencyGraph::clear() {
     dependencyCache_.clear();
 }
 
-void DependencyGraph::addNode(const Node& node, const Version& version) {
+void DependencyGraph::addNode(const Node& node, Version version) {
     if (node.empty()) {
         spdlog::error("Cannot add node with empty name.");
         THROW_INVALID_ARGUMENT("Node name cannot be empty");
@@ -52,7 +56,23 @@ void DependencyGraph::addNode(const Node& node, const Version& version) {
 
     adjList_.try_emplace(node);
     incomingEdges_.try_emplace(node);
-    nodeVersions_[node] = version;
+    nodeVersions_[node] = std::move(version);
+
+    spdlog::info("Node {} added successfully.", node);
+}
+
+void DependencyGraph::addNode(Node&& node, Version version) {
+    if (node.empty()) {
+        spdlog::error("Cannot add node with empty name.");
+        THROW_INVALID_ARGUMENT("Node name cannot be empty");
+    }
+
+    std::unique_lock lock(mutex_);
+    spdlog::info("Adding node: {} with version: {}", node, version.toString());
+
+    adjList_.try_emplace(node);
+    incomingEdges_.try_emplace(node);
+    nodeVersions_[std::move(node)] = std::move(version);
 
     spdlog::info("Node {} added successfully.", node);
 }
@@ -76,27 +96,28 @@ void DependencyGraph::validateVersion(const Node& from, const Node& to,
                                       const Version& requiredVersion) const {
     std::shared_lock lock(mutex_);
 
-    auto toVersion = getNodeVersion(to);
-    if (!toVersion) {
+    auto toVersionIt = nodeVersions_.find(to);
+    if (toVersionIt == nodeVersions_.end()) {
         spdlog::error("Dependency {} not found for node {}.", to, from);
         THROW_INVALID_ARGUMENT("Dependency " + to + " not found for node " +
                                from);
     }
 
-    if (*toVersion < requiredVersion) {
+    if (toVersionIt->second < requiredVersion) {
         spdlog::error(
-              "Version requirement not satisfied for dependency {} -> {}. "
-              "Required: {}, Found: {}",
-              from, to, requiredVersion.toString(), toVersion->toString());
+            "Version requirement not satisfied for dependency {} -> {}. "
+            "Required: {}, Found: {}",
+            from, to, requiredVersion.toString(),
+            toVersionIt->second.toString());
         THROW_INVALID_ARGUMENT(
             "Version requirement not satisfied for dependency " + from +
             " -> " + to + ". Required: " + requiredVersion.toString() +
-            ", Found: " + toVersion->toString());
+            ", Found: " + toVersionIt->second.toString());
     }
 }
 
 void DependencyGraph::addDependency(const Node& from, const Node& to,
-                                    const Version& requiredVersion) {
+                                    Version requiredVersion) {
     if (from.empty() || to.empty()) {
         spdlog::error(
             "Cannot add dependency with empty node name. From: '{}', To: '{}'",
@@ -109,16 +130,46 @@ void DependencyGraph::addDependency(const Node& from, const Node& to,
         THROW_INVALID_ARGUMENT("Self-dependency not allowed: " + from);
     }
 
-    try {
-        validateVersion(from, to, requiredVersion);
-    } catch (const std::exception& e) {
-        spdlog::error("Version validation failed: {}", e.what());
-        throw;
+    std::unique_lock lock(mutex_);
+    if (!adjList_.contains(from) || !adjList_.contains(to)) {
+        spdlog::error("One or both nodes do not exist: {} -> {}", from, to);
+        THROW_INVALID_ARGUMENT("Nodes must exist before adding a dependency.");
+    }
+
+    validateVersion(from, to, requiredVersion);
+
+    spdlog::info("Adding dependency from {} to {} with required version: {}",
+                 from, to, requiredVersion.toString());
+
+    adjList_[from].insert(to);
+    incomingEdges_[to].insert(from);
+    spdlog::info("Dependency from {} to {} added successfully.", from, to);
+}
+
+void DependencyGraph::addDependency(Node&& from, Node&& to,
+                                    Version requiredVersion) {
+    if (from.empty() || to.empty()) {
+        spdlog::error(
+            "Cannot add dependency with empty node name. From: '{}', To: '{}'",
+            from, to);
+        THROW_INVALID_ARGUMENT("Node names cannot be empty");
+    }
+
+    if (from == to) {
+        spdlog::error("Self-dependency detected: {}", from);
+        THROW_INVALID_ARGUMENT("Self-dependency not allowed: " + from);
     }
 
     std::unique_lock lock(mutex_);
+    if (!adjList_.contains(from) || !adjList_.contains(to)) {
+        spdlog::error("One or both nodes do not exist: {} -> {}", from, to);
+        THROW_INVALID_ARGUMENT("Nodes must exist before adding a dependency.");
+    }
+
+    validateVersion(from, to, requiredVersion);
+
     spdlog::info("Adding dependency from {} to {} with required version: {}",
-          from, to, requiredVersion.toString());
+                 from, to, requiredVersion.toString());
 
     adjList_[from].insert(to);
     incomingEdges_[to].insert(from);
@@ -129,18 +180,26 @@ void DependencyGraph::removeNode(const Node& node) noexcept {
     std::unique_lock lock(mutex_);
     spdlog::info("Removing node: {}", node);
 
+    if (!adjList_.contains(node)) {
+        return;
+    }
+
+    // Remove outgoing edges
     adjList_.erase(node);
-    incomingEdges_.erase(node);
+
+    // Remove incoming edges
+    if (incomingEdges_.contains(node)) {
+        for (const auto& sourceNode : incomingEdges_.at(node)) {
+            if (adjList_.contains(sourceNode)) {
+                adjList_.at(sourceNode).erase(node);
+            }
+        }
+        incomingEdges_.erase(node);
+    }
+
     nodeVersions_.erase(node);
     priorities_.erase(node);
     dependencyCache_.erase(node);
-
-    for (auto& [key, neighbors] : adjList_) {
-        neighbors.erase(node);
-    }
-    for (auto& [key, sources] : incomingEdges_) {
-        sources.erase(node);
-    }
 
     spdlog::info("Node {} removed successfully.", node);
 }
@@ -150,11 +209,11 @@ void DependencyGraph::removeDependency(const Node& from,
     std::unique_lock lock(mutex_);
     spdlog::info("Removing dependency from {} to {}", from, to);
 
-    if (adjList_.find(from) != adjList_.end()) {
-        adjList_[from].erase(to);
+    if (adjList_.contains(from)) {
+        adjList_.at(from).erase(to);
     }
-    if (incomingEdges_.find(to) != incomingEdges_.end()) {
-        incomingEdges_[to].erase(from);
+    if (incomingEdges_.contains(to)) {
+        incomingEdges_.at(to).erase(from);
     }
 
     spdlog::info("Dependency from {} to {} removed successfully.", from, to);
@@ -163,7 +222,7 @@ void DependencyGraph::removeDependency(const Node& from,
 auto DependencyGraph::getDependencies(const Node& node) const noexcept
     -> std::vector<Node> {
     std::shared_lock lock(mutex_);
-    if (adjList_.find(node) == adjList_.end()) {
+    if (!adjList_.contains(node)) {
         spdlog::warn("Node {} not found when retrieving dependencies.", node);
         return {};
     }
@@ -177,7 +236,7 @@ auto DependencyGraph::getDependencies(const Node& node) const noexcept
 auto DependencyGraph::getDependents(const Node& node) const noexcept
     -> std::vector<Node> {
     std::shared_lock lock(mutex_);
-    if (incomingEdges_.find(node) == incomingEdges_.end()) {
+    if (!incomingEdges_.contains(node)) {
         spdlog::warn("Node {} not found when retrieving dependents.", node);
         return {};
     }
@@ -216,6 +275,7 @@ auto DependencyGraph::topologicalSort() const noexcept
         std::shared_lock lock(mutex_);
         spdlog::info("Performing topological sort.");
         std::unordered_set<Node> visited;
+        std::vector<Node> sortedNodes;
         std::stack<Node> stack;
 
         for (const auto& [node, _] : adjList_) {
@@ -227,16 +287,14 @@ auto DependencyGraph::topologicalSort() const noexcept
             }
         }
 
-        std::vector<Node> sortedNodes;
         sortedNodes.reserve(stack.size());
-
         while (!stack.empty()) {
             sortedNodes.push_back(stack.top());
             stack.pop();
         }
 
         spdlog::info("Topological sort completed successfully with {} nodes.",
-              sortedNodes.size());
+                     sortedNodes.size());
         return sortedNodes;
     } catch (const std::exception& e) {
         spdlog::error("Error during topological sort: {}", e.what());
@@ -244,74 +302,27 @@ auto DependencyGraph::topologicalSort() const noexcept
     }
 }
 
-auto DependencyGraph::resolveDependencies(std::span<const Node> directories)
-    -> std::vector<Node> {
-    spdlog::info("Resolving dependencies for {} directories.",
-          directories.size());
+void DependencyGraph::buildFromDirectories(std::span<const Node> directories) {
+    spdlog::info("Building dependency graph from {} directories.",
+                 directories.size());
 
     if (directories.empty()) {
         spdlog::warn("No directories provided for dependency resolution.");
-        return {};
+        return;
     }
 
     try {
-        DependencyGraph graph;
-        const std::vector<std::string> FILE_TYPES = {
-            "package.json", "package.xml", "package.yaml"};
-
         for (const auto& dir : directories) {
-            bool fileFound = false;
-
-            for (const auto& file : FILE_TYPES) {
-                std::string filePath = dir;
-                filePath.append(Constants::PATH_SEPARATOR).append(file);
-
-                if (std::filesystem::exists(filePath)) {
-                    spdlog::info("Parsing {} in directory: {}", file, dir);
-                    fileFound = true;
-
-                    auto [package_name, deps] =
-                        (file == "package.json")  ? parsePackageJson(filePath)
-                        : (file == "package.xml") ? parsePackageXml(filePath)
-                                                  : parsePackageYaml(filePath);
-
-                    if (package_name.empty()) {
-                        spdlog::error("Empty package name in {}", filePath);
-                        continue;
-                    }
-
-                    graph.addNode(package_name, deps.at(package_name));
-
-                    for (const auto& [depName, version] : deps) {
-                        if (depName != package_name) {
-                            graph.addNode(depName, version);
-                            graph.addDependency(package_name, depName, version);
-                        }
-                    }
-                }
-            }
-
-            if (!fileFound) {
-                spdlog::warn("No package files found in directory: {}", dir);
+            auto parsedInfo = parseDirectory(dir);
+            if (parsedInfo) {
+                addParsedInfo(*parsedInfo);
             }
         }
 
-        if (graph.hasCycle()) {
+        if (hasCycle()) {
             spdlog::error("Circular dependency detected.");
             THROW_RUNTIME_ERROR("Circular dependency detected.");
         }
-
-        auto sortedPackagesOpt = graph.topologicalSort();
-        if (!sortedPackagesOpt) {
-            spdlog::error("Failed to sort packages.");
-            THROW_RUNTIME_ERROR(
-                "Failed to perform topological sort on dependencies.");
-        }
-
-        spdlog::info("Dependencies resolved successfully with {} packages.",
-              sortedPackagesOpt->size());
-
-        return removeDuplicates(*sortedPackagesOpt);
     } catch (const std::exception& e) {
         spdlog::error("Error resolving dependencies: {}", e.what());
         throw;
@@ -322,7 +333,7 @@ auto DependencyGraph::resolveSystemDependencies(
     std::span<const Node> directories)
     -> std::unordered_map<std::string, Version> {
     spdlog::info("Resolving system dependencies for {} directories.",
-          directories.size());
+                 directories.size());
 
     try {
         std::unordered_map<std::string, Version> systemDeps;
@@ -349,16 +360,16 @@ auto DependencyGraph::resolveSystemDependencies(
                                 systemDeps.end()) {
                                 systemDeps[systemDepName] = version;
                                 spdlog::info(
-                                      "Added system dependency: {} with "
-                                      "version {}",
-                                      systemDepName, version.toString());
+                                    "Added system dependency: {} with "
+                                    "version {}",
+                                    systemDepName, version.toString());
                             } else {
                                 if (systemDeps[systemDepName] < version) {
                                     systemDeps[systemDepName] = version;
                                     spdlog::info(
-                                          "Updated system dependency: {} to "
-                                          "version {}",
-                                          systemDepName, version.toString());
+                                        "Updated system dependency: {} to "
+                                        "version {}",
+                                        systemDepName, version.toString());
                                 }
                             }
                         }
@@ -368,9 +379,9 @@ auto DependencyGraph::resolveSystemDependencies(
         }
 
         spdlog::info(
-              "System dependencies resolved successfully with {} system "
-              "dependencies.",
-              systemDeps.size());
+            "System dependencies resolved successfully with {} system "
+            "dependencies.",
+            systemDeps.size());
 
         return atom::utils::unique(systemDeps);
     } catch (const std::exception& e) {
@@ -382,14 +393,14 @@ auto DependencyGraph::resolveSystemDependencies(
 auto DependencyGraph::removeDuplicates(std::span<const Node> input) noexcept
     -> std::vector<Node> {
     spdlog::info("Removing duplicates from dependency list with {} items.",
-          input.size());
+                 input.size());
 
     std::unordered_set<Node> uniqueNodes;
     std::vector<Node> result;
     result.reserve(input.size());
 
     for (const auto& node : input) {
-        if (!uniqueNodes.contains(node)) {
+        if (uniqueNodes.find(node) == uniqueNodes.end()) {
             uniqueNodes.insert(node);
             result.push_back(node);
         }
@@ -400,7 +411,8 @@ auto DependencyGraph::removeDuplicates(std::span<const Node> input) noexcept
 }
 
 auto DependencyGraph::parsePackageJson(std::string_view path)
-    -> std::pair<Node, std::unordered_map<Node, Version>> {
+    -> std::pair<DependencyGraph::Node,
+                 std::unordered_map<DependencyGraph::Node, Version>> {
     spdlog::info("Parsing package.json file: {}", path);
 
     std::ifstream file(path.data());
@@ -445,8 +457,8 @@ auto DependencyGraph::parsePackageJson(std::string_view path)
                     deps[key] = Version{};
                 }
             } catch (const std::exception& e) {
-                spdlog::error("Error parsing version for dependency {}: {}", key,
-                      e.what());
+                spdlog::error("Error parsing version for dependency {}: {}",
+                              key, e.what());
                 THROW_INVALID_ARGUMENT("Error parsing version for dependency " +
                                        key + ": " + e.what());
             }
@@ -455,13 +467,14 @@ auto DependencyGraph::parsePackageJson(std::string_view path)
 
     file.close();
     spdlog::info(
-          "Parsed package.json file: {} successfully with {} dependencies.",
-          path, deps.size());
+        "Parsed package.json file: {} successfully with {} dependencies.", path,
+        deps.size());
     return {packageName, deps};
 }
 
 auto DependencyGraph::parsePackageXml(std::string_view path)
-    -> std::pair<Node, std::unordered_map<Node, Version>> {
+    -> std::pair<DependencyGraph::Node,
+                 std::unordered_map<DependencyGraph::Node, Version>> {
     spdlog::info("Parsing package.xml file: {}", path);
     XMLDocument doc;
     if (doc.LoadFile(path.data()) != XML_SUCCESS) {
@@ -496,8 +509,10 @@ auto DependencyGraph::parsePackageXml(std::string_view path)
 }
 
 auto DependencyGraph::parsePackageYaml(std::string_view path)
-    -> std::pair<Node, std::unordered_map<Node, Version>> {
+    -> std::pair<DependencyGraph::Node,
+                 std::unordered_map<DependencyGraph::Node, Version>> {
     spdlog::info("Parsing package.yaml file: {}", path);
+#ifdef ATOM_ENABLE_YAML
     YAML::Node config;
     try {
         config = YAML::LoadFile(path.data());
@@ -522,7 +537,7 @@ auto DependencyGraph::parsePackageYaml(std::string_view path)
                     Version::parse(dep.second.as<std::string>());
             } catch (const std::exception& e) {
                 spdlog::error("Error parsing version for dependency {}: {}",
-                      dep.first.as<std::string>(), e.what());
+                              dep.first.as<std::string>(), e.what());
                 THROW_INVALID_ARGUMENT("Error parsing version for dependency " +
                                        dep.first.as<std::string>() + ": " +
                                        e.what());
@@ -532,32 +547,69 @@ auto DependencyGraph::parsePackageYaml(std::string_view path)
 
     spdlog::info("Parsed package.yaml file: {} successfully.", path);
     return {packageName, deps};
+#else
+    spdlog::error(
+        "YAML support is not enabled. Cannot parse package.yaml file: {}",
+        path);
+    return {"", {}};
+#endif
+}
+
+auto DependencyGraph::parsePackageToml(std::string_view path)
+    -> std::pair<DependencyGraph::Node,
+                 std::unordered_map<DependencyGraph::Node, Version>> {
+    spdlog::info("Parsing package.toml file: {}", path);
+#ifdef ATOM_ENABLE_TOML
+    try {
+        auto config = toml::parse_file(path.data());
+        if (!config.contains("package") || !config["package"].is_table()) {
+            spdlog::error("Invalid package.toml file: {}", path);
+            THROW_INVALID_ARGUMENT("Invalid package.toml file: " +
+                                   std::string(path));
+        }
+
+        auto packageName = config["package"]["name"].value_or("");
+        std::unordered_map<std::string, Version> deps;
+
+        for (const auto& [key, value] :
+             config["package"]["dependencies"].as_table()) {
+            deps[key] = Version::parse(value.value_or(""));
+        }
+
+        spdlog::info("Parsed package.toml file: {} successfully.", path);
+        return {packageName, deps};
+    } catch (const std::exception& e) {
+        spdlog::error("Error parsing package.toml file: {}: {}", path,
+                      e.what());
+        THROW_FAIL_TO_OPEN_FILE("Error parsing package.toml file: " +
+                                std::string(path) + ": " + e.what());
+    }
+#else
+    spdlog::error(
+        "TOML support is not enabled. Cannot parse package.toml file: {}",
+        path);
+#endif
+    return {"", {}};
 }
 
 auto DependencyGraph::hasCycleUtil(
     const Node& node, std::unordered_set<Node>& visited,
     std::unordered_set<Node>& recStack) const noexcept -> bool {
-    if (!visited.contains(node)) {
-        visited.insert(node);
-        recStack.insert(node);
+    if (recStack.contains(node)) {
+        return true;
+    }
+    if (visited.contains(node)) {
+        return false;
+    }
 
-        try {
-            const auto& neighbors = adjList_.at(node);
+    visited.insert(node);
+    recStack.insert(node);
 
-            for (const auto& neighbor : neighbors) {
-                if (!visited.contains(neighbor) &&
-                    hasCycleUtil(neighbor, visited, recStack)) {
-                    return true;
-                }
-                else if (recStack.contains(neighbor)) {
-                    spdlog::warn("Cycle detected: {} -> {}", node, neighbor);
-                    return true;
-                }
+    if (adjList_.contains(node)) {
+        for (const auto& neighbor : adjList_.at(node)) {
+            if (hasCycleUtil(neighbor, visited, recStack)) {
+                return true;
             }
-        } catch (const std::exception& e) {
-            spdlog::error("Error checking for cycles at node {}: {}", node,
-                  e.what());
-            return false;
         }
     }
 
@@ -571,18 +623,18 @@ auto DependencyGraph::topologicalSortUtil(
     visited.insert(node);
 
     try {
-        const auto& neighbors = adjList_.at(node);
-
-        for (const auto& neighbor : neighbors) {
-            if (!visited.contains(neighbor)) {
-                if (!topologicalSortUtil(neighbor, visited, stack)) {
-                    return false;
+        if (adjList_.contains(node)) {
+            for (const auto& neighbor : adjList_.at(node)) {
+                if (!visited.contains(neighbor)) {
+                    if (!topologicalSortUtil(neighbor, visited, stack)) {
+                        return false;
+                    }
                 }
             }
         }
     } catch (const std::exception& e) {
         spdlog::error("Error during topological sort at node {}: {}", node,
-              e.what());
+                      e.what());
         return false;
     }
 
@@ -599,12 +651,12 @@ auto DependencyGraph::getAllDependencies(const Node& node) const noexcept
     try {
         getAllDependenciesUtil(node, allDependencies);
         spdlog::info(
-              "All dependencies for node {} retrieved successfully. {} "
-              "dependencies found.",
-              node, allDependencies.size());
+            "All dependencies for node {} retrieved successfully. {} "
+            "dependencies found.",
+            node, allDependencies.size());
     } catch (const std::exception& e) {
         spdlog::error("Error getting all dependencies for node {}: {}", node,
-              e.what());
+                      e.what());
     }
 
     return allDependencies;
@@ -614,11 +666,11 @@ void DependencyGraph::getAllDependenciesUtil(
     const Node& node,
     std::unordered_set<Node>& allDependencies) const noexcept {
     try {
-        if (adjList_.find(node) == adjList_.end())
+        if (!adjList_.contains(node))
             return;
 
         for (const auto& neighbor : adjList_.at(node)) {
-            if (!allDependencies.contains(neighbor)) {
+            if (allDependencies.find(neighbor) == allDependencies.end()) {
                 allDependencies.insert(neighbor);
                 getAllDependenciesUtil(neighbor, allDependencies);
             }
@@ -666,23 +718,25 @@ auto DependencyGraph::detectVersionConflicts() const noexcept
     try {
         for (const auto& [node, deps] : adjList_) {
             for (const auto& dep : deps) {
-                if (nodeVersions_.find(dep) == nodeVersions_.end())
+                auto requiredIt = nodeVersions_.find(dep);
+                if (requiredIt == nodeVersions_.end())
                     continue;
-                const auto& required = nodeVersions_.at(dep);
+                const auto& required = requiredIt->second;
 
                 for (const auto& [otherNode, otherDeps] : adjList_) {
                     if (otherNode != node && otherDeps.contains(dep)) {
-                        if (nodeVersions_.find(dep) == nodeVersions_.end())
+                        auto otherRequiredIt = nodeVersions_.find(dep);
+                        if (otherRequiredIt == nodeVersions_.end())
                             continue;
-                        const auto& otherRequired = nodeVersions_.at(dep);
+                        const auto& otherRequired = otherRequiredIt->second;
 
                         if (required != otherRequired) {
                             conflicts.emplace_back(node, otherNode, required,
                                                    otherRequired);
                             spdlog::info(
-                                  "Version conflict detected: {} and {} "
-                                  "require different versions of {}",
-                                  node, otherNode, dep);
+                                "Version conflict detected: {} and {} "
+                                "require different versions of {}",
+                                node, otherNode, dep);
                         }
                     }
                 }
@@ -708,12 +762,7 @@ void DependencyGraph::addGroup(std::string_view groupName,
     std::unique_lock lock(mutex_);
     spdlog::info("Adding group {} with {} nodes", groupNameStr, nodes.size());
 
-    groups_[groupNameStr].clear();
-    groups_[groupNameStr].reserve(nodes.size());
-
-    for (const auto& node : nodes) {
-        groups_[groupNameStr].push_back(node);
-    }
+    groups_[groupNameStr].assign(nodes.begin(), nodes.end());
 
     spdlog::info("Group {} added successfully", groupNameStr);
 }
@@ -723,7 +772,7 @@ auto DependencyGraph::getGroupDependencies(
     std::shared_lock lock(mutex_);
     std::string groupNameStr{groupName};
 
-    if (groups_.find(groupNameStr) == groups_.end()) {
+    if (!groups_.contains(groupNameStr)) {
         spdlog::warn("Group {} not found", groupNameStr);
         return {};
     }
@@ -739,7 +788,7 @@ auto DependencyGraph::getGroupDependencies(
     }
 
     spdlog::info("Retrieved {} dependencies for group {}", result.size(),
-          groupNameStr);
+                 groupNameStr);
     return std::vector<Node>(result.begin(), result.end());
 }
 
@@ -747,7 +796,7 @@ void DependencyGraph::clearCache() noexcept {
     try {
         std::unique_lock lock(mutex_);
         spdlog::info("Clearing dependency cache with {} entries",
-              dependencyCache_.size());
+                     dependencyCache_.size());
         dependencyCache_.clear();
         spdlog::info("Dependency cache cleared successfully");
     } catch (const std::exception& e) {
@@ -755,16 +804,16 @@ void DependencyGraph::clearCache() noexcept {
     }
 }
 
-auto DependencyGraph::resolveParallelDependencies(
-    std::span<const Node> directories) -> std::vector<Node> {
+void DependencyGraph::buildFromDirectoriesParallel(
+    std::span<const Node> directories) {
     if (directories.empty()) {
         spdlog::warn(
-              "No directories provided for parallel dependency resolution");
-        return {};
+            "No directories provided for parallel dependency resolution");
+        return;
     }
 
     spdlog::info("Resolving dependencies in parallel for {} directories",
-          directories.size());
+                 directories.size());
 
     try {
         const size_t processorCount =
@@ -773,11 +822,9 @@ auto DependencyGraph::resolveParallelDependencies(
             std::max(size_t{1}, directories.size() / processorCount);
 
         spdlog::info("Using {} threads with batch size {}", processorCount,
-              BATCH_SIZE);
+                     BATCH_SIZE);
 
-        std::vector<std::future<std::vector<Node>>> futures;
-        std::vector<Node> result;
-        result.reserve(directories.size() * 2);
+        std::vector<std::future<std::vector<ParsedInfo>>> futures;
 
         for (size_t i = 0; i < directories.size(); i += BATCH_SIZE) {
             auto end = std::min(i + BATCH_SIZE, directories.size());
@@ -785,59 +832,28 @@ auto DependencyGraph::resolveParallelDependencies(
                                     directories.begin() + end);
 
             futures.push_back(std::async(std::launch::async, [this, batch]() {
-                return resolveParallelBatch(batch);
+                std::vector<ParsedInfo> batchResult;
+                for (const auto& dir : batch) {
+                    auto parsedInfo = parseDirectory(dir);
+                    if (parsedInfo) {
+                        batchResult.push_back(*parsedInfo);
+                    }
+                }
+                return batchResult;
             }));
         }
 
         for (auto& future : futures) {
             auto batchResult = future.get();
-            result.insert(result.end(), batchResult.begin(), batchResult.end());
+            for (const auto& info : batchResult) {
+                addParsedInfo(info);
+            }
         }
 
-        auto uniqueResult = removeDuplicates(result);
-        spdlog::info(
-              "Parallel dependency resolution completed with {} unique "
-              "dependencies",
-              uniqueResult.size());
-
-        return uniqueResult;
     } catch (const std::exception& e) {
         spdlog::error("Error in parallel dependency resolution: {}", e.what());
         THROW_RUNTIME_ERROR("Error resolving dependencies in parallel: " +
                             std::string(e.what()));
-    }
-}
-
-auto DependencyGraph::resolveParallelBatch(std::span<const Node> batch)
-    -> std::vector<Node> {
-    try {
-        std::vector<Node> batchResult;
-
-        for (const auto& dir : batch) {
-            {
-                std::shared_lock readLock(mutex_);
-                if (dependencyCache_.contains(dir)) {
-                    const auto& cachedDeps = dependencyCache_[dir];
-                    spdlog::info("Using cached dependencies for {}", dir);
-                    batchResult.insert(batchResult.end(), cachedDeps.begin(),
-                                       cachedDeps.end());
-                    continue;
-                }
-            }
-
-            std::vector<Node> temp = {dir};
-            auto deps = resolveDependencies(temp);
-            {
-                std::unique_lock writeLock(mutex_);
-                dependencyCache_[dir] = deps;
-            }
-            batchResult.insert(batchResult.end(), deps.begin(), deps.end());
-        }
-
-        return batchResult;
-    } catch (const std::exception& e) {
-        spdlog::error("Error resolving batch dependencies: {}", e.what());
-        throw;
     }
 }
 
@@ -870,22 +886,81 @@ auto DependencyGraph::validateDependencies(const Node& node) const noexcept
                     }
                 } catch (const std::exception& e) {
                     spdlog::error(
-                          "Version validation failed for dependency {} of node "
-                          "{}: "
-                          "{}",
-                          dep, node, e.what());
+                        "Version validation failed for dependency {} of node "
+                        "{}: "
+                        "{}",
+                        dep, node, e.what());
                     return false;
                 }
             }
         }
 
         spdlog::debug("All dependencies validated successfully for node {}",
-               node);
+                      node);
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Error validating dependencies for node {}: {}", node,
-              e.what());
+                      e.what());
         return false;
+    }
+}
+
+DependencyGraph::DependencyGenerator DependencyGraph::resolveDependenciesAsync(
+    const Node& directory) {
+    auto parsedInfo = parseDirectory(directory);
+    if (parsedInfo) {
+        addParsedInfo(*parsedInfo);
+        if (hasCycle()) {
+            co_return;
+        }
+        auto sorted = topologicalSort();
+        if (sorted) {
+            for (auto&& node : *sorted) {
+                co_yield std::move(node);
+            }
+        }
+    }
+}
+
+std::optional<DependencyGraph::ParsedInfo> DependencyGraph::parseDirectory(
+    const Node& directory) {
+    const std::vector<std::string> FILE_TYPES = {"package.json", "package.xml",
+                                                 "package.yaml"};
+    for (const auto& file : FILE_TYPES) {
+        std::string filePath = directory;
+        filePath.append(Constants::PATH_SEPARATOR).append(file);
+
+        if (std::filesystem::exists(filePath)) {
+            spdlog::info("Parsing {} in directory: {}", file, directory);
+            auto [package_name, deps] =
+                (file == "package.json")  ? parsePackageJson(filePath)
+                : (file == "package.xml") ? parsePackageXml(filePath)
+                                          : parsePackageYaml(filePath);
+
+            if (package_name.empty()) {
+                spdlog::error("Empty package name in {}", filePath);
+                continue;
+            }
+
+            Version version;
+            if (deps.contains(package_name)) {
+                version = deps.at(package_name);
+                deps.erase(package_name);
+            }
+
+            return ParsedInfo{std::move(package_name), std::move(version),
+                              std::move(deps)};
+        }
+    }
+    spdlog::warn("No package files found in directory: {}", directory);
+    return std::nullopt;
+}
+
+void DependencyGraph::addParsedInfo(const ParsedInfo& info) {
+    addNode(info.name, info.version);
+    for (const auto& [depName, version] : info.dependencies) {
+        addNode(depName, version);
+        addDependency(info.name, depName, version);
     }
 }
 

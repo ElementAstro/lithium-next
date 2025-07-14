@@ -1,243 +1,211 @@
 #!/usr/bin/env python3
 """
-Command-line interface for Nginx Manager.
+Asynchronous command-line interface for Nginx Manager.
 """
 
+from __future__ import annotations
+
 import argparse
-from pathlib import Path
+import asyncio
 import sys
+from pathlib import Path
+from typing import NoReturn
+
 from loguru import logger
 
-from .manager import NginxManager
+from .manager import (
+    NginxManager,
+    basic_template,
+    php_template,
+    proxy_template,
+)
+from .core import NginxError
 
 
 class NginxManagerCLI:
     """
-    Command-line interface for the NginxManager.
-
-    This class provides a command-line interface to interact with
-    the NginxManager class using argparse.
+    Asynchronous command-line interface for the NginxManager.
     """
 
     def __init__(self):
-        """Initialize the CLI with a NginxManager instance."""
+        """Initialize the CLI with a NginxManager instance and register plugins."""
         self.manager = NginxManager()
-        logger.debug("CLI interface initialized")
+        self.manager.register_plugin(
+            "vhost_templates",
+            {"basic": basic_template, "php": php_template, "proxy": proxy_template},
+        )
+        logger.debug("Async CLI interface initialized with default plugins.")
 
     def setup_parser(self) -> argparse.ArgumentParser:
         """
         Set up the argument parser.
-
-        Returns:
-            Configured argument parser
         """
         parser = argparse.ArgumentParser(
-            description="Nginx Manager - A tool for managing Nginx web server",
-            formatter_class=argparse.RawDescriptionHelpFormatter
+            description="Nginx Manager - An async tool for managing Nginx.",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
+        parser.add_argument(
+            "-v", "--verbose", action="store_true", help="Enable verbose output."
         )
 
-        subparsers = parser.add_subparsers(dest="command", help="Commands")
+        subparsers = parser.add_subparsers(
+            dest="command", help="Commands", required=True
+        )
 
-        # Basic commands
-        subparsers.add_parser("install", help="Install Nginx")
-        subparsers.add_parser("start", help="Start Nginx")
-        subparsers.add_parser("stop", help="Stop Nginx")
-        subparsers.add_parser("reload", help="Reload Nginx configuration")
-        subparsers.add_parser("restart", help="Restart Nginx")
-        subparsers.add_parser("check", help="Check Nginx configuration syntax")
-        subparsers.add_parser("status", help="Show Nginx status")
-        subparsers.add_parser("version", help="Show Nginx version")
+        # Service management commands
+        for action in [
+            "install",
+            "start",
+            "stop",
+            "reload",
+            "restart",
+            "status",
+            "version",
+            "check",
+            "health",
+        ]:
+            subparsers.add_parser(action, help=f"{action.capitalize()} Nginx.")
 
-        # Backup commands
+        # Backup and Restore
         backup_parser = subparsers.add_parser(
-            "backup", help="Backup Nginx configuration")
-        backup_parser.add_argument(
-            "--name", help="Custom name for the backup file")
-
-        subparsers.add_parser(
-            "list-backups", help="List available configuration backups")
-
+            "backup", help="Backup Nginx configuration."
+        )
+        backup_parser.add_argument("--name", help="Custom name for the backup file.")
+        subparsers.add_parser("list-backups", help="List available backups.")
         restore_parser = subparsers.add_parser(
-            "restore", help="Restore Nginx configuration")
+            "restore", help="Restore Nginx configuration."
+        )
         restore_parser.add_argument(
-            "--backup", help="Path to the backup file to restore")
+            "--backup", help="Path to the backup file to restore."
+        )
 
-        # Virtual host commands
-        vhost_parser = subparsers.add_parser(
-            "vhost", help="Virtual host management")
-        vhost_subparsers = vhost_parser.add_subparsers(dest="vhost_command")
+        # Virtual Host Management
+        vhost_parser = subparsers.add_parser("vhost", help="Manage virtual hosts.")
+        vhost_sp = vhost_parser.add_subparsers(dest="vhost_command", required=True)
 
-        create_vhost_parser = vhost_subparsers.add_parser(
-            "create", help="Create a virtual host")
-        create_vhost_parser.add_argument("server_name", help="Server name")
-        create_vhost_parser.add_argument(
-            "--port", type=int, default=80, help="Port number")
-        create_vhost_parser.add_argument(
-            "--root", help="Document root directory")
-        create_vhost_parser.add_argument("--template", default="basic",
-                                         choices=["basic", "php", "proxy"],
-                                         help="Template to use")
+        vhost_create = vhost_sp.add_parser("create", help="Create a virtual host.")
+        vhost_create.add_argument("server_name", help="Server name (e.g., example.com)")
+        vhost_create.add_argument("--port", type=int, default=80, help="Port number.")
+        vhost_create.add_argument("--root", help="Document root directory.")
+        vhost_create.add_argument(
+            "--template",
+            default="basic",
+            choices=self.manager.plugins.get("vhost_templates", {}).keys(),
+            help="Template to use for the vhost.",
+        )
 
-        enable_vhost_parser = vhost_subparsers.add_parser(
-            "enable", help="Enable a virtual host")
-        enable_vhost_parser.add_argument("server_name", help="Server name")
+        for action in ["enable", "disable"]:
+            parser = vhost_sp.add_parser(
+                action, help=f"{action.capitalize()} a virtual host."
+            )
+            parser.add_argument("server_name", help="The server name of the vhost.")
 
-        disable_vhost_parser = vhost_subparsers.add_parser(
-            "disable", help="Disable a virtual host")
-        disable_vhost_parser.add_argument("server_name", help="Server name")
-
-        vhost_subparsers.add_parser("list", help="List virtual hosts")
-
-        # SSL commands
-        ssl_parser = subparsers.add_parser("ssl", help="SSL management")
-        ssl_subparsers = ssl_parser.add_subparsers(dest="ssl_command")
-
-        generate_ssl_parser = ssl_subparsers.add_parser(
-            "generate", help="Generate SSL certificate")
-        generate_ssl_parser.add_argument("domain", help="Domain name")
-        generate_ssl_parser.add_argument(
-            "--email", help="Email address for Let's Encrypt")
-        generate_ssl_parser.add_argument("--self-signed", action="store_true",
-                                         help="Generate self-signed certificate")
-
-        configure_ssl_parser = ssl_subparsers.add_parser(
-            "configure", help="Configure SSL for a domain")
-        configure_ssl_parser.add_argument("domain", help="Domain name")
-        configure_ssl_parser.add_argument(
-            "--cert", required=True, help="Path to certificate file")
-        configure_ssl_parser.add_argument(
-            "--key", required=True, help="Path to key file")
-
-        # Log analysis
-        logs_parser = subparsers.add_parser("logs", help="Log analysis")
-        logs_parser.add_argument("--domain", help="Domain to analyze logs for")
-        logs_parser.add_argument("--lines", type=int, default=100,
-                                 help="Number of lines to analyze")
-        logs_parser.add_argument(
-            "--filter", help="Filter pattern for log entries")
-
-        # Health check
-        subparsers.add_parser("health", help="Perform a health check")
-
-        # Add verbose option to all commands
-        parser.add_argument("--verbose", "-v", action="store_true",
-                            help="Enable verbose output")
+        vhost_sp.add_parser("list", help="List all virtual hosts.")
 
         return parser
 
-    def run(self) -> int:
+    async def run(self) -> int:
         """
-        Parse arguments and execute the requested command.
-
-        Returns:
-            Exit code (0 for success, non-zero for failure)
+        Parse arguments and execute the requested async command with enhanced error handling.
         """
         parser = self.setup_parser()
         args = parser.parse_args()
 
-        # Set verbose logging if requested
-        if getattr(args, "verbose", False):
+        if args.verbose:
             logger.remove()
             logger.add(sys.stderr, level="DEBUG")
-            logger.debug("Verbose logging enabled")
-
-        if not args.command:
-            parser.print_help()
-            return 1
+            logger.debug("Verbose logging enabled.")
 
         try:
             logger.debug(f"Executing command: {args.command}")
-            match args.command:
+            cmd = args.command
+
+            match cmd:
+                case "start" | "stop" | "reload" | "restart":
+                    await self.manager.manage_service(cmd)
                 case "install":
-                    self.manager.install_nginx()
-
-                case "start":
-                    self.manager.start_nginx()
-
-                case "stop":
-                    self.manager.stop_nginx()
-
-                case "reload":
-                    self.manager.reload_nginx()
-
-                case "restart":
-                    self.manager.restart_nginx()
-
-                case "check":
-                    self.manager.check_config()
-
+                    await self.manager.install_nginx()
                 case "status":
-                    self.manager.get_status()
-
+                    await self.manager.get_status()
                 case "version":
-                    self.manager.get_version()
-
-                case "backup":
-                    self.manager.backup_config(custom_name=args.name)
-
-                case "list-backups":
-                    self.manager.list_backups()
-
-                case "restore":
-                    self.manager.restore_config(backup_file=args.backup)
-
-                case "vhost":
-                    if not args.vhost_command:
-                        parser.error("No virtual host command specified")
-                        return 1
-
-                    match args.vhost_command:
-                        case "create":
-                            self.manager.create_virtual_host(
-                                server_name=args.server_name,
-                                port=args.port,
-                                root_dir=args.root,
-                                template=args.template
-                            )
-
-                        case "enable":
-                            self.manager.enable_virtual_host(args.server_name)
-
-                        case "disable":
-                            self.manager.disable_virtual_host(args.server_name)
-
-                        case "list":
-                            self.manager.list_virtual_hosts()
-
-                case "ssl":
-                    if not args.ssl_command:
-                        parser.error("No SSL command specified")
-                        return 1
-
-                    match args.ssl_command:
-                        case "generate":
-                            self.manager.generate_ssl_cert(
-                                domain=args.domain,
-                                email=args.email,
-                                use_letsencrypt=not args.self_signed
-                            )
-
-                        case "configure":
-                            self.manager.configure_ssl(
-                                domain=args.domain,
-                                cert_path=Path(args.cert),
-                                key_path=Path(args.key)
-                            )
-
-                case "logs":
-                    self.manager.analyze_logs(
-                        domain=args.domain,
-                        lines=args.lines,
-                        filter_pattern=args.filter
-                    )
-
+                    await self.manager.get_version()
+                case "check":
+                    await self.manager.check_config()
                 case "health":
-                    self.manager.health_check()
+                    await self.manager.health_check()
+                case "backup":
+                    await self.manager.backup_config(custom_name=args.name)
+                case "list-backups":
+                    backups = self.manager.list_backups()
+                    if backups:
+                        print("Available backups:")
+                        for backup in backups:
+                            print(f"  - {backup.name} ({backup.stat().st_mtime})")
+                    else:
+                        print("No backups found.")
+                case "restore":
+                    await self.manager.restore_config(backup_file=args.backup)
+                case "vhost":
+                    await self.handle_vhost_command(args)
+                case _:
+                    logger.error(f"Unknown command: {cmd}")
+                    return 1
 
-            logger.debug("Command executed successfully")
+            logger.debug("Command executed successfully.")
             return 0
 
-        except Exception as e:
-            logger.exception(f"Error executing command: {str(e)}")
-            print(f"Error: {str(e)}")
+        except NginxError as e:
+            logger.error(f"Nginx operation failed: {e}")
+            print(f"Error: {e}", file=sys.stderr)
             return 1
+        except KeyboardInterrupt:
+            logger.info("Operation cancelled by user")
+            print("\nOperation cancelled by user.", file=sys.stderr)
+            return 130
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            print(f"Unexpected error: {e}", file=sys.stderr)
+            return 1
+
+    async def handle_vhost_command(self, args: argparse.Namespace) -> None:
+        """
+        Handle virtual host subcommands.
+        """
+        cmd = args.vhost_command
+        if cmd == "list":
+            vhosts = self.manager.list_virtual_hosts()
+            for host, enabled in vhosts.items():
+                status = "enabled" if enabled else "disabled"
+                print(f"- {host}: {status}")
+        else:
+            await self.manager.manage_virtual_host(
+                cmd,
+                args.server_name,
+                port=getattr(args, "port", 80),
+                root_dir=getattr(args, "root", None),
+                template=getattr(args, "template", "basic"),
+            )
+
+
+def main() -> int:
+    """
+    Main entry point for the asynchronous CLI with enhanced error handling.
+    """
+    try:
+        return asyncio.run(NginxManagerCLI().run())
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.", file=sys.stderr)
+        return 130  # Standard exit code for Ctrl+C
+    except NginxError as e:
+        # Catch exceptions that might be raised during initialization
+        print(f"Critical Error: {e}", file=sys.stderr)
+        logger.error(f"Critical initialization error: {e}")
+        return 1
+    except Exception as e:
+        print(f"Unexpected critical error: {e}", file=sys.stderr)
+        logger.error(f"Unexpected critical error: {e}")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

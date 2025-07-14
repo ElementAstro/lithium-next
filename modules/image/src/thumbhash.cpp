@@ -8,7 +8,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 const double RGB_MAX = 255.0;
 const double Y_COEFF_R = 0.299;

@@ -1,610 +1,665 @@
 #!/usr/bin/env python3
 """
-Hotspot Manager module for WiFi Hotspot Manager.
-Contains the HotspotManager class which is responsible for managing WiFi hotspots.
+Enhanced Hotspot Manager with modern Python features and robust error handling.
+
+This module provides a comprehensive, async-first hotspot management system with
+extensive error handling, monitoring capabilities, and extensible plugin architecture.
 """
 
-import time
+from __future__ import annotations
+
+import asyncio
 import json
 import re
 import shutil
-import asyncio
+import time
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Callable
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncGenerator,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Union,
+)
 
 from loguru import logger
+
+from .command_utils import run_command_async
 from .models import (
-    HotspotConfig, AuthenticationType, EncryptionType, BandType, ConnectedClient
+    AuthenticationType,
+    ConnectedClient,
+    HotspotConfig,
+    HotspotException,
+    NetworkManagerError,
+    InterfaceError,
+    ConfigurationError,
+    NetworkInterface,
+    CommandResult,
 )
-from .command_utils import run_command, run_command_async
+
+
+class HotspotPlugin(Protocol):
+    """Protocol for hotspot plugins."""
+
+    async def on_hotspot_start(self, config: HotspotConfig) -> None:
+        """Called when hotspot starts."""
+        ...
+
+    async def on_hotspot_stop(self) -> None:
+        """Called when hotspot stops."""
+        ...
+
+    async def on_client_connect(self, client: ConnectedClient) -> None:
+        """Called when a client connects."""
+        ...
+
+    async def on_client_disconnect(self, client: ConnectedClient) -> None:
+        """Called when a client disconnects."""
+        ...
 
 
 class HotspotManager:
     """
-    Manages WiFi hotspots using NetworkManager.
+    Enhanced WiFi hotspot manager with modern async architecture and robust error handling.
 
-    This class provides a comprehensive interface to create, modify, and monitor
-    WiFi hotspots through NetworkManager's command-line tools.
+    Features:
+    - Async-first design for better performance
+    - Comprehensive error handling with custom exceptions
+    - Plugin architecture for extensibility
+    - Monitoring and metrics collection
+    - Configuration validation and management
+    - Resource cleanup with context managers
     """
 
-    def __init__(self, config_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        config: Optional[HotspotConfig] = None,
+        config_dir: Optional[Path] = None,
+        runner: Optional[Callable[..., Awaitable[CommandResult]]] = None,
+    ) -> None:
         """
-        Initialize the HotspotManager.
+        Initialize the hotspot manager.
 
         Args:
-            config_dir: Directory to store configuration files. If None, uses ~/.config/hotspot-manager
+            config: Initial hotspot configuration
+            config_dir: Directory for storing configuration files
+            runner: Custom command runner (for testing/mocking)
         """
-        # Set up configuration directory
-        if config_dir is None:
-            self.config_dir = Path.home() / ".config" / "hotspot-manager"
-        else:
-            self.config_dir = Path(config_dir)
-
-        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.config_dir = config_dir or Path.home() / ".config" / "hotspot-manager"
         self.config_file = self.config_dir / "config.json"
+        self.run_command = runner or run_command_async
+        self.plugins: Dict[str, HotspotPlugin] = {}
+        self._monitoring_task: Optional[asyncio.Task[None]] = None
+        self._client_cache: Dict[str, ConnectedClient] = {}
 
-        # Verify NetworkManager availability
+        # Check NetworkManager availability
         if not self._is_network_manager_available():
-            logger.warning("NetworkManager is not available on this system")
+            logger.warning(
+                "NetworkManager (nmcli) is not available. "
+                "Some features may not work correctly."
+            )
 
-        # Initialize with default configuration
-        self.current_config = HotspotConfig()
+        # Load or use provided configuration
+        self.current_config = config or self._load_config() or HotspotConfig()
 
-        # Try to load saved config if available
-        if self.config_file.exists():
-            try:
-                self.load_config()
-                logger.debug(f"Loaded configuration from {self.config_file}")
-            except Exception as e:
-                logger.error(f"Failed to load configuration: {e}")
+        logger.debug(
+            "HotspotManager initialized",
+            extra={
+                "config": self.current_config.to_dict(),
+                "config_dir": str(self.config_dir),
+                "nmcli_available": self._is_network_manager_available(),
+            },
+        )
 
     def _is_network_manager_available(self) -> bool:
-        """
-        Check if NetworkManager is available on the system.
-
-        Returns:
-            True if NetworkManager is installed and available
-        """
+        """Check if NetworkManager is available on the system."""
         return shutil.which("nmcli") is not None
 
-    def save_config(self) -> bool:
-        """
-        Save the current configuration to disk.
+    def _parse_detail(self, output: str, key: str) -> Optional[str]:
+        """Parse a specific field from nmcli output."""
+        pattern = rf"^{re.escape(key)}:\s*(.*)$"
+        match = re.search(pattern, output, re.MULTILINE)
+        return match.group(1).strip() if match else None
 
-        Returns:
-            True if the configuration was successfully saved
-        """
+    async def _ensure_network_manager(self) -> None:
+        """Ensure NetworkManager is available and responsive."""
+        if not self._is_network_manager_available():
+            raise NetworkManagerError(
+                "NetworkManager (nmcli) is not available", error_code="NM_NOT_FOUND"
+            )
+
+        # Test NetworkManager responsiveness
         try:
-            # Create config directory if it doesn't exist
-            self.config_dir.mkdir(parents=True, exist_ok=True)
+            result = await asyncio.wait_for(
+                self.run_command(["nmcli", "--version"]), timeout=5.0
+            )
+            if not result.success:
+                raise NetworkManagerError(
+                    "NetworkManager is not responding",
+                    error_code="NM_NOT_RESPONDING",
+                    command_result=result.to_dict(),
+                )
+        except asyncio.TimeoutError:
+            raise NetworkManagerError(
+                "NetworkManager command timed out", error_code="NM_TIMEOUT"
+            ) from None
 
-            # Write config to file in JSON format
-            with open(self.config_file, 'w') as f:
-                json.dump(self.current_config.to_dict(), f, indent=2)
-            return True
-        except Exception as e:
-            logger.error(f"Error saving configuration: {e}")
-            return False
+    async def get_available_interfaces(self) -> List[NetworkInterface]:
+        """Get list of available network interfaces."""
+        await self._ensure_network_manager()
 
-    def load_config(self) -> bool:
-        """
-        Load configuration from disk.
-
-        Returns:
-            True if the configuration was successfully loaded
-        """
-        try:
-            with open(self.config_file, 'r') as f:
-                config_dict = json.load(f)
-            self.current_config = HotspotConfig.from_dict(config_dict)
-            return True
-        except Exception as e:
-            logger.error(f"Error loading configuration: {e}")
-            return False
-
-    def update_config(self, **kwargs) -> None:
-        """
-        Update configuration with provided parameters.
-
-        Args:
-            **kwargs: Configuration parameters to update
-        """
-        # Update only parameters that exist in the config class
-        for key, value in kwargs.items():
-            if hasattr(self.current_config, key):
-                setattr(self.current_config, key, value)
-                logger.debug(f"Updated config: {key} = {value}")
-            else:
-                logger.warning(f"Unknown configuration parameter: {key}")
-
-    def start(self, **kwargs) -> bool:
-        """
-        Start a WiFi hotspot with the current or provided configuration.
-
-        Args:
-            **kwargs: Configuration parameters to override for this operation
-
-        Returns:
-            True if the hotspot was successfully started
-        """
-        # Update config with any provided parameters
-        if kwargs:
-            self.update_config(**kwargs)
-
-        # Validate configuration
-        if self.current_config.authentication != AuthenticationType.NONE:
-            if self.current_config.password is None or len(self.current_config.password) < 8:
-                logger.error(
-                    "Password is required and must be at least 8 characters")
-                return False
-
-        # Start hotspot with basic parameters
-        cmd = [
-            'nmcli', 'dev', 'wifi', 'hotspot',
-            'ifname', self.current_config.interface,
-            'ssid', self.current_config.name
-        ]
-
-        # Add password if authentication is enabled
-        if self.current_config.authentication != AuthenticationType.NONE and self.current_config.password is not None:
-            cmd.extend(['password', self.current_config.password])
-
-        result = run_command(cmd)
-
+        result = await self.run_command(["nmcli", "device", "status"])
         if not result.success:
-            return False
+            raise NetworkManagerError(
+                "Failed to get interface list",
+                error_code="NM_INTERFACE_LIST_FAILED",
+                command_result=result.to_dict(),
+            )
 
-        # Configure additional settings after basic setup succeeds
-        self._configure_hotspot()
+        interfaces = []
+        for line in result.stdout.splitlines()[1:]:  # Skip header
+            parts = line.split()
+            if len(parts) >= 3:
+                interfaces.append(
+                    NetworkInterface(
+                        name=parts[0],
+                        type=parts[1],
+                        state=parts[2],
+                        driver=parts[3] if len(parts) > 3 else None,
+                    )
+                )
 
-        logger.info(f"Hotspot '{self.current_config.name}' is now running")
+        return [iface for iface in interfaces if iface.is_wifi]
 
-        # Save the configuration for future use
-        self.save_config()
+    async def validate_interface(self, interface: str) -> bool:
+        """Validate that an interface exists and can be used for hotspots."""
+        interfaces = await self.get_available_interfaces()
+        target_interface = next(
+            (iface for iface in interfaces if iface.name == interface), None
+        )
+
+        if not target_interface:
+            raise InterfaceError(
+                f"Interface '{interface}' not found",
+                error_code="INTERFACE_NOT_FOUND",
+                interface=interface,
+            )
+
+        if not target_interface.is_wifi:
+            raise InterfaceError(
+                f"Interface '{interface}' is not a WiFi interface",
+                error_code="INTERFACE_NOT_WIFI",
+                interface=interface,
+                interface_type=target_interface.type,
+            )
+
         return True
 
-    def _configure_hotspot(self) -> None:
+    async def get_connected_clients(
+        self, interface: Optional[str] = None
+    ) -> List[ConnectedClient]:
         """
-        Configure advanced hotspot settings after initial creation.
-
-        This applies settings like authentication type, encryption, channel,
-        and other parameters that can't be set during the initial hotspot creation.
-        """
-        # Set authentication method
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless-security.key-mgmt',
-            self.current_config.authentication.value
-        ])
-
-        # Set encryption for data protection
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless-security.pairwise',
-            self.current_config.encryption.value
-        ])
-
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless-security.group',
-            self.current_config.encryption.value
-        ])
-
-        # Set frequency band (2.4GHz, 5GHz, or both)
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.band',
-            self.current_config.band.value
-        ])
-
-        # Set channel for broadcasting
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.channel',
-            str(self.current_config.channel)
-        ])
-
-        # Set MAC address behavior for consistent identification
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.cloned-mac-address', 'stable'
-        ])
-
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.mac-address-randomization', 'no'
-        ])
-
-        # Set hidden network status if configured
-        if self.current_config.hidden:
-            run_command([
-                'nmcli', 'connection', 'modify', 'Hotspot',
-                '802-11-wireless.hidden', 'yes'
-            ])
-
-    def stop(self) -> bool:
-        """
-        Stop the currently running hotspot.
-
-        Returns:
-            True if the hotspot was successfully stopped
-        """
-        result = run_command(['nmcli', 'connection', 'down', 'Hotspot'])
-        if result.success:
-            logger.info("Hotspot has been stopped")
-        return result.success
-
-    def get_status(self) -> Dict[str, Any]:
-        """
-        Get the current status of the hotspot.
-
-        Returns:
-            Dictionary containing status information including running state,
-            interface, SSID, connected clients, uptime, and IP address
-        """
-        # Initialize status dictionary with default values
-        status = {
-            "running": False,
-            "interface": None,
-            "connection_name": None,
-            "ssid": None,
-            "clients": [],
-            "uptime": None,
-            "ip_address": None
-        }
-
-        # Check if hotspot is running by getting device status
-        dev_status = run_command(['nmcli', 'dev', 'status'])
-        if not dev_status.success:
-            return status
-
-        # Parse output to find hotspot interface
-        for line in dev_status.stdout.splitlines()[1:]:  # Skip header line
-            parts = [p.strip() for p in line.split()]
-            if len(parts) >= 3 and parts[1] == "wifi" and "Hotspot" in line:
-                status["running"] = True
-                status["interface"] = parts[0]
-                break
-
-        if not status["running"]:
-            return status
-
-        # Get detailed connection information
-        conn_details = run_command(['nmcli', 'connection', 'show', 'Hotspot'])
-        if conn_details.success:
-            # Extract relevant details from connection info
-            for line in conn_details.stdout.splitlines():
-                if "802-11-wireless.ssid:" in line:
-                    status["ssid"] = line.split(":", 1)[1].strip()
-                elif "GENERAL.NAME:" in line:
-                    status["connection_name"] = line.split(":", 1)[1].strip()
-                elif "GENERAL.DEVICES:" in line:
-                    status["interface"] = line.split(":", 1)[1].strip()
-                elif "IP4.ADDRESS" in line:
-                    # Extract IP address
-                    ip_info = line.split(":", 1)[1].strip()
-                    if "/" in ip_info:
-                        status["ip_address"] = ip_info.split("/")[0]
-
-        # Get uptime information
-        uptime_cmd = run_command([
-            'nmcli', '-t', '-f', 'GENERAL.STATE-TIMESTAMP',
-            'connection', 'show', 'Hotspot'
-        ])
-        if uptime_cmd.success:
-            # Extract timestamp and calculate uptime
-            try:
-                for line in uptime_cmd.stdout.splitlines():
-                    if "GENERAL.STATE-TIMESTAMP:" in line:
-                        timestamp = int(line.split(":", 1)[1].strip())
-                        status["uptime"] = int(time.time() - timestamp / 1000)
-                        break
-            except (ValueError, IndexError):
-                pass
-
-        # Get connected clients information
-        status["clients"] = self.get_connected_clients()
-
-        return status
-
-    def status(self) -> None:
-        """
-        Print the current status of the hotspot to the console.
-
-        This is a user-friendly version of get_status() that formats
-        the status information for display.
-        """
-        status = self.get_status()
-
-        if status["running"]:
-            print(f"Hotspot is running on interface {status['interface']}")
-            print(f"SSID: {status['ssid']}")
-
-            # Format uptime in a human-readable way
-            if status["uptime"] is not None:
-                hours, remainder = divmod(status["uptime"], 3600)
-                minutes, seconds = divmod(remainder, 60)
-                print(f"Uptime: {hours}h {minutes}m {seconds}s")
-
-            print(f"IP Address: {status['ip_address']}")
-
-            # Show connected clients
-            if status["clients"]:
-                print(f"\n**Connected clients** ({len(status['clients'])}):")
-                for client in status["clients"]:
-                    hostname = f" ({client.get('hostname')})" if client.get(
-                        'hostname') else ""
-                    print(
-                        f"- {client['mac_address']} ({client['ip_address']}){hostname}")
-            else:
-                print("\nNo clients connected")
-        else:
-            print("**Hotspot is not running**")
-
-    def list(self) -> List[Dict[str, str]]:
-        """
-        List all active network connections.
-
-        Returns:
-            List of dictionaries containing connection information
-        """
-        result = run_command(['nmcli', 'connection', 'show', '--active'])
-        connections = []
-
-        if result.success:
-            lines = result.stdout.strip().split('\n')
-            if len(lines) > 1:  # Skip the header line
-                for line in lines[1:]:
-                    parts = line.split()
-                    if len(parts) >= 4:
-                        connection = {
-                            "name": parts[0],
-                            "uuid": parts[1],
-                            "type": parts[2],
-                            "device": parts[3]
-                        }
-                        connections.append(connection)
-
-            # Also print output for CLI usage
-            print(result.stdout)
-
-        return connections
-
-    def set(self, **kwargs) -> bool:
-        """
-        Update the hotspot configuration.
+        Get list of connected clients with enhanced error handling.
 
         Args:
-            **kwargs: Configuration parameters to update
+            interface: Network interface to check (auto-detect if None)
 
         Returns:
-            True if the configuration was successfully updated
+            List of connected clients
         """
-        self.update_config(**kwargs)
+        try:
+            if not interface:
+                status = await self.get_status()
+                if not status.get("running"):
+                    return []
+                interface = status.get("interface")
 
-        # If hotspot is already running, apply changes immediately
-        status = self.get_status()
-        if status["running"]:
-            self._configure_hotspot()
-            logger.info(f"Updated running hotspot configuration")
+            if not interface:
+                logger.debug("No interface specified and hotspot not running")
+                return []
 
-        # Save the configuration for future use
-        self.save_config()
-        logger.info(f"Hotspot configuration updated and saved")
-        return True
+            # Get station information using iw
+            iw_result = await self.run_command(
+                ["iw", "dev", interface, "station", "dump"]
+            )
 
-    def get_connected_clients(self) -> List[Dict[str, str]]:
-        """
-        Get information about clients connected to the hotspot.
+            if not iw_result.success:
+                logger.debug(
+                    f"Failed to get station dump for {interface}: {iw_result.stderr}"
+                )
+                return []
 
-        Uses multiple methods to gather client information, combining
-        data from iw, arp, and DHCP leases.
+            # Parse MAC addresses from station dump
+            mac_addresses = re.findall(r"Station (\S+)", iw_result.stdout)
+            clients = []
 
-        Returns:
-            List of dictionaries containing client information
-        """
-        clients = []
+            # Get ARP table for IP addresses
+            arp_result = await self.run_command(["arp", "-n"])
+            mac_to_ip = {}
 
-        # Check if hotspot is running first
-        status = self.get_status()
-        if not status["running"]:
+            if arp_result.success:
+                for line in arp_result.stdout.splitlines():
+                    match = re.search(r"(\S+)\s+ether\s+(\S+)", line)
+                    if match:
+                        ip, mac = match.groups()
+                        mac_to_ip[mac.lower()] = ip
+
+            # Create ConnectedClient objects
+            current_time = time.time()
+            for mac in mac_addresses:
+                mac_lower = mac.lower()
+
+                # Get cached client info or create new
+                if mac_lower in self._client_cache:
+                    client = self._client_cache[mac_lower]
+                    # Update IP if available
+                    if mac_lower in mac_to_ip:
+                        client = ConnectedClient(
+                            mac_address=client.mac_address,
+                            ip_address=mac_to_ip[mac_lower],
+                            hostname=client.hostname,
+                            connected_since=client.connected_since,
+                            data_transferred=client.data_transferred,
+                            signal_strength=client.signal_strength,
+                        )
+                else:
+                    client = ConnectedClient(
+                        mac_address=mac,
+                        ip_address=mac_to_ip.get(mac_lower),
+                        connected_since=current_time,
+                    )
+                    self._client_cache[mac_lower] = client
+
+                clients.append(client)
+
+            # Clean up disconnected clients from cache
+            current_macs = {mac.lower() for mac in mac_addresses}
+            for mac in list(self._client_cache.keys()):
+                if mac not in current_macs:
+                    del self._client_cache[mac]
+
             return clients
 
-        # METHOD 1: Use 'iw' command to list stations
-        if status["interface"]:
-            iw_cmd = run_command([
-                'iw', 'dev', status["interface"], 'station', 'dump'
-            ])
+        except Exception as e:
+            if isinstance(e, HotspotException):
+                raise
+            raise HotspotException(
+                f"Failed to get connected clients: {e}",
+                error_code="CLIENT_LIST_FAILED",
+                interface=interface,
+            ) from e
 
-            if iw_cmd.success:
-                # Parse iw output to extract client MAC addresses and connection times
-                current_mac = None
-                for line in iw_cmd.stdout.splitlines():
-                    line = line.strip()
-                    if line.startswith("Station"):
-                        current_mac = line.split()[1]
-                        clients.append({
-                            "mac_address": current_mac,
-                            "ip_address": "Unknown",
-                            "connected_since": None
-                        })
-                    elif "connected time:" in line and current_mac:
-                        # Extract connected time in seconds
-                        try:
-                            time_str = line.split(":", 1)[1].strip()
-                            if "seconds" in time_str:
-                                seconds = int(time_str.split()[0])
-                                # Update the client that matches this MAC
-                                for client in clients:
-                                    if client["mac_address"] == current_mac:
-                                        client["connected_since"] = int(
-                                            time.time() - seconds)
-                                        break
-                        except (ValueError, IndexError):
-                            pass
+    async def register_plugin(self, name: str, plugin: HotspotPlugin) -> None:
+        """Register a hotspot plugin."""
+        if not hasattr(plugin, "on_hotspot_start"):
+            raise ValueError(f"Plugin {name} does not implement HotspotPlugin protocol")
 
-        # METHOD 2: Use the ARP table to match MACs with IP addresses
-        arp_cmd = run_command(['arp', '-n'])
-        if arp_cmd.success:
-            for line in arp_cmd.stdout.splitlines()[1:]:  # Skip header
-                parts = line.split()
-                if len(parts) >= 3:
-                    ip = parts[0]
-                    mac = parts[2]
-                    # Check if this MAC is in our clients list
-                    for client in clients:
-                        if client["mac_address"].lower() == mac.lower():
-                            client["ip_address"] = ip
-                            break
+        self.plugins[name] = plugin
+        logger.info(f"Plugin '{name}' registered successfully")
 
-        # METHOD 3: Try to get hostnames from DHCP leases if available
-        leases_file = Path("/var/lib/misc/dnsmasq.leases")
-        if leases_file.exists():
+    async def unregister_plugin(self, name: str) -> bool:
+        """Unregister a hotspot plugin."""
+        if name in self.plugins:
+            del self.plugins[name]
+            logger.info(f"Plugin '{name}' unregistered")
+            return True
+        return False
+
+    async def _notify_plugins(self, event: str, *args: Any) -> None:
+        """Notify all registered plugins of an event."""
+        for name, plugin in self.plugins.items():
             try:
-                with open(leases_file, 'r') as f:
-                    for line in f:
-                        parts = line.split()
-                        if len(parts) >= 5:
-                            mac = parts[1]
-                            ip = parts[2]
-                            hostname = parts[3]
-                            # Check if this MAC is in our clients list
-                            for client in clients:
-                                if client["mac_address"].lower() == mac.lower():
-                                    client["ip_address"] = ip
-                                    if hostname != "*":
-                                        client["hostname"] = hostname
-                                    break
+                method = getattr(plugin, f"on_{event}", None)
+                if method:
+                    await method(*args)
             except Exception as e:
-                logger.error(f"Error reading DHCP leases: {e}")
+                logger.error(f"Plugin '{name}' error on {event}: {e}")
 
-        return clients
+    def _load_config(self) -> Optional[HotspotConfig]:
+        """Load configuration from file with error handling."""
+        if not self.config_file.exists():
+            return None
 
-    def get_network_interfaces(self) -> List[Dict[str, Any]]:
+        try:
+            with self.config_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            config = HotspotConfig.from_dict(data)
+            logger.debug(f"Configuration loaded from {self.config_file}")
+            return config
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to load configuration: {e}")
+            return None
+
+    async def save_config(self) -> None:
+        """Save current configuration to file."""
+        try:
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+            with self.config_file.open("w", encoding="utf-8") as f:
+                json.dump(self.current_config.to_dict(), f, indent=2)
+            logger.info(f"Configuration saved to {self.config_file}")
+        except OSError as e:
+            raise ConfigurationError(
+                f"Failed to save configuration: {e}",
+                error_code="CONFIG_SAVE_FAILED",
+                config_file=str(self.config_file),
+            ) from e
+
+    async def update_config(self, **kwargs: Any) -> None:
+        """Update current configuration with new values."""
+        try:
+            # Create new config with updates
+            current_dict = self.current_config.to_dict()
+            current_dict.update(kwargs)
+
+            # Validate new configuration
+            new_config = HotspotConfig.from_dict(current_dict)
+            self.current_config = new_config
+
+            await self.save_config()
+            logger.debug("Configuration updated", extra={"updates": kwargs})
+
+        except ValueError as e:
+            raise ConfigurationError(
+                f"Invalid configuration update: {e}",
+                error_code="CONFIG_INVALID",
+                updates=kwargs,
+            ) from e
+
+    async def start(self, **kwargs: Any) -> bool:
         """
-        Get a list of available network interfaces.
-
-        Returns:
-            List of dictionaries with interface information
-        """
-        interfaces = []
-
-        # Get list of interfaces using nmcli
-        result = run_command(['nmcli', 'device', 'status'])
-        if result.success:
-            lines = result.stdout.strip().split('\n')
-            if len(lines) > 1:  # Skip the header line
-                for line in lines[1:]:
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        interface = {
-                            "name": parts[0],
-                            "type": parts[1],
-                            "state": parts[2],
-                            "connection": parts[3] if len(parts) > 3 else "Unknown"
-                        }
-                        interfaces.append(interface)
-
-        return interfaces
-
-    def get_available_channels(self, interface: Optional[str] = None) -> List[int]:
-        """
-        Get a list of available WiFi channels for the specified interface.
+        Start the hotspot with enhanced error handling and validation.
 
         Args:
-            interface: Network interface to check (uses current config if None)
+            **kwargs: Configuration overrides
 
         Returns:
-            List of available channel numbers
-        """
-        if interface is None:
-            interface = self.current_config.interface
-
-        channels = []
-
-        # Get channel info using iwlist
-        result = run_command(['iwlist', interface, 'channel'])
-        if result.success:
-            # Parse channel list from output
-            channel_pattern = re.compile(r"Channel\s+(\d+)\s+:")
-            for line in result.stdout.strip().split('\n'):
-                match = channel_pattern.search(line)
-                if match:
-                    channels.append(int(match.group(1)))
-
-        return channels
-
-    def restart(self, **kwargs) -> bool:
-        """
-        Restart the hotspot with new configuration.
-
-        Args:
-            **kwargs: Configuration parameters to update
-
-        Returns:
-            True if the hotspot was successfully restarted
-        """
-        # Update config if parameters provided
-        if kwargs:
-            self.update_config(**kwargs)
-
-        # First stop the hotspot
-        if not self.stop():
-            logger.error("Failed to stop hotspot for restart")
-            return False
-
-        # Brief pause to ensure interface is released
-        time.sleep(1)
-
-        # Start the hotspot with updated config
-        return self.start()
-
-    async def monitor_clients(self, interval: int = 5, callback: Optional[Callable[[List[Dict[str, Any]]], None]] = None) -> None:
-        """
-        Monitor clients connected to the hotspot in real-time.
-
-        Args:
-            interval: Time in seconds between checks
-            callback: Optional function to call with client list on each update
+            True if hotspot started successfully
         """
         try:
-            previous_clients = set()
+            await self._ensure_network_manager()
 
+            # Update configuration if provided
+            if kwargs:
+                await self.update_config(**kwargs)
+
+            cfg = self.current_config
+
+            # Validate configuration
+            if cfg.authentication.requires_password and not cfg.password:
+                raise ConfigurationError(
+                    "Password is required for secured networks",
+                    error_code="PASSWORD_REQUIRED",
+                    authentication=cfg.authentication.value,
+                )
+
+            # Validate interface
+            await self.validate_interface(cfg.interface)
+
+            # Build NetworkManager command
+            cmd = [
+                "nmcli",
+                "dev",
+                "wifi",
+                "hotspot",
+                "ifname",
+                cfg.interface,
+                "ssid",
+                cfg.name,
+            ]
+
+            if cfg.password:
+                cmd.extend(["password", cfg.password])
+
+            # Execute hotspot creation
+            result = await self.run_command(cmd)
+
+            if not result.success:
+                raise NetworkManagerError(
+                    f"Failed to start hotspot: {result.stderr}",
+                    error_code="HOTSPOT_START_FAILED",
+                    command_result=result.to_dict(),
+                )
+
+            # Apply advanced configuration
+            await self._apply_advanced_config(cfg)
+
+            # Notify plugins
+            await self._notify_plugins("hotspot_start", cfg)
+
+            logger.success(f"Hotspot '{cfg.name}' started successfully")
+            return True
+
+        except HotspotException:
+            raise
+        except Exception as e:
+            raise HotspotException(
+                f"Unexpected error starting hotspot: {e}",
+                error_code="HOTSPOT_START_UNEXPECTED",
+            ) from e
+
+    async def _apply_advanced_config(self, cfg: HotspotConfig) -> None:
+        """Apply advanced hotspot configuration."""
+        base_cmd = ["nmcli", "connection", "modify", "Hotspot"]
+
+        commands = [
+            [*base_cmd, "802-11-wireless-security.key-mgmt", cfg.authentication.value],
+            [*base_cmd, "802-11-wireless-security.pairwise", cfg.encryption.value],
+            [*base_cmd, "802-11-wireless.band", cfg.band.value],
+            [*base_cmd, "802-11-wireless.channel", str(cfg.channel)],
+            [*base_cmd, "802-11-wireless.hidden", "yes" if cfg.hidden else "no"],
+        ]
+
+        for cmd in commands:
+            result = await self.run_command(cmd)
+            if not result.success:
+                logger.warning(
+                    f"Failed to apply config: {' '.join(cmd)}: {result.stderr}"
+                )
+
+    async def stop(self) -> bool:
+        """Stop the hotspot with error handling."""
+        try:
+            await self._ensure_network_manager()
+
+            result = await self.run_command(["nmcli", "connection", "down", "Hotspot"])
+
+            if result.success:
+                await self._notify_plugins("hotspot_stop")
+                logger.success("Hotspot stopped successfully")
+
+                # Clear client cache
+                self._client_cache.clear()
+
+                return True
+            else:
+                logger.warning(f"Failed to stop hotspot: {result.stderr}")
+                return False
+
+        except NetworkManagerError:
+            raise
+        except Exception as e:
+            raise HotspotException(
+                f"Unexpected error stopping hotspot: {e}",
+                error_code="HOTSPOT_STOP_UNEXPECTED",
+            ) from e
+
+    async def get_status(self) -> Dict[str, Any]:
+        """Get comprehensive hotspot status information."""
+        try:
+            await self._ensure_network_manager()
+
+            dev_status = await self.run_command(["nmcli", "dev", "status"])
+            if not dev_status.success or "Hotspot" not in dev_status.stdout:
+                return {"running": False}
+
+            # Find interface running hotspot
+            interface = None
+            for line in dev_status.stdout.splitlines():
+                if "Hotspot" in line:
+                    interface = line.split()[0]
+                    break
+
+            if not interface:
+                return {"running": False}
+
+            # Get detailed connection information
+            details = await self.run_command(["nmcli", "con", "show", "Hotspot"])
+
+            # Get connected clients
+            clients = await self.get_connected_clients(interface)
+
+            return {
+                "running": True,
+                "interface": interface,
+                "ssid": self._parse_detail(details.stdout, "802-11-wireless.ssid"),
+                "ip_address": self._parse_detail(details.stdout, "IP4.ADDRESS"),
+                "clients": [client.to_dict() for client in clients],
+                "client_count": len(clients),
+                "config": self.current_config.to_dict(),
+            }
+
+        except HotspotException:
+            raise
+        except Exception as e:
+            raise HotspotException(
+                f"Failed to get hotspot status: {e}", error_code="STATUS_FAILED"
+            ) from e
+
+    async def restart(self, **kwargs: Any) -> bool:
+        """Restart the hotspot with optional configuration updates."""
+        logger.info("Restarting hotspot...")
+
+        await self.stop()
+        await asyncio.sleep(1)  # Brief pause to ensure clean shutdown
+
+        return await self.start(**kwargs)
+
+    @asynccontextmanager
+    async def managed_hotspot(
+        self, **config_overrides: Any
+    ) -> AsyncGenerator[HotspotManager, None]:
+        """
+        Context manager for automatic hotspot lifecycle management.
+
+        Usage:
+            async with manager.managed_hotspot(name="TempHotspot") as hotspot:
+                # Hotspot is automatically started
+                status = await hotspot.get_status()
+                # Hotspot is automatically stopped when exiting context
+        """
+        try:
+            success = await self.start(**config_overrides)
+            if not success:
+                raise HotspotException(
+                    "Failed to start managed hotspot", error_code="MANAGED_START_FAILED"
+                )
+
+            yield self
+
+        finally:
+            try:
+                await self.stop()
+            except Exception as e:
+                logger.error(f"Error stopping managed hotspot: {e}")
+
+    async def monitor_clients(
+        self,
+        interval: int = 5,
+        callback: Optional[Callable[[List[ConnectedClient]], Awaitable[None]]] = None,
+    ) -> AsyncIterator[List[ConnectedClient]]:
+        """
+        Monitor connected clients with async generator pattern.
+
+        Args:
+            interval: Monitoring interval in seconds
+            callback: Optional async callback for client updates
+
+        Yields:
+            List of currently connected clients
+        """
+        seen_clients: Dict[str, ConnectedClient] = {}
+
+        try:
             while True:
-                clients = self.get_connected_clients()
-                current_clients = {client["mac_address"] for client in clients}
+                current_clients = await self.get_connected_clients()
+                current_macs = {client.mac_address for client in current_clients}
 
                 # Detect new and disconnected clients
-                new_clients = current_clients - previous_clients
-                disconnected_clients = previous_clients - current_clients
+                new_clients = [
+                    client
+                    for client in current_clients
+                    if client.mac_address not in seen_clients
+                ]
 
-                # Log connection changes
-                for mac in new_clients:
-                    logger.info(f"New client connected: {mac}")
+                disconnected_macs = set(seen_clients.keys()) - current_macs
+                disconnected_clients = [seen_clients[mac] for mac in disconnected_macs]
 
-                for mac in disconnected_clients:
-                    logger.info(f"Client disconnected: {mac}")
+                # Log and notify changes
+                if new_clients:
+                    for client in new_clients:
+                        logger.info(f"Client connected: {client.mac_address}")
+                        await self._notify_plugins("client_connect", client)
 
-                # Call the callback if provided
+                if disconnected_clients:
+                    for client in disconnected_clients:
+                        logger.info(f"Client disconnected: {client.mac_address}")
+                        await self._notify_plugins("client_disconnect", client)
+
+                # Update seen clients
+                seen_clients = {
+                    client.mac_address: client for client in current_clients
+                }
+
+                # Call callback if provided
                 if callback:
-                    callback(clients)
-                else:
-                    # Default behavior: print client info
-                    if clients:
-                        print(f"\n{len(clients)} clients connected:")
-                        for client in clients:
-                            hostname = f" ({client['hostname']})" if 'hostname' in client and client['hostname'] else ""
-                            print(
-                                f"- {client['mac_address']} ({client.get('ip_address', 'Unknown IP')}){hostname}")
-                    else:
-                        print("\nNo clients connected")
+                    await callback(current_clients)
 
-                # Update previous clients list for next iteration
-                previous_clients = current_clients
+                yield current_clients
 
                 await asyncio.sleep(interval)
 
         except asyncio.CancelledError:
-            logger.info("Client monitoring stopped")
+            logger.debug("Client monitoring cancelled")
+            raise
         except Exception as e:
-            logger.error(f"Error monitoring clients: {e}")
+            logger.error(f"Error in client monitoring: {e}")
+            raise
+
+    async def start_monitoring(self, interval: int = 5) -> None:
+        """Start background client monitoring task."""
+        if self._monitoring_task and not self._monitoring_task.done():
+            logger.warning("Monitoring task already running")
+            return
+
+        async def monitor_task() -> None:
+            async for clients in self.monitor_clients(interval):
+                pass  # Monitoring happens in the async generator
+
+        self._monitoring_task = asyncio.create_task(monitor_task())
+        logger.info("Background client monitoring started")
+
+    async def stop_monitoring(self) -> None:
+        """Stop background client monitoring task."""
+        if self._monitoring_task and not self._monitoring_task.done():
+            self._monitoring_task.cancel()
+            try:
+                await self._monitoring_task
+            except asyncio.CancelledError:
+                pass
+            logger.info("Background client monitoring stopped")
+
+    async def __aenter__(self) -> HotspotManager:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Async context manager exit with cleanup."""
+        await self.stop_monitoring()
+        # Note: We don't automatically stop the hotspot here as it might be intentional

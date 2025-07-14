@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/system/command.hpp"
 #include "atom/utils/uuid.hpp"
 

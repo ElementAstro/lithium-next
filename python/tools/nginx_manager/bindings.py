@@ -1,165 +1,149 @@
 #!/usr/bin/env python3
 """
-PyBind11 bindings for Nginx Manager.
+PyBind11 bindings for the asynchronous Nginx Manager.
 """
 
+from __future__ import annotations
+
+import asyncio
 import json
 from pathlib import Path
+from typing import Any, Coroutine, TypeVar
+
 from loguru import logger
 
-from .manager import NginxManager
+from .manager import (
+    NginxManager,
+    basic_template,
+    php_template,
+    proxy_template,
+)
+from .core import NginxError
+
+T = TypeVar("T")
 
 
 class NginxManagerBindings:
     """
-    Class providing bindings for pybind11 integration.
-
-    This class wraps NginxManager functionality to be called from C++ via pybind11.
+    Class providing synchronous bindings for the async NginxManager,
+    suitable for pybind11 integration.
     """
 
     def __init__(self):
-        """Initialize with a new NginxManager instance."""
+        """Initialize with a new NginxManager instance and a running event loop."""
         self.manager = NginxManager(use_colors=False)
-        logger.debug("PyBind11 bindings initialized")
+        self.manager.register_plugin(
+            "vhost_templates",
+            {"basic": basic_template, "php": php_template, "proxy": proxy_template},
+        )
+        logger.debug("PyBind11 bindings initialized.")
+
+    def _run_sync(self, coro: Coroutine[Any, Any, T]) -> T:
+        """
+        Run an awaitable coroutine synchronously with enhanced error handling.
+        This is a blocking call that will run the asyncio event loop until the future is done.
+        """
+        try:
+            return asyncio.run(coro)
+        except NginxError as e:
+            logger.error(f"Nginx operation failed: {e}")
+            # Re-raise the exception to allow C++ to catch it if needed
+            raise
+        except asyncio.TimeoutError as e:
+            logger.error(f"Operation timed out: {e}")
+            raise NginxError(f"Operation timed out: {e}") from e
+        except Exception as e:
+            logger.error(f"Unexpected error in async execution: {e}")
+            raise NginxError(f"Unexpected error: {e}") from e
 
     def is_installed(self) -> bool:
         """Check if Nginx is installed."""
-        return self.manager.is_nginx_installed()
+        return self._run_sync(self.manager.is_nginx_installed())
 
     def install(self) -> bool:
         """Install Nginx if not already installed."""
-        try:
-            self.manager.install_nginx()
-            return True
-        except Exception as e:
-            logger.error(f"Installation failed: {str(e)}")
-            return False
+        self._run_sync(self.manager.install_nginx())
+        return True
 
     def start(self) -> bool:
         """Start Nginx server."""
-        try:
-            self.manager.start_nginx()
-            return True
-        except Exception as e:
-            logger.error(f"Start failed: {str(e)}")
-            return False
+        self._run_sync(self.manager.manage_service("start"))
+        return True
 
     def stop(self) -> bool:
         """Stop Nginx server."""
-        try:
-            self.manager.stop_nginx()
-            return True
-        except Exception as e:
-            logger.error(f"Stop failed: {str(e)}")
-            return False
+        self._run_sync(self.manager.manage_service("stop"))
+        return True
 
     def reload(self) -> bool:
         """Reload Nginx configuration."""
-        try:
-            self.manager.reload_nginx()
-            return True
-        except Exception as e:
-            logger.error(f"Reload failed: {str(e)}")
-            return False
+        self._run_sync(self.manager.manage_service("reload"))
+        return True
 
     def restart(self) -> bool:
         """Restart Nginx server."""
-        try:
-            self.manager.restart_nginx()
-            return True
-        except Exception as e:
-            logger.error(f"Restart failed: {str(e)}")
-            return False
+        self._run_sync(self.manager.manage_service("restart"))
+        return True
 
     def check_config(self) -> bool:
         """Check Nginx configuration syntax."""
-        try:
-            return self.manager.check_config()
-        except Exception as e:
-            logger.error(f"Config check failed: {str(e)}")
-            return False
+        return self._run_sync(self.manager.check_config())
 
     def get_status(self) -> bool:
         """Check if Nginx is running."""
-        return self.manager.get_status()
+        return self._run_sync(self.manager.get_status())
 
     def get_version(self) -> str:
         """Get Nginx version."""
-        try:
-            return self.manager.get_version()
-        except Exception as e:
-            logger.error(f"Failed to get version: {str(e)}")
-            return ""
+        return self._run_sync(self.manager.get_version())
 
     def backup_config(self, custom_name: str = "") -> str:
         """Backup Nginx configuration."""
-        try:
-            backup_path = self.manager.backup_config(
-                custom_name=custom_name if custom_name else None
-            )
-            return str(backup_path)
-        except Exception as e:
-            logger.error(f"Backup failed: {str(e)}")
-            return ""
+        backup_path = self._run_sync(
+            self.manager.backup_config(custom_name=custom_name or None)
+        )
+        return str(backup_path)
 
     def restore_config(self, backup_file: str = "") -> bool:
         """Restore Nginx configuration from backup."""
-        try:
-            self.manager.restore_config(
-                backup_file=backup_file if backup_file else None
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Restore failed: {str(e)}")
-            return False
+        self._run_sync(self.manager.restore_config(backup_file=backup_file or None))
+        return True
 
-    def create_virtual_host(self, server_name: str, port: int = 80,
-                            root_dir: str = "", template: str = 'basic') -> str:
+    def create_virtual_host(
+        self,
+        server_name: str,
+        port: int = 80,
+        root_dir: str = "",
+        template: str = "basic",
+    ) -> str:
         """Create a virtual host configuration."""
-        try:
-            config_path = self.manager.create_virtual_host(
-                server_name=server_name,
+        config_path = self._run_sync(
+            self.manager.manage_virtual_host(
+                "create",
+                server_name,
                 port=port,
-                root_dir=root_dir if root_dir else None,
-                template=template
+                root_dir=root_dir or None,
+                template=template,
             )
-            return str(config_path)
-        except Exception as e:
-            logger.error(f"Virtual host creation failed: {str(e)}")
-            return ""
+        )
+        return str(config_path)
 
     def enable_virtual_host(self, server_name: str) -> bool:
         """Enable a virtual host."""
-        try:
-            self.manager.enable_virtual_host(server_name)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to enable virtual host: {str(e)}")
-            return False
+        self._run_sync(self.manager.manage_virtual_host("enable", server_name))
+        return True
 
     def disable_virtual_host(self, server_name: str) -> bool:
         """Disable a virtual host."""
-        try:
-            self.manager.disable_virtual_host(server_name)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to disable virtual host: {str(e)}")
-            return False
+        self._run_sync(self.manager.manage_virtual_host("disable", server_name))
+        return True
 
     def list_virtual_hosts(self) -> str:
-        """List all virtual hosts and their status."""
-        try:
-            vhosts = self.manager.list_virtual_hosts()
-            return json.dumps(vhosts)
-        except Exception as e:
-            logger.error(f"Failed to list virtual hosts: {str(e)}")
-            return "{}"
+        """List all virtual hosts and their status as a JSON string."""
+        vhosts = self.manager.list_virtual_hosts()  # This is synchronous
+        return json.dumps(vhosts)
 
     def health_check(self) -> str:
-        """Perform a health check."""
-        try:
-            result = self.manager.health_check()
-            return json.dumps(result)
-        except Exception as e:
-            logger.error(f"Health check failed: {str(e)}")
-            return "{\"error\": \"Health check failed\"}"
+        """Perform a health check and return results as a JSON string."""
+        result = self._run_sync(self.manager.health_check())
+        return json.dumps(result)

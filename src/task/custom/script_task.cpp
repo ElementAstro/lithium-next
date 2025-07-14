@@ -1,5 +1,5 @@
 #include "script_task.hpp"
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "factory.hpp"
 #include "spdlog/spdlog.h"
 #include "script/python_caller.hpp"
@@ -632,13 +632,13 @@ void ScriptTask::loadPythonModule(const std::string& moduleName, const std::stri
     }
 }
 
-void ScriptTask::setPythonVariable(const std::string& alias, 
-                                  const std::string& varName, 
+void ScriptTask::setPythonVariable(const std::string& alias,
+                                  const std::string& varName,
                                   const py::object& value) {
     if (!pythonWrapper_) {
         throw std::runtime_error("Python wrapper not available");
     }
-    
+
     try {
         pythonWrapper_->set_variable(alias, varName, value);
         addHistoryEntry("Set Python variable: " + alias + "::" + varName);
@@ -648,13 +648,13 @@ void ScriptTask::setPythonVariable(const std::string& alias,
     }
 }
 
-void ScriptTask::executeWithContext(const std::string& scriptName, 
+void ScriptTask::executeWithContext(const std::string& scriptName,
                                    const ScriptExecutionContext& context) {
     validateExecutionContext(context);
-    
+
     // Store context for later use
     executionContexts_[scriptName] = context;
-    
+
     // Set working directory
     if (!context.workingDirectory.empty()) {
         // Platform-specific directory change
@@ -664,7 +664,7 @@ void ScriptTask::executeWithContext(const std::string& scriptName,
         chdir(context.workingDirectory.c_str());
         #endif
     }
-    
+
     // Set environment variables
     for (const auto& [key, value] : context.environment) {
         #ifdef _WIN32
@@ -673,7 +673,7 @@ void ScriptTask::executeWithContext(const std::string& scriptName,
         setenv(key.c_str(), value.c_str(), 1);
         #endif
     }
-    
+
     // Execute based on script type
     executeScriptWithType(scriptName, context.type, {});
 }
@@ -697,27 +697,27 @@ std::future<ScriptStatus> ScriptTask::executeAsync(const std::string& scriptName
 void ScriptTask::executePipeline(const std::vector<std::string>& scriptNames,
                                 const json& sharedContext) {
     json currentContext = sharedContext;
-    
+
     for (const auto& scriptName : scriptNames) {
         try {
             addHistoryEntry("Executing pipeline step: " + scriptName);
-            
+
             // Execute script with current context
             auto args = currentContext.get<std::unordered_map<std::string, std::string>>();
             executeScript(scriptName, args);
-            
+
             // Get script output and merge into context
             auto logs = getScriptLogs(scriptName);
             if (!logs.empty()) {
                 currentContext["previous_output"] = logs.back();
             }
-            
+
         } catch (const std::exception& e) {
             spdlog::error("Pipeline failed at step {}: {}", scriptName, e.what());
             throw std::runtime_error("Pipeline execution failed at: " + scriptName);
         }
     }
-    
+
     addHistoryEntry("Pipeline execution completed");
 }
 
@@ -733,7 +733,7 @@ void ScriptTask::executeWorkflow(const std::string& workflowName,
     if (it == workflows_.end()) {
         throw std::invalid_argument("Workflow not found: " + workflowName);
     }
-    
+
     try {
         executePipeline(it->second, params);
         addHistoryEntry("Workflow executed: " + workflowName);
@@ -747,35 +747,35 @@ void ScriptTask::setResourcePool(size_t maxConcurrentScripts, size_t totalMemory
     std::lock_guard<std::mutex> lock(resourcePool_.resourceMutex);
     resourcePool_.maxConcurrentScripts = maxConcurrentScripts;
     resourcePool_.totalMemoryLimit = totalMemoryLimit;
-    addHistoryEntry("Resource pool configured: " + 
+    addHistoryEntry("Resource pool configured: " +
                    std::to_string(maxConcurrentScripts) + " scripts, " +
                    std::to_string(totalMemoryLimit / (1024*1024)) + "MB");
 }
 
 void ScriptTask::reserveResources(const std::string& scriptName,
-                                 size_t memoryMB, 
+                                 size_t memoryMB,
                                  int cpuPercent) {
     std::unique_lock<std::mutex> lock(resourcePool_.resourceMutex);
-    
+
     size_t memoryBytes = memoryMB * 1024 * 1024;
-    
+
     // Wait for resources to become available
     resourcePool_.resourceAvailable.wait(lock, [this, memoryBytes]() {
         return resourcePool_.usedMemory + memoryBytes <= resourcePool_.totalMemoryLimit;
     });
-    
+
     resourcePool_.usedMemory += memoryBytes;
-    addHistoryEntry("Resources reserved for " + scriptName + ": " + 
+    addHistoryEntry("Resources reserved for " + scriptName + ": " +
                    std::to_string(memoryMB) + "MB");
 }
 
 void ScriptTask::releaseResources(const std::string& scriptName) {
     std::lock_guard<std::mutex> lock(resourcePool_.resourceMutex);
-    
+
     // This is simplified - in practice you'd track per-script resource usage
     resourcePool_.usedMemory = 0; // Reset for simplicity
     resourcePool_.resourceAvailable.notify_all();
-    
+
     addHistoryEntry("Resources released for " + scriptName);
 }
 
@@ -786,21 +786,21 @@ ScriptType ScriptTask::detectScriptType(const std::string& content) {
         content.find("def ") != std::string::npos) {
         return ScriptType::Python;
     }
-    
+
     if (content.find("#!/bin/bash") != std::string::npos ||
         content.find("#!/bin/sh") != std::string::npos ||
         content.find("echo ") != std::string::npos) {
         return ScriptType::Shell;
     }
-    
+
     // Check for mixed content
     bool hasPython = content.find("python") != std::string::npos;
     bool hasShell = content.find("bash") != std::string::npos || content.find("sh ") != std::string::npos;
-    
+
     if (hasPython && hasShell) {
         return ScriptType::Mixed;
     }
-    
+
     return ScriptType::Shell; // Default to shell
 }
 
@@ -815,17 +815,17 @@ void ScriptTask::executeScriptWithType(const std::string& scriptName,
             // Execute Python script
             pythonWrapper_->eval_expression(scriptName, "exec(open('" + scriptName + "').read())");
             break;
-            
+
         case ScriptType::Shell:
             // Use existing shell script execution
             executeScript(scriptName, params.get<std::unordered_map<std::string, std::string>>());
             break;
-            
+
         case ScriptType::Mixed:
             // Handle mixed scripts - this would need more sophisticated parsing
             throw std::runtime_error("Mixed script execution not yet implemented");
             break;
-            
+
         case ScriptType::Auto:
             // Auto-detect and execute
             executeScriptWithType(scriptName, detectScriptType(scriptName), params);
@@ -853,7 +853,7 @@ auto ScriptTask::getProfilingData(const std::string& scriptName) -> ProfilingDat
     data.memoryUsage = static_cast<size_t>(getResourceUsage(scriptName) * 1024 * 1024);  // Convert to bytes
     data.cpuUsage = getResourceUsage(scriptName) * 100; // Convert to percentage
     data.ioOperations = 0; // Would need OS-specific implementation
-    
+
     return data;
 }
 

@@ -11,11 +11,18 @@ Date: 2025-06-09
 """
 
 from .types import (
-    UpdateStatus, UpdaterError, NetworkError, VerificationError, InstallationError,
-    UpdaterConfig, PathLike, HashType
+    UpdateStatus,
+    UpdaterError,
+    NetworkError,
+    VerificationError,
+    InstallationError,
+    UpdaterConfig,
+    PathLike,
+    HashType,
 )
 from .core import AutoUpdater
 from .sync import AutoUpdaterSync, create_updater, run_updater
+from .updater import AutoUpdater as AsyncAutoUpdater
 from .utils import compare_versions, parse_version, calculate_file_hash
 from .logger import logger
 
@@ -25,28 +32,24 @@ __all__ = [
     # Core classes
     "AutoUpdater",
     "AutoUpdaterSync",
-
+    "AsyncAutoUpdater",
     # Types
     "UpdaterConfig",
     "UpdateStatus",
-
     # Exceptions
     "UpdaterError",
     "NetworkError",
     "VerificationError",
     "InstallationError",
-
     # Utility functions
     "compare_versions",
     "parse_version",
     "calculate_file_hash",
     "create_updater",
     "run_updater",
-
     # Type definitions
     "PathLike",
     "HashType",
-
     # Logger
     "logger",
 ]
@@ -55,4 +58,5 @@ __all__ = [
 if __name__ == "__main__":
     import sys
     from .cli import main
+
     sys.exit(main())

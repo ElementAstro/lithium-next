@@ -12,7 +12,7 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "task/sequencer.hpp"
 
 /**

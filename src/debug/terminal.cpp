@@ -41,12 +41,12 @@ ConsoleTerminal* globalConsoleTerminal = nullptr;
 void signalHandler(int signal) {
     if (signal == SIGINT || signal == SIGTERM) {
         std::cout << "\nReceived termination signal. Exiting..." << std::endl;
-        
+
         // Clean up terminal state
         if (globalConsoleTerminal) {
             // Perform necessary cleanup
         }
-        
+
         exit(0);
     }
 }
@@ -128,7 +128,7 @@ ConsoleTerminal::ConsoleTerminal()
     // Register signal handlers
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
-    
+
     // Set global terminal pointer
     globalConsoleTerminal = this;
 }
@@ -160,7 +160,7 @@ auto ConsoleTerminal::operator=(ConsoleTerminal&& other) noexcept -> ConsoleTerm
         commandCheckEnabled_ = other.commandCheckEnabled_;
         commandChecker_ = std::move(other.commandChecker_);
         suggestionEngine_ = std::move(other.suggestionEngine_);
-        
+
         // Transfer ownership of the global pointer if necessary
         if (globalConsoleTerminal == &other) {
             globalConsoleTerminal = this;
@@ -188,7 +188,7 @@ void ConsoleTerminal::setCommandTimeout(std::chrono::milliseconds timeout) {
     } else {
         commandTimeout_ = timeout;
     }
-    
+
     if (impl_) {
         impl_->commandTimeout_ = commandTimeout_;
     }
@@ -220,24 +220,24 @@ void ConsoleTerminal::loadConfig(const std::string& configPath) {
         std::cerr << "Error: Config path is empty" << std::endl;
         return;
     }
-    
+
     try {
         std::cout << "Loading configuration from: " << configPath << std::endl;
-        
+
         // Load configuration from file
         std::ifstream configFile(configPath);
         if (!configFile.is_open()) {
             std::cerr << "Failed to open config file: " << configPath << std::endl;
             return;
         }
-        
+
         // In a production environment, parse JSON/XML/YAML here
         // For now, we'll set some default values
         enableHistory(true);
         enableSuggestions(true);
         enableSyntaxHighlight(true);
         setCommandTimeout(std::chrono::milliseconds(5000));
-        
+
         // Load command checker configuration if available
         if (commandChecker_) {
             commandChecker_->loadConfig(configPath);
@@ -290,19 +290,19 @@ std::string ConsoleTerminal::ConsoleTerminalImpl::readInput() {
     echo();  // Enable character echo
     int result = getnstr(inputBuffer, BUFFER_SIZE - 1);
     noecho();  // Disable character echo
-    
+
     if (result == ERR) {
         // Handle input error
         return "";
     }
-    
+
     return std::string(inputBuffer);
 #elif defined(_WIN32)
     // Windows-specific input handling without readline
     std::string input;
     std::cout << "> ";
     std::cout.flush();
-    
+
     char c;
     while ((c = _getch()) != '\r') {
         if (c == '\b') {  // Backspace
@@ -435,12 +435,12 @@ void ConsoleTerminal::ConsoleTerminalImpl::run() {
 
             // Read input from the user
             input = readInput();
-            
+
             // Check if the input is empty
             if (input.empty()) {
                 continue;
             }
-            
+
             // Check for exit commands
             if (input == "exit" || input == "quit") {
                 std::cout << "Exiting console terminal..." << std::endl;
@@ -457,7 +457,7 @@ void ConsoleTerminal::ConsoleTerminalImpl::run() {
                 auto errors = commandChecker_->check(input);
                 if (!errors.empty()) {
                     printErrors(errors, input, false);
-                    
+
                     // Provide suggestions if enabled
                     if (suggestionsEnabled_ && suggestionEngine_) {
                         auto suggestions = suggestionEngine_->suggest(input);
@@ -476,11 +476,11 @@ void ConsoleTerminal::ConsoleTerminalImpl::run() {
             std::string cmdName;
             std::istringstream iss(input);
             iss >> cmdName;
-            
+
             // Extract the remaining string for argument parsing
             std::string argsStr;
             std::getline(iss >> std::ws, argsStr);
-            
+
             // Parse arguments
             std::vector<std::any> args;
             if (!argsStr.empty()) {
@@ -513,9 +513,9 @@ void ConsoleTerminal::ConsoleTerminalImpl::run() {
 
 void ConsoleTerminal::ConsoleTerminalImpl::printErrors(
     const std::vector<CommandChecker::Error>& errors,
-    const std::string& input, 
+    const std::string& input,
     bool continueRun) const {
-    
+
     // ANSI color codes for formatting
     const std::string RED = "\033[1;31m";
     const std::string YELLOW = "\033[1;33m";
@@ -563,11 +563,11 @@ auto ConsoleTerminal::ConsoleTerminalImpl::parseArguments(const std::string& inp
     bool inQuotes = false;
     char quoteChar = '\0';
     bool escape = false;
-    
+
     // Parse the input character by character
     for (size_t i = 0; i < input.length(); ++i) {
         char c = input[i];
-        
+
         if (escape) {
             // Handle escaped character
             token += c;
@@ -590,7 +590,7 @@ auto ConsoleTerminal::ConsoleTerminalImpl::parseArguments(const std::string& inp
             // Start of quoted string
             inQuotes = true;
             quoteChar = c;
-            
+
             // Process any token before the quote
             if (!token.empty()) {
                 args.push_back(processToken(token));
@@ -607,17 +607,17 @@ auto ConsoleTerminal::ConsoleTerminalImpl::parseArguments(const std::string& inp
             token += c;
         }
     }
-    
+
     // Process the last token if there is one
     if (!token.empty()) {
         args.push_back(processToken(token));
     }
-    
+
     // If still in quotes at the end, there's an error
     if (inQuotes) {
         std::cerr << "Warning: Unmatched quote in input" << std::endl;
     }
-    
+
     return args;
 }
 
@@ -695,7 +695,7 @@ void ConsoleTerminal::ConsoleTerminalImpl::handleInput(
         std::istringstream iss(input);
         std::string cmdName;
         iss >> cmdName;
-        
+
         // Parse remaining arguments
         std::string argsStr;
         std::getline(iss >> std::ws, argsStr);

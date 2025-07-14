@@ -3,10 +3,11 @@
  * @brief Implementation of the Target class.
  */
 #include "target.hpp"
-
+#include "exception.hpp"
 #include "custom/factory.hpp"
 
 #include <mutex>
+#include <shared_mutex>
 
 #include "atom/async/safetype.hpp"
 #include "atom/error/exception.hpp"
@@ -19,18 +20,7 @@
 
 namespace lithium::task {
 
-/**
- * @class TaskErrorException
- * @brief Exception thrown when a task error occurs.
- */
-class TaskErrorException : public atom::error::RuntimeError {
-public:
-    using atom::error::RuntimeError::RuntimeError;
-};
-
-#define THROW_TASK_ERROR_EXCEPTION(...)                                      \
-    throw TaskErrorException(ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, \
-                             __VA_ARGS__);
+// Using exception classes from exception.hpp
 
 Target::Target(std::string name, std::chrono::seconds cooldown, int maxRetries)
     : name_(std::move(name)),
@@ -477,99 +467,200 @@ auto Target::getTasks() -> const std::vector<std::unique_ptr<Task>>& {
     return tasks_;
 }
 
-auto Target::toJson() const -> json {
-    json j = {{"name", name_},
-              {"uuid", uuid_},
-              {"enabled", isEnabled()},
-              {"status", static_cast<int>(getStatus())},
-              {"progress", getProgress()},
-              {"tasks", json::array()}};
+auto Target::toJson(bool includeRuntime) const -> json {
+    json j = {
+        {"version", "2.0.0"},  // Version information for schema compatibility
+        {"name", name_},          {"uuid", uuid_},
+        {"enabled", isEnabled()}, {"status", static_cast<int>(getStatus())},
+        {"tasks", json::array()}};
 
+    // Use temporary values to avoid locking issues
     {
-        std::shared_lock lock(mutex_);
-        j["cooldown"] = cooldown_.count();
-        j["maxRetries"] = maxRetries_;
+        auto cooldown_val = cooldown_.count();
+        auto maxRetries_val = maxRetries_;
+        std::vector<json> taskJsons;
 
-        for (const auto& task : tasks_) {
-            j["tasks"].push_back(task->toJson());
+        {
+            std::unique_lock lock(mutex_);
+            j["cooldown"] = cooldown_val;
+            j["maxRetries"] = maxRetries_val;
+
+            for (const auto& task : tasks_) {
+                taskJsons.push_back(task->toJson(includeRuntime));
+            }
         }
+
+        j["tasks"] = taskJsons;
     }
 
+    // Handle parameters
     {
-        std::shared_lock lock(paramsMutex_);
-        j["params"] = params_;
+        json paramsJson;
+        {
+            std::shared_lock lock(paramsMutex_);
+            paramsJson = params_;
+        }
+        j["params"] = paramsJson;
     }
 
+    // Handle task groups
     {
-        std::shared_lock lock(groupMutex_);
-        j["taskGroups"] = json::object();
-        for (const auto& [groupName, tasks] : taskGroups_) {
-            j["taskGroups"][groupName] = tasks;
+        json groupsJson = json::object();
+        {
+            std::shared_lock lock(groupMutex_);
+            for (const auto& [groupName, tasks] : taskGroups_) {
+                groupsJson[groupName] = tasks;
+            }
         }
+        j["taskGroups"] = groupsJson;
     }
 
+    // Handle dependencies
     {
-        std::shared_lock lock(depMutex_);
-        j["taskDependencies"] = json::object();
-        for (const auto& [taskUUID, deps] : taskDependencies_) {
-            j["taskDependencies"][taskUUID] = deps;
+        json depsJson;
+        {
+            std::unique_lock lock(depMutex_);
+            depsJson = taskDependencies_;
         }
+        j["taskDependencies"] = depsJson;
+    }
+
+    // Add any optional fields for extended functionality
+    if (includeRuntime) {
+        j["completedTasks"] = completedTasks_.load();
+        j["totalTasks"] = totalTasks_;
     }
 
     return j;
 }
 
 auto Target::fromJson(const json& data) -> void {
-    name_ = data["name"].get<std::string>();
-    uuid_ = data["uuid"].get<std::string>();
+    try {
+        // Validate schema first
+        if (!validateJson(data)) {
+            THROW_RUNTIME_ERROR("Invalid target JSON schema");
+        }
 
-    {
-        std::unique_lock lock(mutex_);
-        cooldown_ = std::chrono::seconds(data["cooldown"].get<int>());
-        maxRetries_ = data["maxRetries"].get<int>();
-        enabled_ = data["enabled"].get<bool>();
-    }
+        // Set basic properties
+        if (data.contains("name")) {
+            name_ = data["name"].get<std::string>();
+        }
 
-    setStatus(static_cast<TargetStatus>(data["status"].get<int>()));
+        if (data.contains("uuid")) {
+            uuid_ = data["uuid"].get<std::string>();
+        }
 
-    {
-        std::unique_lock lock(paramsMutex_);
+        if (data.contains("enabled")) {
+            setEnabled(data["enabled"].get<bool>());
+        }
+
+        if (data.contains("cooldown")) {
+            setCooldown(std::chrono::seconds(data["cooldown"].get<int64_t>()));
+        }
+
+        if (data.contains("maxRetries")) {
+            setMaxRetries(data["maxRetries"].get<int>());
+        }
+
+        // Load tasks
+        if (data.contains("tasks") && data["tasks"].is_array()) {
+            loadTasksFromJson(data["tasks"]);
+        }
+
+        // Load parameters
         if (data.contains("params")) {
+            std::unique_lock lock(paramsMutex_);
             params_ = data["params"];
         }
-    }
 
-    {
-        std::unique_lock lock(mutex_);
-        tasks_.clear();
-    }
-
-    if (data.contains("tasks") && data["tasks"].is_array()) {
-        loadTasksFromJson(data["tasks"]);
-    }
-
-    {
-        std::unique_lock lock(groupMutex_);
-        taskGroups_.clear();
+        // Load task groups
         if (data.contains("taskGroups") && data["taskGroups"].is_object()) {
-            for (const auto& [groupName, tasks] : data["taskGroups"].items()) {
-                taskGroups_[groupName] = tasks.get<std::vector<std::string>>();
+            std::unique_lock lock(groupMutex_);
+            taskGroups_.clear();
+            for (auto it = data["taskGroups"].begin();
+                 it != data["taskGroups"].end(); ++it) {
+                taskGroups_[it.key()] =
+                    it.value().get<std::vector<std::string>>();
             }
         }
-    }
 
-    {
-        std::unique_lock lock(depMutex_);
-        taskDependencies_.clear();
+        // Load task dependencies
         if (data.contains("taskDependencies") &&
             data["taskDependencies"].is_object()) {
-            for (const auto& [taskUUID, deps] :
-                 data["taskDependencies"].items()) {
-                taskDependencies_[taskUUID] =
-                    deps.get<std::vector<std::string>>();
+            std::unique_lock lock(depMutex_);
+            taskDependencies_.clear();
+            for (auto it = data["taskDependencies"].begin();
+                 it != data["taskDependencies"].end(); ++it) {
+                taskDependencies_[it.key()] =
+                    it.value().get<std::vector<std::string>>();
             }
         }
+
+    } catch (const json::exception& e) {
+        THROW_RUNTIME_ERROR("Failed to parse target from JSON: " +
+                            std::string(e.what()));
+    } catch (const std::exception& e) {
+        THROW_RUNTIME_ERROR("Failed to initialize target from JSON: " +
+                            std::string(e.what()));
     }
+}
+
+std::unique_ptr<lithium::task::Target> lithium::task::Target::createFromJson(
+    const json& data) {
+    try {
+        std::string name = data.at("name").get<std::string>();
+        std::chrono::seconds cooldown = std::chrono::seconds(0);
+        int maxRetries = 0;
+
+        if (data.contains("cooldown")) {
+            cooldown = std::chrono::seconds(data.at("cooldown").get<int64_t>());
+        }
+
+        if (data.contains("maxRetries")) {
+            maxRetries = data.at("maxRetries").get<int>();
+        }
+
+        auto target =
+            std::make_unique<lithium::task::Target>(name, cooldown, maxRetries);
+        target->fromJson(data);
+        return target;
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to create target from JSON: {}", e.what());
+        throw std::runtime_error("Failed to create target from JSON: " +
+                                 std::string(e.what()));
+    }
+}
+
+bool lithium::task::Target::validateJson(const json& data) {
+    // Basic schema validation
+    if (!data.is_object()) {
+        spdlog::error("Target JSON must be an object");
+        return false;
+    }
+
+    // Required fields
+    if (!data.contains("name") || !data["name"].is_string()) {
+        spdlog::error("Target JSON must contain a 'name' string");
+        return false;
+    }
+
+    // Optional fields
+    if (data.contains("tasks") && !data["tasks"].is_array()) {
+        spdlog::error("Target 'tasks' must be an array");
+        return false;
+    }
+
+    if (data.contains("params") && !data["params"].is_object()) {
+        spdlog::error("Target 'params' must be an object");
+        return false;
+    }
+
+    if (data.contains("taskGroups") && !data["taskGroups"].is_object()) {
+        spdlog::error("Target 'taskGroups' must be an object");
+        return false;
+    }
+
+    return true;
 }
 
 }  // namespace lithium::task

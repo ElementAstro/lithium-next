@@ -20,7 +20,7 @@ target_link_libraries(lithium_system_dependency
     # 这里需要链接原项目中的atom库和其他依赖
     # atom::system
     # atom::async
-    # atom::log
+    # atom
     # nlohmann_json
 )
 

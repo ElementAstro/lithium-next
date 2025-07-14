@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
 """
-Nginx Manager - A comprehensive tool for managing Nginx web server
+Nginx Manager - A comprehensive, async-first tool for managing Nginx.
 
-This package provides functionality for managing Nginx installations, including:
-- Installation and service management
-- Configuration handling and validation
-- Virtual host management
-- SSL certificate management
-- Log analysis and monitoring
-
-The package supports both command-line usage and embedding via pybind11.
+This package provides an extensible, asynchronous framework for managing Nginx,
+including service management, configuration, virtual hosts, and more.
 """
 
 from .core import (
@@ -18,23 +12,23 @@ from .core import (
     ConfigError,
     InstallationError,
     OperationError,
-    NginxPaths
+    NginxPaths,
 )
 from .manager import NginxManager
 from .bindings import NginxManagerBindings
 from .logging_config import setup_logging
 
-# Set up default logging
+# Set up default logging for the package
 setup_logging()
 
 __all__ = [
-    'NginxManager',
-    'NginxManagerBindings',
-    'NginxError',
-    'ConfigError',
-    'InstallationError',
-    'OperationError',
-    'OperatingSystem',
-    'NginxPaths',
-    'setup_logging'
+    "NginxManager",
+    "NginxManagerBindings",
+    "NginxError",
+    "ConfigError",
+    "InstallationError",
+    "OperationError",
+    "OperatingSystem",
+    "NginxPaths",
+    "setup_logging",
 ]

@@ -23,7 +23,7 @@ set(PROJECT_FILES
 set(PROJECT_LIBS
     atom
     lithium_config
-    loguru
+    spdlog::spdlog
     yaml-cpp
     pybind11::embed
     ${CMAKE_THREAD_LIBS_INIT}

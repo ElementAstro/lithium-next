@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(AstrometryNetClient VERSION 1.0.0 LANGUAGES CXX)
 
 # Library target
-add_library(astrometry_client 
+add_library(astrometry_client
     client.cpp
     utils.cpp
 )

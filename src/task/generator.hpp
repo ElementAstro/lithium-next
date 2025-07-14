@@ -38,7 +38,10 @@ public:
         MACRO_EVALUATION_ERROR,  ///< Macro evaluation error.
         JSON_PROCESSING_ERROR,   ///< JSON processing error.
         INVALID_MACRO_TYPE,      ///< Invalid macro type error.
-        CACHE_ERROR              ///< Cache error.
+        CACHE_ERROR,             ///< Cache error.
+        VALIDATION_ERROR,        ///< Schema validation error.
+        TEMPLATE_ERROR,          ///< Template processing error.
+        SCRIPT_GENERATION_ERROR  ///< Script generation error.
     };
 
     /**
@@ -60,6 +63,25 @@ public:
      * @return The error code.
      */
     ErrorCode code() const noexcept { return code_; }
+
+    /**
+     * @brief Convert error code to string.
+     * @return String representation of the error code.
+     */
+    std::string codeAsString() const noexcept {
+        switch (code_) {
+            case ErrorCode::UNDEFINED_MACRO: return "UNDEFINED_MACRO";
+            case ErrorCode::INVALID_MACRO_ARGS: return "INVALID_MACRO_ARGS";
+            case ErrorCode::MACRO_EVALUATION_ERROR: return "MACRO_EVALUATION_ERROR";
+            case ErrorCode::JSON_PROCESSING_ERROR: return "JSON_PROCESSING_ERROR";
+            case ErrorCode::INVALID_MACRO_TYPE: return "INVALID_MACRO_TYPE";
+            case ErrorCode::CACHE_ERROR: return "CACHE_ERROR";
+            case ErrorCode::VALIDATION_ERROR: return "VALIDATION_ERROR";
+            case ErrorCode::TEMPLATE_ERROR: return "TEMPLATE_ERROR";
+            case ErrorCode::SCRIPT_GENERATION_ERROR: return "SCRIPT_GENERATION_ERROR";
+            default: return "UNKNOWN_ERROR";
+        }
+    }
 
 private:
     ErrorCode code_;   ///< The error code.
@@ -121,6 +143,18 @@ public:
      * @param j The JSON object to process.
      */
     void processJsonWithJsonMacros(json& j);
+
+    /**
+     * @brief Enable schema validation for processed JSON.
+     * @param schema The JSON schema to validate against.
+     */
+    void setValidationSchema(const json& schema);
+
+    /**
+     * @brief Configure the processor with options.
+     * @param options Configuration options as JSON.
+     */
+    void configure(const json& options);
 
     /**
      * @brief Clear the macro cache.
@@ -321,6 +355,21 @@ public:
     ScriptGenerationResult convertScriptFormat(const std::string& script,
                                                const std::string& fromFormat,
                                                const std::string& toFormat);
+
+    /**
+     * @struct SchemaConfig
+     * @brief Configuration for JSON schema validation.
+     */
+    struct SchemaConfig {
+        json schema;                ///< JSON schema for validation
+        bool validateSchema{false}; ///< Whether to validate JSON against schema
+    };
+
+    /**
+     * @brief Set schema configuration for JSON validation.
+     * @param config The schema configuration.
+     */
+    void setSchemaConfig(const SchemaConfig& config);
 
 private:
     class Impl;

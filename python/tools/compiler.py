@@ -66,7 +66,7 @@ CommandResult = tuple[int, str, str]  # return_code, stdout, stderr
 class CppVersion(Enum):
     """
     Enum representing supported C++ language standard versions.
-    
+
     These values map to standard compiler flags for specifying the
     desired C++ language standard to use during compilation.
     """
@@ -156,7 +156,7 @@ class CompilerFeatures:
 class Compiler:
     """
     Class representing a compiler with its command and compilation capabilities.
-    
+
     This class encapsulates compiler-specific behavior and provides methods for
     compilation and linking operations.
     """
@@ -168,7 +168,7 @@ class Compiler:
     additional_compile_flags: List[str] = field(default_factory=list)
     additional_link_flags: List[str] = field(default_factory=list)
     features: CompilerFeatures = field(default_factory=CompilerFeatures)
-    
+
     def __post_init__(self):
         """Initialize and validate the compiler after creation."""
         # Ensure command is absolute path
@@ -176,15 +176,15 @@ class Compiler:
             resolved_path = shutil.which(self.command)
             if resolved_path:
                 self.command = resolved_path
-        
+
         # Validate compiler exists and is executable
         if not os.access(self.command, os.X_OK):
             raise CompilerNotFoundError(f"Compiler {self.name} not found or not executable: {self.command}")
-    
-    def compile(self, 
-                source_files: List[PathLike], 
-                output_file: PathLike, 
-                cpp_version: CppVersion, 
+
+    def compile(self,
+                source_files: List[PathLike],
+                output_file: PathLike,
+                cpp_version: CppVersion,
                 options: Optional[CompileOptions] = None) -> CompilationResult:
         """
         Compile source files into an object file or executable.
@@ -204,10 +204,10 @@ class Compiler:
         start_time = time.time()
         options = options or {}
         output_path = Path(output_file)
-        
+
         # Ensure output directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Start building command
         if cpp_version in self.cpp_flags:
             version_flag = self.cpp_flags[cpp_version]
@@ -220,10 +220,10 @@ class Compiler:
                 errors=[message],
                 duration_ms=(time.time() - start_time) * 1000
             )
-        
+
         # Build command with all options
         cmd = [self.command, version_flag]
-        
+
         # Add include paths
         for path in options.get('include_paths', []):
             if self.compiler_type == CompilerType.MSVC:
@@ -231,7 +231,7 @@ class Compiler:
             else:
                 cmd.append("-I")
                 cmd.append(str(path))
-        
+
         # Add preprocessor definitions
         for name, value in options.get('defines', {}).items():
             if self.compiler_type == CompilerType.MSVC:
@@ -244,25 +244,25 @@ class Compiler:
                     cmd.append(f"-D{name}")
                 else:
                     cmd.append(f"-D{name}={value}")
-        
+
         # Add warning flags
         cmd.extend(options.get('warnings', []))
-        
+
         # Add optimization level
         if 'optimization' in options:
             cmd.append(options['optimization'])
-        
+
         # Add debug flag if requested
         if options.get('debug', False):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append("/Zi")
             else:
                 cmd.append("-g")
-        
+
         # Position independent code
         if options.get('position_independent', False) and self.compiler_type != CompilerType.MSVC:
             cmd.append("-fPIC")
-        
+
         # Add sanitizers
         for sanitizer in options.get('sanitizers', []):
             if sanitizer in self.features.supported_sanitizers:
@@ -271,39 +271,39 @@ class Compiler:
                         cmd.append("/fsanitize=address")
                 else:
                     cmd.append(f"-fsanitize={sanitizer}")
-        
+
         # Add standard library specification
         if 'standard_library' in options and self.compiler_type != CompilerType.MSVC:
             cmd.append(f"-stdlib={options['standard_library']}")
-        
+
         # Add default compile flags for this compiler
         cmd.extend(self.additional_compile_flags)
-        
+
         # Add extra flags
         cmd.extend(options.get('extra_flags', []))
-        
+
         # Add compile flag
         if self.compiler_type == CompilerType.MSVC:
             cmd.append("/c")
         else:
             cmd.append("-c")
-        
+
         # Add source files
         cmd.extend([str(f) for f in source_files])
-        
+
         # Add output file
         if self.compiler_type == CompilerType.MSVC:
             cmd.extend(["/Fo:", str(output_path)])
         else:
             cmd.extend(["-o", str(output_path)])
-        
+
         # Execute the command
         logger.debug(f"Running compile command: {' '.join(cmd)}")
         result = self._run_command(cmd)
-        
+
         # Process result
         elapsed_time = (time.time() - start_time) * 1000
-        
+
         if result[0] != 0:
             # Parse errors and warnings from stderr
             errors, warnings = self._parse_diagnostics(result[2])
@@ -314,7 +314,7 @@ class Compiler:
                 errors=errors,
                 warnings=warnings
             )
-            
+
         # Check if output file was created
         if not output_path.exists():
             return CompilationResult(
@@ -323,10 +323,10 @@ class Compiler:
                 duration_ms=elapsed_time,
                 errors=[f"Compilation completed but output file was not created: {output_path}"]
             )
-        
+
         # Parse warnings (even if successful)
         _, warnings = self._parse_diagnostics(result[2])
-        
+
         return CompilationResult(
             success=True,
             output_file=output_path,
@@ -334,10 +334,10 @@ class Compiler:
             duration_ms=elapsed_time,
             warnings=warnings
         )
-        
-    def link(self, 
-             object_files: List[PathLike], 
-             output_file: PathLike, 
+
+    def link(self,
+             object_files: List[PathLike],
+             output_file: PathLike,
              options: Optional[LinkOptions] = None) -> CompilationResult:
         """
         Link object files into an executable or library.
@@ -349,38 +349,38 @@ class Compiler:
 
         Returns:
             CompilationResult object with linking details
-            
+
         Raises:
             CompilationError: If linking fails
         """
         start_time = time.time()
         options = options or {}
         output_path = Path(output_file)
-        
+
         # Ensure output directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Start building command
         cmd = [self.command]
-        
+
         # Handle shared library creation
         if options.get('shared', False):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append("/DLL")
             else:
                 cmd.append("-shared")
-        
+
         # Handle static linking preference
         if options.get('static', False) and self.compiler_type != CompilerType.MSVC:
             cmd.append("-static")
-        
+
         # Add library paths
         for path in options.get('library_paths', []):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append(f"/LIBPATH:{path}")
             else:
                 cmd.append(f"-L{path}")
-        
+
         # Add runtime library paths
         if self.compiler_type != CompilerType.MSVC:
             for path in options.get('runtime_library_paths', []):
@@ -388,21 +388,21 @@ class Compiler:
                     cmd.append(f"-Wl,-rpath,{path}")
                 else:
                     cmd.append(f"-Wl,-rpath={path}")
-        
+
         # Add libraries
         for lib in options.get('libraries', []):
             if self.compiler_type == CompilerType.MSVC:
                 cmd.append(f"{lib}.lib")
             else:
                 cmd.append(f"-l{lib}")
-        
+
         # Strip debug symbols if requested
         if options.get('strip', False):
             if self.compiler_type == CompilerType.MSVC:
                 pass  # MSVC handles this differently
             else:
                 cmd.append("-s")
-        
+
         # Add map file if requested
         if 'map_file' in options:
             map_path = Path(options['map_file'])
@@ -410,29 +410,29 @@ class Compiler:
                 cmd.append(f"/MAP:{map_path}")
             else:
                 cmd.append(f"-Wl,-Map={map_path}")
-        
+
         # Add default link flags
         cmd.extend(self.additional_link_flags)
-        
+
         # Add extra flags
         cmd.extend(options.get('extra_flags', []))
-        
+
         # Add object files
         cmd.extend([str(f) for f in object_files])
-        
+
         # Add output file
         if self.compiler_type == CompilerType.MSVC:
             cmd.extend([f"/OUT:{output_path}"])
         else:
             cmd.extend(["-o", str(output_path)])
-        
+
         # Execute the command
         logger.debug(f"Running link command: {' '.join(cmd)}")
         result = self._run_command(cmd)
-        
+
         # Process result
         elapsed_time = (time.time() - start_time) * 1000
-        
+
         if result[0] != 0:
             # Parse errors and warnings from stderr
             errors, warnings = self._parse_diagnostics(result[2])
@@ -443,7 +443,7 @@ class Compiler:
                 errors=errors,
                 warnings=warnings
             )
-        
+
         # Check if output file was created
         if not output_path.exists():
             return CompilationResult(
@@ -452,10 +452,10 @@ class Compiler:
                 duration_ms=elapsed_time,
                 errors=[f"Linking completed but output file was not created: {output_path}"]
             )
-        
+
         # Parse warnings (even if successful)
         _, warnings = self._parse_diagnostics(result[2])
-        
+
         return CompilationResult(
             success=True,
             output_file=output_path,
@@ -463,13 +463,13 @@ class Compiler:
             duration_ms=elapsed_time,
             warnings=warnings
         )
-    
+
     def _run_command(self, cmd: List[str]) -> CommandResult:
         """Execute a command and return its exit code, stdout, and stderr."""
         try:
             process = subprocess.Popen(
-                cmd, 
-                stdout=subprocess.PIPE, 
+                cmd,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 universal_newlines=True
@@ -478,12 +478,12 @@ class Compiler:
             return process.returncode, stdout, stderr
         except Exception as e:
             return 1, "", str(e)
-    
+
     def _parse_diagnostics(self, output: str) -> tuple[List[str], List[str]]:
         """Parse compiler output to extract errors and warnings."""
         errors = []
         warnings = []
-        
+
         # Different parsing based on compiler type
         if self.compiler_type == CompilerType.MSVC:
             error_pattern = re.compile(r'.*?[Ee]rror\s+[A-Za-z0-9]+:.*')
@@ -491,15 +491,15 @@ class Compiler:
         else:
             error_pattern = re.compile(r'.*?:[0-9]+:[0-9]+:\s+error:.*')
             warning_pattern = re.compile(r'.*?:[0-9]+:[0-9]+:\s+warning:.*')
-        
+
         for line in output.splitlines():
             if error_pattern.match(line):
                 errors.append(line.strip())
             elif warning_pattern.match(line):
                 warnings.append(line.strip())
-        
+
         return errors, warnings
-    
+
     def get_version_info(self) -> Dict[str, str]:
         """Get detailed version information about the compiler."""
         if self.compiler_type == CompilerType.GCC:
@@ -515,14 +515,14 @@ class Compiler:
             result = self._run_command([self.command, "/Bv"])
             if result[0] == 0:
                 return {"version": result[1].strip()}
-        
+
         return {"version": "unknown"}
 
 
 class CompilerManager:
     """
     Manages compiler detection, selection, and operations.
-    
+
     This class provides a centralized way to work with compilers including
     automatically detecting available compilers and managing preferences.
     """
@@ -530,17 +530,17 @@ class CompilerManager:
         """Initialize the compiler manager."""
         self.compilers: Dict[str, Compiler] = {}
         self.default_compiler: Optional[str] = None
-    
+
     def detect_compilers(self) -> Dict[str, Compiler]:
         """
         Detect available compilers on the system.
-        
+
         Returns:
             Dictionary of compiler names to Compiler objects
         """
         # Clear existing compilers
         self.compilers.clear()
-        
+
         # Detect GCC
         gcc_path = self._find_command("g++") or self._find_command("gcc")
         if gcc_path:
@@ -567,7 +567,7 @@ class CompilerManager:
                         supports_pch=True,
                         supports_modules=(version >= "11.0"),
                         supported_cpp_versions={
-                            CppVersion.CPP98, CppVersion.CPP03, CppVersion.CPP11, 
+                            CppVersion.CPP98, CppVersion.CPP03, CppVersion.CPP11,
                             CppVersion.CPP14, CppVersion.CPP17, CppVersion.CPP20
                         } | ({CppVersion.CPP23} if version >= "11.0" else set()),
                         supported_sanitizers={"address", "thread", "undefined", "leak"},
@@ -607,7 +607,7 @@ class CompilerManager:
                         supports_pch=True,
                         supports_modules=(version >= "16.0"),
                         supported_cpp_versions={
-                            CppVersion.CPP98, CppVersion.CPP03, CppVersion.CPP11, 
+                            CppVersion.CPP98, CppVersion.CPP03, CppVersion.CPP11,
                             CppVersion.CPP14, CppVersion.CPP17, CppVersion.CPP20
                         } | ({CppVersion.CPP23} if version >= "15.0" else set()),
                         supported_sanitizers={"address", "thread", "undefined", "memory", "dataflow"},
@@ -648,7 +648,7 @@ class CompilerManager:
                             supports_pch=True,
                             supports_modules=(version >= "19.29"),  # Visual Studio 2019 16.10+
                             supported_cpp_versions={
-                                CppVersion.CPP11, CppVersion.CPP14, 
+                                CppVersion.CPP11, CppVersion.CPP14,
                                 CppVersion.CPP17, CppVersion.CPP20
                             } | ({CppVersion.CPP23} if version >= "19.35" else set()),
                             supported_sanitizers={"address"},
@@ -661,25 +661,25 @@ class CompilerManager:
                         self.default_compiler = "MSVC"
                 except CompilerNotFoundError:
                     pass
-        
+
         return self.compilers
-    
+
     def get_compiler(self, name: Optional[str] = None) -> Compiler:
         """
         Get a compiler by name, or return the default compiler.
-        
+
         Args:
             name: Name of the compiler to get
-            
+
         Returns:
             Compiler object
-            
+
         Raises:
             CompilerNotFoundError: If the compiler is not found
         """
         if not self.compilers:
             self.detect_compilers()
-            
+
         if not name:
             # Return default compiler
             if self.default_compiler and self.default_compiler in self.compilers:
@@ -689,29 +689,29 @@ class CompilerManager:
                 return next(iter(self.compilers.values()))
             else:
                 raise CompilerNotFoundError("No compilers detected on the system")
-        
+
         if name in self.compilers:
             return self.compilers[name]
         else:
             raise CompilerNotFoundError(f"Compiler '{name}' not found. Available compilers: {', '.join(self.compilers.keys())}")
-    
+
     def _find_command(self, command: str) -> Optional[str]:
         """
         Find a command in the system path.
-        
+
         Args:
             command: Command to find
-            
+
         Returns:
             Path to the command if found, None otherwise
         """
         path = shutil.which(command)
         return path
-    
+
     def _find_msvc(self) -> Optional[str]:
         """
         Find the MSVC compiler (cl.exe) on Windows.
-        
+
         Returns:
             Path to cl.exe if found, None otherwise
         """
@@ -719,7 +719,7 @@ class CompilerManager:
         cl_path = shutil.which("cl")
         if cl_path:
             return cl_path
-            
+
         # Check Visual Studio installation locations
         if platform.system() == "Windows":
             # Use vswhere.exe if available
@@ -727,20 +727,20 @@ class CompilerManager:
                 os.environ.get("ProgramFiles(x86)", ""),
                 "Microsoft Visual Studio", "Installer", "vswhere.exe"
             )
-            
+
             if os.path.exists(vswhere):
                 result = subprocess.run(
-                    [vswhere, "-latest", "-products", "*", "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", 
+                    [vswhere, "-latest", "-products", "*", "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
                      "-property", "installationPath", "-format", "value"],
-                    capture_output=True, 
+                    capture_output=True,
                     text=True,
                     check=False
                 )
-                
+
                 if result.returncode == 0 and result.stdout.strip():
                     vs_path = result.stdout.strip()
                     cl_path = os.path.join(vs_path, "VC", "Tools", "MSVC")
-                    
+
                     # Find the latest version
                     if os.path.exists(cl_path):
                         versions = os.listdir(cl_path)
@@ -750,23 +750,23 @@ class CompilerManager:
                                 candidate = os.path.join(cl_path, latest, "bin", "Host" + arch, arch, "cl.exe")
                                 if os.path.exists(candidate):
                                     return candidate
-        
+
         return None
-    
+
     def _get_compiler_version(self, compiler_path: str) -> str:
         """
         Get version string from a compiler.
-        
+
         Args:
             compiler_path: Path to the compiler executable
-            
+
         Returns:
             Version string, or "unknown" if version cannot be determined
         """
         try:
             if "cl" in os.path.basename(compiler_path).lower():
                 # MSVC
-                result = subprocess.run([compiler_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                result = subprocess.run([compiler_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                         universal_newlines=True)
                 match = re.search(r'Version\s+(\d+\.\d+\.\d+)', result.stderr)
                 if match:
@@ -774,7 +774,7 @@ class CompilerManager:
                 return "unknown"
             else:
                 # GCC or Clang
-                result = subprocess.run([compiler_path, "--version"], stdout=subprocess.PIPE, 
+                result = subprocess.run([compiler_path, "--version"], stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, universal_newlines=True)
                 first_line = result.stdout.splitlines()[0]
                 # Extract version number
@@ -790,21 +790,21 @@ class CompilerManager:
 class BuildManager:
     """
     Manages the build process for a collection of source files.
-    
+
     Features:
     - Dependency scanning and tracking
     - Incremental builds (only compile what changed)
     - Parallel compilation
     - Multiple compiler support
     """
-    def __init__(self, 
+    def __init__(self,
                 compiler_manager: Optional[CompilerManager] = None,
                 build_dir: Optional[PathLike] = None,
                 parallel: bool = True,
                 max_workers: Optional[int] = None):
         """
         Initialize the build manager.
-        
+
         Args:
             compiler_manager: Compiler manager to use
             build_dir: Directory for build artifacts
@@ -818,15 +818,15 @@ class BuildManager:
         self.cache_file = self.build_dir / "build_cache.json"
         self.dependency_graph: Dict[Path, Set[Path]] = defaultdict(set)
         self.file_hashes: Dict[str, str] = {}
-        
+
         # Create build directory if it doesn't exist
         self.build_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Load cache if available
         self._load_cache()
-    
-    def build(self, 
-             source_files: List[PathLike], 
+
+    def build(self,
+             source_files: List[PathLike],
              output_file: PathLike,
              compiler_name: Optional[str] = None,
              cpp_version: CppVersion = CppVersion.CPP17,
@@ -836,7 +836,7 @@ class BuildManager:
              force_rebuild: bool = False) -> CompilationResult:
         """
         Build source files into an executable or library.
-        
+
         Args:
             source_files: List of source files to compile
             output_file: Output executable/library path
@@ -846,47 +846,47 @@ class BuildManager:
             link_options: Options for linking
             incremental: Whether to use incremental builds
             force_rebuild: Whether to force rebuilding all files
-            
+
         Returns:
             CompilationResult with build result
         """
         start_time = time.time()
         source_paths = [Path(f) for f in source_files]
         output_path = Path(output_file)
-        
+
         # Get compiler
         compiler = self.compiler_manager.get_compiler(compiler_name)
-        
+
         # Create object directory for this build
         obj_dir = self.build_dir / f"{compiler.name}_{cpp_version.value}"
         obj_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Prepare options
         compile_options = compile_options or {}
         link_options = link_options or {}
-        
+
         # Calculate what needs to be rebuilt
         to_compile: List[Path] = []
         object_files: List[Path] = []
-        
+
         if incremental and not force_rebuild:
             # Analyze dependencies and determine what files need rebuilding
             to_compile = self._get_files_to_rebuild(source_paths, compiler, cpp_version)
         else:
             # Rebuild everything
             to_compile = source_paths
-        
+
         # Map source files to object files
         for source_file in source_paths:
             obj_file = obj_dir / f"{source_file.stem}{source_file.suffix}.o"
             object_files.append(obj_file)
-        
+
         # Compile files that need rebuilding
         compile_results = []
-        
+
         if to_compile:
             logger.info(f"Compiling {len(to_compile)} of {len(source_paths)} files")
-            
+
             # Use parallel compilation if enabled and supported
             if self.parallel and compiler.features.supports_parallel and len(to_compile) > 1:
                 with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -895,14 +895,14 @@ class BuildManager:
                         idx = source_paths.index(source_file)
                         obj_file = object_files[idx]
                         future = executor.submit(
-                            compiler.compile, 
-                            [source_file], 
-                            obj_file, 
-                            cpp_version, 
+                            compiler.compile,
+                            [source_file],
+                            obj_file,
+                            cpp_version,
                             compile_options
                         )
                         future_to_file[future] = source_file
-                    
+
                     for future in concurrent.futures.as_completed(future_to_file):
                         source_file = future_to_file[future]
                         try:
@@ -935,10 +935,10 @@ class BuildManager:
                             warnings=result.warnings,
                             duration_ms=(time.time() - start_time) * 1000
                         )
-            
+
             # Update cache with new file hashes
             self._update_file_hashes(to_compile)
-        
+
         # Link object files
         link_result = compiler.link(object_files, output_file, link_options)
         if not link_result.success:
@@ -948,64 +948,64 @@ class BuildManager:
                 warnings=link_result.warnings,
                 duration_ms=(time.time() - start_time) * 1000
             )
-        
+
         # Save cache
         self._save_cache()
-        
+
         # Aggregate warnings from compilation and linking
         all_warnings = []
         for result in compile_results:
             all_warnings.extend(result.warnings)
         all_warnings.extend(link_result.warnings)
-        
+
         return CompilationResult(
             success=True,
             output_file=output_path,
             duration_ms=(time.time() - start_time) * 1000,
             warnings=all_warnings
         )
-    
-    def _get_files_to_rebuild(self, 
-                             source_files: List[Path], 
-                             compiler: Compiler, 
+
+    def _get_files_to_rebuild(self,
+                             source_files: List[Path],
+                             compiler: Compiler,
                              cpp_version: CppVersion) -> List[Path]:
         """
         Determine which files need to be rebuilt based on changes.
-        
+
         Args:
             source_files: List of source files
             compiler: Compiler being used
             cpp_version: C++ version being used
-            
+
         Returns:
             List of files that need to be rebuilt
         """
         to_rebuild = []
-        
+
         # Update dependency graph
         for file in source_files:
             if not file.exists():
                 raise FileNotFoundError(f"Source file not found: {file}")
-            
+
             # Get dependencies for this file
             self._scan_dependencies(file)
-            
+
             # Check if this file or any of its dependencies changed
             if self._has_file_changed(file) or any(self._has_file_changed(dep) for dep in self.dependency_graph[file]):
                 to_rebuild.append(file)
-        
+
         return to_rebuild
-    
+
     def _scan_dependencies(self, file_path: Path):
         """
         Scan a file for its dependencies (include files).
-        
+
         Args:
             file_path: Path to the source file
         """
         # Reset dependencies for this file
         self.dependency_graph[file_path].clear()
-        
+
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 for line in f:
@@ -1020,37 +1020,37 @@ class BuildManager:
                             self.dependency_graph[file_path].add(Path(include_file))
         except Exception as e:
             logger.warning(f"Failed to scan dependencies for {file_path}: {e}")
-    
+
     def _has_file_changed(self, file_path: Path) -> bool:
         """
         Check if a file has changed since the last build.
-        
+
         Args:
             file_path: Path to the file
-            
+
         Returns:
             True if the file has changed or is new
         """
         if not file_path.exists():
             return False
-        
+
         # Calculate file hash
         current_hash = self._calculate_file_hash(file_path)
-        
+
         # Check if hash changed
         str_path = str(file_path.resolve())
         if str_path not in self.file_hashes:
             return True  # New file
-        
+
         return self.file_hashes[str_path] != current_hash
-    
+
     def _calculate_file_hash(self, file_path: Path) -> str:
         """
         Calculate MD5 hash of a file's contents.
-        
+
         Args:
             file_path: Path to the file
-            
+
         Returns:
             MD5 hash string
         """
@@ -1059,11 +1059,11 @@ class BuildManager:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
-    
+
     def _update_file_hashes(self, files: List[Path]):
         """
         Update stored hashes for files.
-        
+
         Args:
             files: List of files to update hashes for
         """
@@ -1071,7 +1071,7 @@ class BuildManager:
             if file_path.exists():
                 str_path = str(file_path.resolve())
                 self.file_hashes[str_path] = self._calculate_file_hash(file_path)
-    
+
     def _load_cache(self):
         """Load build cache from disk."""
         if self.cache_file.exists():
@@ -1081,7 +1081,7 @@ class BuildManager:
                     self.file_hashes = data.get('file_hashes', {})
             except Exception as e:
                 logger.warning(f"Failed to load build cache: {e}")
-    
+
     def _save_cache(self):
         """Save build cache to disk."""
         try:
@@ -1097,13 +1097,13 @@ class BuildManager:
 def load_json(file_path: PathLike) -> Dict[str, Any]:
     """
     Load and parse a JSON file.
-    
+
     Args:
         file_path: Path to the JSON file
-        
+
     Returns:
         Parsed JSON data as a dictionary
-        
+
     Raises:
         FileNotFoundError: If the file doesn't exist
         json.JSONDecodeError: If the file contains invalid JSON
@@ -1111,7 +1111,7 @@ def load_json(file_path: PathLike) -> Dict[str, Any]:
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"JSON file not found: {path}")
-    
+
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
@@ -1119,7 +1119,7 @@ def load_json(file_path: PathLike) -> Dict[str, Any]:
 def save_json(file_path: PathLike, data: Dict[str, Any], indent: int = 2) -> None:
     """
     Save data to a JSON file.
-    
+
     Args:
         file_path: Path to save the JSON file
         data: Data to save
@@ -1127,7 +1127,7 @@ def save_json(file_path: PathLike, data: Dict[str, Any], indent: int = 2) -> Non
     """
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=indent)
 
@@ -1139,35 +1139,35 @@ compiler_manager = CompilerManager()
 def get_compiler(name: Optional[str] = None) -> Compiler:
     """
     Get a compiler by name, or the default compiler if no name is provided.
-    
+
     This is a convenience function that uses the global compiler manager.
-    
+
     Args:
         name: Name of the compiler to get
-        
+
     Returns:
         Compiler object
     """
     return compiler_manager.get_compiler(name)
 
 
-def compile_file(source_file: PathLike, 
-                output_file: PathLike, 
+def compile_file(source_file: PathLike,
+                output_file: PathLike,
                 compiler_name: Optional[str] = None,
                 cpp_version: Union[str, CppVersion] = CppVersion.CPP17,
                 options: Optional[CompileOptions] = None) -> CompilationResult:
     """
     Compile a single source file.
-    
+
     This is a convenience function for simple compilation tasks.
-    
+
     Args:
         source_file: Source file to compile
         output_file: Path to the output object file
         compiler_name: Name of compiler to use
         cpp_version: C++ standard version to use
         options: Additional compilation options
-        
+
     Returns:
         CompilationResult with compilation status
     """
@@ -1180,7 +1180,7 @@ def compile_file(source_file: PathLike,
                 cpp_version = CppVersion["CPP" + cpp_version.replace("++", "").replace("c", "")]
             except KeyError:
                 raise ValueError(f"Invalid C++ version: {cpp_version}")
-    
+
     compiler = get_compiler(compiler_name)
     return compiler.compile([Path(source_file)], Path(output_file), cpp_version, options)
 
@@ -1195,9 +1195,9 @@ def build_project(source_files: List[PathLike],
                  incremental: bool = True) -> CompilationResult:
     """
     Build a project from multiple source files.
-    
+
     This is a convenience function for building projects.
-    
+
     Args:
         source_files: List of source files to compile
         output_file: Path to the output executable/library
@@ -1207,7 +1207,7 @@ def build_project(source_files: List[PathLike],
         link_options: Options for linking
         build_dir: Directory for build artifacts
         incremental: Whether to use incremental builds
-        
+
     Returns:
         CompilationResult with build status
     """
@@ -1220,7 +1220,7 @@ def build_project(source_files: List[PathLike],
                 cpp_version = CppVersion["CPP" + cpp_version.replace("++", "").replace("c", "")]
             except KeyError:
                 raise ValueError(f"Invalid C++ version: {cpp_version}")
-    
+
     build_manager = BuildManager(build_dir=build_dir or "build")
     return build_manager.build(
         source_files=source_files,
@@ -1244,25 +1244,25 @@ def main():
 Examples:
   # Compile a single file
   python compiler_helper.py source.cpp -o output.o --cpp-version c++20
-  
+
   # Compile and link multiple files
   python compiler_helper.py source1.cpp source2.cpp -o myprogram --link --compiler GCC
-  
+
   # Build with specific options
   python compiler_helper.py source.cpp -o output.o --include-path ./include --define DEBUG=1
-  
+
   # Use incremental builds
   python compiler_helper.py *.cpp -o myprogram --build-dir ./build --incremental
 """
     )
-    
+
     # Basic arguments
     parser.add_argument("source_files", nargs="+", type=Path, help="Source files to compile")
     parser.add_argument("-o", "--output", type=Path, required=True, help="Output file (object or executable)")
     parser.add_argument("--compiler", type=str, help="Compiler to use (GCC, Clang, MSVC)")
     parser.add_argument("--cpp-version", type=str, default="c++17", help="C++ standard version (e.g., c++17, c++20)")
     parser.add_argument("--link", action="store_true", help="Link the object files into an executable")
-    
+
     # Build options
     build_group = parser.add_argument_group("Build options")
     build_group.add_argument("--build-dir", type=Path, help="Directory for build artifacts")
@@ -1270,7 +1270,7 @@ Examples:
     build_group.add_argument("--force-rebuild", action="store_true", help="Force rebuilding all files")
     build_group.add_argument("--parallel", action="store_true", default=True, help="Use parallel compilation")
     build_group.add_argument("--jobs", type=int, help="Number of parallel compilation jobs")
-    
+
     # Compilation options
     compile_group = parser.add_argument_group("Compilation options")
     compile_group.add_argument("--include-path", "-I", action="append", dest="include_paths", help="Add include directory")
@@ -1281,7 +1281,7 @@ Examples:
     compile_group.add_argument("--pic", action="store_true", help="Generate position-independent code")
     compile_group.add_argument("--stdlib", help="Specify standard library to use")
     compile_group.add_argument("--sanitize", action="append", dest="sanitizers", help="Enable sanitizer")
-    
+
     # Linking options
     link_group = parser.add_argument_group("Linking options")
     link_group.add_argument("--library-path", "-L", action="append", dest="library_paths", help="Add library directory")
@@ -1290,20 +1290,20 @@ Examples:
     link_group.add_argument("--static", action="store_true", help="Prefer static linking")
     link_group.add_argument("--strip", action="store_true", help="Strip debug symbols")
     link_group.add_argument("--map-file", help="Generate map file")
-    
+
     # Additional flags
     parser.add_argument("--compile-flags", nargs="*", help="Additional compilation flags")
     parser.add_argument("--link-flags", nargs="*", help="Additional linking flags")
     parser.add_argument("--flags", nargs="*", help="Additional flags for both compilation and linking")
     parser.add_argument("--config", type=Path, help="Load options from configuration file (JSON)")
-    
+
     # Output control
     parser.add_argument("--verbose", "-v", action="count", default=0, help="Increase verbosity")
     parser.add_argument("--quiet", "-q", action="store_true", help="Suppress non-error output")
     parser.add_argument("--list-compilers", action="store_true", help="List available compilers and exit")
-    
+
     args = parser.parse_args()
-    
+
     # Configure logging based on verbosity
     if args.quiet:
         logger.setLevel(logging.WARNING)
@@ -1311,7 +1311,7 @@ Examples:
         logger.setLevel(logging.INFO)
     elif args.verbose >= 2:
         logger.setLevel(logging.DEBUG)
-    
+
     # Handle list-compilers flag
     if args.list_compilers:
         compilers = compiler_manager.detect_compilers()
@@ -1323,16 +1323,16 @@ Examples:
         else:
             print("No supported compilers found.")
         return 0
-    
+
     # Parse C++ version
     cpp_version = args.cpp_version
-    
+
     # Prepare compile options
     compile_options: CompileOptions = {}
-    
+
     if args.include_paths:
         compile_options['include_paths'] = args.include_paths
-    
+
     if args.defines:
         defines = {}
         for define in args.defines:
@@ -1342,67 +1342,67 @@ Examples:
             else:
                 defines[define] = None
         compile_options['defines'] = defines
-    
+
     if args.warnings:
         compile_options['warnings'] = args.warnings
-    
+
     if args.optimization:
         compile_options['optimization'] = args.optimization
-    
+
     if args.debug:
         compile_options['debug'] = True
-    
+
     if args.pic:
         compile_options['position_independent'] = True
-    
+
     if args.stdlib:
         compile_options['standard_library'] = args.stdlib
-    
+
     if args.sanitizers:
         compile_options['sanitizers'] = args.sanitizers
-    
+
     if args.compile_flags:
         compile_options['extra_flags'] = args.compile_flags
-    
+
     # Prepare link options
     link_options: LinkOptions = {}
-    
+
     if args.library_paths:
         link_options['library_paths'] = args.library_paths
-    
+
     if args.libraries:
         link_options['libraries'] = args.libraries
-    
+
     if args.shared:
         link_options['shared'] = True
-    
+
     if args.static:
         link_options['static'] = True
-    
+
     if args.strip:
         link_options['strip'] = True
-    
+
     if args.map_file:
         link_options['map_file'] = args.map_file
-    
+
     if args.link_flags:
         link_options['extra_flags'] = args.link_flags
-    
+
     # Load configuration from file if provided
     if args.config:
         try:
             config = load_json(args.config)
-            
+
             # Update compile options
             if 'compile_options' in config:
                 for key, value in config['compile_options'].items():
                     compile_options[key] = value
-            
+
             # Update link options
             if 'link_options' in config:
                 for key, value in config['link_options'].items():
                     link_options[key] = value
-                    
+
             # General options can override specific ones
             if 'options' in config:
                 if 'compiler' in config['options'] and not args.compiler:
@@ -1413,28 +1413,28 @@ Examples:
                     args.incremental = config['options']['incremental']
                 if 'build_dir' in config['options'] and not args.build_dir:
                     args.build_dir = config['options']['build_dir']
-                    
+
         except Exception as e:
             logger.error(f"Failed to load configuration file: {e}")
             return 1
-    
+
     # Combine extra flags if provided
     if args.flags:
         if 'extra_flags' not in compile_options:
             compile_options['extra_flags'] = []
         compile_options['extra_flags'].extend(args.flags)
-        
+
         if 'extra_flags' not in link_options:
             link_options['extra_flags'] = []
         link_options['extra_flags'].extend(args.flags)
-    
+
     # Set up build manager
     build_manager = BuildManager(
         build_dir=args.build_dir,
         parallel=args.parallel,
         max_workers=args.jobs
     )
-    
+
     # Execute build
     result = build_manager.build(
         source_files=args.source_files,
@@ -1446,7 +1446,7 @@ Examples:
         incremental=args.incremental,
         force_rebuild=args.force_rebuild
     )
-    
+
     # Print result
     if result.success:
         logger.info(f"Build successful: {result.output_file} (took {result.duration_ms:.2f}ms)")
@@ -1466,12 +1466,12 @@ Examples:
 def create_pybind11_module(module):
     """
     Create pybind11 bindings for this module.
-    
+
     Args:
         module: pybind11 module object
     """
     import pybind11
-    
+
     # Bind enums
     pybind11.enum_<CppVersion>(module, "CppVersion")
         .value("CPP98", CppVersion.CPP98)
@@ -1482,7 +1482,7 @@ def create_pybind11_module(module):
         .value("CPP20", CppVersion.CPP20)
         .value("CPP23", CppVersion.CPP23)
         .export_values()
-    
+
     pybind11.enum_<CompilerType>(module, "CompilerType")
         .value("GCC", CompilerType.GCC)
         .value("CLANG", CompilerType.CLANG)
@@ -1491,7 +1491,7 @@ def create_pybind11_module(module):
         .value("MINGW", CompilerType.MINGW)
         .value("EMSCRIPTEN", CompilerType.EMSCRIPTEN)
         .export_values()
-    
+
     # Bind CompilationResult
     pybind11.class_<CompilationResult>(module, "CompilationResult")
         .def_readonly("success", &CompilationResult.success)
@@ -1500,19 +1500,19 @@ def create_pybind11_module(module):
         .def_readonly("command_line", &CompilationResult.command_line)
         .def_readonly("errors", &CompilationResult.errors)
         .def_readonly("warnings", &CompilationResult.warnings)
-    
+
     # Bind Compiler
     pybind11.class_<Compiler>(module, "Compiler")
         .def("compile", &Compiler.compile)
         .def("link", &Compiler.link)
         .def("get_version_info", &Compiler.get_version_info)
-    
+
     # Bind CompilerManager
     pybind11.class_<CompilerManager>(module, "CompilerManager")
         .def(pybind11.init<>())
         .def("detect_compilers", &CompilerManager.detect_compilers)
         .def("get_compiler", &CompilerManager.get_compiler)
-    
+
     # Bind BuildManager
     pybind11.class_<BuildManager>(module, "BuildManager")
         .def(pybind11.init<CompilerManager*, PathLike, bool, int>(),
@@ -1521,12 +1521,12 @@ def create_pybind11_module(module):
              pybind11.arg("parallel") = true,
              pybind11.arg("max_workers") = nullptr)
         .def("build", &BuildManager.build)
-    
+
     # Add convenience functions
     module.def("get_compiler", &get_compiler, pybind11.arg("name") = nullptr)
     module.def("compile_file", &compile_file)
     module.def("build_project", &build_project)
-    
+
     # Add globals
     module.attr("compiler_manager") = compiler_manager
 

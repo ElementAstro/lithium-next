@@ -4,7 +4,7 @@
 #include <filesystem>
 
 #include "atom/async/pool.hpp"
-#include "atom/log/loguru.hpp"
+#include "../../utils/logging/spdlog_config.hpp"
 
 using namespace tinyxml2;
 using namespace std::filesystem;

@@ -23,9 +23,9 @@ from .api import (
     compiler_manager,  # singleton instance
 )
 from .utils import load_json, save_json
-from .build_manager import BuildManager
 from .compiler_manager import CompilerManager
-from .compiler import Compiler
+from .build_manager import BuildManager
+from .compiler import EnhancedCompiler as Compiler
 from .core_types import (
     CppVersion,
     CompilerType,
@@ -35,7 +35,7 @@ from .core_types import (
     CompilationError,
     CompilerNotFoundError,
 )
-from cli import main
+from .cli import main
 import sys
 from loguru import logger
 
@@ -44,7 +44,7 @@ logger.remove()  # Remove default handler
 logger.add(
     sys.stderr,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level="INFO"
+    level="INFO",
 )
 
 # Export public API
@@ -52,30 +52,26 @@ logger.add(
 
 __all__ = [
     # Core types
-    'CppVersion',
-    'CompilerType',
-    'CompilationResult',
-    'CompileOptions',
-    'LinkOptions',
-    'CompilationError',
-    'CompilerNotFoundError',
-
+    "CppVersion",
+    "CompilerType",
+    "CompilationResult",
+    "CompileOptions",
+    "LinkOptions",
+    "CompilationError",
+    "CompilerNotFoundError",
     # Classes
-    'Compiler',
-    'CompilerManager',
-    'BuildManager',
-
+    "Compiler",
+    "CompilerManager",
+    "BuildManager",
     # API functions
-    'get_compiler',
-    'compile_file',
-    'build_project',
-    'load_json',
-    'save_json',
-
+    "get_compiler",
+    "compile_file",
+    "build_project",
+    "load_json",
+    "save_json",
     # Instances
-    'compiler_manager',
-
-    'main'
+    "compiler_manager",
+    "main",
 ]
 
-__version__ = '0.1.0'
+__version__ = "0.1.0"

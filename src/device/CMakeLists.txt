@@ -9,16 +9,82 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium_device VERSION 1.0.0 LANGUAGES C CXX)
 
+# Include common device configuration
+include(${CMAKE_CURRENT_SOURCE_DIR}/DeviceConfig.cmake)
+
+# Add all device module subdirectories using the common macro
+add_device_subdirectory(template)
+add_device_subdirectory(ascom)
+add_device_subdirectory(indi)
+add_device_subdirectory(asi)
+add_device_subdirectory(qhy)
+add_device_subdirectory(atik)
+add_device_subdirectory(fli)
+add_device_subdirectory(sbig)
+add_device_subdirectory(playerone)
+
+# Enhanced device management sources
+set(ENHANCED_DEVICE_FILES
+    enhanced_device_factory.hpp
+    device_performance_monitor.hpp
+    device_resource_manager.hpp
+    device_connection_pool.hpp
+    device_task_scheduler.hpp
+    device_cache_system.hpp
+)
+
+# Performance optimization sources
+set(PERFORMANCE_FILES
+    device_performance_monitor.cpp
+    device_connection_pool.cpp
+    integrated_device_manager.cpp
+    device_integration_test.cpp
+)
+
 # Sources and Headers
 set(PROJECT_FILES
     manager.cpp
+    device_factory.cpp
+    camera_factory.cpp
+    ${ENHANCED_DEVICE_FILES}
+    ${PERFORMANCE_FILES}
+)
+
+# Create main device library using common function
+create_vendor_library(device
+    TARGET_NAME lithium_device
+    SOURCES ${PROJECT_FILES}
+    DEVICE_MODULES
+        lithium_device_template
+        lithium_device_ascom
+        lithium_device_asi
+        lithium_device_qhy
+        lithium_device_atik
+        lithium_device_fli
+        lithium_device_sbig
+        lithium_device_playerone
+)
+
+# Apply standard settings
+apply_standard_settings(lithium_device)
+
+# Install main headers
+install(
+    FILES manager.hpp
+          device_factory.hpp
+          camera_factory.hpp
+          device_interface.hpp
+          device_config.hpp
+          device_configuration_manager.hpp
+          enhanced_device_factory.hpp
+    DESTINATION include/lithium/device
 )
 
 # Required libraries
 set(PROJECT_LIBS
     atom
     lithium_config
-    loguru
+    spdlog::spdlog
     yaml-cpp
 )
 
@@ -26,11 +92,35 @@ set(PROJECT_LIBS
 add_library(${PROJECT_NAME} STATIC ${PROJECT_FILES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+# Create Mock Devices Library
+add_library(${PROJECT_NAME}_mock STATIC ${MOCK_DEVICE_FILES})
+set_property(TARGET ${PROJECT_NAME}_mock PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# Create INDI Devices Library (optional)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/indi/camera.cpp")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(INDI QUIET indi)
+
+    if(INDI_FOUND)
+        add_library(${PROJECT_NAME}_indi STATIC ${INDI_DEVICE_FILES})
+        set_property(TARGET ${PROJECT_NAME}_indi PROPERTY POSITION_INDEPENDENT_CODE ON)
+        target_include_directories(${PROJECT_NAME}_indi PRIVATE ${INDI_INCLUDE_DIRS})
+        target_link_libraries(${PROJECT_NAME}_indi PRIVATE ${INDI_LIBRARIES} ${PROJECT_LIBS})
+
+        # Install INDI library
+        install(TARGETS ${PROJECT_NAME}_indi
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        )
+    endif()
+endif()
+
 # Include directories
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME}_mock PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBS})
+target_link_libraries(${PROJECT_NAME}_mock PRIVATE ${PROJECT_LIBS})
 
 # Set version properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -39,9 +129,34 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME}
 )
 
-# Install target
-install(TARGETS ${PROJECT_NAME}
+set_target_properties(${PROJECT_NAME}_mock PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 1
+    OUTPUT_NAME ${PROJECT_NAME}_mock
+)
+
+# Create integration test executable
+if(BUILD_TESTING)
+    add_executable(device_integration_test device_integration_test.cpp)
+    target_link_libraries(device_integration_test PRIVATE
+        ${PROJECT_NAME}_mock
+        ${PROJECT_LIBS}
+    )
+    target_include_directories(device_integration_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+    # Add test
+    add_test(NAME DeviceIntegrationTest COMMAND device_integration_test)
+endif()
+
+# Install targets
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_mock
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Install headers
+install(DIRECTORY template/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lithium/device/template
+    FILES_MATCHING PATTERN "*.hpp"
 )
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)

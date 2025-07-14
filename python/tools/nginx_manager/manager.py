@@ -1,1074 +1,1009 @@
 #!/usr/bin/env python3
 """
-Main NginxManager class implementation.
+Main NginxManager class implementation with modern Python features.
 """
 
-import os
+from __future__ import annotations
+
+import asyncio
+import datetime
 import platform
-import re
 import shutil
 import subprocess
-import datetime
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import List, Optional, Union, Any, Callable, Awaitable, AsyncGenerator
 
-# Import loguru for logging
 from loguru import logger
 
-from .core import OperatingSystem, NginxError, ConfigError, InstallationError, OperationError, NginxPaths
+from .core import (
+    OperatingSystem,
+    ConfigError,
+    InstallationError,
+    OperationError,
+    NginxPaths,
+)
 from .utils import OutputColors
 
 
 class NginxManager:
     """
-    Main class for managing Nginx operations.
-
-    This class provides methods to install, configure, and manage Nginx web server.
-    It supports operations on different operating systems and can be used both from
-    command line or as an imported library.
+    Main class for managing Nginx operations with a modern, extensible design.
     """
 
-    def __init__(self, use_colors: bool = True):
+    def __init__(
+        self,
+        use_colors: bool = True,
+        paths: Optional[NginxPaths] = None,
+        runner: Optional[Callable[..., Awaitable[subprocess.CompletedProcess]]] = None,
+    ) -> None:
         """
         Initialize the NginxManager.
-
         Args:
-            use_colors: Whether to use colored output in terminal
+            use_colors: Whether to use colored output in terminal.
+            paths: Optional NginxPaths object for dependency injection.
+            runner: Optional async function to run shell commands.
         """
-        self.os = self._detect_os()
-        self.paths = self._setup_paths()
+        self._os = self._detect_os()
+        self._paths = paths or self._setup_paths()
         self.use_colors = use_colors and OutputColors.is_color_supported()
-        logger.debug(f"NginxManager initialized with OS: {self.os.value}")
+        self.run_command = runner or self._run_command
+        self.plugins: dict[str, Any] = {}
+        logger.debug(f"NginxManager initialized with OS: {self._os!s}")
+
+    @property
+    def os(self) -> OperatingSystem:
+        """Get the detected operating system."""
+        return self._os
+
+    @property
+    def paths(self) -> NginxPaths:
+        """Get the Nginx paths configuration."""
+        return self._paths
+
+    def register_plugin(self, name: str, plugin: Any) -> None:
+        """Register a new plugin."""
+        self.plugins[name] = plugin
+        logger.info(f"Plugin '{name}' registered.")
 
     def _detect_os(self) -> OperatingSystem:
-        """
-        Detect the current operating system.
-
-        Returns:
-            The detected operating system enum value
-        """
+        """Detect the current operating system."""
         system = platform.system().lower()
-        try:
-            return next(os_type for os_type in OperatingSystem
-                        if os_type.value == system)
-        except StopIteration:
-            return OperatingSystem.UNKNOWN
+        return OperatingSystem.from_platform(system)
 
     def _setup_paths(self) -> NginxPaths:
-        """
-        Set up the path configuration based on the detected OS.
+        """Set up the path configuration based on the detected OS."""
+        base_path, binary_path, logs_path = self._get_os_specific_paths()
+        return NginxPaths.from_base_path(base_path, binary_path, logs_path)
 
-        Returns:
-            Object containing all relevant Nginx paths
-        """
-        match self.os:
+    def _get_os_specific_paths(self) -> tuple[Path, Path, Path]:
+        """Return OS-specific paths for Nginx."""
+        match self._os:
             case OperatingSystem.LINUX:
-                base_path = Path("/etc/nginx")
-                binary_path = Path("/usr/sbin/nginx")
-                logs_path = Path("/var/log/nginx")
-
+                return (
+                    Path("/etc/nginx"),
+                    Path("/usr/sbin/nginx"),
+                    Path("/var/log/nginx"),
+                )
             case OperatingSystem.WINDOWS:
-                base_path = Path("C:/nginx")
-                binary_path = base_path / "nginx.exe"
-                logs_path = base_path / "logs"
-
+                base = Path("C:/nginx")
+                return base, base / "nginx.exe", base / "logs"
             case OperatingSystem.MACOS:
-                base_path = Path("/usr/local/etc/nginx")
-                binary_path = Path("/usr/local/bin/nginx")
-                logs_path = Path("/usr/local/var/log/nginx")
-
+                return (
+                    Path("/usr/local/etc/nginx"),
+                    Path("/usr/local/bin/nginx"),
+                    Path("/usr/local/var/log/nginx"),
+                )
             case _:
-                # Default to Linux paths if OS is unknown
-                logger.warning(
-                    "Unknown OS detected, defaulting to Linux paths")
-                base_path = Path("/etc/nginx")
-                binary_path = Path("/usr/sbin/nginx")
-                logs_path = Path("/var/log/nginx")
+                logger.warning("Unknown OS, defaulting to Linux paths.")
+                return (
+                    Path("/etc/nginx"),
+                    Path("/usr/sbin/nginx"),
+                    Path("/var/log/nginx"),
+                )
 
-        conf_path = base_path / "nginx.conf"
-        backup_path = base_path / "backup"
-        sites_available = base_path / "sites-available"
-        sites_enabled = base_path / "sites-enabled"
-        ssl_path = base_path / "ssl"
-
-        logger.debug(
-            f"Nginx paths configured: base={base_path}, binary={binary_path}")
-        return NginxPaths(
-            base_path=base_path,
-            conf_path=conf_path,
-            binary_path=binary_path,
-            backup_path=backup_path,
-            sites_available=sites_available,
-            sites_enabled=sites_enabled,
-            logs_path=logs_path,
-            ssl_path=ssl_path
-        )
-
-    def _print_color(self, message: str, color: str = OutputColors.RESET) -> None:
-        """
-        Print a message with color if color output is enabled.
-
-        Args:
-            message: The message to print
-            color: The ANSI color code to use
-        """
+    def _print_color(
+        self, message: str, color: OutputColors = OutputColors.RESET
+    ) -> None:
+        """Print a message with color if color output is enabled."""
         if self.use_colors:
-            print(f"{color}{message}{OutputColors.RESET}")
+            print(color.format_text(message))
         else:
             print(message)
 
-    def _run_command(self, cmd: Union[List[str], str], check: bool = True, **kwargs) -> subprocess.CompletedProcess:
-        """
-        Run a shell command with proper error handling.
+    async def _run_command(
+        self, cmd: Union[List[str], str], check: bool = True, **kwargs
+    ) -> subprocess.CompletedProcess:
+        """Run a shell command asynchronously with proper error handling and context management."""
+        command_str = cmd if isinstance(cmd, str) else " ".join(cmd)
 
-        Args:
-            cmd: Command to run (list or string)
-            check: Whether to raise an exception if the command fails
-            **kwargs: Additional arguments to pass to subprocess.run
-
-        Returns:
-            The result of the command
-
-        Raises:
-            OperationError: If the command fails and check is True
-        """
         try:
-            logger.debug(f"Running command: {cmd}")
-            return subprocess.run(
-                cmd,
-                check=check,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                **kwargs
-            )
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Command '{cmd}' failed with error: {e.stderr.strip() if e.stderr else str(e)}"
-            logger.error(error_msg)
-            if check:
-                raise OperationError(error_msg) from e
-            return subprocess.CompletedProcess(e.cmd, e.returncode, e.stdout, e.stderr)
+            logger.debug(f"Running command: {command_str}")
+
+            async with self._command_context():
+                proc = await asyncio.create_subprocess_shell(
+                    command_str,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    **kwargs,
+                )
+                stdout, stderr = await proc.communicate()
+
+                returncode = proc.returncode or 0
+                result = subprocess.CompletedProcess(
+                    args=cmd,
+                    returncode=returncode,
+                    stdout=stdout.decode(errors="replace"),
+                    stderr=stderr.decode(errors="replace"),
+                )
+
+                if check and result.returncode != 0:
+                    error_msg = (
+                        result.stderr.strip()
+                        or result.stdout.strip()
+                        or "Command failed"
+                    )
+                    raise OperationError(
+                        f"Command '{command_str}' failed",
+                        error_code=result.returncode,
+                        details={"stderr": error_msg},
+                    )
+
+                logger.debug(f"Command completed with return code: {result.returncode}")
+                return result
+
+        except asyncio.TimeoutError as e:
+            logger.error(f"Command '{command_str}' timed out")
+            raise OperationError(
+                f"Command '{command_str}' timed out", details={"timeout": str(e)}
+            ) from e
+        except OSError as e:
+            logger.error(f"OS error running command '{command_str}': {e}")
+            raise OperationError(
+                f"OS error: {e}", details={"command": command_str}
+            ) from e
+        except Exception as e:
+            logger.error(f"Unexpected error running command '{command_str}': {e}")
+            raise OperationError(
+                f"Unexpected error: {e}", details={"command": command_str}
+            ) from e
+
+    @asynccontextmanager
+    async def _command_context(self) -> AsyncGenerator[None, None]:
+        """Context manager for command execution with proper cleanup."""
+        try:
+            yield
+        except Exception:
+            # Log any cleanup needed here
+            logger.debug("Command execution context cleanup")
+            raise
 
     @lru_cache(maxsize=1)
-    def is_nginx_installed(self) -> bool:
-        """
-        Check if Nginx is installed.
-
-        Returns:
-            True if Nginx is installed, False otherwise
-        """
+    async def is_nginx_installed(self) -> bool:
+        """Check if Nginx is installed."""
         try:
-            result = self._run_command(
-                [str(self.paths.binary_path), "-v"], check=False)
+            result = await self.run_command(
+                [str(self.paths.binary_path), "-v"], check=False
+            )
             return result.returncode == 0
         except FileNotFoundError:
-            logger.debug("Nginx binary not found")
+            logger.debug("Nginx binary not found.")
             return False
 
-    def install_nginx(self) -> None:
-        """
-        Install Nginx if not already installed.
-
-        Raises:
-            InstallationError: If installation fails or platform is unsupported
-        """
-        if self.is_nginx_installed():
-            logger.info("Nginx is already installed")
-            return
-
-        logger.info("Installing Nginx...")
-
+    async def install_nginx(self) -> None:
+        """Install Nginx if not already installed with enhanced error handling."""
         try:
-            match self.os:
+            if await self.is_nginx_installed():
+                logger.info("Nginx is already installed.")
+                return
+
+            logger.info("Installing Nginx...")
+            install_commands = {
+                OperatingSystem.LINUX: {
+                    "debian": "sudo apt-get update && sudo apt-get install -y nginx",
+                    "redhat": "sudo yum update && sudo yum install -y nginx",
+                },
+                OperatingSystem.MACOS: "brew update && brew install nginx",
+            }
+
+            cmd = None
+            match self._os:
                 case OperatingSystem.LINUX:
-                    # Check Linux distribution
                     if Path("/etc/debian_version").exists():
-                        logger.info("Detected Debian-based system")
-                        self._run_command(
-                            "sudo apt-get update && sudo apt-get install nginx -y", shell=True)
+                        cmd = install_commands[self._os]["debian"]
                     elif Path("/etc/redhat-release").exists():
-                        logger.info("Detected RedHat-based system")
-                        self._run_command(
-                            "sudo yum update && sudo yum install nginx -y", shell=True)
+                        cmd = install_commands[self._os]["redhat"]
                     else:
                         raise InstallationError(
-                            "Unsupported Linux distribution. Please install Nginx manually.")
-
-                case OperatingSystem.WINDOWS:
-                    self._print_color(
-                        "Windows automatic installation not supported. Please install manually.", OutputColors.YELLOW)
-                    raise InstallationError(
-                        "Automatic installation on Windows is not supported.")
-
+                            "Unsupported Linux distribution for automatic installation",
+                            details={
+                                "detected_files": str(
+                                    list(Path("/etc").glob("*-release"))
+                                )
+                            },
+                        )
                 case OperatingSystem.MACOS:
-                    logger.info("Installing Nginx via Homebrew")
-                    self._run_command(
-                        "brew update && brew install nginx", shell=True)
-
+                    cmd = install_commands[self._os]
                 case _:
                     raise InstallationError(
-                        "Unsupported platform. Please install Nginx manually.")
+                        "Unsupported OS for automatic installation. Please install manually.",
+                        details={"detected_os": str(self._os)},
+                    )
 
-            logger.success("Nginx installed successfully")
+            if cmd:
+                await self.run_command(cmd, shell=True)
+                logger.success("Nginx installed successfully.")
+                self._paths.ensure_directories()  # Ensure directories exist after installation
 
-        except Exception as e:
-            logger.exception("Installation failed")
+        except (OSError, PermissionError) as e:
             raise InstallationError(
-                f"Failed to install Nginx: {str(e)}") from e
+                f"Permission or system error during installation: {e}",
+                details={"error_type": type(e).__name__},
+            ) from e
+        except Exception as e:
+            if isinstance(e, (InstallationError, OperationError)):
+                raise
+            raise InstallationError(f"Unexpected error during installation: {e}") from e
 
-    def start_nginx(self) -> None:
-        """
-        Start the Nginx server.
-
-        Raises:
-            OperationError: If Nginx fails to start
-        """
-        if not self.paths.binary_path.exists():
-            logger.error("Nginx binary not found")
-            raise OperationError("Nginx binary not found")
-
-        self._run_command([str(self.paths.binary_path)])
-        self._print_color("Nginx has been started", OutputColors.GREEN)
-        logger.success("Nginx started")
-
-    def stop_nginx(self) -> None:
-        """
-        Stop the Nginx server.
-
-        Raises:
-            OperationError: If Nginx fails to stop
-        """
-        if not self.paths.binary_path.exists():
-            logger.error("Nginx binary not found")
-            raise OperationError("Nginx binary not found")
-
-        self._run_command([str(self.paths.binary_path), '-s', 'stop'])
-        self._print_color("Nginx has been stopped", OutputColors.GREEN)
-        logger.success("Nginx stopped")
-
-    def reload_nginx(self) -> None:
-        """
-        Reload the Nginx configuration.
-
-        Raises:
-            OperationError: If Nginx fails to reload
-        """
-        if not self.paths.binary_path.exists():
-            logger.error("Nginx binary not found")
-            raise OperationError("Nginx binary not found")
-
-        self._run_command([str(self.paths.binary_path), '-s', 'reload'])
-        self._print_color(
-            "Nginx configuration has been reloaded", OutputColors.GREEN)
-        logger.success("Nginx configuration reloaded")
-
-    def restart_nginx(self) -> None:
-        """
-        Restart the Nginx server.
-
-        Raises:
-            OperationError: If Nginx fails to restart
-        """
-        self.stop_nginx()
-        self.start_nginx()
-        self._print_color("Nginx has been restarted", OutputColors.GREEN)
-        logger.success("Nginx restarted")
-
-    def check_config(self) -> bool:
-        """
-        Check the syntax of the Nginx configuration files.
-
-        Returns:
-            True if the configuration is valid, False otherwise
-        """
-        if not self.paths.conf_path.exists():
-            logger.error("Nginx configuration file not found")
-            raise ConfigError("Nginx configuration file not found")
+    async def manage_service(self, action: str) -> None:
+        """Manage the Nginx service (start, stop, reload, restart) with enhanced error handling."""
+        valid_actions = {"start", "stop", "reload", "restart"}
+        if action not in valid_actions:
+            raise ValueError(
+                f"Invalid service action: {action}. Valid actions: {valid_actions}"
+            )
 
         try:
-            self._run_command([str(self.paths.binary_path),
-                              '-t', '-c', str(self.paths.conf_path)])
-            self._print_color(
-                "Nginx configuration syntax is correct", OutputColors.GREEN)
-            logger.success("Nginx configuration syntax is correct")
+            if not await self.is_nginx_installed():
+                raise OperationError(
+                    "Nginx is not installed",
+                    details={"action": action, "suggestion": "Install Nginx first"},
+                )
+
+            if action in ("start", "restart") and not self.paths.binary_path.exists():
+                raise OperationError(
+                    "Nginx binary not found",
+                    details={
+                        "binary_path": str(self.paths.binary_path),
+                        "action": action,
+                    },
+                )
+
+            cmd_map = {
+                "start": [str(self.paths.binary_path)],
+                "stop": [str(self.paths.binary_path), "-s", "stop"],
+                "reload": [str(self.paths.binary_path), "-s", "reload"],
+            }
+
+            if action == "restart":
+                logger.info("Restarting Nginx: stopping first...")
+                await self.manage_service("stop")
+                await asyncio.sleep(1)  # Give time for the service to stop
+                logger.info("Starting Nginx...")
+                await self.manage_service("start")
+            elif action in cmd_map:
+                await self.run_command(cmd_map[action])
+
+            self._print_color(f"Nginx has been {action}ed.", OutputColors.GREEN)
+            logger.success(f"Nginx {action}ed successfully.")
+
+        except (OSError, PermissionError) as e:
+            raise OperationError(
+                f"Permission or system error during {action}: {e}",
+                details={"action": action, "error_type": type(e).__name__},
+            ) from e
+        except Exception as e:
+            if isinstance(e, (OperationError, ValueError)):
+                raise
+            raise OperationError(
+                f"Unexpected error during {action}: {e}", details={"action": action}
+            ) from e
+
+    async def check_config(self) -> bool:
+        """Check the syntax of the Nginx configuration files with enhanced validation."""
+        try:
+            if not self.paths.conf_path.exists():
+                raise ConfigError(
+                    "Nginx configuration file not found",
+                    details={"config_path": str(self.paths.conf_path)},
+                )
+
+            logger.debug(f"Checking configuration at {self.paths.conf_path}")
+            await self.run_command(
+                [str(self.paths.binary_path), "-t", "-c", str(self.paths.conf_path)]
+            )
+            self._print_color("Nginx configuration is valid.", OutputColors.GREEN)
+            logger.success("Configuration validation passed")
             return True
-        except OperationError:
+
+        except OperationError as e:
+            error_details = e.details.get("stderr", str(e))
             self._print_color(
-                "Nginx configuration syntax is incorrect", OutputColors.RED)
-            logger.error("Nginx configuration syntax is incorrect")
+                f"Nginx configuration is invalid: {error_details}", OutputColors.RED
+            )
+            logger.error(f"Configuration validation failed: {error_details}")
             return False
+        except Exception as e:
+            logger.error(f"Unexpected error during config check: {e}")
+            raise ConfigError(f"Config check failed: {e}") from e
 
-    def get_status(self) -> bool:
-        """
-        Check if Nginx is running.
-
-        Returns:
-            True if Nginx is running, False otherwise
-        """
+    async def get_status(self) -> bool:
+        """Check if Nginx is running with OS-specific commands."""
         try:
-            match self.os:
+            match self._os:
                 case OperatingSystem.WINDOWS:
-                    result = self._run_command(
-                        'tasklist | findstr nginx.exe', shell=True, check=False)
+                    cmd = "tasklist | findstr nginx.exe"
                 case _:
-                    result = self._run_command(
-                        'pgrep nginx', shell=True, check=False)
+                    cmd = "pgrep nginx"
 
-            is_running = result.returncode == 0 and result.stdout.strip() != ""
+            result = await self.run_command(cmd, shell=True, check=False)
+            is_running = result.returncode == 0 and result.stdout.strip()
+            status_msg = "running" if is_running else "not running"
+            color = OutputColors.GREEN if is_running else OutputColors.RED
 
-            if is_running:
-                self._print_color("Nginx is running", OutputColors.GREEN)
-                logger.info("Nginx is running")
-            else:
-                self._print_color("Nginx is not running", OutputColors.RED)
-                logger.info("Nginx is not running")
-
+            self._print_color(f"Nginx is {status_msg}.", color)
+            logger.info(f"Nginx status check: {status_msg}")
             return is_running
 
         except Exception as e:
-            logger.error(f"Error checking Nginx status: {str(e)}")
-            return False
+            logger.error(f"Error checking Nginx status: {e}")
+            raise OperationError(f"Status check failed: {e}") from e
 
-    def get_version(self) -> str:
-        """
-        Get the version of Nginx.
-
-        Returns:
-            The Nginx version string
-
-        Raises:
-            OperationError: If the version cannot be retrieved
-        """
-        result = self._run_command([str(self.paths.binary_path), '-v'])
-        version_output = result.stderr.strip()
-        self._print_color(version_output, OutputColors.CYAN)
-        logger.info(f"Nginx version: {version_output}")
-        return version_output
-
-    def backup_config(self, custom_name: Optional[str] = None) -> Path:
-        """
-        Backup Nginx configuration file.
-
-        Args:
-            custom_name: Optional custom name for the backup file
-
-        Returns:
-            Path to the created backup file
-
-        Raises:
-            OperationError: If the backup cannot be created
-        """
-        # Create backup directory if it doesn't exist
-        self.paths.backup_path.mkdir(parents=True, exist_ok=True)
-
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_name = custom_name or f"nginx.conf.{timestamp}.bak"
-        backup_file = self.paths.backup_path / backup_name
-
+    async def get_version(self) -> str:
+        """Get the version of Nginx with error handling."""
         try:
+            result = await self.run_command([str(self.paths.binary_path), "-v"])
+            # Nginx outputs version to stderr by default
+            version = result.stderr.strip() or result.stdout.strip()
+            if not version:
+                raise OperationError("No version information returned")
+
+            self._print_color(version, OutputColors.CYAN)
+            logger.info(f"Nginx version: {version}")
+            return version
+
+        except Exception as e:
+            if isinstance(e, OperationError):
+                raise
+            raise OperationError(f"Failed to get Nginx version: {e}") from e
+
+    async def backup_config(self, custom_name: Optional[str] = None) -> Path:
+        """Backup Nginx configuration file with enhanced error handling."""
+        try:
+            self.paths.backup_path.mkdir(parents=True, exist_ok=True)
+
+            if not self.paths.conf_path.exists():
+                raise ConfigError(
+                    "Source configuration file does not exist",
+                    details={"config_path": str(self.paths.conf_path)},
+                )
+
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_name = custom_name or f"nginx.conf.{timestamp}.bak"
+
+            # Ensure backup name is safe
+            safe_backup_name = Path(backup_name).name  # Remove any path components
+            backup_file = self.paths.backup_path / safe_backup_name
+
+            # Check if backup already exists
+            if backup_file.exists() and not custom_name:
+                backup_file = (
+                    self.paths.backup_path / f"nginx.conf.{timestamp}_{id(self)}.bak"
+                )
+
             shutil.copy2(self.paths.conf_path, backup_file)
-            self._print_color(
-                f"Nginx configuration file has been backed up to {backup_file}", OutputColors.GREEN)
+            self._print_color(f"Config backed up to {backup_file}", OutputColors.GREEN)
             logger.success(f"Configuration backed up to {backup_file}")
             return backup_file
+
+        except (OSError, PermissionError) as e:
+            raise ConfigError(
+                f"Failed to backup configuration: {e}",
+                details={
+                    "source": str(self.paths.conf_path),
+                    "backup_dir": str(self.paths.backup_path),
+                },
+            ) from e
         except Exception as e:
-            logger.exception("Backup failed")
-            raise OperationError(
-                f"Failed to backup configuration: {str(e)}") from e
+            if isinstance(e, ConfigError):
+                raise
+            raise ConfigError(f"Unexpected error during backup: {e}") from e
 
-    def list_backups(self) -> List[Path]:
-        """
-        List all available configuration backups.
+    def list_backups(self) -> list[Path]:
+        """List all available configuration backups sorted by modification time."""
+        try:
+            if not self.paths.backup_path.exists():
+                logger.debug(
+                    f"Backup directory does not exist: {self.paths.backup_path}"
+                )
+                return []
 
-        Returns:
-            List of backup file paths
-        """
-        if not self.paths.backup_path.exists():
-            logger.info("No backup directory found")
+            backups = list(self.paths.backup_path.glob("*.bak"))
+            return sorted(backups, key=lambda p: p.stat().st_mtime, reverse=True)
+
+        except (OSError, PermissionError) as e:
+            logger.warning(f"Cannot access backup directory: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error listing backups: {e}")
             return []
 
-        backups = sorted(list(self.paths.backup_path.glob("nginx.conf.*.bak")),
-                         key=lambda p: p.stat().st_mtime,
-                         reverse=True)
-
-        if backups:
-            self._print_color(
-                "Available configuration backups:", OutputColors.CYAN)
-            for i, backup in enumerate(backups, 1):
-                backup_time = datetime.datetime.fromtimestamp(
-                    backup.stat().st_mtime)
-                self._print_color(
-                    f"{i}. {backup.name} - {backup_time.strftime('%Y-%m-%d %H:%M:%S')}", OutputColors.CYAN)
-
-            logger.info(f"Found {len(backups)} backup(s)")
-        else:
-            self._print_color(
-                "No configuration backups found", OutputColors.YELLOW)
-            logger.info("No configuration backups found")
-
-        return backups
-
-    def restore_config(self, backup_file: Optional[Union[Path, str]] = None) -> None:
-        """
-        Restore Nginx configuration from backup.
-
-        Args:
-            backup_file: Path to the backup file to restore (if None, uses latest backup)
-
-        Raises:
-            OperationError: If the restoration fails
-        """
-        if backup_file is None:
+    async def restore_config(
+        self, backup_file: Optional[Union[Path, str]] = None
+    ) -> None:
+        """Restore Nginx configuration from backup with enhanced validation."""
+        to_restore: Path | None = None  # Initialize to_restore
+        try:
             backups = self.list_backups()
             if not backups:
-                logger.error("No backup files found")
-                raise OperationError("No backup files found")
-            backup_file = backups[0]  # Take the most recent backup
-            logger.info(f"Using most recent backup: {backup_file}")
+                raise OperationError(
+                    "No backups found",
+                    details={"backup_dir": str(self.paths.backup_path)},
+                )
 
-        if isinstance(backup_file, str):
-            backup_file = Path(backup_file)
+            to_restore = Path(backup_file) if backup_file else backups[0]
 
-        if not backup_file.exists():
-            logger.error(f"Backup file {backup_file} not found")
-            raise OperationError(f"Backup file {backup_file} not found")
+            if not to_restore.exists():
+                raise OperationError(
+                    f"Backup file not found: {to_restore}",
+                    details={
+                        "backup_file": str(to_restore),
+                        "available_backups": [
+                            str(b) for b in backups[:5]
+                        ],  # Show first 5
+                    },
+                )
+
+            # Validate backup file before proceeding
+            if not to_restore.suffix == ".bak":
+                logger.warning(f"Backup file doesn't have .bak extension: {to_restore}")
+
+            # Create a pre-restore backup
+            pre_restore_name = (
+                f"pre-restore-{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.bak"
+            )
+            await self.backup_config(pre_restore_name)
+
+            # Perform the restoration
+            shutil.copy2(to_restore, self.paths.conf_path)
+            self._print_color(f"Config restored from {to_restore}", OutputColors.GREEN)
+            logger.success(f"Configuration restored from {to_restore}")
+
+            # Validate the restored configuration
+            if not await self.check_config():
+                logger.warning("Restored configuration failed validation")
+
+        except (OSError, PermissionError) as e:
+            raise OperationError(
+                f"Permission error during restore: {e}",
+                details={
+                    "backup_file": (
+                        str(to_restore) if "to_restore" in locals() else "unknown"
+                    )
+                },
+            ) from e
+        except Exception as e:
+            if isinstance(e, OperationError):
+                raise
+            raise OperationError(f"Unexpected error during restore: {e}") from e
+
+    async def manage_virtual_host(
+        self, action: str, server_name: str, **kwargs
+    ) -> Optional[Path]:
+        """Manage virtual hosts (create, enable, disable) with enhanced validation."""
+        valid_actions = {"create", "enable", "disable"}
+        if action not in valid_actions:
+            raise ValueError(
+                f"Invalid virtual host action: {action}. Valid actions: {valid_actions}"
+            )
+
+        # Validate server name
+        if not server_name or not isinstance(server_name, str):
+            raise ValueError("Server name must be a non-empty string")
+
+        # Basic server name validation (prevent directory traversal)
+        if any(char in server_name for char in ["/", "\\", "..", "\0"]):
+            raise ValueError(f"Invalid server name: {server_name}")
 
         try:
-            # Make a backup of current config before restoring
-            current_backup = self.backup_config(
-                custom_name=f"pre_restore.{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.bak")
-            logger.info(f"Created safety backup at {current_backup}")
-
-            # Restore the backup
-            shutil.copy2(backup_file, self.paths.conf_path)
-            self._print_color(
-                f"Nginx configuration has been restored from {backup_file}", OutputColors.GREEN)
-            logger.success(f"Configuration restored from {backup_file}")
-
-            # Check if the restored config is valid
-            self.check_config()
+            actions_map = {
+                "create": self._create_vhost,
+                "enable": self._enable_vhost,
+                "disable": self._disable_vhost,
+            }
+            logger.info(f"Managing virtual host '{server_name}': {action}")
+            return await actions_map[action](server_name, **kwargs)
 
         except Exception as e:
-            logger.exception("Restore failed")
+            if isinstance(e, (ValueError, ConfigError, OperationError)):
+                raise
             raise OperationError(
-                f"Failed to restore configuration: {str(e)}") from e
+                f"Failed to {action} virtual host '{server_name}': {e}",
+                details={"action": action, "server_name": server_name},
+            ) from e
 
-    def create_virtual_host(self, server_name: str, port: int = 80,
-                            root_dir: Optional[str] = None, template: str = 'basic') -> Path:
-        """
-        Create a new virtual host configuration.
+    async def _create_vhost(
+        self,
+        server_name: str,
+        port: int = 80,
+        root_dir: Optional[str] = None,
+        template: str = "basic",
+    ) -> Path:
+        """Create a new virtual host configuration with enhanced validation."""
+        config_file: Path | None = None  # Initialize config_file
+        try:
+            # Validate port
+            if not (1 <= port <= 65535):
+                raise ValueError(
+                    f"Invalid port number: {port}. Must be between 1 and 65535."
+                )
 
-        Args:
-            server_name: Server name (e.g., example.com)
-            port: Port number (default: 80)
-            root_dir: Document root directory
-            template: Template to use ('basic', 'php', 'proxy')
+            self.paths.sites_available.mkdir(parents=True, exist_ok=True)
 
-        Returns:
-            Path to the created configuration file
+            # Determine root directory with OS-specific defaults
+            if root_dir is None:
+                match self._os:
+                    case OperatingSystem.WINDOWS:
+                        root_dir = f"C:/www/{server_name}"
+                    case _:
+                        root_dir = f"/var/www/{server_name}"
 
-        Raises:
-            ConfigError: If creation fails
-        """
-        # Create sites-available and sites-enabled if they don't exist
-        self.paths.sites_available.mkdir(parents=True, exist_ok=True)
-        self.paths.sites_enabled.mkdir(parents=True, exist_ok=True)
+            config_file = self.paths.sites_available / f"{server_name}.conf"
 
-        # Determine root directory if not specified
-        if not root_dir:
-            match self.os:
+            # Check if config already exists
+            if config_file.exists():
+                logger.warning(f"Virtual host config already exists: {config_file}")
+
+            templates = self.plugins.get("vhost_templates", {})
+            if template not in templates:
+                available_templates = list(templates.keys())
+                raise ConfigError(
+                    f"Unknown template: {template}",
+                    details={
+                        "requested_template": template,
+                        "available_templates": available_templates,
+                    },
+                )
+
+            # Generate configuration content
+            try:
+                config_content = templates[template](
+                    server_name=server_name,
+                    port=port,
+                    root_dir=root_dir,
+                    paths=self.paths,
+                )
+            except Exception as e:
+                raise ConfigError(f"Template generation failed: {e}") from e
+
+            # Write configuration file
+            config_file.write_text(config_content, encoding="utf-8")
+
+            self._print_color(
+                f"Virtual host '{server_name}' created.", OutputColors.GREEN
+            )
+            logger.success(f"Virtual host created: {config_file}")
+            return config_file
+
+        except (OSError, PermissionError) as e:
+            raise ConfigError(
+                f"Failed to create virtual host configuration: {e}",
+                details={
+                    "server_name": server_name,
+                    "config_path": (
+                        str(config_file) if "config_file" in locals() else "unknown"
+                    ),
+                },
+            ) from e
+
+    async def _enable_vhost(self, server_name: str, **_) -> None:
+        """Enable a virtual host with cross-platform support."""
+        source: Path | None = None  # Initialize source
+        target: Path | None = None  # Initialize target
+        try:
+            source = self.paths.sites_available / f"{server_name}.conf"
+            target = self.paths.sites_enabled / f"{server_name}.conf"
+
+            if not source.exists():
+                raise ConfigError(
+                    f"Virtual host configuration not found: {source}",
+                    details={
+                        "server_name": server_name,
+                        "expected_path": str(source),
+                        "available_configs": [
+                            f.stem for f in self.paths.sites_available.glob("*.conf")
+                        ],
+                    },
+                )
+
+            self.paths.sites_enabled.mkdir(parents=True, exist_ok=True)
+
+            # Handle different platforms for enabling
+            if target.exists():
+                logger.info(f"Virtual host '{server_name}' is already enabled")
+                return
+
+            match self._os:
                 case OperatingSystem.WINDOWS:
-                    root_dir = f"C:/www/{server_name}"
+                    # On Windows, copy the file
+                    shutil.copy2(source, target)
                 case _:
-                    root_dir = f"/var/www/{server_name}"
+                    # On Unix-like systems, create a symbolic link
+                    target.symlink_to(f"../sites-available/{server_name}.conf")
 
-            logger.info(f"Using default root directory: {root_dir}")
+            self._print_color(
+                f"Virtual host '{server_name}' enabled.", OutputColors.GREEN
+            )
+            logger.success(f"Virtual host enabled: {server_name}")
 
-        # Create config file path
-        config_file = self.paths.sites_available / f"{server_name}.conf"
+            # Validate configuration after enabling
+            await self.check_config()
 
-        # Templates for different virtual host configurations
-        templates = {
-            'basic': f"""server {{
+        except (OSError, PermissionError) as e:
+            raise ConfigError(
+                f"Failed to enable virtual host: {e}",
+                details={
+                    "server_name": server_name,
+                    "source": str(source),
+                    "target": str(target),
+                },
+            ) from e
+
+    async def _disable_vhost(self, server_name: str, **_) -> None:
+        """Disable a virtual host with error handling."""
+        target: Path | None = None  # Initialize target
+        try:
+            target = self.paths.sites_enabled / f"{server_name}.conf"
+
+            if target.exists():
+                target.unlink()
+                self._print_color(
+                    f"Virtual host '{server_name}' disabled.", OutputColors.GREEN
+                )
+                logger.success(f"Virtual host disabled: {server_name}")
+            else:
+                self._print_color(
+                    f"Virtual host '{server_name}' is already disabled.",
+                    OutputColors.YELLOW,
+                )
+                logger.info(f"Virtual host already disabled: {server_name}")
+
+        except (OSError, PermissionError) as e:
+            raise ConfigError(
+                f"Failed to disable virtual host: {e}",
+                details={"server_name": server_name, "target": str(target)},
+            ) from e
+
+    def list_virtual_hosts(self) -> dict[str, bool]:
+        """List all virtual hosts and their status with error handling."""
+        try:
+            self.paths.sites_available.mkdir(exist_ok=True)
+            self.paths.sites_enabled.mkdir(exist_ok=True)
+
+            available = {f.stem for f in self.paths.sites_available.glob("*.conf")}
+            enabled = {f.stem for f in self.paths.sites_enabled.glob("*.conf")}
+
+            result = {host: host in enabled for host in available}
+            logger.debug(
+                f"Found {len(available)} virtual hosts, {len(enabled)} enabled"
+            )
+            return result
+
+        except (OSError, PermissionError) as e:
+            logger.warning(f"Error listing virtual hosts: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Unexpected error listing virtual hosts: {e}")
+            return {}
+
+    async def health_check(self) -> dict[str, Any]:
+        """Perform a comprehensive health check with detailed error reporting."""
+        logger.info("Starting comprehensive Nginx health check...")
+
+        results: dict[str, Any] = {
+            "installed": False,
+            "running": False,
+            "config_valid": False,
+            "version": None,
+            "virtual_hosts": 0,
+            "errors": [],
+            "warnings": [],
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
+
+        # Check installation
+        try:
+            results["installed"] = await self.is_nginx_installed()
+            if not results["installed"]:
+                results["errors"].append("Nginx is not installed")
+                self._print_health_results(results)
+                return results
+        except Exception as e:
+            results["errors"].append(f"Installation check failed: {e}")
+
+        # If installed, perform additional checks
+        if results["installed"]:
+            # Version check
+            try:
+                version_output = await self.get_version()
+                results["version"] = version_output
+            except Exception as e:
+                results["errors"].append(f"Version check failed: {e}")
+
+            # Status check
+            try:
+                results["running"] = await self.get_status()
+            except Exception as e:
+                results["errors"].append(f"Status check failed: {e}")
+
+            # Configuration validation
+            try:
+                results["config_valid"] = await self.check_config()
+                if not results["config_valid"]:
+                    results["warnings"].append("Configuration validation failed")
+            except Exception as e:
+                results["errors"].append(f"Config validation failed: {e}")
+
+            # Virtual hosts count
+            try:
+                vhosts = self.list_virtual_hosts()
+                results["virtual_hosts"] = len(vhosts)
+                enabled_count = sum(1 for enabled in vhosts.values() if enabled)
+                results["virtual_hosts_enabled"] = enabled_count
+
+                if results["virtual_hosts"] > 0:
+                    results["virtual_hosts_list"] = list(vhosts.keys())[
+                        :10
+                    ]  # Limit to first 10
+
+            except Exception as e:
+                results["errors"].append(f"Virtual hosts check failed: {e}")
+
+            # Path validation
+            try:
+                missing_paths = []
+                for path_name in ["base_path", "conf_path", "binary_path"]:
+                    path = getattr(self.paths, path_name)
+                    if not path.exists():
+                        missing_paths.append(f"{path_name}: {path}")
+
+                if missing_paths:
+                    results["warnings"].extend(missing_paths)
+
+            except Exception as e:
+                results["errors"].append(f"Path validation failed: {e}")
+
+        # Overall health assessment
+        results["healthy"] = (
+            results["installed"]
+            and results["config_valid"]
+            and len(results["errors"]) == 0
+        )
+
+        self._print_health_results(results)
+        logger.info(f"Health check completed. Healthy: {results['healthy']}")
+        return results
+
+    def _print_health_results(self, results: dict[str, Any]) -> None:
+        """Print formatted health check results."""
+        self._print_color("\n=== Nginx Health Check Results ===", OutputColors.CYAN)
+
+        status_items = [
+            (
+                "Installed",
+                results["installed"],
+                OutputColors.GREEN if results["installed"] else OutputColors.RED,
+            ),
+            (
+                "Running",
+                results["running"],
+                OutputColors.GREEN if results["running"] else OutputColors.RED,
+            ),
+            (
+                "Config Valid",
+                results["config_valid"],
+                OutputColors.GREEN if results["config_valid"] else OutputColors.RED,
+            ),
+        ]
+
+        for label, value, color in status_items:
+            self._print_color(f"  {label}: {value}", color)
+
+        if results["version"]:
+            self._print_color(f"  Version: {results['version']}", OutputColors.CYAN)
+
+        if results["virtual_hosts"] > 0:
+            enabled = results.get("virtual_hosts_enabled", 0)
+            self._print_color(
+                f"  Virtual Hosts: {results['virtual_hosts']} total, {enabled} enabled",
+                OutputColors.BLUE,
+            )
+
+        if results["warnings"]:
+            self._print_color("  Warnings:", OutputColors.YELLOW)
+            for warning in results["warnings"]:
+                self._print_color(f"    - {warning}", OutputColors.YELLOW)
+
+        if results["errors"]:
+            self._print_color("  Errors:", OutputColors.RED)
+            for error in results["errors"]:
+                self._print_color(f"    - {error}", OutputColors.RED)
+
+        overall_color = (
+            OutputColors.GREEN if results.get("healthy", False) else OutputColors.RED
+        )
+        overall_status = "HEALTHY" if results.get("healthy", False) else "UNHEALTHY"
+        self._print_color(f"\nOverall Status: {overall_status}", overall_color)
+
+
+# Modern virtual host templates with enhanced features
+def basic_template(**kwargs) -> str:
+    """Basic Nginx virtual host template with security headers."""
+    server_name = kwargs["server_name"]
+    port = kwargs["port"]
+    root_dir = kwargs["root_dir"]
+    logs_path = kwargs["paths"].logs_path
+
+    return f"""server {{
     listen {port};
     server_name {server_name};
     root {root_dir};
+    index index.html index.htm;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
 
     location / {{
-        index index.html;
         try_files $uri $uri/ =404;
     }}
 
-    access_log {self.paths.logs_path}/{server_name}.access.log;
-    error_log {self.paths.logs_path}/{server_name}.error.log;
-}}
-""",
-            'php': f"""server {{
+    # Deny access to hidden files
+    location ~ /\\. {{
+        deny all;
+        access_log off;
+        log_not_found off;
+    }}
+
+    # Logging
+    access_log {logs_path}/{server_name}.access.log;
+    error_log {logs_path}/{server_name}.error.log;
+}}"""
+
+
+def php_template(**kwargs) -> str:
+    """PHP-enabled Nginx virtual host template with modern PHP-FPM configuration."""
+    server_name = kwargs["server_name"]
+    port = kwargs["port"]
+    root_dir = kwargs["root_dir"]
+    logs_path = kwargs["paths"].logs_path
+
+    return f"""server {{
     listen {port};
     server_name {server_name};
     root {root_dir};
+    index index.php index.html index.htm;
 
-    index index.php index.html;
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
 
     location / {{
         try_files $uri $uri/ /index.php$is_args$args;
     }}
 
+    # PHP processing
     location ~ \\.php$ {{
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\\.php)(/.+)$;
         fastcgi_pass unix:/var/run/php/php-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
+
+        # PHP security
+        fastcgi_param PHP_VALUE "expose_php=0";
+        fastcgi_hide_header X-Powered-By;
     }}
 
-    access_log {self.paths.logs_path}/{server_name}.access.log;
-    error_log {self.paths.logs_path}/{server_name}.error.log;
+    # Deny access to hidden files and PHP files in uploads
+    location ~ /\\. {{
+        deny all;
+        access_log off;
+        log_not_found off;
+    }}
+
+    location ~* /uploads/.*\\.php$ {{
+        deny all;
+    }}
+
+    # Static file caching
+    location ~* \\.(jpg|jpeg|gif|png|css|js|ico|xml)$ {{
+        expires 5d;
+        add_header Cache-Control "public, immutable";
+    }}
+
+    # Logging
+    access_log {logs_path}/{server_name}.access.log;
+    error_log {logs_path}/{server_name}.error.log;
+}}"""
+
+
+def proxy_template(**kwargs) -> str:
+    """Reverse proxy Nginx virtual host template with modern proxy settings."""
+    server_name = kwargs["server_name"]
+    port = kwargs["port"]
+    logs_path = kwargs["paths"].logs_path
+    upstream_host = kwargs.get("upstream_host", "localhost")
+    upstream_port = kwargs.get("upstream_port", 8000)
+
+    return f"""upstream {server_name}_backend {{
+    server {upstream_host}:{upstream_port};
+    keepalive 32;
 }}
-""",
-            'proxy': f"""server {{
+
+server {{
     listen {port};
     server_name {server_name};
 
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Increase client body size for file uploads
+    client_max_body_size 100M;
+
     location / {{
-        proxy_pass http://localhost:8000;
+        proxy_pass http://{server_name}_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Timeout settings
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # Buffering
+        proxy_buffering on;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+
+        # Cache bypass for websockets
+        proxy_cache_bypass $http_upgrade;
     }}
 
-    access_log {self.paths.logs_path}/{server_name}.access.log;
-    error_log {self.paths.logs_path}/{server_name}.error.log;
-}}
-"""
-        }
-
-        if template not in templates:
-            logger.error(f"Unknown template: {template}")
-            raise ConfigError(f"Unknown template: {template}")
-
-        try:
-            # Write the configuration file
-            with open(config_file, 'w') as f:
-                f.write(templates[template])
-
-            self._print_color(
-                f"Virtual host configuration created at {config_file}", OutputColors.GREEN)
-            logger.success(
-                f"Virtual host {server_name} created using {template} template")
-            return config_file
-
-        except Exception as e:
-            logger.exception("Virtual host creation failed")
-            raise ConfigError(
-                f"Failed to create virtual host: {str(e)}") from e
-
-    def enable_virtual_host(self, server_name: str) -> None:
-        """
-        Enable a virtual host by creating a symlink in sites-enabled.
-
-        Args:
-            server_name: Name of the server configuration
-
-        Raises:
-            ConfigError: If the operation fails
-        """
-        source = self.paths.sites_available / f"{server_name}.conf"
-        target = self.paths.sites_enabled / f"{server_name}.conf"
-
-        if not source.exists():
-            logger.error(f"Virtual host configuration {source} not found")
-            raise ConfigError(f"Virtual host configuration {source} not found")
-
-        try:
-            # Handle different OS symlink capabilities
-            match self.os:
-                case OperatingSystem.WINDOWS:
-                    logger.info(
-                        f"Using file copy instead of symlink on Windows")
-                    shutil.copy2(source, target)
-                case _:
-                    # Create symlink (remove if it already exists)
-                    if target.exists():
-                        logger.debug(f"Removing existing symlink at {target}")
-                        target.unlink()
-                    target.symlink_to(
-                        Path(f"../sites-available/{server_name}.conf"))
-
-            self._print_color(
-                f"Virtual host {server_name} has been enabled", OutputColors.GREEN)
-            logger.success(f"Virtual host {server_name} enabled")
-
-            # Check config after enabling
-            self.check_config()
-
-        except Exception as e:
-            logger.exception("Failed to enable virtual host")
-            raise ConfigError(
-                f"Failed to enable virtual host: {str(e)}") from e
-
-    def disable_virtual_host(self, server_name: str) -> None:
-        """
-        Disable a virtual host by removing the symlink from sites-enabled.
-
-        Args:
-            server_name: Name of the server configuration
-
-        Raises:
-            ConfigError: If the operation fails
-        """
-        target = self.paths.sites_enabled / f"{server_name}.conf"
-
-        if not target.exists():
-            self._print_color(
-                f"Virtual host {server_name} is already disabled", OutputColors.YELLOW)
-            logger.info(f"Virtual host {server_name} is already disabled")
-            return
-
-        try:
-            target.unlink()
-            self._print_color(
-                f"Virtual host {server_name} has been disabled", OutputColors.GREEN)
-            logger.success(f"Virtual host {server_name} disabled")
-
-        except Exception as e:
-            logger.exception("Failed to disable virtual host")
-            raise ConfigError(
-                f"Failed to disable virtual host: {str(e)}") from e
-
-    def list_virtual_hosts(self) -> Dict[str, bool]:
-        """
-        List all virtual hosts and their status (enabled/disabled).
-
-        Returns:
-            Dictionary of virtual hosts with their status
-        """
-        result = {}
-
-        # Create directories if they don't exist
-        self.paths.sites_available.mkdir(parents=True, exist_ok=True)
-        self.paths.sites_enabled.mkdir(parents=True, exist_ok=True)
-
-        available_hosts = [
-            f.stem for f in self.paths.sites_available.glob("*.conf")]
-        enabled_hosts = [
-            f.stem for f in self.paths.sites_enabled.glob("*.conf")]
-
-        for host in available_hosts:
-            result[host] = host in enabled_hosts
-
-        if result:
-            self._print_color("Virtual hosts:", OutputColors.CYAN)
-            for host, enabled in result.items():
-                status = "enabled" if enabled else "disabled"
-                color = OutputColors.GREEN if enabled else OutputColors.YELLOW
-                self._print_color(f"  {host} - {status}", color)
-
-            logger.info(f"Found {len(result)} virtual host(s)")
-        else:
-            self._print_color("No virtual hosts found", OutputColors.YELLOW)
-            logger.info("No virtual hosts found")
-
-        return result
-
-    def analyze_logs(self, domain: Optional[str] = None,
-                     lines: int = 100,
-                     filter_pattern: Optional[str] = None) -> List[Dict[str, str]]:
-        """
-        Analyze Nginx access logs.
-
-        Args:
-            domain: Specific domain to analyze logs for
-            lines: Number of lines to analyze
-            filter_pattern: Regex pattern to filter log entries
-
-        Returns:
-            Parsed log entries as a list of dictionaries
-        """
-        log_path = None
-
-        if domain:
-            log_path = self.paths.logs_path / f"{domain}.access.log"
-            if not log_path.exists():
-                self._print_color(
-                    f"No access log found for {domain}", OutputColors.YELLOW)
-                logger.warning(f"No access log found for {domain}")
-                return []
-        else:
-            log_path = self.paths.logs_path / "access.log"
-            if not log_path.exists():
-                self._print_color(
-                    "No global access log found", OutputColors.YELLOW)
-                logger.warning("No global access log found")
-                return []
-
-        try:
-            logger.info(f"Analyzing log file: {log_path}")
-            # Tail the log file using appropriate OS command
-            match self.os:
-                case OperatingSystem.WINDOWS:
-                    cmd = f"powershell -command \"Get-Content -Tail {lines} '{log_path}'\""
-                case _:
-                    cmd = f"tail -n {lines} {log_path}"
-
-            result = self._run_command(cmd, shell=True)
-            log_lines = result.stdout.strip().split("\n")
-            logger.debug(f"Retrieved {len(log_lines)} log lines")
-
-            # Parse log entries
-            parsed_entries = []
-
-            # Common Nginx log pattern (can be adjusted based on log format)
-            log_pattern = r'(\S+) - (\S+) $$(.*?)$$ "(.*?)" (\d+) (\d+) "(.*?)" "(.*?)"'
-
-            for line in log_lines:
-                if not line.strip():
-                    continue
-
-                if filter_pattern and not re.search(filter_pattern, line):
-                    continue
-
-                match = re.match(log_pattern, line)
-                if match:
-                    ip, user, timestamp, request, status, size, referer, user_agent = match.groups()
-
-                    parsed_entries.append({
-                        "ip": ip,
-                        "user": user,
-                        "timestamp": timestamp,
-                        "request": request,
-                        "status": status,
-                        "size": size,
-                        "referer": referer,
-                        "user_agent": user_agent
-                    })
-                else:
-                    # For lines that don't match the pattern, store them as raw entries
-                    parsed_entries.append({"raw": line})
-
-            # Display summary
-            if parsed_entries:
-                # Count status codes
-                status_counts = {}
-                for entry in parsed_entries:
-                    if "status" in entry:
-                        status = entry["status"]
-                        status_counts[status] = status_counts.get(
-                            status, 0) + 1
-
-                self._print_color("Log Analysis Summary:", OutputColors.CYAN)
-                self._print_color(
-                    f"  Total entries: {len(parsed_entries)}", OutputColors.CYAN)
-
-                logger.info(f"Parsed {len(parsed_entries)} log entries")
-
-                if status_counts:
-                    self._print_color(
-                        "  Status code breakdown:", OutputColors.CYAN)
-
-                    for status, count in sorted(status_counts.items()):
-                        if status.startswith("2"):
-                            color = OutputColors.GREEN
-                        elif status.startswith("3"):
-                            color = OutputColors.CYAN
-                        elif status.startswith("4"):
-                            color = OutputColors.YELLOW
-                        else:
-                            color = OutputColors.RED
-
-                        self._print_color(f"    {status}: {count}", color)
-                        logger.info(f"Status {status}: {count} requests")
-            else:
-                self._print_color("No log entries found", OutputColors.YELLOW)
-                logger.warning("No log entries found")
-
-            return parsed_entries
-
-        except Exception as e:
-            logger.exception("Failed to analyze logs")
-            return []
-
-    def generate_ssl_cert(self, domain: str, email: Optional[str] = None,
-                          use_letsencrypt: bool = True) -> Tuple[Path, Path]:
-        """
-        Generate SSL certificates for a domain.
-
-        Args:
-            domain: Domain name
-            email: Email address for Let's Encrypt
-            use_letsencrypt: Whether to use Let's Encrypt (if False, uses self-signed)
-
-        Returns:
-            Tuple containing paths to certificate and key files
-
-        Raises:
-            OperationError: If certificate generation fails
-        """
-        # Create SSL directory if it doesn't exist
-        self.paths.ssl_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Generating SSL certificate for {domain}")
-
-        cert_path = self.paths.ssl_path / f"{domain}.crt"
-        key_path = self.paths.ssl_path / f"{domain}.key"
-
-        try:
-            if use_letsencrypt:
-                if not email:
-                    logger.error("Email is required for Let's Encrypt")
-                    raise OperationError("Email is required for Let's Encrypt")
-
-                logger.info(f"Using Let's Encrypt with email: {email}")
-                # Use certbot to generate certificates
-                cmd = [
-                    "certbot", "certonly", "--webroot",
-                    "-w", "/var/www/html",
-                    "-d", domain,
-                    "--email", email,
-                    "--agree-tos", "--non-interactive"
-                ]
-
-                self._run_command(cmd)
-
-                # Link Let's Encrypt certificates to our location
-                letsencrypt_cert = Path(
-                    f"/etc/letsencrypt/live/{domain}/fullchain.pem")
-                letsencrypt_key = Path(
-                    f"/etc/letsencrypt/live/{domain}/privkey.pem")
-
-                if letsencrypt_cert.exists() and letsencrypt_key.exists():
-                    if cert_path.exists():
-                        cert_path.unlink()
-                    if key_path.exists():
-                        key_path.unlink()
-
-                    cert_path.symlink_to(letsencrypt_cert)
-                    key_path.symlink_to(letsencrypt_key)
-                    logger.debug(
-                        f"Created symlinks to Let's Encrypt certificates")
-                else:
-                    logger.error("Let's Encrypt certificates not found")
-                    raise OperationError(
-                        "Let's Encrypt certificates not found")
-            else:
-                logger.info("Generating self-signed certificate")
-                # Generate self-signed certificate
-                cmd = [
-                    "openssl", "req", "-x509", "-nodes",
-                    "-days", "365", "-newkey", "rsa:2048",
-                    "-keyout", str(key_path),
-                    "-out", str(cert_path),
-                    "-subj", f"/CN={domain}"
-                ]
-
-                self._run_command(cmd)
-                logger.debug("Self-signed certificate created successfully")
-
-            self._print_color(
-                f"SSL certificate for {domain} generated successfully", OutputColors.GREEN)
-            logger.success(f"SSL certificate generated for {domain}")
-            return cert_path, key_path
-
-        except Exception as e:
-            logger.exception("SSL certificate generation failed")
-            raise OperationError(
-                f"Failed to generate SSL certificate: {str(e)}") from e
-
-    def configure_ssl(self, domain: str, cert_path: Path, key_path: Path) -> None:
-        """
-        Configure SSL for a virtual host.
-
-        Args:
-            domain: Domain name
-            cert_path: Path to the certificate file
-            key_path: Path to the key file
-
-        Raises:
-            ConfigError: If SSL configuration fails
-        """
-        config_path = self.paths.sites_available / f"{domain}.conf"
-        logger.info(f"Configuring SSL for {domain}")
-
-        if not config_path.exists():
-            logger.error(f"Virtual host configuration for {domain} not found")
-            raise ConfigError(
-                f"Virtual host configuration for {domain} not found")
-
-        try:
-            # Read the existing configuration
-            with open(config_path, 'r') as f:
-                config = f.read()
-
-            # Check if SSL is already configured
-            if "listen 443 ssl" in config:
-                self._print_color(
-                    f"SSL is already configured for {domain}", OutputColors.YELLOW)
-                logger.warning(f"SSL is already configured for {domain}")
-                return
-
-            # Modify the configuration to add SSL
-            ssl_config = f"""
-server {{
-    listen 443 ssl;
-    server_name {domain};
-    
-    ssl_certificate {cert_path};
-    ssl_certificate_key {key_path};
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    
-    # Rest of configuration copied from HTTP server block
-"""
-
-            # Extract the contents inside the existing server block
-            match = re.search(r'server\s*{(.*?)}', config, re.DOTALL)
-            if match:
-                server_block_content = match.group(1)
-
-                # Remove the listen directive from the copied content
-                server_block_content = re.sub(
-                    r'\s*listen\s+\d+;', '', server_block_content)
-
-                # Complete the SSL server block
-                ssl_config += server_block_content + "\n}"
-
-                # Add HTTP to HTTPS redirection
-                redirect_config = f"""
-server {{
-    listen 80;
-    server_name {domain};
-    return 301 https://$host$request_uri;
-}}
-"""
-
-                # Replace the original configuration
-                new_config = redirect_config + "\n" + ssl_config
-                logger.debug("Created new virtual host configuration with SSL")
-
-                with open(config_path, 'w') as f:
-                    f.write(new_config)
-
-                self._print_color(
-                    f"SSL configured for {domain}", OutputColors.GREEN)
-                logger.success(f"SSL configured for {domain}")
-
-                # Check if configuration is valid
-                self.check_config()
-            else:
-                logger.error(f"Could not parse server block in {config_path}")
-                raise ConfigError(
-                    f"Could not parse server block in {config_path}")
-
-        except Exception as e:
-            logger.exception("SSL configuration failed")
-            raise ConfigError(f"Failed to configure SSL: {str(e)}") from e
-
-    def health_check(self) -> Dict[str, Any]:
-        """
-        Perform a comprehensive health check on Nginx installation.
-
-        Returns:
-            Dictionary containing health check results
-        """
-        logger.info("Starting Nginx health check")
-        results = {
-            "nginx_installed": False,
-            "nginx_running": False,
-            "config_valid": False,
-            "version": None,
-            "virtual_hosts": 0,
-            "errors": []
-        }
-
-        try:
-            # Check if Nginx is installed
-            results["nginx_installed"] = self.is_nginx_installed()
-            logger.debug(f"Nginx installed: {results['nginx_installed']}")
-
-            if results["nginx_installed"]:
-                # Get Nginx version
-                try:
-                    version_output = self.get_version()
-                    version_match = re.search(
-                        r'nginx/(\d+\.\d+\.\d+)', version_output)
-                    if version_match:
-                        results["version"] = version_match.group(1)
-                        logger.debug(f"Nginx version: {results['version']}")
-                except Exception as e:
-                    error_msg = f"Failed to get version: {str(e)}"
-                    results["errors"].append(error_msg)
-                    logger.error(error_msg)
-
-                # Check if Nginx is running
-                try:
-                    results["nginx_running"] = self.get_status()
-                    logger.debug(f"Nginx running: {results['nginx_running']}")
-                except Exception as e:
-                    error_msg = f"Failed to check status: {str(e)}"
-                    results["errors"].append(error_msg)
-                    logger.error(error_msg)
-
-                # Check if configuration is valid
-                try:
-                    results["config_valid"] = self.check_config()
-                    logger.debug(f"Config valid: {results['config_valid']}")
-                except Exception as e:
-                    error_msg = f"Failed to check config: {str(e)}"
-                    results["errors"].append(error_msg)
-                    logger.error(error_msg)
-
-                # Count virtual hosts
-                try:
-                    virtual_hosts = list(
-                        self.paths.sites_available.glob("*.conf"))
-                    results["virtual_hosts"] = len(virtual_hosts)
-                    logger.debug(f"Virtual hosts: {results['virtual_hosts']}")
-                except Exception as e:
-                    error_msg = f"Failed to count virtual hosts: {str(e)}"
-                    results["errors"].append(error_msg)
-                    logger.error(error_msg)
-
-                # Check disk space for logs
-                try:
-                    if self.paths.logs_path.exists():
-                        if self.os != OperatingSystem.WINDOWS:
-                            df_result = self._run_command(
-                                f"df -h {self.paths.logs_path}", shell=True)
-                            results["disk_space"] = df_result.stdout.strip()
-                            logger.debug("Disk space check completed")
-                except Exception as e:
-                    error_msg = f"Failed to check disk space: {str(e)}"
-                    results["errors"].append(error_msg)
-                    logger.error(error_msg)
-
-            # Display results
-            self._print_color("Nginx Health Check Results:", OutputColors.CYAN)
-            self._print_color(f"  Installed: {results['nginx_installed']}",
-                              OutputColors.GREEN if results["nginx_installed"] else OutputColors.RED)
-
-            if results["nginx_installed"]:
-                self._print_color(f"  Running: {results['nginx_running']}",
-                                  OutputColors.GREEN if results["nginx_running"] else OutputColors.RED)
-                self._print_color(f"  Configuration Valid: {results['config_valid']}",
-                                  OutputColors.GREEN if results["config_valid"] else OutputColors.RED)
-                self._print_color(
-                    f"  Version: {results['version']}", OutputColors.CYAN)
-                self._print_color(
-                    f"  Virtual Hosts: {results['virtual_hosts']}", OutputColors.CYAN)
-
-                if "disk_space" in results:
-                    self._print_color(
-                        f"  Disk Space:\n{results['disk_space']}", OutputColors.CYAN)
-
-            if results["errors"]:
-                self._print_color("  Errors:", OutputColors.RED)
-                for error in results["errors"]:
-                    self._print_color(f"    - {error}", OutputColors.RED)
-
-            logger.info("Health check completed")
-            return results
-
-        except Exception as e:
-            logger.exception("Health check failed")
-            results["errors"].append(f"Health check failed: {str(e)}")
-            return results
+    # Health check endpoint
+    location /nginx-health {{
+        access_log off;
+        return 200 "healthy\\n";
+        add_header Content-Type text/plain;
+    }}
+
+    # Logging
+    access_log {logs_path}/{server_name}.access.log;
+    error_log {logs_path}/{server_name}.error.log;
+}}"""
+
+
+async def main():
+    """Example usage of the NginxManager."""
+    manager = NginxManager()
+    manager.register_plugin(
+        "vhost_templates",
+        {"basic": basic_template, "php": php_template, "proxy": proxy_template},
+    )
+    await manager.health_check()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

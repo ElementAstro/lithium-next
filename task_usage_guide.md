@@ -49,14 +49,14 @@ sequence.setOnError([](const std::string& name, const std::exception& e) {
 // 方法1：直接创建Task
 auto customTask = std::make_unique<Task>("CustomTask", [](const json& params) {
     std::cout << "执行自定义任务，参数：" << params.dump() << std::endl;
-    
+
     // 获取参数
     double exposure = params.value("exposure", 1.0);
     int gain = params.value("gain", 100);
-    
+
     // 执行具体操作
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    
+
     std::cout << "任务完成，曝光时间：" << exposure << "s，增益：" << gain << std::endl;
 });
 
@@ -188,7 +188,7 @@ configTask->execute(saveParams);
 #include "task/custom/script_task.hpp"
 
 auto scriptTask = std::make_unique<task::ScriptTask>(
-    "ScriptRunner", 
+    "ScriptRunner",
     "/path/to/script_config.json",
     "/path/to/analyzer_config.json"
 );
@@ -305,35 +305,35 @@ using namespace lithium::sequencer;
 int main() {
     // 1. 创建序列管理器
     ExposureSequence sequence;
-    
+
     // 2. 设置回调
     sequence.setOnSequenceStart([]() {
         std::cout << "=== 开始执行任务序列 ===" << std::endl;
     });
-    
+
     sequence.setOnTargetEnd([](const std::string& name, TargetStatus status) {
         std::cout << "目标 " << name << " 完成，状态：" << static_cast<int>(status) << std::endl;
     });
-    
+
     // 3. 创建目标和任务
     auto target1 = std::make_unique<Target>("InitTarget", std::chrono::seconds(2), 2);
-    
+
     // 配置管理任务
     auto configTask = std::make_unique<task::TaskConfigManagement>("Config");
     target1->addTask(std::move(configTask));
-    
+
     // 设备管理任务
     DeviceManager deviceManager;
     auto deviceTask = std::make_unique<DeviceTask>("Device", deviceManager);
     target1->addTask(std::move(deviceTask));
-    
+
     // 自定义任务
     auto customTask = std::make_unique<Task>("Custom", [](const json& params) {
         std::cout << "执行自定义任务：" << params.dump() << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(1));
     });
     target1->addTask(std::move(customTask));
-    
+
     // 4. 配置序列
     sequence.addTarget(std::move(target1));
     sequence.setTargetParams("InitTarget", {
@@ -342,24 +342,24 @@ int main() {
         {"config_key", "system.ready"},
         {"custom_param", "test_value"}
     });
-    
+
     // 5. 执行序列
     std::thread execThread([&sequence]() {
         sequence.executeAll();
     });
-    
+
     // 6. 监控进度
     while (sequence.getProgress() < 100.0) {
         std::cout << "进度：" << sequence.getProgress() << "%" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    
+
     execThread.join();
-    
+
     // 7. 获取结果
     auto stats = sequence.getExecutionStats();
     std::cout << "执行统计：" << stats.dump(2) << std::endl;
-    
+
     return 0;
 }
 ```
