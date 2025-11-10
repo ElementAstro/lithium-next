@@ -9,7 +9,7 @@ namespace lithium::task::task {
 /**
  * @brief Exposure type enumeration for camera tasks
  */
-enum ExposureType { 
+enum ExposureType {
     LIGHT,      ///< Light frame - main science exposure
     DARK,       ///< Dark frame - noise calibration
     BIAS,       ///< Bias frame - readout noise calibration

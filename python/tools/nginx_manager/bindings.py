@@ -113,15 +113,20 @@ class NginxManagerBindings:
             logger.error(f"Restore failed: {str(e)}")
             return False
 
-    def create_virtual_host(self, server_name: str, port: int = 80,
-                            root_dir: str = "", template: str = 'basic') -> str:
+    def create_virtual_host(
+        self,
+        server_name: str,
+        port: int = 80,
+        root_dir: str = "",
+        template: str = "basic",
+    ) -> str:
         """Create a virtual host configuration."""
         try:
             config_path = self.manager.create_virtual_host(
                 server_name=server_name,
                 port=port,
                 root_dir=root_dir if root_dir else None,
-                template=template
+                template=template,
             )
             return str(config_path)
         except Exception as e:
@@ -162,4 +167,4 @@ class NginxManagerBindings:
             return json.dumps(result)
         except Exception as e:
             logger.error(f"Health check failed: {str(e)}")
-            return "{\"error\": \"Health check failed\"}"
+            return '{"error": "Health check failed"}'

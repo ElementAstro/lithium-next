@@ -22,7 +22,7 @@ def setup_logging(log_level: str = "INFO") -> None:
         sys.stderr,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         level=log_level,
-        colorize=True
+        colorize=True,
     )
 
     # Optional: Add a file logger for persistent logs
@@ -31,7 +31,7 @@ def setup_logging(log_level: str = "INFO") -> None:
         rotation="10 MB",
         retention="1 week",
         level=log_level,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}"
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
     )
 
     logger.info("Logging initialized")

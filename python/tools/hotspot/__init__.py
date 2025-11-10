@@ -20,7 +20,7 @@ from .models import (
     BandType,
     HotspotConfig,
     CommandResult,
-    ConnectedClient
+    ConnectedClient,
 )
 
 from .command_utils import run_command, run_command_async
@@ -47,13 +47,13 @@ def create_pybind11_module():
 
 
 __all__ = [
-    'HotspotManager',
-    'HotspotConfig',
-    'AuthenticationType',
-    'EncryptionType',
-    'BandType',
-    'CommandResult',
-    'ConnectedClient',
-    'create_pybind11_module',
-    'logger'
+    "HotspotManager",
+    "HotspotConfig",
+    "AuthenticationType",
+    "EncryptionType",
+    "BandType",
+    "CommandResult",
+    "ConnectedClient",
+    "create_pybind11_module",
+    "logger",
 ]

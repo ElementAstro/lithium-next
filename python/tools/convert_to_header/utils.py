@@ -27,6 +27,7 @@ ChecksumAlgo = Literal["md5", "sha1", "sha256", "sha512", "crc32"]
 
 class HeaderInfo(TypedDict, total=False):
     """Type definition for header file information."""
+
     array_name: str
     size_name: str
     array_type: str

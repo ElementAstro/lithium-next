@@ -48,13 +48,12 @@ class BuildHelperBase(ABC):
         parallel: int = os.cpu_count() or 4,
     ) -> None:
         # Convert string paths to Path objects if necessary
-        self.source_dir = source_dir if isinstance(
-            source_dir, Path) else Path(source_dir)
-        self.build_dir = build_dir if isinstance(
-            build_dir, Path) else Path(build_dir)
+        self.source_dir = (
+            source_dir if isinstance(source_dir, Path) else Path(source_dir)
+        )
+        self.build_dir = build_dir if isinstance(build_dir, Path) else Path(build_dir)
         self.install_prefix = (
-            install_prefix if install_prefix is not None
-            else self.build_dir / "install"
+            install_prefix if install_prefix is not None else self.build_dir / "install"
         )
         if isinstance(self.install_prefix, str):
             self.install_prefix = Path(self.install_prefix)
@@ -77,7 +76,8 @@ class BuildHelperBase(ABC):
         self.build_dir.mkdir(parents=True, exist_ok=True)
 
         logger.debug(
-            f"Initialized {self.__class__.__name__} with source={self.source_dir}, build={self.build_dir}")
+            f"Initialized {self.__class__.__name__} with source={self.source_dir}, build={self.build_dir}"
+        )
 
     def _load_cache(self) -> None:
         """Load the build cache from disk if it exists."""
@@ -122,11 +122,7 @@ class BuildHelperBase(ABC):
 
         try:
             result = subprocess.run(
-                cmd,
-                check=True,
-                capture_output=True,
-                text=True,
-                env=env
+                cmd, check=True, capture_output=True, text=True, env=env
             )
             end_time = time.time()
 
@@ -136,7 +132,7 @@ class BuildHelperBase(ABC):
                 output=result.stdout,
                 error=result.stderr,
                 exit_code=result.returncode,
-                execution_time=end_time - start_time
+                execution_time=end_time - start_time,
             )
 
             if self.verbose:
@@ -156,7 +152,7 @@ class BuildHelperBase(ABC):
                 output=e.stdout if e.stdout else "",
                 error=e.stderr if e.stderr else str(e),
                 exit_code=e.returncode,
-                execution_time=end_time - start_time
+                execution_time=end_time - start_time,
             )
 
             logger.error(f"Command failed: {cmd_str}")
@@ -190,7 +186,7 @@ class BuildHelperBase(ABC):
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env=env
+                env=env,
             )
 
             # Wait for the subprocess to complete and capture output
@@ -206,7 +202,7 @@ class BuildHelperBase(ABC):
                 output=stdout.decode() if isinstance(stdout, bytes) else str(stdout),
                 error=stderr.decode() if isinstance(stderr, bytes) else str(stderr),
                 exit_code=exit_code or 0,
-                execution_time=end_time - start_time
+                execution_time=end_time - start_time,
             )
 
             if self.verbose:
@@ -230,7 +226,7 @@ class BuildHelperBase(ABC):
                 output="",
                 error=str(e),
                 exit_code=1,
-                execution_time=end_time - start_time
+                execution_time=end_time - start_time,
             )
 
             logger.error(f"Async command failed: {cmd_str}")
@@ -262,8 +258,7 @@ class BuildHelperBase(ABC):
                     with open(self.cache_file, "r") as f:
                         cache_content = f.read()
                 except IOError as e:
-                    logger.warning(
-                        f"Failed to backup cache before cleaning: {e}")
+                    logger.warning(f"Failed to backup cache before cleaning: {e}")
 
             # Remove all contents of the build directory
             if self.build_dir.exists():
@@ -290,8 +285,7 @@ class BuildHelperBase(ABC):
                     with open(self.cache_file, "w") as f:
                         f.write(cache_content)
                 except IOError as e:
-                    logger.warning(
-                        f"Failed to restore cache after cleaning: {e}")
+                    logger.warning(f"Failed to restore cache after cleaning: {e}")
 
         except Exception as e:
             success = False
@@ -306,12 +300,11 @@ class BuildHelperBase(ABC):
             output=f"Cleaned build directory: {self.build_dir}" if success else "",
             error=error_message,
             exit_code=0 if success else 1,
-            execution_time=end_time - start_time
+            execution_time=end_time - start_time,
         )
 
         if success:
-            logger.success(
-                f"Successfully cleaned build directory: {self.build_dir}")
+            logger.success(f"Successfully cleaned build directory: {self.build_dir}")
             self.status = BuildStatus.COMPLETED
         else:
             logger.error(f"Failed to clean build directory: {self.build_dir}")
@@ -339,7 +332,7 @@ class BuildHelperBase(ABC):
         return self.last_result
 
     @classmethod
-    def from_options(cls, options: BuildOptions) -> 'BuildHelperBase':
+    def from_options(cls, options: BuildOptions) -> "BuildHelperBase":
         """
         Create a BuildHelperBase instance from a BuildOptions dictionary.
 
@@ -353,13 +346,13 @@ class BuildHelperBase(ABC):
             BuildHelperBase: Instance of the build helper.
         """
         return cls(
-            source_dir=options.get('source_dir', Path('.')),
-            build_dir=options.get('build_dir', Path('build')),
-            install_prefix=options.get('install_prefix'),
-            options=options.get('options', []),
-            env_vars=options.get('env_vars', {}),
-            verbose=options.get('verbose', False),
-            parallel=options.get('parallel', os.cpu_count() or 4)
+            source_dir=options.get("source_dir", Path(".")),
+            build_dir=options.get("build_dir", Path("build")),
+            install_prefix=options.get("install_prefix"),
+            options=options.get("options", []),
+            env_vars=options.get("env_vars", {}),
+            verbose=options.get("verbose", False),
+            parallel=options.get("parallel", os.cpu_count() or 4),
         )
 
     # Abstract methods that must be implemented by subclasses

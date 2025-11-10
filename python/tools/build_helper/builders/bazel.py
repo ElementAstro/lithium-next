@@ -42,7 +42,7 @@ class BazelBuilder(BuildHelperBase):
             bazel_options,
             env_vars,
             verbose,
-            parallel
+            parallel,
         )
         self.build_mode = build_mode
 
@@ -59,10 +59,7 @@ class BazelBuilder(BuildHelperBase):
         """Get the Bazel version string."""
         try:
             result = subprocess.run(
-                ["bazel", "--version"],
-                capture_output=True,
-                text=True,
-                check=True
+                ["bazel", "--version"], capture_output=True, text=True, check=True
             )
             version = result.stdout.strip()
             logger.debug(f"Detected Bazel: {version}")
@@ -74,8 +71,7 @@ class BazelBuilder(BuildHelperBase):
     def configure(self) -> BuildResult:
         """Configure the Bazel build system."""
         self.status = BuildStatus.CONFIGURING
-        logger.info(
-            f"Configuring Bazel build with output base in {self.build_dir}")
+        logger.info(f"Configuring Bazel build with output base in {self.build_dir}")
 
         # Create build directory if it doesn't exist
         self.build_dir.mkdir(parents=True, exist_ok=True)
@@ -100,8 +96,7 @@ class BazelBuilder(BuildHelperBase):
             else:
                 self.status = BuildStatus.FAILED
                 logger.error(f"Bazel configuration failed: {result.error}")
-                raise ConfigurationError(
-                    f"Bazel configuration failed: {result.error}")
+                raise ConfigurationError(f"Bazel configuration failed: {result.error}")
 
             return result
         finally:
@@ -124,7 +119,7 @@ class BazelBuilder(BuildHelperBase):
                 "build",
                 f"--compilation_mode={self.build_mode}",
                 f"--jobs={self.parallel}",
-                target
+                target,
             ] + self.options
 
             # Add verbosity flag if requested
@@ -163,24 +158,23 @@ class BazelBuilder(BuildHelperBase):
             install_prefix_path.mkdir(parents=True, exist_ok=True)
 
             # Query for all built targets
-            query_cmd = [
-                "bazel",
-                "query",
-                "'kind(\".*_binary|.*_library\", //...)'"
-            ]
+            query_cmd = ["bazel", "query", "'kind(\".*_binary|.*_library\", //...)'"]
 
             query_result = self.run_command(*query_cmd)
             if not query_result.success:
                 self.status = BuildStatus.FAILED
                 logger.error(
-                    f"Failed to query targets for installation: {query_result.error}")
+                    f"Failed to query targets for installation: {query_result.error}"
+                )
                 raise InstallationError(
-                    f"Bazel target query failed: {query_result.error}")
+                    f"Bazel target query failed: {query_result.error}"
+                )
 
             # Create a marker file indicating installation
             try:
-                install_marker_path = Path(
-                    self.install_prefix) / "bazel_install_marker.txt"
+                install_marker_path = (
+                    Path(self.install_prefix) / "bazel_install_marker.txt"
+                )
                 with open(install_marker_path, "w") as f:
                     f.write(f"Bazel build installed from {self.source_dir}\n")
                     f.write(f"Available targets:\n{query_result.output}")
@@ -190,12 +184,13 @@ class BazelBuilder(BuildHelperBase):
                     output=f"Installed Bazel build artifacts to {self.install_prefix}",
                     error="",
                     exit_code=0,
-                    execution_time=0.0
+                    execution_time=0.0,
                 )
 
                 self.status = BuildStatus.COMPLETED
                 logger.success(
-                    f"Project installed successfully to {self.install_prefix}")
+                    f"Project installed successfully to {self.install_prefix}"
+                )
                 return build_result
 
             except Exception as e:
@@ -208,7 +203,7 @@ class BazelBuilder(BuildHelperBase):
                     output="",
                     error=error_msg,
                     exit_code=1,
-                    execution_time=0.0
+                    execution_time=0.0,
                 )
 
                 raise InstallationError(error_msg)
@@ -233,7 +228,7 @@ class BazelBuilder(BuildHelperBase):
                 f"--compilation_mode={self.build_mode}",
                 f"--jobs={self.parallel}",
                 "--test_output=errors",
-                "//..."
+                "//...",
             ] + self.options
 
             # Add verbosity flags if requested
@@ -266,7 +261,8 @@ class BazelBuilder(BuildHelperBase):
             result = self.build(doc_target)
             if result.success:
                 logger.success(
-                    f"Documentation generated successfully with target '{doc_target}'")
+                    f"Documentation generated successfully with target '{doc_target}'"
+                )
             return result
         except BuildError as e:
             logger.error(f"Documentation generation failed: {str(e)}")

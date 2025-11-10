@@ -46,7 +46,7 @@ struct Version {
      */
     constexpr Version(int maj, int min, int pat, std::string pre = "",
                       std::string bld = "") noexcept
-        : major(maj), minor(min), patch(pat), 
+        : major(maj), minor(min), patch(pat),
           prerelease(std::move(pre)), build(std::move(bld)) {}
 
     /**
@@ -88,16 +88,16 @@ struct Version {
      * @brief Checks if the version is a prerelease.
      * @return True if it is a prerelease, false otherwise
      */
-    [[nodiscard]] constexpr auto isPrerelease() const noexcept -> bool { 
-        return !prerelease.empty(); 
+    [[nodiscard]] constexpr auto isPrerelease() const noexcept -> bool {
+        return !prerelease.empty();
     }
 
     /**
      * @brief Checks if the version has build metadata.
      * @return True if it has build metadata, false otherwise
      */
-    [[nodiscard]] constexpr auto hasBuildMetadata() const noexcept -> bool { 
-        return !build.empty(); 
+    [[nodiscard]] constexpr auto hasBuildMetadata() const noexcept -> bool {
+        return !build.empty();
     }
 
     constexpr auto operator<(const Version& other) const noexcept -> bool;
@@ -227,7 +227,7 @@ struct VersionRange {
  * @param strategy Comparison strategy
  * @return True if the actual version satisfies the required version, false otherwise
  */
-auto checkVersion(const Version& actualVersion, 
+auto checkVersion(const Version& actualVersion,
                   const std::string& requiredVersionStr,
                   VersionCompareStrategy strategy = VersionCompareStrategy::Strict) -> bool;
 
@@ -259,11 +259,11 @@ constexpr auto Version::operator<(const Version& other) const noexcept -> bool {
     if (major != other.major) return major < other.major;
     if (minor != other.minor) return minor < other.minor;
     if (patch != other.patch) return patch < other.patch;
-    
+
     if (prerelease.empty() && other.prerelease.empty()) return false;
     if (prerelease.empty()) return false;
     if (other.prerelease.empty()) return true;
-    
+
     return prerelease < other.prerelease;
 }
 

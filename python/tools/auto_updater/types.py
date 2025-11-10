@@ -1,6 +1,17 @@
 # types.py
 from enum import Enum
-from typing import Any, Dict, Optional, Union, Callable, List, Tuple, Protocol, TypedDict, Literal
+from typing import (
+    Any,
+    Dict,
+    Optional,
+    Union,
+    Callable,
+    List,
+    Tuple,
+    Protocol,
+    TypedDict,
+    Literal,
+)
 from dataclasses import dataclass
 from pathlib import Path
 import os
@@ -13,6 +24,7 @@ PathLike = Union[str, os.PathLike, Path]
 
 class UpdateStatus(Enum):
     """Status codes for the update process."""
+
     CHECKING = "checking"
     UP_TO_DATE = "up_to_date"
     UPDATE_AVAILABLE = "update_available"
@@ -30,29 +42,32 @@ class UpdateStatus(Enum):
 # Exception classes for better error handling
 class UpdaterError(Exception):
     """Base exception class for all updater errors."""
+
     pass
 
 
 class NetworkError(UpdaterError):
     """Exception raised for network-related errors."""
+
     pass
 
 
 class VerificationError(UpdaterError):
     """Exception raised for verification failures."""
+
     pass
 
 
 class InstallationError(UpdaterError):
     """Exception raised for installation failures."""
+
     pass
 
 
 class ProgressCallback(Protocol):
     """Protocol defining the structure for progress callback functions."""
 
-    def __call__(self, status: UpdateStatus,
-                 progress: float, message: str) -> None: ...
+    def __call__(self, status: UpdateStatus, progress: float, message: str) -> None: ...
 
 
 @dataclass
@@ -69,6 +84,7 @@ class UpdaterConfig:
         temp_dir (Optional[Path]): Directory for temporary files
         backup_dir (Optional[Path]): Directory for backups
     """
+
     url: str
     install_dir: Path
     current_version: str
