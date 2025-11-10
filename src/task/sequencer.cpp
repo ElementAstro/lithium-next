@@ -40,11 +40,11 @@ ExposureSequence::ExposureSequence() {
         std::make_shared<atom::async::LockFreeHashTable<std::string, json>>());
 
     taskGenerator_ = TaskGenerator::createShared();
-    
+
     // Register built-in tasks with the factory
     registerBuiltInTasks();
     spdlog::info("Built-in tasks registered with factory");
-    
+
     initializeDefaultMacros();
 }
 

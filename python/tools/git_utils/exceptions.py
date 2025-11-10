@@ -3,6 +3,7 @@
 
 class GitException(Exception):
     """Base exception for Git-related errors."""
+
     pass
 
 
@@ -29,14 +30,17 @@ class GitCommandError(GitException):
 
 class GitRepositoryNotFound(GitException):
     """Raised when a Git repository is not found."""
+
     pass
 
 
 class GitBranchError(GitException):
     """Raised when a branch operation fails."""
+
     pass
 
 
 class GitMergeConflict(GitException):
     """Raised when a merge results in conflicts."""
+
     pass

@@ -38,7 +38,7 @@ def create_python_module() -> Dict[str, Any]:
         "BuildConfig": BuildConfig,
         "BuildResult": BuildResult,
         "BuildStatus": BuildStatus,
-        "__version__": __version__
+        "__version__": __version__,
     }
 
 

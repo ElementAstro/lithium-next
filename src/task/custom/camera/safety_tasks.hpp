@@ -19,7 +19,7 @@ public:
 
     static auto taskName() -> std::string;
     void execute(const json& params) override;
-    
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
     static void defineParameters(Task& task);
@@ -41,7 +41,7 @@ public:
 
     static auto taskName() -> std::string;
     void execute(const json& params) override;
-    
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
     static void defineParameters(Task& task);
@@ -64,7 +64,7 @@ public:
 
     static auto taskName() -> std::string;
     void execute(const json& params) override;
-    
+
     // Enhanced functionality using new Task base class features
     static auto createEnhancedTask() -> std::unique_ptr<Task>;
     static void defineParameters(Task& task);

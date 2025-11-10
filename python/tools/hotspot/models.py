@@ -17,10 +17,11 @@ class AuthenticationType(Enum):
     Each type represents a different security protocol that can be used
     to secure the hotspot connection.
     """
-    WPA_PSK = "wpa-psk"    # WPA Personal
+
+    WPA_PSK = "wpa-psk"  # WPA Personal
     WPA2_PSK = "wpa2-psk"  # WPA2 Personal
     WPA3_SAE = "wpa3-sae"  # WPA3 Personal with SAE
-    NONE = "none"          # Open network (no authentication)
+    NONE = "none"  # Open network (no authentication)
 
 
 class EncryptionType(Enum):
@@ -30,7 +31,8 @@ class EncryptionType(Enum):
     These encryption methods are used to protect data transmitted over
     the wireless network.
     """
-    AES = "aes"    # Advanced Encryption Standard
+
+    AES = "aes"  # Advanced Encryption Standard
     TKIP = "tkip"  # Temporal Key Integrity Protocol
     CCMP = "ccmp"  # Counter Mode with CBC-MAC Protocol (AES-based)
 
@@ -41,9 +43,10 @@ class BandType(Enum):
 
     Different bands offer different ranges and speeds.
     """
-    G_ONLY = "bg"   # 2.4 GHz band
-    A_ONLY = "a"    # 5 GHz band
-    DUAL = "any"    # Both bands
+
+    G_ONLY = "bg"  # 2.4 GHz band
+    A_ONLY = "a"  # 5 GHz band
+    DUAL = "any"  # Both bands
 
 
 @dataclass
@@ -54,6 +57,7 @@ class HotspotConfig:
     This class stores all settings needed to create and manage a WiFi hotspot,
     with reasonable defaults for common scenarios.
     """
+
     name: str = "MyHotspot"
     password: Optional[str] = None
     authentication: AuthenticationType = AuthenticationType.WPA_PSK
@@ -94,6 +98,7 @@ class CommandResult:
     This class standardizes command execution returns with fields for stdout,
     stderr, success status, and the original command executed.
     """
+
     success: bool
     stdout: str = ""
     stderr: str = ""
@@ -109,6 +114,7 @@ class CommandResult:
 @dataclass
 class ConnectedClient:
     """Information about a client connected to the hotspot."""
+
     mac_address: str
     ip_address: Optional[str] = None
     hostname: Optional[str] = None

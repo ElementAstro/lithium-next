@@ -13,8 +13,11 @@ from typing import Dict, List, Any
 from loguru import logger
 
 from .core.errors import (
-    BuildSystemError, ConfigurationError,
-    BuildError, TestError, InstallationError
+    BuildSystemError,
+    ConfigurationError,
+    BuildError,
+    TestError,
+    InstallationError,
 )
 from .builders.cmake import CMakeBuilder
 from .builders.meson import MesonBuilder
@@ -27,80 +30,120 @@ def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Advanced Build System Helper",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     # Basic options
-    parser.add_argument("--source_dir", type=Path,
-                        default=Path(".").resolve(), help="Source directory")
-    parser.add_argument("--build_dir", type=Path,
-                        default=Path("build").resolve(), help="Build directory")
     parser.add_argument(
-        "--builder", choices=["cmake", "meson", "bazel"], required=True,
-        help="Choose the build system")
+        "--source_dir", type=Path, default=Path(".").resolve(), help="Source directory"
+    )
+    parser.add_argument(
+        "--build_dir",
+        type=Path,
+        default=Path("build").resolve(),
+        help="Build directory",
+    )
+    parser.add_argument(
+        "--builder",
+        choices=["cmake", "meson", "bazel"],
+        required=True,
+        help="Choose the build system",
+    )
 
     # Build system specific options
     cmake_group = parser.add_argument_group("CMake options")
     cmake_group.add_argument(
-        "--generator", choices=["Ninja", "Unix Makefiles"], default="Ninja",
-        help="CMake generator to use")
-    cmake_group.add_argument("--build_type", choices=[
-        "Debug", "Release", "RelWithDebInfo", "MinSizeRel"], default="Debug",
-        help="Build type for CMake")
+        "--generator",
+        choices=["Ninja", "Unix Makefiles"],
+        default="Ninja",
+        help="CMake generator to use",
+    )
+    cmake_group.add_argument(
+        "--build_type",
+        choices=["Debug", "Release", "RelWithDebInfo", "MinSizeRel"],
+        default="Debug",
+        help="Build type for CMake",
+    )
 
     meson_group = parser.add_argument_group("Meson options")
-    meson_group.add_argument("--meson_build_type", choices=[
-        "debug", "release", "debugoptimized"], default="debug",
-        help="Build type for Meson")
+    meson_group.add_argument(
+        "--meson_build_type",
+        choices=["debug", "release", "debugoptimized"],
+        default="debug",
+        help="Build type for Meson",
+    )
 
     bazel_group = parser.add_argument_group("Bazel options")
-    bazel_group.add_argument("--bazel_mode", choices=[
-        "opt", "dbg"], default="dbg",
-        help="Build mode for Bazel")
+    bazel_group.add_argument(
+        "--bazel_mode",
+        choices=["opt", "dbg"],
+        default="dbg",
+        help="Build mode for Bazel",
+    )
 
     # Build actions
     parser.add_argument("--target", default="", help="Specify a build target")
-    parser.add_argument("--install", action="store_true",
-                        help="Install the project")
-    parser.add_argument("--clean", action="store_true",
-                        help="Clean the build directory")
+    parser.add_argument("--install", action="store_true", help="Install the project")
+    parser.add_argument(
+        "--clean", action="store_true", help="Clean the build directory"
+    )
     parser.add_argument("--test", action="store_true", help="Run the tests")
 
     # Options
-    parser.add_argument("--cmake_options", nargs="*", default=[],
-                        help="Custom CMake options (e.g. -DVAR=VALUE)")
-    parser.add_argument("--meson_options", nargs="*", default=[],
-                        help="Custom Meson options (e.g. -Dvar=value)")
-    parser.add_argument("--bazel_options", nargs="*", default=[],
-                        help="Custom Bazel options")
-    parser.add_argument("--generate_docs", action="store_true",
-                        help="Generate documentation")
-    parser.add_argument("--doc_target", default="doc",
-                        help="Documentation target name")
+    parser.add_argument(
+        "--cmake_options",
+        nargs="*",
+        default=[],
+        help="Custom CMake options (e.g. -DVAR=VALUE)",
+    )
+    parser.add_argument(
+        "--meson_options",
+        nargs="*",
+        default=[],
+        help="Custom Meson options (e.g. -Dvar=value)",
+    )
+    parser.add_argument(
+        "--bazel_options", nargs="*", default=[], help="Custom Bazel options"
+    )
+    parser.add_argument(
+        "--generate_docs", action="store_true", help="Generate documentation"
+    )
+    parser.add_argument("--doc_target", default="doc", help="Documentation target name")
 
     # Environment and build settings
-    parser.add_argument("--env", nargs="*", default=[],
-                        help="Set environment variables (e.g. VAR=value)")
-    parser.add_argument("--verbose", action="store_true",
-                        help="Enable verbose output")
-    parser.add_argument("--parallel", type=int, default=os.cpu_count() or 4,
-                        help="Number of parallel jobs for building")
-    parser.add_argument("--install_prefix", type=Path,
-                        help="Installation prefix")
+    parser.add_argument(
+        "--env",
+        nargs="*",
+        default=[],
+        help="Set environment variables (e.g. VAR=value)",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "--parallel",
+        type=int,
+        default=os.cpu_count() or 4,
+        help="Number of parallel jobs for building",
+    )
+    parser.add_argument("--install_prefix", type=Path, help="Installation prefix")
 
     # Logging options
-    parser.add_argument("--log_level", choices=["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"],
-                        default="INFO", help="Set the logging level")
-    parser.add_argument("--log_file", type=Path,
-                        help="Log to file instead of stderr")
+    parser.add_argument(
+        "--log_level",
+        choices=["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Set the logging level",
+    )
+    parser.add_argument("--log_file", type=Path, help="Log to file instead of stderr")
 
     # Configuration file
-    parser.add_argument("--config", type=Path,
-                        help="Load configuration from file (JSON, YAML, or INI)")
+    parser.add_argument(
+        "--config", type=Path, help="Load configuration from file (JSON, YAML, or INI)"
+    )
 
     # Version information
-    parser.add_argument("--version", action="version",
-                        version=f"Build System Helper v{__version__}")
+    parser.add_argument(
+        "--version", action="version", version=f"Build System Helper v{__version__}"
+    )
 
     return parser.parse_args()
 
@@ -128,15 +171,10 @@ def setup_logging(args: argparse.Namespace) -> None:
             level=log_level,
             format=log_format,
             rotation="10 MB",
-            retention=3
+            retention=3,
         )
     else:
-        logger.add(
-            sys.stderr,
-            level=log_level,
-            format=log_format,
-            colorize=True
-        )
+        logger.add(sys.stderr, level=log_level, format=log_format, colorize=True)
 
     logger.debug(f"Logging initialized at {log_level} level")
 
@@ -176,7 +214,8 @@ def main() -> int:
                 logger.debug(f"Setting environment variable: {name}={value}")
             except ValueError:
                 logger.warning(
-                    f"Invalid environment variable format: {var} (expected VAR=value)")
+                    f"Invalid environment variable format: {var} (expected VAR=value)"
+                )
 
         # Create the builder based on the specified build system
         match args.builder:

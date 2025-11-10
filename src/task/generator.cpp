@@ -80,7 +80,7 @@ public:
     bool validateScript(const std::string& script, const std::string& templateName);
     size_t loadTemplatesFromDirectory(const std::string& templateDir);
     bool saveTemplatesToDirectory(const std::string& templateDir) const;
-    TaskGenerator::ScriptGenerationResult convertScriptFormat(const std::string& script, 
+    TaskGenerator::ScriptGenerationResult convertScriptFormat(const std::string& script,
                                                              const std::string& fromFormat,
                                                              const std::string& toFormat);
 
@@ -111,7 +111,7 @@ public:
         -> std::string;
     void preprocessJsonMacros(json& json_obj);
     void trimCache();
-    
+
     // Script generation helper methods
     std::string processTemplate(const std::string& templateContent, const json& parameters);
     bool validateParameters(const std::vector<std::string>& required, const json& provided);
@@ -572,101 +572,101 @@ void TaskGenerator::Impl::unregisterScriptTemplate(const std::string& templateNa
 
 TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateScript(const std::string& templateName, const json& parameters) {
     std::shared_lock lock(scriptMutex_);
-    
+
     TaskGenerator::ScriptGenerationResult result;
-    
+
     auto it = scriptTemplates_.find(templateName);
     if (it == scriptTemplates_.end()) {
         result.errors.push_back("Template not found: " + templateName);
         return result;
     }
-    
+
     const auto& templateInfo = it->second;
-    
+
     // Validate required parameters
     if (!validateParameters(templateInfo.requiredParams, parameters)) {
         result.errors.push_back("Missing required parameters");
         return result;
     }
-    
+
     try {
         // Process template with macro replacement
         result.generatedScript = processTemplate(templateInfo.content, parameters);
-        
+
         // Add metadata
         result.metadata["template_name"] = templateName;
         result.metadata["template_version"] = templateInfo.version;
         result.metadata["generated_at"] = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
-        
+
         result.success = true;
         spdlog::info("Generated script from template: {}", templateName);
-        
+
     } catch (const std::exception& e) {
         result.errors.push_back("Script generation failed: " + std::string(e.what()));
         spdlog::error("Script generation failed for template {}: {}", templateName, e.what());
     }
-    
+
     return result;
 }
 
 TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateSequenceScript(const json& sequenceConfig) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         if (!sequenceConfig.contains("targets") || !sequenceConfig["targets"].is_array()) {
             result.errors.push_back("Sequence configuration must contain 'targets' array");
             return result;
         }
-        
+
         json sequence;
         sequence["name"] = sequenceConfig.value("name", "Generated Sequence");
         sequence["description"] = sequenceConfig.value("description", "Auto-generated sequence");
         sequence["targets"] = json::array();
-        
+
         for (const auto& target : sequenceConfig["targets"]) {
             json targetJson;
             targetJson["name"] = target.value("name", "Unnamed Target");
             targetJson["ra"] = target.value("ra", 0.0);
             targetJson["dec"] = target.value("dec", 0.0);
             targetJson["tasks"] = target.value("tasks", json::array());
-            
+
             sequence["targets"].push_back(targetJson);
         }
-        
+
         if (scriptConfig_.outputFormat == "yaml") {
             result.generatedScript = generateYamlScript(sequence);
         } else {
             result.generatedScript = generateJsonScript(sequence);
         }
-        
+
         result.metadata["type"] = "sequence";
         result.metadata["target_count"] = sequenceConfig["targets"].size();
         result.success = true;
-        
+
     } catch (const std::exception& e) {
         result.errors.push_back("Sequence generation failed: " + std::string(e.what()));
     }
-    
+
     return result;
 }
 
 TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::parseScript(const std::string& script, const std::string& format) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         json parsedScript;
-        
+
         if (format == "yaml") {
             parsedScript = parseYamlScript(script);
         } else {
             parsedScript = parseJsonScript(script);
         }
-        
+
         // Validate structure
         auto errors = validateScriptStructure(parsedScript);
         result.errors = errors;
-        
+
         if (errors.empty()) {
             result.generatedScript = script; // Original script is valid
             result.metadata = parsedScript.value("metadata", json::object());
@@ -674,43 +674,43 @@ TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::parseScript(const std
         } else {
             result.success = false;
         }
-        
+
     } catch (const std::exception& e) {
         result.errors.push_back("Parse error: " + std::string(e.what()));
         result.success = false;
     }
-    
+
     return result;
 }
 
 std::vector<std::string> TaskGenerator::Impl::getAvailableTemplates() const {
     std::shared_lock lock(scriptMutex_);
-    
+
     std::vector<std::string> templates;
     templates.reserve(scriptTemplates_.size());
-    
+
     for (const auto& [name, _] : scriptTemplates_) {
         templates.push_back(name);
     }
-    
+
     std::sort(templates.begin(), templates.end());
     return templates;
 }
 
 std::optional<TaskGenerator::ScriptTemplate> TaskGenerator::Impl::getTemplateInfo(const std::string& templateName) const {
     std::shared_lock lock(scriptMutex_);
-    
+
     auto it = scriptTemplates_.find(templateName);
     if (it != scriptTemplates_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
 TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateCustomTaskScript(const std::string& taskType, const json& taskConfig) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         json taskScript;
         taskScript["task_type"] = taskType;
@@ -718,33 +718,33 @@ TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateCustomTaskScr
         taskScript["parameters"] = taskConfig.value("parameters", json::object());
         taskScript["timeout"] = taskConfig.value("timeout", 30);
         taskScript["retry_count"] = taskConfig.value("retry_count", 0);
-        
+
         result.generatedScript = generateJsonScript(taskScript);
         result.metadata["task_type"] = taskType;
         result.success = true;
-        
+
     } catch (const std::exception& e) {
         result.errors.push_back("Custom task script generation failed: " + std::string(e.what()));
     }
-    
+
     return result;
 }
 
 TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::optimizeScript(const std::string& script) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         auto parsedScript = parseJsonScript(script);
         auto optimizedScript = optimizeScriptJson(parsedScript);
-        
+
         result.generatedScript = generateJsonScript(optimizedScript);
         result.metadata["optimized"] = true;
         result.success = true;
-        
+
     } catch (const std::exception& e) {
         result.errors.push_back("Script optimization failed: " + std::string(e.what()));
     }
-    
+
     return result;
 }
 
@@ -752,7 +752,7 @@ bool TaskGenerator::Impl::validateScript(const std::string& script, const std::s
     try {
         auto parsedScript = parseJsonScript(script);
         auto errors = validateScriptStructure(parsedScript);
-        
+
         if (!templateName.empty()) {
             std::shared_lock lock(scriptMutex_);
             auto it = scriptTemplates_.find(templateName);
@@ -764,9 +764,9 @@ bool TaskGenerator::Impl::validateScript(const std::string& script, const std::s
                 }
             }
         }
-        
+
         return errors.empty();
-        
+
     } catch (const std::exception&) {
         return false;
     }
@@ -786,56 +786,56 @@ bool TaskGenerator::Impl::saveTemplatesToDirectory(const std::string& templateDi
     return true;
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::convertScriptFormat(const std::string& script, 
+TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::convertScriptFormat(const std::string& script,
                                                                                const std::string& fromFormat,
                                                                                const std::string& toFormat) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         json parsedScript;
-        
+
         if (fromFormat == "yaml") {
             parsedScript = parseYamlScript(script);
         } else {
             parsedScript = parseJsonScript(script);
         }
-        
+
         if (toFormat == "yaml") {
             result.generatedScript = generateYamlScript(parsedScript);
         } else {
             result.generatedScript = generateJsonScript(parsedScript);
         }
-        
+
         result.metadata["converted_from"] = fromFormat;
         result.metadata["converted_to"] = toFormat;
         result.success = true;
-        
+
     } catch (const std::exception& e) {
         result.errors.push_back("Format conversion failed: " + std::string(e.what()));
     }
-    
+
     return result;
 }
 
 // Helper method implementations
 std::string TaskGenerator::Impl::processTemplate(const std::string& templateContent, const json& parameters) {
     std::string result = templateContent;
-    
+
     // Replace template variables with parameter values
     for (const auto& [key, value] : parameters.items()) {
         std::string placeholder = "${" + key + "}";
         std::string replacement = value.is_string() ? value.get<std::string>() : value.dump();
-        
+
         size_t pos = 0;
         while ((pos = result.find(placeholder, pos)) != std::string::npos) {
             result.replace(pos, placeholder.length(), replacement);
             pos += replacement.length();
         }
     }
-    
+
     // Apply macro processing
     result = replaceMacros(result);
-    
+
     return result;
 }
 
@@ -870,13 +870,13 @@ std::string TaskGenerator::Impl::generateYamlScript(const json& data) {
 
 std::vector<std::string> TaskGenerator::Impl::validateScriptStructure(const json& script) {
     std::vector<std::string> errors;
-    
+
     // Basic structure validation
     if (!script.is_object()) {
         errors.push_back("Script must be a JSON object");
         return errors;
     }
-    
+
     // Check for required fields based on script type
     if (script.contains("targets") && script["targets"].is_array()) {
         // Sequence script validation
@@ -886,16 +886,16 @@ std::vector<std::string> TaskGenerator::Impl::validateScriptStructure(const json
             }
         }
     }
-    
+
     return errors;
 }
 
 json TaskGenerator::Impl::optimizeScriptJson(const json& script) {
     json optimized = script;
-    
+
     // Remove unnecessary fields, combine similar tasks, etc.
     // For now, just return the original script
-    
+
     return optimized;
 }
 
@@ -1002,7 +1002,7 @@ bool TaskGenerator::saveTemplatesToDirectory(const std::string& templateDir) con
     return impl_->saveTemplatesToDirectory(templateDir);
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::convertScriptFormat(const std::string& script, 
+TaskGenerator::ScriptGenerationResult TaskGenerator::convertScriptFormat(const std::string& script,
                                                                          const std::string& fromFormat,
                                                                          const std::string& toFormat) {
     return impl_->convertScriptFormat(script, fromFormat, toFormat);

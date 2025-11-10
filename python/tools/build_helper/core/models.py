@@ -12,6 +12,7 @@ from typing import Dict, List, TypedDict, Optional, Union
 
 class BuildStatus(Enum):
     """Enumeration of possible build status values."""
+
     NOT_STARTED = auto()
     CONFIGURING = auto()
     BUILDING = auto()
@@ -26,6 +27,7 @@ class BuildStatus(Enum):
 @dataclass
 class BuildResult:
     """Data class to store build operation results."""
+
     success: bool
     output: str
     error: str = ""
@@ -40,6 +42,7 @@ class BuildResult:
 
 class BuildOptions(TypedDict, total=False):
     """Type definition for build options dictionary."""
+
     source_dir: Path
     build_dir: Path
     install_prefix: Path

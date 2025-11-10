@@ -19,23 +19,23 @@ from loguru import logger
 # Type definitions for enhanced type safety
 class CertificateType(Enum):
     """Types of certificates that can be created."""
+
     SERVER = auto()
     CLIENT = auto()
     CA = auto()
 
     @classmethod
-    def from_string(cls, value: str) -> 'CertificateType':
+    def from_string(cls, value: str) -> "CertificateType":
         """Convert string value to CertificateType."""
-        return {
-            "server": cls.SERVER,
-            "client": cls.CLIENT,
-            "ca": cls.CA
-        }.get(value.lower(), cls.SERVER)
+        return {"server": cls.SERVER, "client": cls.CLIENT, "ca": cls.CA}.get(
+            value.lower(), cls.SERVER
+        )
 
 
 @dataclass
 class CertificateOptions:
     """Options for certificate generation."""
+
     hostname: str
     cert_dir: Path
     key_size: int = 2048
@@ -53,6 +53,7 @@ class CertificateOptions:
 @dataclass
 class CertificateResult:
     """Result of certificate generation operations."""
+
     cert_path: Path
     key_path: Path
     success: bool = True
@@ -62,6 +63,7 @@ class CertificateResult:
 @dataclass
 class RevokedCertInfo:
     """Information about a revoked certificate."""
+
     serial_number: int
     revocation_date: datetime.datetime
     reason: Optional[x509.ReasonFlags] = None
@@ -70,6 +72,7 @@ class RevokedCertInfo:
 @dataclass
 class CertificateDetails:
     """Detailed information about a certificate."""
+
     subject: str
     issuer: str
     serial_number: int
@@ -84,19 +87,23 @@ class CertificateDetails:
 # Custom exceptions for better error handling
 class CertificateError(Exception):
     """Base exception for certificate operations."""
+
     pass
 
 
 class KeyGenerationError(CertificateError):
     """Raised when key generation fails."""
+
     pass
 
 
 class CertificateGenerationError(CertificateError):
     """Raised when certificate generation fails."""
+
     pass
 
 
 class CertificateNotFoundError(CertificateError):
     """Raised when a certificate is not found."""
+
     pass

@@ -34,11 +34,11 @@ void WebSocketServer::on_close(crow::websocket::connection& conn,
     clients_.erase(&conn);
     last_activity_times_.erase(&conn);
     client_tokens_.erase(&conn);
-    
+
     for (auto& [topic, subscribers] : topic_subscribers_) {
         subscribers.erase(&conn);
     }
-    
+
     spdlog::info("Client disconnected: {}, reason: {}, code: {}",
           conn.get_remote_ip(), reason, code);
 }
@@ -47,7 +47,7 @@ void WebSocketServer::on_message(crow::websocket::connection& conn,
                                  const std::string& message, bool is_binary) {
     update_activity_time(&conn);
     spdlog::debug("Received message from client {}: {}", conn.get_remote_ip(), message);
-    
+
     try {
         auto json = nlohmann::json::parse(message);
 
@@ -80,11 +80,11 @@ void WebSocketServer::handle_command(crow::websocket::connection& conn,
                                      const std::string& payload) {
     spdlog::info("Handling command from client {}: command: {}, payload: {}",
           conn.get_remote_ip(), command, payload);
-          
+
     auto callback = [this, conn_ptr = &conn](
         const std::string& cmd_id,
         const lithium::app::CommandDispatcher::ResultType& result) {
-        
+
         nlohmann::json response = {
             {"type", "command_result"},
             {"command", cmd_id},
@@ -155,8 +155,8 @@ void WebSocketServer::run_server() {
     auto& route = CROW_WEBSOCKET_ROUTE(app_, "/ws")
         .onopen([this](crow::websocket::connection& conn) { on_open(conn); })
         .onclose([this](crow::websocket::connection& conn,
-                        const std::string& reason, uint16_t code) { 
-            on_close(conn, reason, code); 
+                        const std::string& reason, uint16_t code) {
+            on_close(conn, reason, code);
         })
         .onmessage([this](crow::websocket::connection& conn,
                           const std::string& message, bool is_binary) {
@@ -198,7 +198,7 @@ void WebSocketServer::broadcast(const std::string& msg) {
 
     std::vector<std::future<void>> futures;
     futures.reserve(clients_.size());
-    
+
     for (auto* conn : clients_) {
         futures.emplace_back(thread_pool_->enqueue([conn, msg]() {
             try {
@@ -233,11 +233,11 @@ void WebSocketServer::send_to_client(crow::websocket::connection& conn,
                                      const std::string& msg) {
     update_activity_time(&conn);
     spdlog::debug("Sending message to client {}: {}", conn.get_remote_ip(), msg);
-    
+
     try {
         conn.send_text(msg);
     } catch (const std::exception& e) {
-        spdlog::error("Failed to send message to client {}: {}", 
+        spdlog::error("Failed to send message to client {}: {}",
                      conn.get_remote_ip(), e.what());
         handle_connection_error(conn, "Send failed");
     }
@@ -271,7 +271,7 @@ void handle_echo(crow::websocket::connection& conn, const std::string& msg) {
 
 void handle_long_task(crow::websocket::connection& conn, const std::string& msg) {
     spdlog::info("Starting long task with message: {}", msg);
-    
+
     std::thread([&conn, msg]() {
         std::this_thread::sleep_for(std::chrono::seconds(3));
         spdlog::info("Long task completed with message: {}", msg);
@@ -303,8 +303,8 @@ void WebSocketServer::setup_message_bus_handlers() {
     spdlog::info("Subscribed to broadcast messages");
 
     bus_subscriptions_["command_result"] = message_bus_->subscribe<nlohmann::json>(
-        "command.result", [this](const nlohmann::json& result) { 
-            broadcast(result.dump()); 
+        "command.result", [this](const nlohmann::json& result) {
+            broadcast(result.dump());
         });
     spdlog::info("Subscribed to command result messages");
 }
@@ -341,7 +341,7 @@ void WebSocketServer::unsubscribe_from_topic(const std::string& topic) {
     }
 }
 
-void WebSocketServer::subscribe_client_to_topic(crow::websocket::connection* conn, 
+void WebSocketServer::subscribe_client_to_topic(crow::websocket::connection* conn,
                                                const std::string& topic) {
     std::unique_lock lock(conn_mutex_);
     topic_subscribers_[topic].insert(conn);
@@ -365,14 +365,14 @@ void WebSocketServer::broadcast_to_topic(const std::string& topic, const T& data
     std::shared_lock lock(conn_mutex_);
     if (auto it = topic_subscribers_.find(topic); it != topic_subscribers_.end()) {
         nlohmann::json message = {
-            {"type", "topic_message"}, 
-            {"topic", topic}, 
+            {"type", "topic_message"},
+            {"topic", topic},
             {"payload", data}
         };
 
         std::string msg = message.dump();
         spdlog::debug("Broadcasting message to topic {}: {}", topic, msg);
-        
+
         for (auto* conn : it->second) {
             try {
                 conn->send_text(msg);
@@ -404,11 +404,11 @@ void WebSocketServer::disconnect_client(crow::websocket::connection& conn) {
     if (clients_.find(&conn) != clients_.end()) {
         client_tokens_.erase(&conn);
         last_activity_times_.erase(&conn);
-        
+
         for (auto& [topic, subscribers] : topic_subscribers_) {
             subscribers.erase(&conn);
         }
-        
+
         conn.close("Server initiated disconnect");
         clients_.erase(&conn);
         spdlog::info("Client {} disconnected by server", conn.get_remote_ip());
@@ -424,7 +424,7 @@ std::vector<std::string> WebSocketServer::get_subscribed_topics() const {
     std::shared_lock lock(conn_mutex_);
     std::vector<std::string> topics;
     topics.reserve(topic_subscribers_.size());
-    
+
     for (const auto& [topic, _] : topic_subscribers_) {
         topics.push_back(topic);
     }
@@ -439,7 +439,7 @@ void WebSocketServer::set_rate_limit(size_t messages_per_second) {
 void WebSocketServer::set_compression(bool enable, int level) {
     compression_enabled_ = enable;
     compression_level_ = level;
-    spdlog::info("Compression {} with level {}", 
+    spdlog::info("Compression {} with level {}",
                 enable ? "enabled" : "disabled", level);
 }
 
@@ -472,7 +472,7 @@ void WebSocketServer::check_timeouts() {
 
 void WebSocketServer::handle_ping_pong() {
     std::shared_lock lock(conn_mutex_);
-    
+
     for (auto* conn : clients_) {
         try {
             conn->send_ping("ping");
@@ -484,15 +484,15 @@ void WebSocketServer::handle_ping_pong() {
     }
 }
 
-bool WebSocketServer::is_running() const { 
-    return running_.load(); 
+bool WebSocketServer::is_running() const {
+    return running_.load();
 }
 
 template <typename T>
 void WebSocketServer::publish_to_topic(const std::string& topic, const T& data) {
     nlohmann::json message = {
-        {"type", "topic_message"}, 
-        {"topic", topic}, 
+        {"type", "topic_message"},
+        {"topic", topic},
         {"payload", data}
     };
 
@@ -504,7 +504,7 @@ void WebSocketServer::broadcast_batch(const std::vector<std::string>& messages) 
     if (!running_ || messages.empty()) return;
 
     std::shared_lock lock(conn_mutex_);
-    
+
     for (const auto& msg : messages) {
         if (rate_limiter_ && !rate_limiter_->allow_request()) {
             spdlog::warn("Batch broadcast rate limit exceeded");

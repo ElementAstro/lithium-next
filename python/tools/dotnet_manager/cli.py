@@ -11,7 +11,7 @@ from .api import (
     list_installed_dotnets,
     download_file,
     install_software,
-    uninstall_dotnet
+    uninstall_dotnet,
 )
 
 
@@ -24,37 +24,67 @@ def parse_args():
 Examples:
   # List installed .NET versions
   python -m dotnet_manager --list
-  
+
   # Check if a specific version is installed
   python -m dotnet_manager --check v4.8
-  
+
   # Download and install a specific version
   python -m dotnet_manager --download URL --output installer.exe --install
-"""
+""",
     )
 
-    parser.add_argument("--check", metavar="VERSION",
-                        help="Check if a specific .NET Framework version is installed.")
-    parser.add_argument("--list", action="store_true",
-                        help="List all installed .NET Framework versions.")
-    parser.add_argument("--download", metavar="URL",
-                        help="URL to download the .NET Framework installer from.")
-    parser.add_argument("--output", metavar="FILE",
-                        help="Path where the downloaded file should be saved.")
-    parser.add_argument("--install", action="store_true",
-                        help="Install the downloaded or specified .NET Framework installer.")
-    parser.add_argument("--installer", metavar="FILE",
-                        help="Path to the .NET Framework installer to run.")
-    parser.add_argument("--quiet", action="store_true",
-                        help="Run the installer in quiet mode.")
-    parser.add_argument("--threads", type=int, default=4,
-                        help="Number of threads to use for downloading.")
-    parser.add_argument("--checksum", metavar="SHA256",
-                        help="Expected SHA256 checksum of the downloaded file.")
-    parser.add_argument("--uninstall", metavar="VERSION",
-                        help="Attempt to uninstall a specific .NET Framework version.")
-    parser.add_argument("--verbose", action="store_true",
-                        help="Enable verbose logging.")
+    parser.add_argument(
+        "--check",
+        metavar="VERSION",
+        help="Check if a specific .NET Framework version is installed.",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List all installed .NET Framework versions.",
+    )
+    parser.add_argument(
+        "--download",
+        metavar="URL",
+        help="URL to download the .NET Framework installer from.",
+    )
+    parser.add_argument(
+        "--output",
+        metavar="FILE",
+        help="Path where the downloaded file should be saved.",
+    )
+    parser.add_argument(
+        "--install",
+        action="store_true",
+        help="Install the downloaded or specified .NET Framework installer.",
+    )
+    parser.add_argument(
+        "--installer",
+        metavar="FILE",
+        help="Path to the .NET Framework installer to run.",
+    )
+    parser.add_argument(
+        "--quiet", action="store_true", help="Run the installer in quiet mode."
+    )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=4,
+        help="Number of threads to use for downloading.",
+    )
+    parser.add_argument(
+        "--checksum",
+        metavar="SHA256",
+        help="Expected SHA256 checksum of the downloaded file.",
+    )
+    parser.add_argument(
+        "--uninstall",
+        metavar="VERSION",
+        help="Attempt to uninstall a specific .NET Framework version.",
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose logging."
+    )
 
     return parser.parse_args()
 
@@ -87,7 +117,8 @@ def main() -> int:
         elif args.check:
             is_installed = check_dotnet_installed(args.check)
             print(
-                f".NET Framework {args.check} is {'installed' if is_installed else 'not installed'}")
+                f".NET Framework {args.check} is {'installed' if is_installed else 'not installed'}"
+            )
             return 0 if is_installed else 1
 
         elif args.uninstall:
@@ -101,9 +132,10 @@ def main() -> int:
                 return 1
 
             success = download_file(
-                args.download, args.output,
+                args.download,
+                args.output,
                 num_threads=args.threads,
-                expected_checksum=args.checksum
+                expected_checksum=args.checksum,
             )
 
             if success:
@@ -111,10 +143,10 @@ def main() -> int:
 
                 # Proceed to installation if requested
                 if args.install:
-                    install_success = install_software(
-                        args.output, quiet=args.quiet)
+                    install_success = install_software(args.output, quiet=args.quiet)
                     print(
-                        f"Installation {'started successfully' if install_success else 'failed'}")
+                        f"Installation {'started successfully' if install_success else 'failed'}"
+                    )
                     return 0 if install_success else 1
             else:
                 print("Download failed")
@@ -122,8 +154,7 @@ def main() -> int:
 
         elif args.install and args.installer:
             success = install_software(args.installer, quiet=args.quiet)
-            print(
-                f"Installation {'started successfully' if success else 'failed'}")
+            print(f"Installation {'started successfully' if success else 'failed'}")
             return 0 if success else 1
 
         else:

@@ -90,11 +90,11 @@ from pacman_manager import PacmanManager
 
 async def update_and_upgrade():
     pacman = PacmanManager()
-    
+
     # Update database
     result = await pacman.update_package_database_async()
     print("Database updated:", result["success"])
-    
+
     # Upgrade system
     result = await pacman.upgrade_system_async(no_confirm=True)
     print("System upgraded:", result["success"])
@@ -113,12 +113,12 @@ pacman = PacmanManager()
 # Check if AUR helper is available
 if pacman.has_aur_support():
     print(f"Using AUR helper: {pacman.aur_helper}")
-    
+
     # Search AUR packages
     packages = pacman.search_aur_package("yay-bin")
     for pkg in packages:
         print(f"{pkg.name} ({pkg.version}): {pkg.description}")
-    
+
     # Install AUR package
     result = pacman.install_aur_package("yay-bin")
 ```

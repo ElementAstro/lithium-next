@@ -4,7 +4,7 @@
 /**
  * @file camera_tasks.hpp
  * @brief Comprehensive header including all camera-related tasks
- * 
+ *
  * This file provides a single include point for all camera task functionality,
  * organized into logical groups for better maintainability.
  */
@@ -24,7 +24,7 @@ namespace lithium::task::task {
 
 /**
  * @brief Namespace alias for camera tasks
- * 
+ *
  * Provides a convenient way to access camera-specific functionality
  * while maintaining the flat namespace structure for compatibility.
  */
