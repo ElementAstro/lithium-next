@@ -33,6 +33,10 @@
 #include "server/controller/script.hpp"
 #include "server/controller/search.hpp"
 #include "server/controller/sequencer.hpp"
+#include "server/controller/mount.hpp"
+#include "server/controller/focuser.hpp"
+#include "server/controller/filterwheel.hpp"
+#include "server/controller/camera.hpp"
 #include "server/websocket.hpp"
 
 using namespace std::string_literals;
@@ -233,6 +237,10 @@ int main(int argc, char *argv[]) {
     controllers.push_back(atom::memory::makeShared<ScriptController>());
     controllers.push_back(atom::memory::makeShared<SearchController>());
     controllers.push_back(atom::memory::makeShared<SequenceController>());
+    controllers.push_back(atom::memory::makeShared<MountController>());
+    controllers.push_back(atom::memory::makeShared<FocuserController>());
+    controllers.push_back(atom::memory::makeShared<FilterWheelController>());
+    controllers.push_back(atom::memory::makeShared<CameraController>());
 
     AddPtr<lithium::ConfigManager>(
         Constants::CONFIG_MANAGER,

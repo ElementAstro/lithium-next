@@ -1,9 +1,17 @@
+# ============================================================================
+# Compiler Options Configuration
+# ============================================================================
+
+include(${CMAKE_CURRENT_LIST_DIR}/LithiumColors.cmake)
+
 # Set default build type to Debug
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(STATUS "Setting build type to 'Debug'.")
+    lithium_message(INFO "Setting build type to 'Debug' (default)")
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the build type." FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
+
+lithium_message(STATUS "Build Type: ${BoldYellow}${CMAKE_BUILD_TYPE}${ColorReset}")
 
 # Check and set C++ standard
 include(CheckCXXCompilerFlag)
@@ -12,14 +20,18 @@ check_cxx_compiler_flag(-std=c++20 HAS_CXX20_FLAG)
 
 if(HAS_CXX23_FLAG)
     set(CMAKE_CXX_STANDARD 23)
+    lithium_message(SUCCESS "Using C++23 standard")
 elseif(HAS_CXX20_FLAG)
     set(CMAKE_CXX_STANDARD 20)
+    lithium_message(SUCCESS "Using C++20 standard")
 else()
-    message(FATAL_ERROR "C++20 standard is required!")
+    lithium_message(FATAL_ERROR "C++20 standard or higher is required!")
 endif()
 
 # Check and set compiler version
-function(check_compiler_version)
+function(lithium_check_compiler_version)
+    lithium_print_subsection("Compiler Detection")
+    
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         execute_process(
             COMMAND ${CMAKE_CXX_COMPILER} -dumpfullversion
@@ -27,16 +39,16 @@ function(check_compiler_version)
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
         if(GCC_VERSION VERSION_LESS "13.0")
-            message(WARNING "g++ version ${GCC_VERSION} is too old. Trying to find a higher version.")
+            lithium_message(WARNING "g++ version ${GCC_VERSION} is too old. Trying to find a higher version.")
             find_program(GCC_COMPILER NAMES g++-13 g++-14 g++-15)
             if(GCC_COMPILER)
                 set(CMAKE_CXX_COMPILER ${GCC_COMPILER} CACHE STRING "C++ Compiler" FORCE)
-                message(STATUS "Using found g++ compiler: ${GCC_COMPILER}")
+                lithium_message(SUCCESS "Using found g++ compiler: ${GCC_COMPILER}")
             else()
-                message(FATAL_ERROR "g++ version 13.0 or higher is required")
+                lithium_message(FATAL_ERROR "g++ version 13.0 or higher is required")
             endif()
         else()
-            message(STATUS "Using g++ version ${GCC_VERSION}")
+            lithium_message(SUCCESS "Using g++ version ${BoldGreen}${GCC_VERSION}${ColorReset}")
         endif()
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         execute_process(
@@ -45,24 +57,24 @@ function(check_compiler_version)
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
         if(NOT CLANG_VERSION_OUTPUT MATCHES "clang version ([0-9]+\\.[0-9]+)")
-            message(FATAL_ERROR "Unable to determine Clang version.")
+            lithium_message(FATAL_ERROR "Unable to determine Clang version.")
         endif()
         set(CLANG_VERSION "${CMAKE_MATCH_1}")
         if(CLANG_VERSION VERSION_LESS "16.0")
-            message(WARNING "Clang version ${CLANG_VERSION} is too old. Trying to find a higher version.")
+            lithium_message(WARNING "Clang version ${CLANG_VERSION} is too old. Trying to find a higher version.")
             find_program(CLANG_COMPILER NAMES clang-17 clang-18 clang-19)
             if(CLANG_COMPILER)
                 set(CMAKE_CXX_COMPILER ${CLANG_COMPILER} CACHE STRING "C++ Compiler" FORCE)
-                message(STATUS "Using found Clang compiler: ${CLANG_COMPILER}")
+                lithium_message(SUCCESS "Using found Clang compiler: ${CLANG_COMPILER}")
             else()
-                message(FATAL_ERROR "Clang version 16.0 or higher is required")
+                lithium_message(FATAL_ERROR "Clang version 16.0 or higher is required")
             endif()
         else()
-            message(STATUS "Using Clang version ${CLANG_VERSION}")
+            lithium_message(SUCCESS "Using Clang version ${BoldGreen}${CLANG_VERSION}${ColorReset}")
         endif()
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.28)
-            message(WARNING "MSVC version ${CMAKE_CXX_COMPILER_VERSION} is too old. Trying to find a newer version.")
+            lithium_message(WARNING "MSVC version ${CMAKE_CXX_COMPILER_VERSION} is too old. Trying to find a newer version.")
             find_program(MSVC_COMPILER NAMES cl)
             if(MSVC_COMPILER)
                 execute_process(
@@ -73,55 +85,90 @@ function(check_compiler_version)
                 if(MSVC_VERSION_OUTPUT MATCHES "Version ([0-9]+\\.[0-9]+)")
                     set(MSVC_VERSION "${CMAKE_MATCH_1}")
                     if(MSVC_VERSION VERSION_LESS "19.28")
-                        message(FATAL_ERROR "MSVC version 19.28 (Visual Studio 2019 16.10) or higher is required")
+                        lithium_message(FATAL_ERROR "MSVC version 19.28 (Visual Studio 2019 16.10) or higher is required")
                     else()
                         set(CMAKE_CXX_COMPILER ${MSVC_COMPILER} CACHE STRING "C++ Compiler" FORCE)
-                        message(STATUS "Using MSVC compiler: ${MSVC_COMPILER}")
+                        lithium_message(SUCCESS "Using MSVC compiler: ${MSVC_COMPILER}")
                     endif()
                 else()
-                    message(FATAL_ERROR "Unable to determine MSVC version.")
+                    lithium_message(FATAL_ERROR "Unable to determine MSVC version.")
                 endif()
             else()
-                message(FATAL_ERROR "MSVC version 19.28 (Visual Studio 2019 16.10) or higher is required")
+                lithium_message(FATAL_ERROR "MSVC version 19.28 (Visual Studio 2019 16.10) or higher is required")
             endif()
         else()
-            message(STATUS "Using MSVC version ${CMAKE_CXX_COMPILER_VERSION}")
+            lithium_message(SUCCESS "Using MSVC version ${BoldGreen}${CMAKE_CXX_COMPILER_VERSION}${ColorReset}")
         endif()
     endif()
 endfunction()
 
-check_compiler_version()
+lithium_check_compiler_version()
+
+# ============================================================================
+# Global Compiler Settings
+# ============================================================================
 
 # Set C standard
 set(CMAKE_C_STANDARD 17)
-
-# Set compiler flags for Apple platform
-if(APPLE)
-    check_cxx_compiler_flag(-stdlib=libc++ HAS_LIBCXX_FLAG)
-    if(HAS_LIBCXX_FLAG)
-        target_compile_options(${PROJECT_NAME} PRIVATE -stdlib=libc++)
-    endif()
-endif()
+set(CMAKE_C_STANDARD_REQUIRED ON)
+lithium_message(INFO "Using C17 standard")
 
 # Set build architecture for non-Apple platforms
 if(NOT APPLE)
     set(CMAKE_OSX_ARCHITECTURES x86_64 CACHE STRING "Build architecture for non-Apple platforms" FORCE)
 endif()
 
-# Additional compiler flags
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
-endif()
+# ============================================================================
+# Compiler Flag Functions
+# ============================================================================
 
-# Enable LTO for Release builds
-if(CMAKE_BUILD_TYPE MATCHES "Release")
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(${PROJECT_NAME} PRIVATE -flto)
-        target_link_options(${PROJECT_NAME} PRIVATE -flto)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-        target_compile_options(${PROJECT_NAME} PRIVATE /GL)
-        target_link_options(${PROJECT_NAME} PRIVATE /LTCG)
+# Function to apply standard compiler flags to a target
+function(lithium_apply_compiler_flags TARGET_NAME)
+    # Apple-specific flags
+    if(APPLE)
+        check_cxx_compiler_flag(-stdlib=libc++ HAS_LIBCXX_FLAG)
+        if(HAS_LIBCXX_FLAG)
+            target_compile_options(${TARGET_NAME} PRIVATE -stdlib=libc++)
+        endif()
     endif()
-endif()
+    
+    # Warning flags
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${TARGET_NAME} PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        target_compile_options(${TARGET_NAME} PRIVATE /W4)
+    endif()
+    
+    # LTO for Release builds
+    if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            target_compile_options(${TARGET_NAME} PRIVATE -flto)
+            target_link_options(${TARGET_NAME} PRIVATE -flto)
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+            target_compile_options(${TARGET_NAME} PRIVATE /GL)
+            target_link_options(${TARGET_NAME} PRIVATE /LTCG)
+        endif()
+    endif()
+endfunction()
+
+# Function to apply strict compiler flags (for new/clean code)
+function(lithium_apply_strict_flags TARGET_NAME)
+    lithium_apply_compiler_flags(${TARGET_NAME})
+    
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${TARGET_NAME} PRIVATE
+            -Werror
+            -Wconversion
+            -Wsign-conversion
+        )
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        target_compile_options(${TARGET_NAME} PRIVATE /WX)
+    endif()
+endfunction()
+
+lithium_message(STATUS "Compiler options configured successfully")
+message(STATUS "")

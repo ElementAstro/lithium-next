@@ -1,0 +1,5356 @@
+openapi: 3.0.3
+info:
+  title: Astronomical Equipment Control API
+  description: |
+    A comprehensive API for controlling astronomical equipment including cameras, mounts, focusers, 
+    filter wheels, domes, and other observatory devices. The API provides both RESTful HTTP endpoints 
+    for stateless operations and WebSocket connections for real-time communication and event streaming.
+    
+    ## Features
+    - Device management (cameras, mounts, focusers, filter wheels, domes, etc.)
+    - Automated imaging sequences
+    - Real-time status updates via WebSocket
+    - Plate solving and sky coordinate resolution
+    - Weather monitoring and safety systems
+    - File system operations
+    - System control and monitoring
+    
+    ## Authentication
+    All endpoints require API key authentication via the `X-API-Key` header.
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@astronomy-api.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+  - url: https://api.astronomy-equipment.example.com/api/v1
+    description: Production server
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Cameras
+    description: Camera device control and management
+  - name: Mounts
+    description: Telescope mount control and positioning
+  - name: Focusers
+    description: Electronic focuser control
+  - name: Filter Wheels
+    description: Filter wheel position control
+  - name: Domes
+    description: Dome and observatory control
+  - name: Weather Stations
+    description: Environmental monitoring
+  - name: Flat Panels
+    description: Calibration flat panel control
+  - name: Guiders
+    description: Autoguiding system control
+  - name: Rotators
+    description: Field rotator control
+  - name: Safety Monitors
+    description: Observatory safety systems
+  - name: Sequences
+    description: Automated imaging sequence management
+  - name: Sky Atlas
+    description: Astronomical utilities, sky object search, and calculations
+  - name: System Control
+    description: System-level management and monitoring
+  - name: File System
+    description: File system operations and management
+  - name: Image Management
+    description: Image upload, processing, and metadata management
+
+paths:
+  # Camera Endpoints
+  /cameras:
+    get:
+      tags:
+        - Cameras
+      summary: List Available Cameras
+      description: Retrieves a list of all available cameras
+      operationId: listCameras
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceInfo'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cameras/{deviceId}:
+    get:
+      tags:
+        - Cameras
+      summary: Get Camera Status
+      description: Retrieves the current status and properties of a specific camera
+      operationId: getCameraStatus
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Camera device identifier
+          example: cam-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/CameraStatus'
+        '404':
+          description: Camera not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cameras/{deviceId}/connect:
+    post:
+      tags:
+        - Cameras
+      summary: Connect/Disconnect Camera
+      description: Manages the connection to a specific camera
+      operationId: connectCamera
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionRequest'
+      responses:
+        '200':
+          description: Connection process initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Camera connection process initiated
+
+  /cameras/{deviceId}/settings:
+    put:
+      tags:
+        - Cameras
+      summary: Configure Camera Settings
+      description: Updates various settings for a specific camera
+      operationId: updateCameraSettings
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraSettings'
+      responses:
+        '202':
+          description: Settings update initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Camera settings update initiated
+
+  /cameras/{deviceId}/exposure:
+    post:
+      tags:
+        - Cameras
+      summary: Start Exposure
+      description: Starts a single exposure on a specific camera
+      operationId: startExposure
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExposureRequest'
+      responses:
+        '202':
+          description: Exposure started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ExposureResponse'
+                  message:
+                    type: string
+                    example: Exposure started
+
+  /cameras/{deviceId}/exposure/abort:
+    post:
+      tags:
+        - Cameras
+      summary: Abort Exposure
+      description: Aborts the currently running exposure on a specific camera
+      operationId: abortExposure
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      responses:
+        '200':
+          description: Abort command sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Exposure abort command sent
+
+  /cameras/{deviceId}/capabilities:
+    get:
+      tags:
+        - Cameras
+      summary: Get Camera Capabilities
+      description: Retrieves the capabilities and supported features of a specific camera
+      operationId: getCameraCapabilities
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/CameraCapabilities'
+        '404':
+          description: Camera not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cameras/{deviceId}/gains:
+    get:
+      tags:
+        - Cameras
+      summary: Get Available Gains
+      description: Retrieves all available gain values for the camera
+      operationId: getCameraGains
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/CameraGains'
+
+  /cameras/{deviceId}/offsets:
+    get:
+      tags:
+        - Cameras
+      summary: Get Available Offsets
+      description: Retrieves all available offset values for the camera
+      operationId: getCameraOffsets
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/CameraOffsets'
+
+  /cameras/{deviceId}/cooler-power:
+    put:
+      tags:
+        - Cameras
+      summary: Set Cooler Power
+      description: Manually controls the cooler power (advanced users only)
+      operationId: setCoolerPower
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoolerPowerRequest'
+      responses:
+        '200':
+          description: Cooler power updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Cooler power set to manual mode
+
+  /cameras/{deviceId}/warmup:
+    post:
+      tags:
+        - Cameras
+      summary: Warm Up Camera
+      description: Initiates a controlled camera warm-up sequence
+      operationId: warmUpCamera
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: cam-001
+      responses:
+        '202':
+          description: Warm-up initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Camera warm-up sequence initiated
+                  data:
+                    type: object
+                    properties:
+                      targetTemperature:
+                        type: number
+                        format: float
+                      estimatedTime:
+                        type: integer
+
+  # Mount Endpoints
+  /mounts:
+    get:
+      tags:
+        - Mounts
+      summary: List Available Mounts
+      description: Retrieves a list of all available telescope mounts
+      operationId: listMounts
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceInfo'
+
+  /mounts/{deviceId}:
+    get:
+      tags:
+        - Mounts
+      summary: Get Mount Status
+      description: Retrieves the current status and position of a specific mount
+      operationId: getMountStatus
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/MountStatus'
+
+  /mounts/{deviceId}/connect:
+    post:
+      tags:
+        - Mounts
+      summary: Connect/Disconnect Mount
+      description: Manages the connection to a specific mount
+      operationId: connectMount
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionRequest'
+      responses:
+        '200':
+          description: Connection process initiated
+
+  /mounts/{deviceId}/slew:
+    post:
+      tags:
+        - Mounts
+      summary: Slew to Coordinates
+      description: Commands the mount to slew to specified RA/Dec coordinates
+      operationId: slewMount
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Coordinates'
+            example:
+              ra: "05:34:31.97"
+              dec: "-05:23:22.8"
+      responses:
+        '202':
+          description: Slew command accepted
+
+  /mounts/{deviceId}/tracking:
+    put:
+      tags:
+        - Mounts
+      summary: Set Tracking
+      description: Enables or disables mount tracking
+      operationId: setTracking
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackingRequest'
+      responses:
+        '200':
+          description: Tracking state updated
+
+  /mounts/{deviceId}/position:
+    post:
+      tags:
+        - Mounts
+      summary: Park or Home Mount
+      description: Parks, unparks, or homes the mount
+      operationId: mountPosition
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MountPositionCommand'
+      responses:
+        '202':
+          description: Mount command accepted
+
+  /mounts/{deviceId}/pulse-guide:
+    post:
+      tags:
+        - Mounts
+      summary: Pulse Guide
+      description: Sends a manual guiding pulse to the mount
+      operationId: pulseGuide
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PulseGuideRequest'
+      responses:
+        '202':
+          description: Pulse guide command sent
+
+  /mounts/{deviceId}/sync:
+    post:
+      tags:
+        - Mounts
+      summary: Sync Mount Position
+      description: Synchronizes the mount's coordinate system with actual coordinates
+      operationId: syncMount
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Coordinates'
+      responses:
+        '200':
+          description: Mount position synchronized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      syncError:
+                        type: object
+                        properties:
+                          raError:
+                            type: number
+                            format: float
+                          decError:
+                            type: number
+                            format: float
+
+  /mounts/{deviceId}/capabilities:
+    get:
+      tags:
+        - Mounts
+      summary: Get Mount Capabilities
+      description: Retrieves the capabilities and limits of the mount
+      operationId: getMountCapabilities
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/MountCapabilities'
+
+  /mounts/{deviceId}/guide-rates:
+    put:
+      tags:
+        - Mounts
+      summary: Set Guide Rates
+      description: Configures the guide rates for pulse guiding
+      operationId: setGuideRates
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuideRatesRequest'
+      responses:
+        '200':
+          description: Guide rates updated
+
+  /mounts/{deviceId}/tracking-rate:
+    put:
+      tags:
+        - Mounts
+      summary: Set Tracking Rate
+      description: Sets the mount's tracking rate mode
+      operationId: setTrackingRate
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackingRateRequest'
+      responses:
+        '200':
+          description: Tracking rate updated
+
+  /mounts/{deviceId}/stop:
+    post:
+      tags:
+        - Mounts
+      summary: Stop Mount Movement
+      description: Immediately stops all mount motion (emergency stop)
+      operationId: stopMount
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      responses:
+        '200':
+          description: Mount motion stopped
+
+  /mounts/{deviceId}/pier-side:
+    get:
+      tags:
+        - Mounts
+      summary: Get Side of Pier
+      description: Returns which side of the pier the mount is currently on
+      operationId: getPierSide
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/PierSideInfo'
+
+  /mounts/{deviceId}/meridian-flip:
+    post:
+      tags:
+        - Mounts
+      summary: Perform Meridian Flip
+      description: Manually initiates a meridian flip operation
+      operationId: performMeridianFlip
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: mnt-001
+      responses:
+        '202':
+          description: Meridian flip initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      estimatedTime:
+                        type: integer
+
+  # Focuser Endpoints
+  /focusers:
+    get:
+      tags:
+        - Focusers
+      summary: List Available Focusers
+      operationId: listFocusers
+      responses:
+        '200':
+          description: Successful operation
+
+  /focusers/{deviceId}:
+    get:
+      tags:
+        - Focusers
+      summary: Get Focuser Status
+      operationId: getFocuserStatus
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/FocuserStatus'
+
+  /focusers/{deviceId}/connect:
+    post:
+      tags:
+        - Focusers
+      summary: Connect/Disconnect Focuser
+      operationId: connectFocuser
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionRequest'
+      responses:
+        '200':
+          description: Connection process initiated
+
+  /focusers/{deviceId}/move:
+    post:
+      tags:
+        - Focusers
+      summary: Move Focuser
+      description: Moves the focuser to a specific position or by a relative offset
+      operationId: moveFocuser
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FocuserMoveRequest'
+      responses:
+        '202':
+          description: Focuser move initiated
+
+  /focusers/{deviceId}/settings:
+    put:
+      tags:
+        - Focusers
+      summary: Configure Focuser Settings
+      description: Updates settings such as temperature compensation
+      operationId: updateFocuserSettings
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FocuserSettings'
+      responses:
+        '202':
+          description: Settings update initiated
+
+  /focusers/{deviceId}/halt:
+    post:
+      tags:
+        - Focusers
+      summary: Halt Focuser Movement
+      description: Immediately stops focuser movement
+      operationId: haltFocuser
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+      responses:
+        '200':
+          description: Focuser halted
+
+  /focusers/{deviceId}/capabilities:
+    get:
+      tags:
+        - Focusers
+      summary: Get Focuser Capabilities
+      description: Retrieves the capabilities and limits of the focuser
+      operationId: getFocuserCapabilities
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/FocuserCapabilities'
+
+  /focusers/{deviceId}/autofocus:
+    post:
+      tags:
+        - Focusers
+      summary: Start Autofocus
+      description: Initiates an autofocus routine using the HFR method
+      operationId: startAutofocus
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutofocusRequest'
+      responses:
+        '202':
+          description: Autofocus initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/AutofocusResponse'
+
+  /focusers/{deviceId}/autofocus/{autofocusId}:
+    get:
+      tags:
+        - Focusers
+      summary: Get Autofocus Status
+      description: Retrieves the status of an ongoing autofocus routine
+      operationId: getAutofocusStatus
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: foc-001
+        - name: autofocusId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: af_abc123def
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/AutofocusStatus'
+
+  # Filter Wheel Endpoints
+  /filterwheels:
+    get:
+      tags:
+        - Filter Wheels
+      summary: List Available Filter Wheels
+      operationId: listFilterWheels
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceInfo'
+
+  /filterwheels/{deviceId}:
+    get:
+      tags:
+        - Filter Wheels
+      summary: Get Filter Wheel Status
+      operationId: getFilterWheelStatus
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/FilterWheelStatus'
+
+  /filterwheels/{deviceId}/connect:
+    post:
+      tags:
+        - Filter Wheels
+      summary: Connect/Disconnect Filter Wheel
+      operationId: connectFilterWheel
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionRequest'
+      responses:
+        '200':
+          description: Connection process initiated
+
+  /filterwheels/{deviceId}/position:
+    post:
+      tags:
+        - Filter Wheels
+      summary: Set Filter Position
+      description: Moves the filter wheel to a specific filter position
+      operationId: setFilterPosition
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterPositionRequest'
+      responses:
+        '202':
+          description: Filter wheel move initiated
+
+  /filterwheels/{deviceId}/filter:
+    post:
+      tags:
+        - Filter Wheels
+      summary: Set Filter by Name
+      description: Moves the filter wheel to a filter by its name
+      operationId: setFilterByName
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - filterName
+              properties:
+                filterName:
+                  type: string
+                  example: Luminance
+      responses:
+        '202':
+          description: Filter wheel move initiated
+
+  /filterwheels/{deviceId}/capabilities:
+    get:
+      tags:
+        - Filter Wheels
+      summary: Get Filter Wheel Capabilities
+      description: Retrieves the capabilities and configuration of the filter wheel
+      operationId: getFilterWheelCapabilities
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/FilterWheelCapabilities'
+
+  /filterwheels/{deviceId}/filters:
+    put:
+      tags:
+        - Filter Wheels
+      summary: Configure Filter Names
+      description: Updates the names of filters in each position
+      operationId: configureFilterNames
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterNamesRequest'
+      responses:
+        '200':
+          description: Filter names updated
+
+  /filterwheels/{deviceId}/offsets:
+    get:
+      tags:
+        - Filter Wheels
+      summary: Get Filter Focus Offsets
+      description: Retrieves the focus offsets for each filter position
+      operationId: getFilterOffsets
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/FilterOffsets'
+    put:
+      tags:
+        - Filter Wheels
+      summary: Set Filter Focus Offsets
+      description: Updates the focus offsets for each filter position
+      operationId: setFilterOffsets
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterOffsetsRequest'
+      responses:
+        '200':
+          description: Filter offsets updated
+
+  /filterwheels/{deviceId}/halt:
+    post:
+      tags:
+        - Filter Wheels
+      summary: Halt Filter Wheel Movement
+      description: Immediately stops filter wheel movement
+      operationId: haltFilterWheel
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      responses:
+        '200':
+          description: Filter wheel halted
+
+  /filterwheels/{deviceId}/calibrate:
+    post:
+      tags:
+        - Filter Wheels
+      summary: Calibrate Filter Wheel
+      description: Initiates a calibration sequence to determine filter positions
+      operationId: calibrateFilterWheel
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fw-001
+      responses:
+        '202':
+          description: Calibration initiated
+
+  # System Control Endpoints
+  /system/status:
+    get:
+      tags:
+        - System Control
+      summary: Get System Status
+      description: Retrieves comprehensive system status including resource usage
+      operationId: getSystemStatus
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/SystemStatus'
+
+  /system/config:
+    get:
+      tags:
+        - System Control
+      summary: Get System Configuration
+      description: Retrieves the current system configuration settings
+      operationId: getSystemConfig
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/SystemConfig'
+    
+    put:
+      tags:
+        - System Control
+      summary: Update System Configuration
+      description: Updates system configuration settings
+      operationId: updateSystemConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdateRequest'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Configuration updated successfully
+                  data:
+                    $ref: '#/components/schemas/ConfigUpdateResponse'
+
+  /system/shutdown:
+    post:
+      tags:
+        - System Control
+      summary: System Shutdown
+      description: Initiates a graceful system shutdown
+      operationId: shutdownSystem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShutdownRequest'
+      responses:
+        '202':
+          description: Shutdown scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: System shutdown scheduled
+                  data:
+                    $ref: '#/components/schemas/ShutdownResponse'
+
+  /system/restart:
+    post:
+      tags:
+        - System Control
+      summary: System Restart
+      description: Initiates a graceful system restart
+      operationId: restartSystem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShutdownRequest'
+      responses:
+        '202':
+          description: Restart scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: System restart scheduled
+                  data:
+                    $ref: '#/components/schemas/RestartResponse'
+
+  /system/logs:
+    get:
+      tags:
+        - System Control
+      summary: Get System Logs
+      description: Retrieves recent system logs with filtering options
+      operationId: getSystemLogs
+      parameters:
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [debug, info, warning, error]
+          description: Log level filter
+        - name: component
+          in: query
+          schema:
+            type: string
+          description: Component filter
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+          description: Maximum number of log entries
+        - name: startTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter logs after this time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter logs before this time
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      logs:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LogEntry'
+                      totalEntries:
+                        type: integer
+                      hasMore:
+                        type: boolean
+
+  /system/devices/discover:
+    post:
+      tags:
+        - System Control
+      summary: Discover Devices
+      description: Initiates a scan to discover available astronomical devices
+      operationId: discoverDevices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceDiscoveryRequest'
+      responses:
+        '202':
+          description: Device discovery initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DiscoveryResponse'
+
+  /system/devices/discover/{discoveryId}:
+    get:
+      tags:
+        - System Control
+      summary: Get Discovery Results
+      description: Retrieves the results of a device discovery scan
+      operationId: getDiscoveryResults
+      parameters:
+        - name: discoveryId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: disc_abc123
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/DiscoveryResults'
+
+  /system/devices:
+    get:
+      tags:
+        - System Control
+      summary: List All Devices
+      description: Retrieves a list of all known devices
+      operationId: listAllDevices
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: Filter by device type
+        - name: connected
+          in: query
+          schema:
+            type: boolean
+          description: Filter by connection status
+        - name: driver
+          in: query
+          schema:
+            type: string
+          description: Filter by driver type
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/AllDevicesResponse'
+
+  /system/drivers:
+    get:
+      tags:
+        - System Control
+      summary: Get Available Drivers
+      description: Lists all available device drivers and their supported devices
+      operationId: getAvailableDrivers
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/DriversResponse'
+
+  /system/diagnostics:
+    get:
+      tags:
+        - System Control
+      summary: Get System Diagnostics
+      description: Retrieves comprehensive system diagnostics information
+      operationId: getSystemDiagnostics
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/SystemDiagnostics'
+
+  /system/healthcheck:
+    post:
+      tags:
+        - System Control
+      summary: Run System Health Check
+      description: Initiates a comprehensive system health check
+      operationId: runHealthCheck
+      responses:
+        '200':
+          description: Health check completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/HealthCheckResults'
+
+  /system/errors:
+    get:
+      tags:
+        - System Control
+      summary: Get Error Report
+      description: Retrieves a detailed error report for a specific time period
+      operationId: getErrorReport
+      parameters:
+        - name: startTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: component
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ErrorReport'
+
+  /system/backup:
+    post:
+      tags:
+        - System Control
+      summary: Backup System Configuration
+      description: Creates a backup of the entire system configuration
+      operationId: backupSystem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackupRequest'
+      responses:
+        '202':
+          description: Backup initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      backupId:
+                        type: string
+                      estimatedTime:
+                        type: integer
+
+  /system/restore:
+    post:
+      tags:
+        - System Control
+      summary: Restore System Configuration
+      description: Restores system configuration from a backup
+      operationId: restoreSystem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestoreRequest'
+      responses:
+        '202':
+          description: Restore initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      estimatedTime:
+                        type: integer
+                      requiresRestart:
+                        type: boolean
+
+  /system/backups:
+    get:
+      tags:
+        - System Control
+      summary: List Available Backups
+      description: Retrieves a list of available system backups
+      operationId: listBackups
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/BackupsListResponse'
+
+  # Sky Atlas Endpoints
+  /sky/resolve:
+    get:
+      tags:
+        - Sky Atlas
+      summary: Resolve Object Name
+      description: Resolves a celestial object name to J2000 RA/Dec coordinates
+      operationId: resolveObjectName
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Object name (e.g., M31, Orion Nebula)
+          example: M31
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ObjectResolution'
+
+  /plate-solve:
+    post:
+      tags:
+        - Sky Atlas
+      summary: Plate Solve Image
+      description: Initiates an asynchronous plate-solving task on an image
+      operationId: plateSolveImage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlateSolveRequest'
+      responses:
+        '202':
+          description: Plate solving initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/PlateSolveResponse'
+                  message:
+                    type: string
+                    example: Plate solving initiated. Monitor WebSocket for results.
+
+  /sky/search:
+    get:
+      tags:
+        - Sky Atlas
+      summary: Basic Sky Object Search
+      description: Searches for celestial objects using common query parameters
+      operationId: searchSkyObjects
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+          description: Search term for object name or designation
+          example: M31
+        - name: ra
+          in: query
+          schema:
+            type: string
+          description: Right Ascension filter (HH:MM:SS format)
+          example: "00:42:44.3"
+        - name: dec
+          in: query
+          schema:
+            type: string
+          description: Declination filter (±DD:MM:SS format)
+          example: "+41:16:09"
+        - name: radius
+          in: query
+          schema:
+            type: number
+            format: float
+            default: 1.0
+          description: Search radius in degrees
+        - name: catalog
+          in: query
+          schema:
+            type: string
+            enum: [messier, ngc, ic, caldwell]
+          description: Catalog source filter
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 1000
+          description: Maximum results to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/SkySearchResults'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sky/search/advanced:
+    post:
+      tags:
+        - Sky Atlas
+      summary: Advanced Sky Object Search
+      description: Performs advanced search with complex filtering options for celestial objects
+      operationId: advancedSearchSkyObjects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdvancedSkySearchRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/AdvancedSkySearchResults'
+        '400':
+          description: Invalid filter parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # File System Endpoints
+  /filesystem/list:
+    get:
+      tags:
+        - File System
+      summary: List Directory Contents
+      description: Lists files and subdirectories in a specified directory
+      operationId: listDirectory
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Directory path to list
+          example: /data/images
+        - name: recursive
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include subdirectories recursively
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: File extension filter
+          example: "*.fits"
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, size, modified]
+            default: name
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      path:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FileItem'
+                      totalItems:
+                        type: integer
+                      totalSize:
+                        type: integer
+
+  /filesystem/info:
+    get:
+      tags:
+        - File System
+      summary: Get File Information
+      description: Retrieves detailed metadata for a specific file
+      operationId: getFileInfo
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: File path
+          example: /data/images/M31_Light_001.fits
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/FileInfo'
+
+  /filesystem/write:
+    post:
+      tags:
+        - File System
+      summary: Write File Contents
+      description: Creates a new file or overwrites an existing file
+      operationId: writeFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileWriteRequest'
+      responses:
+        '201':
+          description: File written successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: File written successfully
+                  data:
+                    $ref: '#/components/schemas/FileWriteResponse'
+
+  /filesystem/delete:
+    delete:
+      tags:
+        - File System
+      summary: Delete File or Directory
+      description: Deletes a file or directory
+      operationId: deleteFile
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Path to delete
+        - name: recursive
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Delete directory and all contents
+        - name: force
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Force deletion of read-only files
+      responses:
+        '200':
+          description: Path deleted successfully
+
+  /filesystem/search:
+    get:
+      tags:
+        - File System
+      summary: Basic File Search
+      description: Searches for files matching basic criteria with simple query parameters
+      operationId: searchFiles
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Root directory for search
+          example: /data/images
+        - name: query
+          in: query
+          schema:
+            type: string
+          description: Filename search query (supports wildcards)
+          example: "*M31*"
+        - name: fileType
+          in: query
+          schema:
+            type: string
+          description: File extension filter
+          example: fits
+        - name: recursive
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Search subdirectories
+        - name: createdAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter files created after this timestamp
+        - name: createdBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter files created before this timestamp
+        - name: modifiedAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter files modified after this timestamp
+        - name: modifiedBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter files modified before this timestamp
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+          description: Maximum results to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/FileSearchResults'
+        '400':
+          description: Invalid search parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /filesystem/search/advanced:
+    post:
+      tags:
+        - File System
+      summary: Advanced File Search
+      description: Performs advanced file search with metadata filtering, tags, size range, and content search
+      operationId: advancedSearchFiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdvancedFileSearchRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/AdvancedFileSearchResults'
+        '400':
+          description: Invalid filter parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Image Management Endpoints
+  /images/upload:
+    post:
+      tags:
+        - Image Management
+      summary: Upload Image
+      description: Uploads an image file with associated metadata
+      operationId: uploadImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (FITS, TIFF, JPEG, PNG)
+                metadata:
+                  type: string
+                  description: JSON string with image metadata
+      responses:
+        '201':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Image uploaded successfully
+                  data:
+                    $ref: '#/components/schemas/ImageUploadResponse'
+        '400':
+          description: Invalid file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /images:
+    get:
+      tags:
+        - Image Management
+      summary: List Images
+      description: Lists images with filtering and pagination options
+      operationId: listImages
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: Filter by tags, metadata, or filename
+        - name: camera
+          in: query
+          schema:
+            type: string
+          description: Filter by camera name
+        - name: telescope
+          in: query
+          schema:
+            type: string
+          description: Filter by telescope name
+        - name: filterWheel
+          in: query
+          schema:
+            type: string
+          description: Filter by filter name
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter images captured after this date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter images captured before this date
+        - name: calibrated
+          in: query
+          schema:
+            type: boolean
+          description: Filter by calibration status
+        - name: stacked
+          in: query
+          schema:
+            type: boolean
+          description: Filter by stack status
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [fits, tiff, jpg, png]
+          description: Filter by image format
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: captureDate
+          description: Sort field
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 500
+          description: Maximum results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ImageListResponse'
+
+  /images/{imageId}:
+    get:
+      tags:
+        - Image Management
+      summary: Get Image Details
+      description: Retrieves detailed information about a specific image including metadata and FITS headers
+      operationId: getImageDetails
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+          example: img_abc123def456
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ImageDetails'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      tags:
+        - Image Management
+      summary: Delete Image
+      description: Deletes an image and its associated thumbnails and metadata
+      operationId: deleteImage
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+        - name: keepMetadata
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Preserve metadata even if file is deleted
+      responses:
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Image deleted successfully
+                  data:
+                    type: object
+                    properties:
+                      imageId:
+                        type: string
+                      freedSpace:
+                        type: integer
+
+  /images/{imageId}/download:
+    get:
+      tags:
+        - Image Management
+      summary: Download Image
+      description: Downloads the original image file
+      operationId: downloadImage
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [fits, tiff, jpg, png]
+          description: Convert to format before download
+      responses:
+        '200':
+          description: Image file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /images/{imageId}/thumbnail:
+    get:
+      tags:
+        - Image Management
+      summary: Get Image Thumbnail
+      description: Retrieves a thumbnail version of the image
+      operationId: getImageThumbnail
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+        - name: size
+          in: query
+          schema:
+            type: string
+            enum: [small, medium, large]
+            default: medium
+          description: Thumbnail size
+      responses:
+        '200':
+          description: JPEG thumbnail image
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+
+  /images/{imageId}/metadata:
+    put:
+      tags:
+        - Image Management
+      summary: Update Image Metadata
+      description: Updates metadata for an existing image
+      operationId: updateImageMetadata
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageMetadataUpdate'
+      responses:
+        '200':
+          description: Metadata updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Image metadata updated successfully
+                  data:
+                    type: object
+                    properties:
+                      imageId:
+                        type: string
+                      updatedFields:
+                        type: array
+                        items:
+                          type: string
+
+  /images/batch-delete:
+    post:
+      tags:
+        - Image Management
+      summary: Batch Delete Images
+      description: Deletes multiple images in a single operation
+      operationId: batchDeleteImages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchDeleteRequest'
+      responses:
+        '200':
+          description: Batch deletion completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Batch deletion completed
+                  data:
+                    $ref: '#/components/schemas/BatchDeleteResponse'
+
+  /images/{imageId}/process/transform:
+    post:
+      tags:
+        - Image Management
+      summary: Process Image - Basic Transformations
+      description: Applies basic image transformations (resize, crop, rotate)
+      operationId: transformImage
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageTransformRequest'
+      responses:
+        '202':
+          description: Image processing initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Image processing initiated
+                  data:
+                    $ref: '#/components/schemas/ProcessingResponse'
+
+  /images/process/astronomy:
+    post:
+      tags:
+        - Image Management
+      summary: Process Image - Astronomy Operations
+      description: Applies astronomy-specific image processing operations like stacking
+      operationId: processAstronomyImages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AstronomyProcessingRequest'
+      responses:
+        '202':
+          description: Processing initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Astronomy processing initiated
+                  data:
+                    $ref: '#/components/schemas/ProcessingResponse'
+
+  /images/{imageId}/process/calibrate:
+    post:
+      tags:
+        - Image Management
+      summary: Process Image - Calibration
+      description: Calibrates a light frame using dark, flat, and bias frames
+      operationId: calibrateImage
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalibrationRequest'
+      responses:
+        '202':
+          description: Calibration initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Calibration initiated
+                  data:
+                    $ref: '#/components/schemas/ProcessingResponse'
+
+  /images/{imageId}/process/stretch:
+    post:
+      tags:
+        - Image Management
+      summary: Process Image - Stretch
+      description: Applies histogram stretching to enhance image details
+      operationId: stretchImage
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StretchRequest'
+      responses:
+        '202':
+          description: Stretch operation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Stretch operation initiated
+                  data:
+                    $ref: '#/components/schemas/ProcessingResponse'
+
+  /images/{imageId}/convert:
+    post:
+      tags:
+        - Image Management
+      summary: Convert Image Format
+      description: Converts an image from one format to another
+      operationId: convertImageFormat
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormatConversionRequest'
+      responses:
+        '202':
+          description: Format conversion initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Format conversion initiated
+                  data:
+                    $ref: '#/components/schemas/ProcessingResponse'
+
+  /images/process/{processingId}/status:
+    get:
+      tags:
+        - Image Management
+      summary: Get Processing Status
+      description: Retrieves the status of an ongoing image processing operation
+      operationId: getProcessingStatus
+      parameters:
+        - name: processingId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Processing operation identifier
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ProcessingStatus'
+
+  /images/{imageId}/thumbnail/generate:
+    post:
+      tags:
+        - Image Management
+      summary: Generate Thumbnail
+      description: Manually triggers thumbnail generation for an image
+      operationId: generateThumbnail
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sizes:
+                  type: array
+                  items:
+                    type: string
+                    enum: [small, medium, large]
+                regenerate:
+                  type: boolean
+      responses:
+        '202':
+          description: Thumbnail generation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Thumbnail generation initiated
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+  schemas:
+    SuccessResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [success]
+          example: success
+        message:
+          type: string
+          example: Operation completed successfully
+        data:
+          type: object
+          description: Response data payload
+
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - error
+      properties:
+        status:
+          type: string
+          enum: [error]
+          example: error
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: device_not_found
+            message:
+              type: string
+              example: The requested device was not found
+            details:
+              type: object
+              additionalProperties: true
+
+    DeviceInfo:
+      type: object
+      required:
+        - deviceId
+        - name
+        - isConnected
+      properties:
+        deviceId:
+          type: string
+          example: cam-001
+        name:
+          type: string
+          example: ZWO ASI2600MM Pro
+        isConnected:
+          type: boolean
+          example: true
+
+    CameraStatus:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        cameraState:
+          type: string
+          enum: [Idle, Exposing, Reading, Downloading, Error, Cooling]
+          example: Idle
+        coolerOn:
+          type: boolean
+          example: true
+        temperature:
+          type: number
+          format: float
+          example: -10.5
+          description: Current CCD temperature in Celsius
+        setpoint:
+          type: number
+          format: float
+          example: -10.0
+          description: Target CCD temperature in Celsius
+        coolerPower:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          example: 45.5
+          description: Cooler power percentage
+        gain:
+          type: integer
+          example: 100
+        offset:
+          type: integer
+          example: 50
+        binning:
+          $ref: '#/components/schemas/Binning'
+        roi:
+          $ref: '#/components/schemas/ROI'
+        sensor:
+          $ref: '#/components/schemas/SensorInfo'
+
+    Binning:
+      type: object
+      required:
+        - x
+        - y
+      properties:
+        x:
+          type: integer
+          minimum: 1
+          example: 1
+        y:
+          type: integer
+          minimum: 1
+          example: 1
+
+    ROI:
+      type: object
+      required:
+        - x
+        - y
+        - width
+        - height
+      properties:
+        x:
+          type: integer
+          minimum: 0
+          example: 0
+        y:
+          type: integer
+          minimum: 0
+          example: 0
+        width:
+          type: integer
+          minimum: 1
+          example: 6244
+        height:
+          type: integer
+          minimum: 1
+          example: 4168
+
+    SensorInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          example: IMX571
+        resolution:
+          type: object
+          properties:
+            width:
+              type: integer
+              example: 6244
+            height:
+              type: integer
+              example: 4168
+        pixelSize:
+          type: object
+          properties:
+            width:
+              type: number
+              format: float
+              example: 3.76
+              description: Pixel width in micrometers
+            height:
+              type: number
+              format: float
+              example: 3.76
+              description: Pixel height in micrometers
+
+    ConnectionRequest:
+      type: object
+      required:
+        - connected
+      properties:
+        connected:
+          type: boolean
+          example: true
+
+    CameraSettings:
+      type: object
+      properties:
+        coolerOn:
+          type: boolean
+          example: true
+        setpoint:
+          type: number
+          format: float
+          example: -15.0
+        gain:
+          type: integer
+          example: 120
+        offset:
+          type: integer
+          example: 30
+        binning:
+          $ref: '#/components/schemas/Binning'
+        roi:
+          $ref: '#/components/schemas/ROI'
+
+    ExposureRequest:
+      type: object
+      required:
+        - duration
+        - frameType
+      properties:
+        duration:
+          type: number
+          format: float
+          minimum: 0
+          example: 300
+          description: Exposure duration in seconds
+        frameType:
+          type: string
+          enum: [Light, Dark, Flat, Bias]
+          example: Light
+        filename:
+          type: string
+          example: M31_Light_300s_001.fits
+
+    ExposureResponse:
+      type: object
+      properties:
+        exposureId:
+          type: string
+          example: exp_2a7d3f8e-1b9c-4d3f-8a9a-5f0e1c2b3a4d
+
+    MountStatus:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        isSlewing:
+          type: boolean
+          example: false
+        isTracking:
+          type: boolean
+          example: true
+        isParked:
+          type: boolean
+          example: false
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        altitude:
+          type: number
+          format: float
+          example: 45.2
+          description: Altitude in degrees
+        azimuth:
+          type: number
+          format: float
+          example: 180.5
+          description: Azimuth in degrees
+        pierSide:
+          type: string
+          enum: [East, West, Unknown]
+          example: East
+
+    Coordinates:
+      type: object
+      required:
+        - ra
+        - dec
+      properties:
+        ra:
+          type: string
+          pattern: '^\d{2}:\d{2}:\d{2}(\.\d+)?$'
+          example: '22:34:15.05'
+          description: Right Ascension in HH:MM:SS format
+        dec:
+          type: string
+          pattern: '^[+-]\d{2}:\d{2}:\d{2}(\.\d+)?$'
+          example: '+45:12:03.3'
+          description: Declination in ±DD:MM:SS format
+
+    TrackingRequest:
+      type: object
+      required:
+        - tracking
+      properties:
+        tracking:
+          type: boolean
+          example: true
+
+    MountPositionCommand:
+      type: object
+      required:
+        - command
+      properties:
+        command:
+          type: string
+          enum: [park, unpark, home, find_home]
+          example: park
+
+    PulseGuideRequest:
+      type: object
+      required:
+        - direction
+        - duration
+      properties:
+        direction:
+          type: string
+          enum: [North, South, East, West]
+          example: North
+        duration:
+          type: integer
+          minimum: 0
+          example: 500
+          description: Pulse duration in milliseconds
+
+    FocuserStatus:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        isMoving:
+          type: boolean
+          example: false
+        position:
+          type: integer
+          example: 3452
+        temperature:
+          type: number
+          format: float
+          example: 12.7
+        tempComp:
+          $ref: '#/components/schemas/TempCompensation'
+
+    TempCompensation:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        coefficient:
+          type: number
+          format: float
+          example: -5.5
+          description: Temperature compensation coefficient
+
+    FocuserMoveRequest:
+      type: object
+      required:
+        - isRelative
+      properties:
+        position:
+          type: integer
+          example: 3500
+          description: Absolute position (when isRelative is false)
+        offset:
+          type: integer
+          example: -50
+          description: Relative offset (when isRelative is true)
+        isRelative:
+          type: boolean
+          example: false
+
+    FocuserSettings:
+      type: object
+      properties:
+        tempComp:
+          $ref: '#/components/schemas/TempCompensation'
+
+    FilterWheelStatus:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        isMoving:
+          type: boolean
+          example: false
+        position:
+          type: integer
+          example: 3
+        filters:
+          type: array
+          items:
+            type: object
+            properties:
+              slot:
+                type: integer
+                example: 1
+              name:
+                type: string
+                example: Luminance
+
+    FilterPositionRequest:
+      type: object
+      required:
+        - position
+      properties:
+        position:
+          type: integer
+          minimum: 1
+          example: 2
+
+    DomeStatus:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        shutterStatus:
+          type: string
+          enum: [Open, Closed, Opening, Closing, Error]
+          example: Open
+        isSlaved:
+          type: boolean
+          example: true
+        azimuth:
+          type: number
+          format: float
+          example: 181.0
+
+    DomeShutterCommand:
+      type: object
+      required:
+        - command
+      properties:
+        command:
+          type: string
+          enum: [open, close]
+          example: open
+
+    DomeSlaveRequest:
+      type: object
+      required:
+        - slaved
+      properties:
+        slaved:
+          type: boolean
+          example: true
+
+    WeatherData:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        temperature:
+          type: number
+          format: float
+          example: 10.2
+        humidity:
+          type: number
+          format: float
+          example: 88.0
+        dewPoint:
+          type: number
+          format: float
+          example: 8.3
+        windSpeed:
+          type: number
+          format: float
+          example: 15.0
+        cloudCover:
+          type: number
+          format: float
+          example: 10.0
+        skyBrightness:
+          type: number
+          format: float
+          example: 18.5
+
+    FlatPanelStatus:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        isOn:
+          type: boolean
+          example: true
+        brightness:
+          type: integer
+          minimum: 0
+          maximum: 255
+          example: 150
+
+    FlatPanelControl:
+      type: object
+      required:
+        - on
+      properties:
+        on:
+          type: boolean
+          example: true
+        brightness:
+          type: integer
+          minimum: 0
+          maximum: 255
+          example: 200
+
+    GuiderStatus:
+      type: object
+      properties:
+        isGuiding:
+          type: boolean
+          example: true
+        rmsError:
+          type: object
+          properties:
+            ra:
+              type: number
+              format: float
+              example: 0.45
+            dec:
+              type: number
+              format: float
+              example: 0.38
+            total:
+              type: number
+              format: float
+              example: 0.59
+        starMass:
+          type: integer
+          example: 2500
+        snr:
+          type: number
+          format: float
+          example: 25.6
+
+    GuiderStateRequest:
+      type: object
+      required:
+        - guiding
+      properties:
+        guiding:
+          type: boolean
+          example: true
+
+    DitherRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: float
+          example: 2.5
+          description: Dither amount in pixels
+        settleTime:
+          type: integer
+          example: 15
+          description: Settle time in seconds
+
+    RotatorStatus:
+      type: object
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+        isMoving:
+          type: boolean
+          example: false
+        angle:
+          type: number
+          format: float
+          example: 178.5
+
+    RotatorMoveRequest:
+      type: object
+      required:
+        - angle
+      properties:
+        angle:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 360
+          example: 270.0
+
+    SafetyStatus:
+      type: object
+      properties:
+        isSafe:
+          type: boolean
+          example: false
+        reasons:
+          type: array
+          items:
+            type: string
+          example:
+            - High wind speed detected
+            - Rain detected
+
+    SequenceStartResponse:
+      type: object
+      properties:
+        sequenceId:
+          type: string
+          example: seq_a1b2c3d4-e5f6-7890-1234-567890abcdef
+
+    ObjectResolution:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Andromeda Galaxy
+        ra:
+          type: string
+          example: '00:42:44.3'
+        dec:
+          type: string
+          example: '+41:16:09'
+
+    PlateSolveRequest:
+      type: object
+      required:
+        - camera
+      properties:
+        camera:
+          type: string
+          example: cam-001
+        filePath:
+          type: string
+          example: /path/to/image.fits
+
+    PlateSolveResponse:
+      type: object
+      properties:
+        solveId:
+          type: string
+          example: solve_abc123
+
+    SystemStatus:
+      type: object
+      properties:
+        uptime:
+          type: integer
+          example: 345678
+          description: System uptime in seconds
+        version:
+          type: string
+          example: 1.0.0
+        cpu:
+          type: object
+          properties:
+            usage:
+              type: number
+              format: float
+              example: 23.5
+            temperature:
+              type: number
+              format: float
+              example: 45.2
+            cores:
+              type: integer
+              example: 8
+        memory:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 16384
+              description: Total memory in MB
+            used:
+              type: integer
+              example: 8192
+            free:
+              type: integer
+              example: 8192
+            usagePercent:
+              type: number
+              format: float
+              example: 50.0
+        disk:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 512000
+            used:
+              type: integer
+              example: 256000
+            free:
+              type: integer
+              example: 256000
+            usagePercent:
+              type: number
+              format: float
+              example: 50.0
+        services:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [running, stopped, error]
+          example:
+            database: running
+            deviceManager: running
+            imageProcessor: running
+
+    SystemConfig:
+      type: object
+      properties:
+        logging:
+          type: object
+          properties:
+            level:
+              type: string
+              enum: [debug, info, warning, error]
+              example: info
+            maxFileSize:
+              type: integer
+              example: 10485760
+            retentionDays:
+              type: integer
+              example: 30
+        network:
+          type: object
+          properties:
+            port:
+              type: integer
+              example: 8080
+            enableSSL:
+              type: boolean
+              example: true
+            corsEnabled:
+              type: boolean
+              example: true
+        devices:
+          type: object
+          properties:
+            autoConnect:
+              type: boolean
+              example: true
+            reconnectAttempts:
+              type: integer
+              example: 3
+            connectionTimeout:
+              type: integer
+              example: 5000
+        storage:
+          type: object
+          properties:
+            imagePath:
+              type: string
+              example: /data/images
+            tempPath:
+              type: string
+              example: /data/temp
+            maxStorageUsage:
+              type: integer
+              example: 90
+
+    ConfigUpdateRequest:
+      type: object
+      properties:
+        logging:
+          type: object
+          properties:
+            level:
+              type: string
+              enum: [debug, info, warning, error]
+        devices:
+          type: object
+          properties:
+            autoConnect:
+              type: boolean
+            reconnectAttempts:
+              type: integer
+
+    ConfigUpdateResponse:
+      type: object
+      properties:
+        requiresRestart:
+          type: boolean
+          example: true
+        updatedFields:
+          type: array
+          items:
+            type: string
+          example:
+            - logging.level
+            - devices.autoConnect
+
+    ProcessInfo:
+      type: object
+      properties:
+        pid:
+          type: integer
+          example: 1234
+        name:
+          type: string
+          example: device-manager
+        status:
+          type: string
+          enum: [running, stopped, error]
+          example: running
+        cpuUsage:
+          type: number
+          format: float
+          example: 5.2
+        memoryUsage:
+          type: integer
+          example: 256
+        uptime:
+          type: integer
+          example: 123456
+
+    ShutdownRequest:
+      type: object
+      properties:
+        delay:
+          type: integer
+          minimum: 0
+          default: 0
+          example: 60
+          description: Delay in seconds
+        reason:
+          type: string
+          example: Scheduled maintenance
+        force:
+          type: boolean
+          default: false
+          example: false
+
+    ShutdownResponse:
+      type: object
+      properties:
+        shutdownTime:
+          type: string
+          format: date-time
+          example: '2023-11-20T12:01:00Z'
+        activeOperations:
+          type: integer
+          example: 2
+
+    RestartResponse:
+      type: object
+      properties:
+        restartTime:
+          type: string
+          format: date-time
+          example: '2023-11-20T12:00:30Z'
+        estimatedDowntime:
+          type: integer
+          example: 30
+
+    LogEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: '2023-11-20T12:00:00Z'
+        level:
+          type: string
+          enum: [debug, info, warning, error]
+          example: info
+        component:
+          type: string
+          example: device-manager
+        message:
+          type: string
+          example: Camera cam-001 connected successfully
+        metadata:
+          type: object
+          additionalProperties: true
+
+    FileItem:
+      type: object
+      properties:
+        name:
+          type: string
+          example: M31_Light_001.fits
+        type:
+          type: string
+          enum: [file, directory]
+          example: file
+        size:
+          type: integer
+          example: 25165824
+        modified:
+          type: string
+          format: date-time
+          example: '2023-11-20T10:30:00Z'
+        permissions:
+          type: string
+          example: rw-r--r--
+        extension:
+          type: string
+          example: .fits
+        itemCount:
+          type: integer
+          description: Number of items in directory
+
+    FileInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+        type:
+          type: string
+          enum: [file, directory]
+        extension:
+          type: string
+        created:
+          type: string
+          format: date-time
+        modified:
+          type: string
+          format: date-time
+        accessed:
+          type: string
+          format: date-time
+        permissions:
+          type: string
+        owner:
+          type: string
+        group:
+          type: string
+        mimeType:
+          type: string
+        checksum:
+          type: object
+          properties:
+            md5:
+              type: string
+            sha256:
+              type: string
+
+    FileReadResponse:
+      type: object
+      properties:
+        content:
+          type: string
+        encoding:
+          type: string
+          example: utf-8
+        size:
+          type: integer
+        truncated:
+          type: boolean
+
+    FileWriteRequest:
+      type: object
+      required:
+        - path
+        - content
+      properties:
+        path:
+          type: string
+          example: /data/config/settings.json
+        content:
+          type: string
+          example: '{"key": "value"}'
+        encoding:
+          type: string
+          default: utf-8
+        overwrite:
+          type: boolean
+          default: false
+        createDirectories:
+          type: boolean
+          default: false
+
+    FileWriteResponse:
+      type: object
+      properties:
+        path:
+          type: string
+        size:
+          type: integer
+        created:
+          type: boolean
+
+    MkdirRequest:
+      type: object
+      required:
+        - path
+      properties:
+        path:
+          type: string
+          example: /data/new-session
+        recursive:
+          type: boolean
+          default: true
+        permissions:
+          type: string
+          example: '755'
+
+    FileMoveRequest:
+      type: object
+      required:
+        - source
+        - destination
+      properties:
+        source:
+          type: string
+          example: /data/images/old-name.fits
+        destination:
+          type: string
+          example: /data/archive/new-name.fits
+        overwrite:
+          type: boolean
+          default: false
+
+    FileCopyRequest:
+      type: object
+      required:
+        - source
+        - destination
+      properties:
+        source:
+          type: string
+          example: /data/images/M31_Light_001.fits
+        destination:
+          type: string
+          example: /data/backup/M31_Light_001.fits
+        overwrite:
+          type: boolean
+          default: false
+        preserveMetadata:
+          type: boolean
+          default: true
+
+    FileExistsResponse:
+      type: object
+      properties:
+        exists:
+          type: boolean
+        type:
+          type: string
+          enum: [file, directory]
+        path:
+          type: string
+
+    # Sky Atlas Search Schemas
+    SkyObject:
+      type: object
+      properties:
+        id:
+          type: string
+          example: M31
+        name:
+          type: string
+          example: Andromeda Galaxy
+        alternateNames:
+          type: array
+          items:
+            type: string
+          example: ["NGC 224"]
+        type:
+          type: string
+          example: Galaxy
+        ra:
+          type: string
+          example: "00:42:44.3"
+        dec:
+          type: string
+          example: "+41:16:09"
+        magnitude:
+          type: number
+          format: float
+          example: 3.4
+        constellation:
+          type: string
+          example: Andromeda
+        catalog:
+          type: string
+          example: messier
+
+    SkySearchResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkyObject'
+        totalResults:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasMore:
+          type: boolean
+
+    AdvancedSkySearchRequest:
+      type: object
+      properties:
+        filters:
+          type: object
+          properties:
+            objectTypes:
+              type: array
+              items:
+                type: string
+            magnitudeRange:
+              type: object
+              properties:
+                min:
+                  type: number
+                  format: float
+                max:
+                  type: number
+                  format: float
+            constellations:
+              type: array
+              items:
+                type: string
+            coordinates:
+              type: object
+              properties:
+                ra:
+                  type: string
+                dec:
+                  type: string
+                radius:
+                  type: number
+                  format: float
+            sizeRange:
+              type: object
+              properties:
+                min:
+                  type: number
+                  format: float
+                max:
+                  type: number
+                  format: float
+            visibilityConditions:
+              type: object
+              properties:
+                observerLatitude:
+                  type: number
+                  format: float
+                observerLongitude:
+                  type: number
+                  format: float
+                dateTime:
+                  type: string
+                  format: date-time
+                minAltitude:
+                  type: number
+                  format: float
+                maxAirmass:
+                  type: number
+                  format: float
+            catalogs:
+              type: array
+              items:
+                type: string
+            hasImages:
+              type: boolean
+        sorting:
+          type: object
+          properties:
+            field:
+              type: string
+            order:
+              type: string
+              enum: [asc, desc]
+        pagination:
+          type: object
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+
+    AdvancedSkySearchResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              alternateNames:
+                type: array
+                items:
+                  type: string
+              type:
+                type: string
+              ra:
+                type: string
+              dec:
+                type: string
+              magnitude:
+                type: number
+                format: float
+              size:
+                type: object
+                properties:
+                  major:
+                    type: number
+                    format: float
+                  minor:
+                    type: number
+                    format: float
+                  angle:
+                    type: number
+                    format: float
+              constellation:
+                type: string
+              catalog:
+                type: string
+              visibility:
+                type: object
+                properties:
+                  altitude:
+                    type: number
+                    format: float
+                  azimuth:
+                    type: number
+                    format: float
+                  airmass:
+                    type: number
+                    format: float
+                  isVisible:
+                    type: boolean
+                  transitTime:
+                    type: string
+                    format: date-time
+              hasImages:
+                type: boolean
+              distance:
+                type: number
+              description:
+                type: string
+        totalResults:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasMore:
+          type: boolean
+        appliedFilters:
+          type: object
+
+    # File Search Schemas
+    FileSearchResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              name:
+                type: string
+              size:
+                type: integer
+              created:
+                type: string
+                format: date-time
+              modified:
+                type: string
+                format: date-time
+              type:
+                type: string
+                enum: [file, directory]
+              extension:
+                type: string
+        totalResults:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasMore:
+          type: boolean
+        searchTime:
+          type: number
+          format: float
+
+    AdvancedFileSearchRequest:
+      type: object
+      properties:
+        searchPaths:
+          type: array
+          items:
+            type: string
+        filters:
+          type: object
+          properties:
+            filename:
+              type: object
+              properties:
+                pattern:
+                  type: string
+                caseSensitive:
+                  type: boolean
+            fileTypes:
+              type: array
+              items:
+                type: string
+            sizeRange:
+              type: object
+              properties:
+                min:
+                  type: integer
+                max:
+                  type: integer
+            dateRange:
+              type: object
+              properties:
+                createdAfter:
+                  type: string
+                  format: date-time
+                createdBefore:
+                  type: string
+                  format: date-time
+                modifiedAfter:
+                  type: string
+                  format: date-time
+            metadata:
+              type: object
+              additionalProperties: true
+            tags:
+              type: array
+              items:
+                type: string
+            contentSearch:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                query:
+                  type: string
+                searchFitsHeaders:
+                  type: boolean
+            permissions:
+              type: object
+              properties:
+                readable:
+                  type: boolean
+                writable:
+                  type: boolean
+        sorting:
+          type: object
+          properties:
+            field:
+              type: string
+            order:
+              type: string
+              enum: [asc, desc]
+        pagination:
+          type: object
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+
+    AdvancedFileSearchResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              name:
+                type: string
+              size:
+                type: integer
+              created:
+                type: string
+                format: date-time
+              modified:
+                type: string
+                format: date-time
+              accessed:
+                type: string
+                format: date-time
+              type:
+                type: string
+                enum: [file, directory]
+              extension:
+                type: string
+              permissions:
+                type: string
+              owner:
+                type: string
+              metadata:
+                type: object
+                additionalProperties: true
+              tags:
+                type: array
+                items:
+                  type: string
+              checksum:
+                type: object
+                properties:
+                  md5:
+                    type: string
+                  sha256:
+                    type: string
+              fitsHeaders:
+                type: object
+                additionalProperties: true
+        totalResults:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasMore:
+          type: boolean
+        searchTime:
+          type: number
+          format: float
+        appliedFilters:
+          type: object
+
+    # Image Management Schemas
+    ImageMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        captureDate:
+          type: string
+          format: date-time
+        telescope:
+          type: string
+        camera:
+          type: string
+        filter:
+          type: string
+        exposure:
+          type: number
+          format: float
+        temperature:
+          type: number
+          format: float
+        gain:
+          type: integer
+        offset:
+          type: integer
+        binning:
+          $ref: '#/components/schemas/Binning'
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        tags:
+          type: array
+          items:
+            type: string
+        calibrated:
+          type: boolean
+        stacked:
+          type: boolean
+
+    ImageUploadResponse:
+      type: object
+      properties:
+        imageId:
+          type: string
+          example: img_abc123def456
+        filename:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+        format:
+          type: string
+        dimensions:
+          type: object
+          properties:
+            width:
+              type: integer
+            height:
+              type: integer
+        thumbnailUrl:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+
+    ImageDetails:
+      type: object
+      properties:
+        imageId:
+          type: string
+        filename:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+        format:
+          type: string
+        dimensions:
+          type: object
+          properties:
+            width:
+              type: integer
+            height:
+              type: integer
+            bitDepth:
+              type: integer
+        metadata:
+          $ref: '#/components/schemas/ImageMetadata'
+        fitsHeaders:
+          type: object
+          additionalProperties: true
+        statistics:
+          type: object
+          properties:
+            mean:
+              type: number
+              format: float
+            median:
+              type: number
+              format: float
+            stddev:
+              type: number
+              format: float
+            min:
+              type: integer
+            max:
+              type: integer
+        thumbnailUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        uploadedAt:
+          type: string
+          format: date-time
+
+    ImageListResponse:
+      type: object
+      properties:
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              imageId:
+                type: string
+              filename:
+                type: string
+              format:
+                type: string
+              dimensions:
+                type: object
+                properties:
+                  width:
+                    type: integer
+                  height:
+                    type: integer
+              size:
+                type: integer
+              captureDate:
+                type: string
+                format: date-time
+              camera:
+                type: string
+              filter:
+                type: string
+              exposure:
+                type: number
+                format: float
+              tags:
+                type: array
+                items:
+                  type: string
+              thumbnailUrl:
+                type: string
+        totalImages:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasMore:
+          type: boolean
+
+    ImageMetadataUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        calibrated:
+          type: boolean
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+
+    BatchDeleteRequest:
+      type: object
+      required:
+        - imageIds
+      properties:
+        imageIds:
+          type: array
+          items:
+            type: string
+        keepMetadata:
+          type: boolean
+          default: false
+
+    BatchDeleteResponse:
+      type: object
+      properties:
+        deleted:
+          type: integer
+        failed:
+          type: integer
+        freedSpace:
+          type: integer
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              imageId:
+                type: string
+              status:
+                type: string
+
+    ImageTransformRequest:
+      type: object
+      properties:
+        operations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [rotate, crop, resize]
+              angle:
+                type: number
+                format: float
+              x:
+                type: integer
+              y:
+                type: integer
+              width:
+                type: integer
+              height:
+                type: integer
+              preserveAspect:
+                type: boolean
+        outputFormat:
+          type: string
+          enum: [fits, tiff, jpg, png]
+        saveAs:
+          type: string
+
+    AstronomyProcessingRequest:
+      type: object
+      properties:
+        imageIds:
+          type: array
+          items:
+            type: string
+        operation:
+          type: string
+          enum: [stack, align, register]
+        parameters:
+          type: object
+          properties:
+            method:
+              type: string
+            rejection:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                algorithm:
+                  type: string
+                sigma:
+                  type: number
+                  format: float
+            alignment:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                method:
+                  type: string
+                referenceImage:
+                  type: string
+            calibration:
+              type: object
+              properties:
+                useDarks:
+                  type: boolean
+                darkFrames:
+                  type: array
+                  items:
+                    type: string
+                useFlats:
+                  type: boolean
+                flatFrames:
+                  type: array
+                  items:
+                    type: string
+                useBias:
+                  type: boolean
+                biasFrames:
+                  type: array
+                  items:
+                    type: string
+        outputFormat:
+          type: string
+        outputName:
+          type: string
+
+    CalibrationRequest:
+      type: object
+      properties:
+        darkFrame:
+          type: string
+        flatFrame:
+          type: string
+        biasFrame:
+          type: string
+        options:
+          type: object
+          properties:
+            subtractDark:
+              type: boolean
+            applyFlat:
+              type: boolean
+            subtractBias:
+              type: boolean
+            debayer:
+              type: boolean
+        outputFormat:
+          type: string
+        saveAs:
+          type: string
+
+    StretchRequest:
+      type: object
+      properties:
+        method:
+          type: string
+        parameters:
+          type: object
+          properties:
+            targetBackground:
+              type: number
+              format: float
+            shadows:
+              type: number
+              format: float
+            highlights:
+              type: number
+              format: float
+            preserve:
+              type: boolean
+        outputFormat:
+          type: string
+        saveAs:
+          type: string
+
+    FormatConversionRequest:
+      type: object
+      required:
+        - targetFormat
+      properties:
+        targetFormat:
+          type: string
+          enum: [fits, tiff, jpg, png]
+        options:
+          type: object
+          properties:
+            compression:
+              type: string
+            bitDepth:
+              type: integer
+            colorSpace:
+              type: string
+        saveAs:
+          type: string
+
+    ProcessingResponse:
+      type: object
+      properties:
+        processingId:
+          type: string
+        estimatedTime:
+          type: integer
+        operation:
+          type: string
+
+    ProcessingStatus:
+      type: object
+      properties:
+        processingId:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        progress:
+          type: number
+          format: float
+        operation:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        estimatedCompletion:
+          type: string
+          format: date-time
+        resultImageId:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
+    # New Camera Schemas
+    CameraCapabilities:
+      type: object
+      properties:
+        canCool:
+          type: boolean
+        canSetTemperature:
+          type: boolean
+        canAbortExposure:
+          type: boolean
+        canStopExposure:
+          type: boolean
+        canGetCoolerPower:
+          type: boolean
+        hasMechanicalShutter:
+          type: boolean
+        gainRange:
+          type: object
+          properties:
+            min:
+              type: integer
+            max:
+              type: integer
+            default:
+              type: integer
+        offsetRange:
+          type: object
+          properties:
+            min:
+              type: integer
+            max:
+              type: integer
+            default:
+              type: integer
+        temperatureRange:
+          type: object
+          properties:
+            min:
+              type: number
+              format: float
+            max:
+              type: number
+              format: float
+        binningModes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Binning'
+        readoutModes:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              id:
+                type: integer
+        bayerPattern:
+          type: string
+        pixelSizeX:
+          type: number
+          format: float
+        pixelSizeY:
+          type: number
+          format: float
+        maxBinX:
+          type: integer
+        maxBinY:
+          type: integer
+        electronsPerADU:
+          type: number
+          format: float
+        fullWellCapacity:
+          type: integer
+        readNoise:
+          type: number
+          format: float
+
+    CameraGains:
+      type: object
+      properties:
+        gains:
+          type: array
+          items:
+            type: integer
+        currentGain:
+          type: integer
+        defaultGain:
+          type: integer
+        unityGain:
+          type: integer
+          nullable: true
+
+    CameraOffsets:
+      type: object
+      properties:
+        offsets:
+          type: array
+          items:
+            type: integer
+        currentOffset:
+          type: integer
+        defaultOffset:
+          type: integer
+
+    CoolerPowerRequest:
+      type: object
+      required:
+        - power
+        - mode
+      properties:
+        power:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        mode:
+          type: string
+          enum: [manual, auto]
+
+    # New Mount Schemas
+    MountCapabilities:
+      type: object
+      properties:
+        canPark:
+          type: boolean
+        canUnpark:
+          type: boolean
+        canFindHome:
+          type: boolean
+        canSetTracking:
+          type: boolean
+        canSetGuideRates:
+          type: boolean
+        canPulseGuide:
+          type: boolean
+        canSync:
+          type: boolean
+        canSlewAsync:
+          type: boolean
+        canSlewAltAz:
+          type: boolean
+        hasEquatorialSystem:
+          type: boolean
+        alignmentMode:
+          type: string
+        trackingRates:
+          type: array
+          items:
+            type: string
+        axisRates:
+          type: object
+          properties:
+            ra:
+              type: object
+              properties:
+                min:
+                  type: number
+                  format: float
+                max:
+                  type: number
+                  format: float
+            dec:
+              type: object
+              properties:
+                min:
+                  type: number
+                  format: float
+                max:
+                  type: number
+                  format: float
+        guideRates:
+          type: object
+          properties:
+            ra:
+              type: number
+              format: float
+            dec:
+              type: number
+              format: float
+        slewSettleTime:
+          type: integer
+
+    GuideRatesRequest:
+      type: object
+      required:
+        - raRate
+        - decRate
+      properties:
+        raRate:
+          type: number
+          format: float
+          minimum: 0.1
+          maximum: 1.0
+        decRate:
+          type: number
+          format: float
+          minimum: 0.1
+          maximum: 1.0
+
+    TrackingRateRequest:
+      type: object
+      required:
+        - rate
+      properties:
+        rate:
+          type: string
+          enum: [Sidereal, Lunar, Solar, King]
+
+    PierSideInfo:
+      type: object
+      properties:
+        pierSide:
+          type: string
+          enum: [East, West, Unknown]
+        timeToFlip:
+          type: integer
+          nullable: true
+        destinationAfterFlip:
+          type: string
+          enum: [East, West]
+          nullable: true
+
+    # New Focuser Schemas
+    FocuserCapabilities:
+      type: object
+      properties:
+        canHalt:
+          type: boolean
+        canReverse:
+          type: boolean
+        canAbsoluteMove:
+          type: boolean
+        canRelativeMove:
+          type: boolean
+        canTempComp:
+          type: boolean
+        maxPosition:
+          type: integer
+        maxIncrement:
+          type: integer
+        stepSize:
+          type: number
+          format: float
+        tempCompAvailable:
+          type: boolean
+        hasTemperatureSensor:
+          type: boolean
+
+    AutofocusRequest:
+      type: object
+      required:
+        - method
+        - initialStep
+        - numberOfSteps
+        - exposure
+      properties:
+        method:
+          type: string
+          enum: [HFR, FWHM, contrast]
+        initialStep:
+          type: integer
+        numberOfSteps:
+          type: integer
+        exposure:
+          type: number
+          format: float
+        binning:
+          $ref: '#/components/schemas/Binning'
+        useSubframe:
+          type: boolean
+        filterPosition:
+          type: integer
+
+    AutofocusResponse:
+      type: object
+      properties:
+        autofocusId:
+          type: string
+        estimatedTime:
+          type: integer
+
+    AutofocusStatus:
+      type: object
+      properties:
+        autofocusId:
+          type: string
+        status:
+          type: string
+          enum: [running, completed, failed, aborted]
+        progress:
+          type: number
+          format: float
+        currentPosition:
+          type: integer
+        currentHFR:
+          type: number
+          format: float
+        bestPosition:
+          type: integer
+        bestHFR:
+          type: number
+          format: float
+        measurements:
+          type: array
+          items:
+            type: object
+            properties:
+              position:
+                type: integer
+              hfr:
+                type: number
+                format: float
+              starCount:
+                type: integer
+
+    # New Filter Wheel Schemas
+    FilterWheelCapabilities:
+      type: object
+      properties:
+        numPositions:
+          type: integer
+        canSetNames:
+          type: boolean
+        canSetOffsets:
+          type: boolean
+        supportsHalting:
+          type: boolean
+        moveTime:
+          type: number
+          format: float
+        positionNames:
+          type: array
+          items:
+            type: string
+
+    FilterNamesRequest:
+      type: object
+      required:
+        - filters
+      properties:
+        filters:
+          type: array
+          items:
+            type: object
+            properties:
+              slot:
+                type: integer
+              name:
+                type: string
+
+    FilterOffsets:
+      type: object
+      properties:
+        offsets:
+          type: array
+          items:
+            type: object
+            properties:
+              slot:
+                type: integer
+              name:
+                type: string
+              offset:
+                type: integer
+
+    FilterOffsetsRequest:
+      type: object
+      required:
+        - offsets
+      properties:
+        offsets:
+          type: array
+          items:
+            type: object
+            properties:
+              slot:
+                type: integer
+              offset:
+                type: integer
+
+    # New System Management Schemas
+    DeviceDiscoveryRequest:
+      type: object
+      properties:
+        deviceTypes:
+          type: array
+          items:
+            type: string
+        interfaces:
+          type: array
+          items:
+            type: string
+        timeout:
+          type: integer
+          default: 30
+
+    DiscoveryResponse:
+      type: object
+      properties:
+        discoveryId:
+          type: string
+        estimatedTime:
+          type: integer
+
+    DiscoveryResults:
+      type: object
+      properties:
+        discoveryId:
+          type: string
+        status:
+          type: string
+          enum: [running, completed, failed]
+        discoveredDevices:
+          type: array
+          items:
+            type: object
+            properties:
+              deviceType:
+                type: string
+              deviceId:
+                type: string
+              name:
+                type: string
+              driver:
+                type: string
+              interface:
+                type: string
+              capabilities:
+                type: array
+                items:
+                  type: string
+        totalFound:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+
+    AllDevicesResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            type: object
+            properties:
+              deviceType:
+                type: string
+              deviceId:
+                type: string
+              name:
+                type: string
+              driver:
+                type: string
+              isConnected:
+                type: boolean
+              isAvailable:
+                type: boolean
+        totalDevices:
+          type: integer
+
+    DriversResponse:
+      type: object
+      properties:
+        drivers:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              version:
+                type: string
+              type:
+                type: string
+              supportedDevices:
+                type: array
+                items:
+                  type: string
+              isInstalled:
+                type: boolean
+
+    SystemDiagnostics:
+      type: object
+      properties:
+        systemHealth:
+          type: string
+          enum: [healthy, warning, critical, error]
+        timestamp:
+          type: string
+          format: date-time
+        performance:
+          type: object
+          properties:
+            cpuUsage:
+              type: number
+              format: float
+            memoryUsage:
+              type: number
+              format: float
+            diskUsage:
+              type: number
+              format: float
+            networkLatency:
+              type: number
+              format: float
+        services:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+              responseTime:
+                type: number
+                format: float
+        connectedDevices:
+          type: object
+          properties:
+            cameras:
+              type: integer
+            mounts:
+              type: integer
+            focusers:
+              type: integer
+            filterwheels:
+              type: integer
+            total:
+              type: integer
+        activeOperations:
+          type: object
+          properties:
+            exposures:
+              type: integer
+            sequences:
+              type: integer
+            autofocus:
+              type: integer
+        errors:
+          type: object
+          properties:
+            last24Hours:
+              type: integer
+            lastError:
+              type: object
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                code:
+                  type: string
+                message:
+                  type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    HealthCheckResults:
+      type: object
+      properties:
+        overallHealth:
+          type: string
+          enum: [healthy, warning, critical]
+        checks:
+          type: array
+          items:
+            type: object
+            properties:
+              component:
+                type: string
+              status:
+                type: string
+                enum: [pass, warning, fail]
+              message:
+                type: string
+              responseTime:
+                type: number
+                format: float
+                nullable: true
+              details:
+                type: object
+                additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorReport:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              errorId:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+              severity:
+                type: string
+              code:
+                type: string
+              message:
+                type: string
+              component:
+                type: string
+              stackTrace:
+                type: string
+              context:
+                type: object
+                additionalProperties: true
+        totalErrors:
+          type: integer
+        summary:
+          type: object
+          properties:
+            bySeverity:
+              type: object
+              additionalProperties:
+                type: integer
+            byComponent:
+              type: object
+              additionalProperties:
+                type: integer
+
+    BackupRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        includeDevices:
+          type: boolean
+          default: true
+        includeSequences:
+          type: boolean
+          default: true
+        includeSettings:
+          type: boolean
+          default: true
+
+    RestoreRequest:
+      type: object
+      required:
+        - backupId
+      properties:
+        backupId:
+          type: string
+        restoreDevices:
+          type: boolean
+          default: true
+        restoreSequences:
+          type: boolean
+          default: true
+        restoreSettings:
+          type: boolean
+          default: true
+
+    BackupsListResponse:
+      type: object
+      properties:
+        backups:
+          type: array
+          items:
+            type: object
+            properties:
+              backupId:
+                type: string
+              name:
+                type: string
+              created:
+                type: string
+                format: date-time
+              size:
+                type: integer
+              version:
+                type: string
+              description:
+                type: string
+        totalBackups:
+          type: integer
+
+  responses: {}
+
+  parameters: {}

@@ -1,45 +1,56 @@
+# ============================================================================
 # CMakeLists.txt for Lithium-Database
+# ============================================================================
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: Lithium-Database
-# Description: The official config module for lithium server
+# Description: Database ORM and management module
 # Author: Max Qian
 # License: GPL3
+# ============================================================================
 
-cmake_minimum_required(VERSION 3.20)
-project(lithium_database VERSION 1.0.0 LANGUAGES C CXX)
+lithium_component_begin(lithium_database 1.0.0)
 
-find_package(SQLite3 REQUIRED)
+# ============================================================================
+# Dependencies
+# ============================================================================
 
-# Sources and Headers
-set(PROJECT_FILES
+lithium_find_package(SQLite3 REQUIRED)
+
+# ============================================================================
+# Source Files
+# ============================================================================
+
+set(PROJECT_SOURCES
     orm.cpp
 )
 
-# Required libraries
-set(PROJECT_LIBS
+# ============================================================================
+# Library Dependencies
+# ============================================================================
+
+set(PROJECT_LIBRARIES
     atom
     SQLite::SQLite3
 )
 
-# Create Static Library
-add_library(${PROJECT_NAME} STATIC ${PROJECT_FILES})
-set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+# ============================================================================
+# Build Library
+# ============================================================================
 
-# Include directories
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-# Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBS})
-
-# Set version properties
-set_target_properties(${PROJECT_NAME} PROPERTIES
+lithium_add_library(
+    NAME ${PROJECT_NAME}
+    SOURCES ${PROJECT_SOURCES}
+    LIBRARIES ${PROJECT_LIBRARIES}
     VERSION ${PROJECT_VERSION}
-    SOVERSION 1
-    OUTPUT_NAME ${PROJECT_NAME}
+    TYPE STATIC
+    DESCRIPTION "Database ORM and management"
 )
 
-# Install target
-install(TARGETS ${PROJECT_NAME}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
+# Apply standard compiler flags
+lithium_apply_compiler_flags(${PROJECT_NAME})
+
+# Set IDE folder
+lithium_set_target_folder(${PROJECT_NAME} "Core/Database")
+
+lithium_component_end(${PROJECT_NAME})

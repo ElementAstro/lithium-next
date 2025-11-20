@@ -1,37 +1,61 @@
-cmake_minimum_required(VERSION 3.20)
+# ============================================================================
+# CMakeLists.txt for Lithium-Config
+# ============================================================================
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Lithium-Config
+# Description: Configuration management module
+# Author: Max Qian
+# License: GPL3
+# ============================================================================
 
-# Project name and version, using C and C++ languages
-project(lithium_config VERSION 1.0.0 LANGUAGES C CXX)
+lithium_component_begin(lithium_config 1.0.0)
 
-# Project sources and headers
-set(PROJECT_SOURCES configor.cpp)
-set(PROJECT_HEADERS configor.hpp)
+# ============================================================================
+# Source Files
+# ============================================================================
 
-# Required libraries for the project
-set(PROJECT_LIBS loguru ${CMAKE_THREAD_LIBS_INIT} atom)
+set(PROJECT_SOURCES
+    configor.cpp
+)
 
-if (WIN32)
-    list(APPEND PROJECT_LIBS ws2_32)
+set(PROJECT_HEADERS
+    configor.hpp
+)
+
+# ============================================================================
+# Library Dependencies
+# ============================================================================
+
+set(PROJECT_LIBRARIES
+    loguru
+    ${CMAKE_THREAD_LIBS_INIT}
+    atom
+)
+
+# Platform-specific libraries
+if(WIN32)
+    list(APPEND PROJECT_LIBRARIES ws2_32)
 endif()
 
-# Create static library
-add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES} ${PROJECT_HEADERS})
+# ============================================================================
+# Build Library
+# ============================================================================
 
-# Set static library properties
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION ${PROJECT_VERSION}  # Version number
-    SOVERSION 1                 # Compatibility version
-    OUTPUT_NAME ${PROJECT_NAME} # Output name
-    POSITION_INDEPENDENT_CODE ON # Position independent code
+lithium_add_library(
+    NAME ${PROJECT_NAME}
+    SOURCES ${PROJECT_SOURCES} ${PROJECT_HEADERS}
+    LIBRARIES ${PROJECT_LIBRARIES}
+    VERSION ${PROJECT_VERSION}
+    TYPE STATIC
+    DESCRIPTION "Configuration management module"
+    PUBLIC_HEADERS
 )
 
-# Include directories so that project headers can be included
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Apply standard compiler flags
+lithium_apply_compiler_flags(${PROJECT_NAME})
 
-# Link libraries required by the project
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBS})
+# Set IDE folder
+lithium_set_target_folder(${PROJECT_NAME} "Core/Config")
 
-# Install target to install the static library to a specified location
-install(TARGETS ${PROJECT_NAME}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
+lithium_component_end(${PROJECT_NAME})

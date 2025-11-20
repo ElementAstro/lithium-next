@@ -1,0 +1,1149 @@
+asyncapi: 3.0.0
+info:
+  title: Astronomical Equipment Control WebSocket API
+  version: 1.0.0
+  description: |
+    Real-time WebSocket API for controlling astronomical equipment and monitoring device status.
+    This API provides bidirectional communication for device control, event notifications, and
+    progress monitoring of long-running operations like exposures and sequences.
+    
+    ## Features
+    - Real-time device status updates
+    - Asynchronous event notifications
+    - Long-running task progress monitoring
+    - Device control commands
+    - System management operations
+    - File system operations
+    
+    ## Connection
+    Connect to: `ws://your-server-address/api/v1/ws?apiKey=your-api-key`
+    For secure connections, use: `wss://your-server-address/api/v1/ws?apiKey=your-api-key`
+    
+    ## Authentication
+    API key must be provided as a query parameter during WebSocket connection handshake.
+    Invalid or missing API key will result in connection close with code 4001 (Unauthorized).
+    
+    ## Heartbeat
+    Server sends ping messages every 30 seconds. Client must respond with pong within 5 seconds.
+    
+    ## Subscription Model
+    After connection, clients can subscribe to specific event topics using the subscribe command.
+    Topic patterns support wildcards (e.g., "device.camera.*", "exposure.*").
+    
+    ## Error Handling
+    Command errors are returned in response messages with success: false and error details.
+    Connection errors result in WebSocket close codes:
+    - 1000: Normal closure
+    - 1001: Server shutting down
+    - 1002: Protocol error (e.g., failed heartbeat)
+    - 4001: Unauthorized (invalid API key)
+    - 4002: Rate limited
+    
+  contact:
+    name: API Support
+    url: https://github.com/ElementAstro/lithium-next
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  production:
+    host: localhost:8080
+    protocol: ws
+    description: Production WebSocket server
+    security:
+      - $ref: '#/components/securitySchemes/apiKey'
+  production-secure:
+    host: localhost:8080
+    protocol: wss
+    description: Production WebSocket server (secure)
+    security:
+      - $ref: '#/components/securitySchemes/apiKey'
+
+defaultContentType: application/json
+
+channels:
+  root:
+    address: /api/v1/ws
+    description: Main WebSocket endpoint for all real-time communication
+    parameters:
+      apiKey:
+        description: API key for authentication (provided as query parameter)
+    messages:
+      connectionEstablished:
+        $ref: '#/components/messages/connectionEstablished'
+      ping:
+        $ref: '#/components/messages/ping'
+      pong:
+        $ref: '#/components/messages/pong'
+      deviceConnected:
+        $ref: '#/components/messages/deviceConnected'
+      deviceDisconnected:
+        $ref: '#/components/messages/deviceDisconnected'
+      deviceStatusUpdate:
+        $ref: '#/components/messages/deviceStatusUpdate'
+      exposureStarted:
+        $ref: '#/components/messages/exposureStarted'
+      exposureProgress:
+        $ref: '#/components/messages/exposureProgress'
+      exposureFinished:
+        $ref: '#/components/messages/exposureFinished'
+      exposureAborted:
+        $ref: '#/components/messages/exposureAborted'
+      mountSlewStarted:
+        $ref: '#/components/messages/mountSlewStarted'
+      mountSlewFinished:
+        $ref: '#/components/messages/mountSlewFinished'
+      mountMeridianFlipRequired:
+        $ref: '#/components/messages/mountMeridianFlipRequired'
+      sequenceStarted:
+        $ref: '#/components/messages/sequenceStarted'
+      sequenceProgress:
+        $ref: '#/components/messages/sequenceProgress'
+      sequenceFinished:
+        $ref: '#/components/messages/sequenceFinished'
+      notification:
+        $ref: '#/components/messages/notification'
+      safetyAlert:
+        $ref: '#/components/messages/safetyAlert'
+      command:
+        $ref: '#/components/messages/command'
+      commandResponse:
+        $ref: '#/components/messages/commandResponse'
+
+operations:
+  # Server to Client Operations (Receive Events)
+  onConnectionEstablished:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Receive connection established event
+    description: Sent immediately after successful WebSocket connection and authentication
+    messages:
+      - $ref: '#/channels/root/messages/connectionEstablished'
+  
+  onPing:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Receive heartbeat ping
+    description: Server sends ping every 30 seconds to maintain connection health
+    messages:
+      - $ref: '#/channels/root/messages/ping'
+  
+  sendPong:
+    action: send
+    channel:
+      $ref: '#/channels/root'
+    summary: Send heartbeat pong response
+    description: Client must respond to ping within 5 seconds
+    messages:
+      - $ref: '#/channels/root/messages/pong'
+  
+  # Device Events
+  onDeviceConnected:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Device connected event
+    messages:
+      - $ref: '#/channels/root/messages/deviceConnected'
+  
+  onDeviceDisconnected:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Device disconnected event
+    messages:
+      - $ref: '#/channels/root/messages/deviceDisconnected'
+  
+  onDeviceStatusUpdate:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Device status update event
+    description: Periodic updates of device status (every 1-5 seconds)
+    messages:
+      - $ref: '#/channels/root/messages/deviceStatusUpdate'
+  
+  # Exposure Events
+  onExposureStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Exposure started event
+    messages:
+      - $ref: '#/channels/root/messages/exposureStarted'
+  
+  onExposureProgress:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Exposure progress event
+    description: Sent every 1-2 seconds during exposure
+    messages:
+      - $ref: '#/channels/root/messages/exposureProgress'
+  
+  onExposureFinished:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Exposure finished event
+    messages:
+      - $ref: '#/channels/root/messages/exposureFinished'
+  
+  onExposureAborted:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Exposure aborted event
+    messages:
+      - $ref: '#/channels/root/messages/exposureAborted'
+  
+  # Mount Events
+  onMountSlewStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Mount slew started event
+    messages:
+      - $ref: '#/channels/root/messages/mountSlewStarted'
+  
+  onMountSlewFinished:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Mount slew finished event
+    messages:
+      - $ref: '#/channels/root/messages/mountSlewFinished'
+  
+  onMountMeridianFlipRequired:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Meridian flip required alert
+    messages:
+      - $ref: '#/channels/root/messages/mountMeridianFlipRequired'
+  
+  # Sequence Events
+  onSequenceStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Sequence started event
+    messages:
+      - $ref: '#/channels/root/messages/sequenceStarted'
+  
+  onSequenceProgress:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Sequence progress event
+    messages:
+      - $ref: '#/channels/root/messages/sequenceProgress'
+  
+  onSequenceFinished:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Sequence finished event
+    messages:
+      - $ref: '#/channels/root/messages/sequenceFinished'
+  
+  # System Events
+  onNotification:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: System notification
+    messages:
+      - $ref: '#/channels/root/messages/notification'
+  
+  onSafetyAlert:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Safety alert event
+    messages:
+      - $ref: '#/channels/root/messages/safetyAlert'
+  
+  # Commands (Client to Server)
+  sendCommand:
+    action: send
+    channel:
+      $ref: '#/channels/root'
+    summary: Send command to server
+    description: All client-to-server commands use this operation
+    messages:
+      - $ref: '#/channels/root/messages/command'
+  
+  onCommandResponse:
+    action: receive
+    channel:
+      $ref: '#/channels/root'
+    summary: Receive command response
+    description: Server response to client commands
+    messages:
+      - $ref: '#/channels/root/messages/commandResponse'
+
+components:
+  securitySchemes:
+    apiKey:
+      type: httpApiKey
+      name: apiKey
+      in: query
+      description: API key for authentication passed as query parameter during connection handshake
+
+  messages:
+    # Connection Messages
+    connectionEstablished:
+      name: connectionEstablished
+      title: Connection Established
+      summary: Sent after successful connection and authentication
+      payload:
+        $ref: '#/components/schemas/connectionEstablishedPayload'
+    
+    ping:
+      name: ping
+      title: Ping
+      summary: Heartbeat ping from server
+      payload:
+        $ref: '#/components/schemas/pingPayload'
+    
+    pong:
+      name: pong
+      title: Pong
+      summary: Heartbeat pong response from client
+      payload:
+        $ref: '#/components/schemas/pongPayload'
+    
+    # Device Messages
+    deviceConnected:
+      name: deviceConnected
+      title: Device Connected
+      summary: Device connection established
+      payload:
+        $ref: '#/components/schemas/deviceConnectedPayload'
+    
+    deviceDisconnected:
+      name: deviceDisconnected
+      title: Device Disconnected
+      summary: Device connection lost or manually disconnected
+      payload:
+        $ref: '#/components/schemas/deviceDisconnectedPayload'
+    
+    deviceStatusUpdate:
+      name: deviceStatusUpdate
+      title: Device Status Update
+      summary: Periodic device status update
+      payload:
+        $ref: '#/components/schemas/deviceStatusUpdatePayload'
+    
+    # Exposure Messages
+    exposureStarted:
+      name: exposureStarted
+      title: Exposure Started
+      summary: Camera exposure has begun
+      payload:
+        $ref: '#/components/schemas/exposureStartedPayload'
+    
+    exposureProgress:
+      name: exposureProgress
+      title: Exposure Progress
+      summary: Exposure progress update
+      payload:
+        $ref: '#/components/schemas/exposureProgressPayload'
+    
+    exposureFinished:
+      name: exposureFinished
+      title: Exposure Finished
+      summary: Exposure completed (success or failure)
+      payload:
+        $ref: '#/components/schemas/exposureFinishedPayload'
+    
+    exposureAborted:
+      name: exposureAborted
+      title: Exposure Aborted
+      summary: Exposure was manually aborted
+      payload:
+        $ref: '#/components/schemas/exposureAbortedPayload'
+    
+    # Mount Messages
+    mountSlewStarted:
+      name: mountSlewStarted
+      title: Mount Slew Started
+      summary: Mount slew operation has begun
+      payload:
+        $ref: '#/components/schemas/mountSlewStartedPayload'
+    
+    mountSlewFinished:
+      name: mountSlewFinished
+      title: Mount Slew Finished
+      summary: Mount slew operation completed
+      payload:
+        $ref: '#/components/schemas/mountSlewFinishedPayload'
+    
+    mountMeridianFlipRequired:
+      name: mountMeridianFlipRequired
+      title: Meridian Flip Required
+      summary: Meridian flip is approaching or required
+      payload:
+        $ref: '#/components/schemas/mountMeridianFlipRequiredPayload'
+    
+    # Sequence Messages
+    sequenceStarted:
+      name: sequenceStarted
+      title: Sequence Started
+      summary: Imaging sequence has begun execution
+      payload:
+        $ref: '#/components/schemas/sequenceStartedPayload'
+    
+    sequenceProgress:
+      name: sequenceProgress
+      title: Sequence Progress
+      summary: Sequence progress update
+      payload:
+        $ref: '#/components/schemas/sequenceProgressPayload'
+    
+    sequenceFinished:
+      name: sequenceFinished
+      title: Sequence Finished
+      summary: Sequence completed
+      payload:
+        $ref: '#/components/schemas/sequenceFinishedPayload'
+    
+    # System Messages
+    notification:
+      name: notification
+      title: System Notification
+      summary: General system notification or alert
+      payload:
+        $ref: '#/components/schemas/notificationPayload'
+    
+    safetyAlert:
+      name: safetyAlert
+      title: Safety Alert
+      summary: Safety condition alert
+      payload:
+        $ref: '#/components/schemas/safetyAlertPayload'
+    
+    # Command Messages
+    command:
+      name: command
+      title: Command
+      summary: Client command to server
+      payload:
+        $ref: '#/components/schemas/commandPayload'
+    
+    commandResponse:
+      name: commandResponse
+      title: Command Response
+      summary: Server response to client command
+      payload:
+        $ref: '#/components/schemas/commandResponsePayload'
+
+  schemas:
+    # Base Types
+    timestamp:
+      type: string
+      format: date-time
+      description: ISO 8601 timestamp
+      examples:
+        - "2023-11-20T12:00:00Z"
+    
+    deviceId:
+      type: string
+      description: Unique device identifier
+      examples:
+        - "cam-001"
+        - "mnt-001"
+        - "foc-001"
+    
+    deviceType:
+      type: string
+      enum:
+        - camera
+        - mount
+        - focuser
+        - filterwheel
+        - dome
+        - guider
+        - rotator
+        - weatherstation
+        - flatpanel
+      description: Type of astronomical device
+    
+    coordinates:
+      type: object
+      properties:
+        ra:
+          type: string
+          description: Right Ascension in HH:MM:SS format
+          examples:
+            - "05:34:31.97"
+        dec:
+          type: string
+          description: Declination in ±DD:MM:SS format
+          examples:
+            - "-05:23:22.8"
+      required:
+        - ra
+        - dec
+    
+    errorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code identifier
+          examples:
+            - "device_not_connected"
+            - "invalid_parameter"
+        message:
+          type: string
+          description: Human-readable error message
+          examples:
+            - "Camera cam-001 is not connected"
+        details:
+          type: object
+          description: Additional error context
+          additionalProperties: true
+      required:
+        - code
+        - message
+    
+    # Event Payloads
+    connectionEstablishedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: connection.established
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            sessionId:
+              type: string
+              description: Unique session identifier
+            serverVersion:
+              type: string
+              description: Server software version
+            protocolVersion:
+              type: string
+              description: WebSocket protocol version
+          required:
+            - sessionId
+            - serverVersion
+            - protocolVersion
+      required:
+        - type
+        - timestamp
+        - data
+      examples:
+        - type: connection.established
+          timestamp: "2023-11-20T12:00:00Z"
+          data:
+            sessionId: "sess_abc123"
+            serverVersion: "1.0.0"
+            protocolVersion: "1.0"
+    
+    pingPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: ping
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+      required:
+        - type
+        - timestamp
+    
+    pongPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: pong
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+      required:
+        - type
+        - timestamp
+    
+    deviceConnectedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: device.connected
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            deviceType:
+              $ref: '#/components/schemas/deviceType'
+            deviceId:
+              $ref: '#/components/schemas/deviceId'
+            deviceName:
+              type: string
+              description: Human-readable device name
+          required:
+            - deviceType
+            - deviceId
+            - deviceName
+      required:
+        - type
+        - timestamp
+        - data
+    
+    deviceDisconnectedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: device.disconnected
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            deviceType:
+              $ref: '#/components/schemas/deviceType'
+            deviceId:
+              $ref: '#/components/schemas/deviceId'
+            reason:
+              type: string
+              description: Reason for disconnection
+          required:
+            - deviceType
+            - deviceId
+            - reason
+      required:
+        - type
+        - timestamp
+        - data
+    
+    deviceStatusUpdatePayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: device.status_update
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          description: Device-specific status fields vary by device type
+          properties:
+            deviceType:
+              $ref: '#/components/schemas/deviceType'
+            deviceId:
+              $ref: '#/components/schemas/deviceId'
+            isConnected:
+              type: boolean
+          required:
+            - deviceType
+            - deviceId
+            - isConnected
+      required:
+        - type
+        - timestamp
+        - data
+    
+    exposureStartedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: exposure.started
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            exposureId:
+              type: string
+              description: Unique exposure identifier
+            deviceId:
+              $ref: '#/components/schemas/deviceId'
+            duration:
+              type: number
+              description: Exposure duration in seconds
+            frameType:
+              type: string
+              enum: [Light, Dark, Flat, Bias]
+          required:
+            - exposureId
+            - deviceId
+            - duration
+            - frameType
+      required:
+        - type
+        - timestamp
+        - data
+    
+    exposureProgressPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: exposure.progress
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            exposureId:
+              type: string
+            progress:
+              type: number
+              minimum: 0
+              maximum: 100
+              description: Progress percentage
+            remainingTime:
+              type: number
+              description: Remaining time in seconds
+            elapsedTime:
+              type: number
+              description: Elapsed time in seconds
+          required:
+            - exposureId
+            - progress
+            - remainingTime
+            - elapsedTime
+      required:
+        - type
+        - timestamp
+        - data
+    
+    exposureFinishedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: exposure.finished
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            exposureId:
+              type: string
+            success:
+              type: boolean
+            filePath:
+              type: string
+              description: Path to saved image file (if successful)
+            hfr:
+              type: number
+              description: Half-Flux Radius star quality metric
+            starCount:
+              type: integer
+              description: Number of detected stars
+            error:
+              $ref: '#/components/schemas/errorObject'
+          required:
+            - exposureId
+            - success
+      required:
+        - type
+        - timestamp
+        - data
+    
+    exposureAbortedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: exposure.aborted
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            exposureId:
+              type: string
+            reason:
+              type: string
+              description: Reason for abort
+          required:
+            - exposureId
+            - reason
+      required:
+        - type
+        - timestamp
+        - data
+    
+    mountSlewStartedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: mount.slew_started
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            deviceId:
+              $ref: '#/components/schemas/deviceId'
+            targetRa:
+              type: string
+              description: Target Right Ascension
+            targetDec:
+              type: string
+              description: Target Declination
+          required:
+            - deviceId
+            - targetRa
+            - targetDec
+      required:
+        - type
+        - timestamp
+        - data
+    
+    mountSlewFinishedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: mount.slew_finished
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            deviceId:
+              $ref: '#/components/schemas/deviceId'
+            success:
+              type: boolean
+            finalPosition:
+              $ref: '#/components/schemas/coordinates'
+            error:
+              $ref: '#/components/schemas/errorObject'
+          required:
+            - deviceId
+            - success
+      required:
+        - type
+        - timestamp
+        - data
+    
+    mountMeridianFlipRequiredPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: mount.meridian_flip_required
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            deviceId:
+              $ref: '#/components/schemas/deviceId'
+            timeToFlip:
+              type: number
+              description: Time until flip required in seconds
+            urgency:
+              type: string
+              enum: [warning, critical]
+          required:
+            - deviceId
+            - timeToFlip
+            - urgency
+      required:
+        - type
+        - timestamp
+        - data
+    
+    sequenceStartedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: sequence.started
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            sequenceId:
+              type: string
+              description: Unique sequence identifier
+            sequenceName:
+              type: string
+              description: Name of the sequence
+            totalTasks:
+              type: integer
+              description: Total number of tasks in sequence
+          required:
+            - sequenceId
+            - sequenceName
+            - totalTasks
+      required:
+        - type
+        - timestamp
+        - data
+    
+    sequenceProgressPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: sequence.progress
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            sequenceId:
+              type: string
+            currentTask:
+              type: integer
+              description: Current task index (0-based)
+            totalTasks:
+              type: integer
+            taskProgress:
+              type: number
+              minimum: 0
+              maximum: 100
+              description: Progress of current task
+            totalProgress:
+              type: number
+              minimum: 0
+              maximum: 100
+              description: Overall sequence progress
+            statusMessage:
+              type: string
+              description: Human-readable status message
+            estimatedTimeRemaining:
+              type: number
+              description: Estimated time remaining in seconds
+          required:
+            - sequenceId
+            - currentTask
+            - totalTasks
+            - totalProgress
+      required:
+        - type
+        - timestamp
+        - data
+    
+    sequenceFinishedPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: sequence.finished
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            sequenceId:
+              type: string
+            success:
+              type: boolean
+            completedTasks:
+              type: integer
+            totalTasks:
+              type: integer
+            duration:
+              type: number
+              description: Total sequence duration in seconds
+          required:
+            - sequenceId
+            - success
+            - completedTasks
+            - totalTasks
+            - duration
+      required:
+        - type
+        - timestamp
+        - data
+    
+    notificationPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: notification
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            level:
+              type: string
+              enum: [info, warning, error, critical]
+              description: Notification severity level
+            message:
+              type: string
+              description: Human-readable notification message
+            category:
+              type: string
+              description: Notification category
+              examples:
+                - "system"
+                - "device"
+                - "safety"
+          required:
+            - level
+            - message
+      required:
+        - type
+        - timestamp
+        - data
+    
+    safetyAlertPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          const: safety.alert
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        data:
+          type: object
+          properties:
+            level:
+              type: string
+              enum: [warning, critical]
+              description: Alert severity level
+            reasons:
+              type: array
+              items:
+                type: string
+              description: List of safety issues
+            actions:
+              type: array
+              items:
+                type: string
+              description: Recommended actions
+          required:
+            - level
+            - reasons
+            - actions
+      required:
+        - type
+        - timestamp
+        - data
+    
+    # Command Payloads
+    commandPayload:
+      type: object
+      description: |
+        Generic command structure for all client-to-server commands.
+        
+        Available commands include:
+        - Subscription: subscribe, unsubscribe
+        - Device queries: device.get_status
+        - Camera: camera.start_exposure, camera.abort_exposure
+        - Mount: mount.slew, mount.stop
+        - Focuser: focuser.move
+        - Guider: guider.start, guider.stop, guider.dither
+        - Sequence: sequence.pause, sequence.resume, sequence.stop
+        - System: system.get_status, system.restart_service, system.shutdown, system.restart
+        - Filesystem: filesystem.list, filesystem.read, filesystem.write, filesystem.delete, filesystem.move, filesystem.copy
+        
+        See the original specification for complete parameter documentation for each command.
+      properties:
+        type:
+          type: string
+          const: command
+        command:
+          type: string
+          description: The command name to execute
+          examples:
+            - "subscribe"
+            - "camera.start_exposure"
+            - "mount.slew"
+            - "guider.start"
+        requestId:
+          type: string
+          description: Unique identifier for correlating responses
+        params:
+          type: object
+          description: Command-specific parameters
+          additionalProperties: true
+      required:
+        - type
+        - command
+        - requestId
+      examples:
+        - summary: Subscribe to multiple topics
+          value:
+            type: command
+            command: subscribe
+            requestId: req_001
+            params:
+              topics:
+                - "device.camera.*"
+                - "exposure.*"
+        - summary: Start an exposure
+          value:
+            type: command
+            command: camera.start_exposure
+            requestId: req_004
+            params:
+              deviceId: "cam-001"
+              duration: 300
+              frameType: "Light"
+              binning:
+                x: 1
+                y: 1
+              gain: 100
+    
+    commandResponsePayload:
+      type: object
+      description: Server response to client commands
+      properties:
+        type:
+          type: string
+          const: response
+        requestId:
+          type: string
+          description: Matches the requestId from the command
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        success:
+          type: boolean
+          description: true if command succeeded, false otherwise
+        data:
+          type: object
+          description: Response data (if successful)
+          additionalProperties: true
+        error:
+          $ref: '#/components/schemas/errorObject'
+      required:
+        - type
+        - requestId
+        - timestamp
+        - success
+      examples:
+        - summary: Successful subscription response
+          value:
+            type: response
+            requestId: req_001
+            timestamp: "2023-11-20T12:00:00Z"
+            success: true
+            data:
+              subscribed:
+                - "device.camera.*"
+                - "exposure.*"
+        - summary: Failed exposure due to missing device
+          value:
+            type: response
+            requestId: req_012
+            timestamp: "2023-11-20T12:00:00Z"
+            success: false
+            error:
+              code: "device_not_connected"
+              message: "Camera cam-001 is not connected"
+              details:
+                deviceId: "cam-001"
