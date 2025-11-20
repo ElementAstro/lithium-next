@@ -17,10 +17,20 @@ lithium_component_begin(lithium_config 1.0.0)
 
 set(PROJECT_SOURCES
     configor.cpp
+    config_cache.cpp
+    config_validator.cpp
+    config_serializer.cpp
+    config_watcher.cpp
 )
 
 set(PROJECT_HEADERS
     configor.hpp
+    config_cache.hpp
+    config_validator.hpp
+    config_serializer.hpp
+    config_watcher.hpp
+    configor_macro.hpp
+    json5.hpp
 )
 
 # ============================================================================

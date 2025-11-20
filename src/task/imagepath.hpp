@@ -255,8 +255,7 @@ public:
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;  ///< Pointer to implementation.
-    mutable std::shared_ptr<
-        atom::search::ThreadSafeLRUCache<std::string, ImageInfo>>
+    std::shared_ptr<atom::search::ThreadSafeLRUCache<std::string, ImageInfo>>
         cache_;                                  ///< Cache for parsed results.
     mutable std::atomic<size_t> parseCount_{0};  ///< Count of parsed filenames.
     mutable std::atomic<size_t> cacheHits_{0};   ///< Count of cache hits.

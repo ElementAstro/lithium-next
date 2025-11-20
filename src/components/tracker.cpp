@@ -20,19 +20,20 @@
 #include <shared_mutex>
 #include <source_location>
 #include <span>
-#include <syncstream>
 #include <thread>
 #include <vector>
 
+#include "atom/async/pool.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/aes.hpp"
 #include "atom/utils/difflib.hpp"
 #include "atom/utils/string.hpp"
 #include "atom/utils/time.hpp"
+#include "spdlog/spdlog.h"
 
 namespace lithium {
-// Exception classes with improved source location handling
+
 class FailToScanDirectory : public atom::error::Exception {
 public:
     using Exception::Exception;
@@ -83,221 +84,6 @@ public:
     }
 };
 
-// Improved thread-safe logger with severity levels
-class ThreadSafeLogger {
-public:
-    enum class Level { Debug, Info, Warning, Error, Critical };
-
-    static void log(std::string_view message, Level level = Level::Info) {
-        std::osyncstream syncStream(level >= Level::Warning ? std::cerr
-                                                            : std::cout);
-        syncStream << formatPrefix(level) << message << '\n';
-    }
-
-    static void logError(std::string_view message) {
-        log(message, Level::Error);
-    }
-
-    static void logCritical(std::string_view message) {
-        log(message, Level::Critical);
-    }
-
-private:
-    static std::string formatPrefix(Level level) {
-        auto now = std::chrono::system_clock::now();
-        std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-        std::tm tm;
-        localtime_r(&now_c, &tm);
-
-        std::ostringstream oss;
-        oss << "[" << std::put_time(&tm, "%H:%M:%S") << "|";
-
-        switch (level) {
-            case Level::Debug:
-                oss << "DEBUG";
-                break;
-            case Level::Info:
-                oss << "INFO ";
-                break;
-            case Level::Warning:
-                oss << "WARN ";
-                break;
-            case Level::Error:
-                oss << "ERROR";
-                break;
-            case Level::Critical:
-                oss << "CRIT ";
-                break;
-        }
-
-        oss << "|FileTracker] ";
-        return oss.str();
-    }
-};
-
-// Enhanced thread pool with work stealing and task priorities
-class ThreadPool {
-public:
-    enum class Priority { Low = 0, Normal = 1, High = 2 };
-
-    struct Task {
-        std::function<void()> func;
-        Priority priority;
-
-        // Comparison for priority queue (higher priority first)
-        bool operator<(const Task& other) const {
-            return priority < other.priority;
-        }
-    };
-
-    explicit ThreadPool(size_t numThreads = std::thread::hardware_concurrency())
-        : stop_(false),
-          activeThreads_(0),
-          maxQueueSize_(std::numeric_limits<size_t>::max()) {
-        try {
-            workers_.reserve(numThreads);
-            for (size_t i = 0; i < numThreads; ++i) {
-                workers_.emplace_back([this, i] { workerLoop(i); });
-            }
-        } catch (...) {
-            stop_ = true;
-            condition_.notify_all();
-            throw;
-        }
-    }
-
-    ~ThreadPool() {
-        {
-            std::unique_lock lock(queueMutex_);
-            stop_ = true;
-        }
-        condition_.notify_all();
-        for (auto& worker : workers_) {
-            if (worker.joinable()) {
-                worker.join();
-            }
-        }
-    }
-
-    // Improved enqueue with priority support
-    template <typename F, typename... Args>
-        requires std::invocable<std::decay_t<F>, std::decay_t<Args>...>
-    auto enqueue(F&& f, Args&&... args, Priority priority = Priority::Normal)
-        -> std::future<std::invoke_result_t<F, Args...>> {
-        using ReturnType = std::invoke_result_t<F, Args...>;
-
-        // Check if queue is full
-        {
-            std::unique_lock lock(queueMutex_);
-            if (tasks_.size() >= maxQueueSize_) {
-                throw std::runtime_error("ThreadPool: task queue is full");
-            }
-        }
-
-        auto task = std::make_shared<std::packaged_task<ReturnType()>>(
-            [f = std::forward<F>(f),
-             ... args = std::forward<Args>(args)]() mutable {
-                return std::invoke(std::forward<F>(f),
-                                   std::forward<Args>(args)...);
-            });
-
-        std::future<ReturnType> result = task->get_future();
-
-        {
-            std::unique_lock lock(queueMutex_);
-            if (stop_) {
-                throw std::runtime_error("ThreadPool: enqueue on stopped pool");
-            }
-
-            tasks_.push({[task]() { (*task)(); }, priority});
-        }
-
-        condition_.notify_one();
-        return result;
-    }
-
-    // Set maximum queue size to prevent memory exhaustion
-    void setMaxQueueSize(size_t size) {
-        std::unique_lock lock(queueMutex_);
-        maxQueueSize_ = size > 0 ? size : std::numeric_limits<size_t>::max();
-    }
-
-    size_t getActiveThreadCount() const {
-        return activeThreads_.load(std::memory_order_relaxed);
-    }
-
-    bool isIdle() const {
-        return activeThreads_.load(std::memory_order_relaxed) == 0 &&
-               tasks_.empty();
-    }
-
-    void waitForCompletion() {
-        std::unique_lock lock(queueMutex_);
-        completionCondition_.wait(lock, [this] {
-            return tasks_.empty() && activeThreads_.load() == 0;
-        });
-    }
-
-private:
-    void workerLoop(size_t workerId) {
-        while (true) {
-            Task task;
-            bool hasTask = false;
-
-            {
-                std::unique_lock lock(queueMutex_);
-                condition_.wait(lock,
-                                [this] { return stop_ || !tasks_.empty(); });
-
-                if (stop_ && tasks_.empty()) {
-                    return;
-                }
-
-                if (!tasks_.empty()) {
-                    task = std::move(tasks_.top());
-                    tasks_.pop();
-                    hasTask = true;
-                }
-            }
-
-            if (hasTask) {
-                activeThreads_.fetch_add(1, std::memory_order_relaxed);
-
-                try {
-                    task.func();
-                } catch (const std::exception& e) {
-                    ThreadSafeLogger::logError(
-                        std::string("Task exception in worker ") +
-                        std::to_string(workerId) + ": " + e.what());
-                } catch (...) {
-                    ThreadSafeLogger::logError(
-                        std::string("Unknown task exception in worker ") +
-                        std::to_string(workerId));
-                }
-
-                activeThreads_.fetch_sub(1, std::memory_order_relaxed);
-
-                {
-                    std::unique_lock lock(queueMutex_);
-                    if (tasks_.empty() && activeThreads_.load() == 0) {
-                        completionCondition_.notify_all();
-                    }
-                }
-            }
-        }
-    }
-
-    std::vector<std::thread> workers_;
-    std::priority_queue<Task> tasks_;
-    std::mutex queueMutex_;
-    std::condition_variable condition_;
-    std::condition_variable completionCondition_;
-    std::atomic<bool> stop_;
-    std::atomic<size_t> activeThreads_;
-    size_t maxQueueSize_;
-};
-
-// LRU cache implemented with C++20 features
 template <typename K, typename V>
 class LRUCache {
 public:
@@ -310,11 +96,9 @@ public:
             return std::nullopt;
         }
 
-        // Update access order (need write lock)
         readLock.unlock();
         std::unique_lock writeLock(mutex_);
 
-        // Check again after acquiring write lock
         it = cache_.find(key);
         if (it == cache_.end()) {
             return std::nullopt;
@@ -330,7 +114,6 @@ public:
         std::unique_lock lock(mutex_);
         auto it = cache_.find(key);
 
-        // Key exists, update value and move to front
         if (it != cache_.end()) {
             accessList_.erase(it->second.second);
             accessList_.push_front(key);
@@ -338,13 +121,11 @@ public:
             return;
         }
 
-        // Cache is full, remove least recently used
         if (cache_.size() >= capacity_) {
             cache_.erase(accessList_.back());
             accessList_.pop_back();
         }
 
-        // Add new key-value
         accessList_.push_front(key);
         cache_[key] = {std::move(value), accessList_.begin()};
     }
@@ -375,7 +156,6 @@ public:
         std::unique_lock lock(mutex_);
         capacity_ = newCapacity;
 
-        // Remove least recently used entries if needed
         while (cache_.size() > capacity_) {
             cache_.erase(accessList_.back());
             accessList_.pop_back();
@@ -400,24 +180,19 @@ struct FileTracker::Impl {
     std::shared_mutex mtx;
     std::optional<std::string> encryptionKey;
 
-    // Thread pool with C++20 features
-    std::unique_ptr<ThreadPool> threadPool;
+    std::unique_ptr<atom::async::ThreadPool<>> threadPool;
 
-    // File watching members
     std::atomic<bool> watching{false};
     std::thread watchThread;
     std::function<void(const fs::path&, const std::string&)> changeCallback;
 
-    // Improved cache with LRU policy
     LRUCache<std::string, std::chrono::system_clock::time_point> fileCache{
         1000};
     bool cacheEnabled{false};
 
-    // Statistics
     FileStats stats;
     std::mutex statsMutex;
 
-    // File change notification queue
     struct ChangeNotification {
         fs::path path;
         std::string changeType;
@@ -447,25 +222,16 @@ struct FileTracker::Impl {
         }
 
         if (fileTypes.empty()) {
-            ThreadSafeLogger::log(
-                "No file types specified, will track all files",
-                ThreadSafeLogger::Level::Warning);
+            spdlog::warn("No file types specified, will track all files");
         }
 
         // Initialize thread pool with optimal thread count based on CPU cores
         // and task type
-        size_t threadCount = std::clamp<size_t>(
-            std::thread::hardware_concurrency(),
-            2,  // Minimum 2 threads
-            16  // Maximum 16 threads (to avoid excessive context switching)
-        );
+        size_t threadCount =
+            std::clamp<size_t>(std::thread::hardware_concurrency(), 2, 16);
+        spdlog::debug("Initializing thread pool with {} threads", threadCount);
 
-        ThreadSafeLogger::log("Initializing thread pool with " +
-                                  std::to_string(threadCount) + " threads",
-                              ThreadSafeLogger::Level::Debug);
-
-        threadPool = std::make_unique<ThreadPool>(threadCount);
-        threadPool->setMaxQueueSize(10000);  // Prevent excessive memory usage
+        threadPool = std::make_unique<atom::async::ThreadPool<>>(threadCount);
     }
 
     ~Impl() {
@@ -490,12 +256,9 @@ struct FileTracker::Impl {
                 try {
                     fs::copy_file(filePath, backupPath,
                                   fs::copy_options::overwrite_existing);
-                    ThreadSafeLogger::log("Created backup at: " + backupPath,
-                                          ThreadSafeLogger::Level::Debug);
+                    spdlog::debug("Created backup at: {}", backupPath);
                 } catch (const std::exception& e) {
-                    ThreadSafeLogger::log(
-                        "Failed to create backup: " + std::string(e.what()),
-                        ThreadSafeLogger::Level::Warning);
+                    spdlog::warn("Failed to create backup: {}", e.what());
                 }
             }
 
@@ -551,15 +314,13 @@ struct FileTracker::Impl {
                          const std::optional<std::string>& key) -> json {
         try {
             if (!fs::exists(filePath)) {
-                ThreadSafeLogger::log("JSON file does not exist: " + filePath,
-                                      ThreadSafeLogger::Level::Warning);
+                spdlog::warn("JSON file does not exist: {}", filePath);
                 return {};
             }
 
             // Check if file is readable and has content
             if (fs::file_size(filePath) == 0) {
-                ThreadSafeLogger::log("JSON file is empty: " + filePath,
-                                      ThreadSafeLogger::Level::Warning);
+                spdlog::warn("JSON file is empty: {}", filePath);
                 return {};
             }
 
@@ -595,16 +356,14 @@ struct FileTracker::Impl {
                 // Try to recover from backup if parse error
                 auto backupPath = filePath + ".backup";
                 if (fs::exists(backupPath)) {
-                    ThreadSafeLogger::log(
-                        "Attempting to recover from backup file: " + backupPath,
-                        ThreadSafeLogger::Level::Warning);
+                    spdlog::warn("Attempting to recover from backup file: {}",
+                                 backupPath);
                     try {
                         std::ifstream backupFile(backupPath);
                         json backupJson;
                         backupFile >> backupJson;
                         return backupJson;
                     } catch (...) {
-                        // Fall through to throw the original error
                     }
                 }
                 throw FailToOpenFile("JSON parse error: " +
@@ -621,17 +380,14 @@ struct FileTracker::Impl {
     // Optimized file discovery using C++20 ranges and parallel processing
     auto discoverFiles() -> std::vector<fs::path> {
         try {
-            // Use std::vector for better parallel processing support
             std::vector<fs::path> discoveredFiles;
 
-            // Check if directory exists and is accessible
             if (!fs::exists(directory) || !fs::is_directory(directory)) {
                 throw FailToScanDirectory(
                     "Directory does not exist or is not accessible: " +
                     directory);
             }
 
-            // Define a view to filter files by extension
             auto isTrackedFile = [this](const fs::path& path) -> bool {
                 if (fileTypes.empty()) {
                     return true;  // Track all files if no types specified
@@ -640,14 +396,12 @@ struct FileTracker::Impl {
                 return std::ranges::find(fileTypes, ext) != fileTypes.end();
             };
 
-            // Use C++20 ranges to create a filtered view
             if (recursive) {
                 try {
                     auto dirRange = fs::recursive_directory_iterator(
                         directory,
                         fs::directory_options::skip_permission_denied);
-                    // Capture discoveredFiles by reference and use ranges to
-                    // filter and process
+
                     auto addFile = [&discoveredFiles, &isTrackedFile](
                                        const fs::directory_entry& entry) {
                         if (entry.is_regular_file() &&
@@ -656,20 +410,17 @@ struct FileTracker::Impl {
                         }
                     };
 
-                    // Process directory entries with ranges
                     std::ranges::for_each(dirRange, addFile);
-
                 } catch (const fs::filesystem_error& e) {
-                    // Handle specific filesystem errors more gracefully
-                    ThreadSafeLogger::logError(
-                        "Filesystem error during discovery: " +
-                        std::string(e.what()) +
-                        " (continuing with partial results)");
+                    spdlog::error(
+                        "Filesystem error during discovery: {} (continuing "
+                        "with partial results)",
+                        e.what());
                 }
             } else {
+                // Non-recursive directory scanning
                 try {
                     auto dirRange = fs::directory_iterator(directory);
-                    // Use ranges for filtering non-recursive directory
                     auto fileView =
                         dirRange | std::views::filter([](const auto& entry) {
                             return entry.is_regular_file();
@@ -680,14 +431,10 @@ struct FileTracker::Impl {
                         std::views::transform(
                             [](const auto& entry) { return entry.path(); });
 
-                    // Copy to output vector using ranges
-                    discoveredFiles.clear();
                     std::ranges::copy(fileView,
                                       std::back_inserter(discoveredFiles));
-
                 } catch (const fs::filesystem_error& e) {
-                    ThreadSafeLogger::logError("Directory iteration error: " +
-                                               std::string(e.what()));
+                    spdlog::error("Directory iteration error: {}", e.what());
                 }
             }
 
@@ -698,65 +445,51 @@ struct FileTracker::Impl {
         }
     }
 
-    // Optimize JSON generation with parallel processing and better error
-    // handling
     void generateJSON() {
         try {
             std::vector<fs::path> files = discoverFiles();
             std::atomic<size_t> processedCount = 0;
             const size_t totalCount = files.size();
 
-            // Use latch to synchronize completion
             std::latch completionLatch(totalCount > 0 ? totalCount : 1);
 
-            // Process files in parallel with proper scheduling to avoid
-            // overwhelming the system
-            const size_t maxConcurrentTasks =
-                threadPool->getActiveThreadCount() * 4;
+            // Use thread pool thread count for concurrency control
+            const size_t maxConcurrentTasks = threadPool->size() * 4;
             std::atomic<size_t> activeTasks = 0;
 
             for (const auto& file : files) {
-                // Simple scheduling - limit concurrent tasks
                 while (activeTasks.load() >= maxConcurrentTasks) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
 
                 activeTasks.fetch_add(1);
-                threadPool->enqueue(
-                    [this, file, &processedCount, totalCount, &completionLatch,
-                     &activeTasks]() {
-                        try {
-                            processFile(file);
-                            size_t current = processedCount.fetch_add(1) + 1;
-                            if (current %
-                                        std::max<size_t>(1, totalCount / 10) ==
-                                    0 ||
-                                current == totalCount) {
-                                ThreadSafeLogger::log(
-                                    "Processed " + std::to_string(current) +
-                                    " of " + std::to_string(totalCount) +
-                                    " files");
-                            }
-                        } catch (const std::exception& e) {
-                            ThreadSafeLogger::logError(
-                                std::string("Error processing file ") +
-                                file.string() + ": " + e.what());
+                // Cast to void to handle [[nodiscard]] attribute
+                (void)threadPool->enqueue([this, file, &processedCount,
+                                           totalCount, &completionLatch,
+                                           &activeTasks]() {
+                    try {
+                        processFile(file);
+                        size_t current = processedCount.fetch_add(1) + 1;
+                        if (current % std::max<size_t>(1, totalCount / 10) ==
+                                0 ||
+                            current == totalCount) {
+                            spdlog::info("Processed {} of {} files", current,
+                                         totalCount);
                         }
-                        activeTasks.fetch_sub(1);
-                        completionLatch.count_down();
-                    },
-                    ThreadPool::Priority::Normal);
+                    } catch (const std::exception& e) {
+                        spdlog::error("Error processing file {}: {}",
+                                      file.string(), e.what());
+                    }
+                    activeTasks.fetch_sub(1);
+                    completionLatch.count_down();
+                });
             }
 
-            // If no files were found, ensure the latch is released
             if (totalCount == 0) {
                 completionLatch.count_down();
             }
 
-            // Wait for all files to be processed
             completionLatch.wait();
-
-            // Save JSON with proper exception handling
             saveJSON(newJson, jsonFilePath, encryptionKey);
         } catch (const std::exception& e) {
             throw FailToScanDirectory(std::string("Failed to generate JSON: ") +
@@ -776,8 +509,8 @@ struct FileTracker::Impl {
             try {
                 hash = atom::utils::calculateSha256(entry.string());
             } catch (const std::exception& e) {
-                ThreadSafeLogger::logError("Failed to calculate hash for " +
-                                           entry.string() + ": " + e.what());
+                spdlog::error("Failed to calculate hash for {}: {}",
+                              entry.string(), e.what());
                 hash = "hash_calculation_failed";
             }
 
@@ -788,8 +521,8 @@ struct FileTracker::Impl {
             try {
                 fileSize = fs::file_size(entry);
             } catch (const std::exception& e) {
-                ThreadSafeLogger::logError("Failed to get file size for " +
-                                           entry.string() + ": " + e.what());
+                spdlog::error("Failed to get file size for {}: {}",
+                              entry.string(), e.what());
                 fileSize = 0;
             }
 
@@ -889,14 +622,11 @@ struct FileTracker::Impl {
             const size_t pathCount = pathsToRecover.size();
 
             if (pathCount == 0) {
-                ThreadSafeLogger::log("No files need recovery",
-                                      ThreadSafeLogger::Level::Info);
+                spdlog::info("No files need recovery");
                 return;
             }
 
-            ThreadSafeLogger::log(
-                "Beginning recovery of " + std::to_string(pathCount) + " files",
-                ThreadSafeLogger::Level::Info);
+            spdlog::info("Beginning recovery of {} files", pathCount);
 
             // Use latch for synchronization with C++20 features
             std::latch completionLatch(pathCount);
@@ -921,7 +651,7 @@ struct FileTracker::Impl {
                                 fs::create_directories(filePath.parent_path());
 
                                 // Create or restore the file
-                                if (restoreFileContent(path)) {
+                                if (restoreFileContent(path, this->oldJson)) {
                                     successCount.fetch_add(
                                         1, std::memory_order_relaxed);
                                 } else {
@@ -929,15 +659,13 @@ struct FileTracker::Impl {
                                         1, std::memory_order_relaxed);
                                 }
                             } catch (const std::exception& e) {
-                                ThreadSafeLogger::logError(
-                                    "Failed to recover file " + path + ": " +
-                                    e.what());
+                                spdlog::error("Failed to recover file {}: {}",
+                                              path, e.what());
                                 failureCount.fetch_add(
                                     1, std::memory_order_relaxed);
                             }
                             completionLatch.count_down();
-                        },
-                        ThreadPool::Priority::High));
+                        }));
                 }
 
                 // Wait for current batch to complete before starting next batch
@@ -948,21 +676,18 @@ struct FileTracker::Impl {
 
                 // Report progress periodically
                 const size_t processed = std::min(end, pathCount);
-                ThreadSafeLogger::log("Processed " + std::to_string(processed) +
-                                      " of " + std::to_string(pathCount) +
-                                      " files for recovery");
+                spdlog::info("Processed {} of {} files for recovery", processed,
+                             pathCount);
             }
 
             // Wait for all tasks to complete
             completionLatch.wait();
 
             // Log completion statistics
-            ThreadSafeLogger::log(
-                "Recovery complete: " + std::to_string(successCount) +
-                    " files recovered successfully, " +
-                    std::to_string(failureCount) + " files failed",
-                failureCount > 0 ? ThreadSafeLogger::Level::Warning
-                                 : ThreadSafeLogger::Level::Info);
+            spdlog::info(
+                "Recovery complete: {} files recovered successfully, {} files "
+                "failed",
+                successCount.load(), failureCount.load());
 
             if (failureCount > 0) {
                 throw FailToRecoverFiles(
@@ -975,62 +700,23 @@ struct FileTracker::Impl {
         }
     }
 
-    // Helper method for file restoration with improved error handling
-    bool restoreFileContent(const std::string& filePath) {
-        try {
-            // Get file information from the old JSON
-            if (!oldJson.contains(filePath)) {
-                return false;
-            }
-
-            const json& fileInfo = oldJson[filePath];
-            std::ofstream outFile(filePath);
-            if (!outFile.is_open()) {
-                ThreadSafeLogger::logError("Failed to open file for writing: " +
-                                           filePath);
-                return false;
-            }
-
-            // Write minimal recovery information
-            outFile << "# Recovered file\n"
-                    << "# Original last modified: "
-                    << fileInfo["last_write_time"].get<std::string>() << "\n"
-                    << "# Original size: " << fileInfo["size"].get<uintmax_t>()
-                    << " bytes\n"
-                    << "# Original hash: "
-                    << fileInfo["hash"].get<std::string>() << "\n\n";
-
-            outFile.close();
-            return true;
-        } catch (const std::exception& e) {
-            ThreadSafeLogger::logError("Error restoring file " + filePath +
-                                       ": " + e.what());
-            return false;
-        }
-    }
-
     // Enhanced directory watching with file system event detection
     void watchDirectory() {
         if (watching.exchange(true)) {
-            // Already watching
             return;
         }
 
-        // Start notification processor if not already running
         startNotificationProcessor();
 
-        // Create a thread for watching directory changes
         watchThread = std::thread([this]() {
             try {
                 using Clock = std::chrono::steady_clock;
                 auto lastCheckTime = Clock::now();
                 const auto checkInterval = std::chrono::seconds(1);
 
-                // Keep track of file modification times for change detection
                 std::unordered_map<std::string, fs::file_time_type>
                     lastModifiedTimes;
 
-                // Watch until stopped
                 while (watching) {
                     try {
                         auto now = Clock::now();
@@ -1041,8 +727,6 @@ struct FileTracker::Impl {
                         }
 
                         lastCheckTime = now;
-
-                        // Discover current files
                         auto files = discoverFiles();
 
                         // Check for modified or new files
@@ -1060,12 +744,10 @@ struct FileTracker::Impl {
                                             lastModTime;
                                     }
                                 } else {
-                                    // New file discovered
                                     queueChangeNotification(path, "new");
                                     lastModifiedTimes[pathStr] = lastModTime;
                                 }
 
-                                // Update cache if enabled
                                 if (cacheEnabled) {
                                     fileCache.put(
                                         pathStr,
@@ -1073,9 +755,8 @@ struct FileTracker::Impl {
                                             lastModTime));
                                 }
                             } catch (const std::exception& e) {
-                                ThreadSafeLogger::logError(
-                                    "Error checking file " + path.string() +
-                                    ": " + e.what());
+                                spdlog::error("Error checking file {}: {}",
+                                              path.string(), e.what());
                             }
                         }
 
@@ -1097,23 +778,19 @@ struct FileTracker::Impl {
                             }
                         }
 
-                        // Remove deleted files from tracking
                         for (const auto& pathStr : pathsToRemove) {
                             lastModifiedTimes.erase(pathStr);
                         }
                     } catch (const std::exception& e) {
-                        ThreadSafeLogger::logError("Error in watch cycle: " +
-                                                   std::string(e.what()));
+                        spdlog::error("Error in watch cycle: {}", e.what());
                         std::this_thread::sleep_for(std::chrono::seconds(1));
                     }
                 }
             } catch (const std::exception& e) {
-                ThreadSafeLogger::logCritical(
-                    "Fatal error in directory watcher: " +
-                    std::string(e.what()));
+                spdlog::critical("Fatal error in directory watcher: {}",
+                                 e.what());
             }
 
-            // Ensure we stop processing notifications when watching stops
             stopNotificationProcessor();
         });
     }
@@ -1126,8 +803,7 @@ struct FileTracker::Impl {
         }
 
         notificationThread = std::thread([this]() {
-            ThreadSafeLogger::log("Starting notification processor",
-                                  ThreadSafeLogger::Level::Debug);
+            spdlog::debug("Starting notification processor");
 
             while (processingNotifications || !changeQueue.empty()) {
                 ChangeNotification notification;
@@ -1152,18 +828,14 @@ struct FileTracker::Impl {
                         changeCallback(notification.path,
                                        notification.changeType);
                     } catch (const std::exception& e) {
-                        ThreadSafeLogger::logError(
-                            "Error in change callback: " +
-                            std::string(e.what()));
+                        spdlog::error("Error in change callback: {}", e.what());
                     } catch (...) {
-                        ThreadSafeLogger::logError(
-                            "Unknown error in change callback");
+                        spdlog::error("Unknown error in change callback");
                     }
                 }
             }
 
-            ThreadSafeLogger::log("Notification processor stopped",
-                                  ThreadSafeLogger::Level::Debug);
+            spdlog::debug("Notification processor stopped");
         });
     }
 
@@ -1220,19 +892,48 @@ struct FileTracker::Impl {
         }
     }
 
-    // Convert time point to string representation
     static std::string timePointToString(
         const std::chrono::system_clock::time_point& tp) {
         std::time_t time = std::chrono::system_clock::to_time_t(tp);
         std::tm tm;
-        localtime_r(&time, &tm);  // Thread-safe version of localtime
+#ifdef _WIN32
+        localtime_s(&tm, &time);
+#else
+        localtime_r(&time, &tm);
+#endif
         std::ostringstream oss;
         oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
         return oss.str();
     }
-};
 
-// FileTracker implementation
+    static bool restoreFileContent(const std::string& path,
+                                   const json& oldJson) {
+        try {
+            auto it = oldJson.find(path);
+            if (it == oldJson.end()) {
+                spdlog::error("No backup found in oldJson for: {}", path);
+                return false;
+            }
+            if (!(*it).contains("content") || !(*it)["content"].is_string()) {
+                spdlog::error("No valid content field in oldJson for: {}",
+                              path);
+                return false;
+            }
+            std::string content = (*it)["content"];
+            std::ofstream ofs(path, std::ios::binary);
+            if (!ofs.is_open()) {
+                spdlog::error("Failed to open file for restore: {}", path);
+                return false;
+            }
+            ofs << content;
+            ofs.close();
+            return true;
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in restoreFileContent: {}", e.what());
+            return false;
+        }
+    }
+};
 
 FileTracker::FileTracker(std::string_view directory,
                          std::string_view jsonFilePath,
@@ -1275,12 +976,10 @@ void FileTracker::logDifferences(std::string_view logFilePath) const {
                                  std::string(logFilePath));
         }
 
-        // Add timestamp to log header
         logFile << "\n=== Differences Log: "
                 << impl_->timePointToString(std::chrono::system_clock::now())
                 << " ===\n";
 
-        // Log each difference
         size_t count = 0;
         for (const auto& [filePath, info] : impl_->differences.items()) {
             logFile << "File: " << filePath << ", Status: " << info["status"]
@@ -1434,7 +1133,6 @@ void FileTracker::batchProcess(const std::vector<fs::path>& files,
         throw std::invalid_argument("Files list cannot be empty");
     }
 
-    // Process files in batches with improved concurrency
     const size_t batchSize = std::min<size_t>(100, files.size());
 
     for (size_t i = 0; i < files.size(); i += batchSize) {
@@ -1454,12 +1152,16 @@ void FileTracker::batchProcess(const std::vector<fs::path>& files,
     }
 }
 
+void FileTracker::setChangeCallback(
+    std::function<void(const fs::path&, const std::string&)> callback) {
+    impl_->changeCallback = std::move(callback);
+}
+
 template <ChangeNotifier Callback>
 void FileTracker::setChangeCallback(Callback&& callback) {
     impl_->changeCallback = std::forward<Callback>(callback);
 }
 
-// Explicit instantiations to avoid linker errors
 template void FileTracker::forEachFile(lithium::FileHandler auto&&) const;
 template void FileTracker::batchProcess(const std::vector<fs::path>&,
                                         lithium::FileHandler auto&&);

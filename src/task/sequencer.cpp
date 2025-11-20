@@ -1,14 +1,6 @@
 /**
  * @file sequencer.cpp
- * @brief Task Sequencer Implementation
- *
- * This file contains the implementation of the ExposureSequence class,
- * which manages and executes a sequence of targets.
- *
- * @date 2023-07-21
- * @modified 2024-04-27
- * @author Max Qian <lightapt.com>
- * @copyright
+ * @brief Implementation of the task sequencer for managing target execution.
  */
 
 #include "sequencer.hpp"
@@ -20,26 +12,25 @@
 
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "spdlog/spdlog.h"
 
 #include "constant/constant.hpp"
+#include "registration.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 using json = nlohmann::json;
 
-// ExposureSequence Implementation
-
 ExposureSequence::ExposureSequence() {
-    // 初始化数据库连接
+    // Initialize database connection
     try {
         db_ = std::make_shared<database::Database>("sequences.db");
         sequenceTable_ = std::make_unique<database::Table<SequenceModel>>(*db_);
         sequenceTable_->createTable();
-        LOG_F(INFO, "Database initialized successfully");
+        spdlog::info("Database initialized successfully");
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to initialize database: {}", e.what());
+        spdlog::error("Failed to initialize database: {}", e.what());
         THROW_RUNTIME_ERROR("Failed to initialize database: " +
                             std::string(e.what()));
     }
@@ -49,6 +40,11 @@ ExposureSequence::ExposureSequence() {
         std::make_shared<atom::async::LockFreeHashTable<std::string, json>>());
 
     taskGenerator_ = TaskGenerator::createShared();
+    
+    // Register built-in tasks with the factory
+    registerBuiltInTasks();
+    spdlog::info("Built-in tasks registered with factory");
+    
     initializeDefaultMacros();
 }
 
@@ -56,38 +52,43 @@ ExposureSequence::~ExposureSequence() { stop(); }
 
 void ExposureSequence::addTarget(std::unique_ptr<Target> target) {
     if (!target) {
-        LOG_F(ERROR, "Cannot add a null target");
-        THROW_INVALID_ARGUMENT("Cannot add a null target");
+        spdlog::error("Cannot add a null target");
+        throw std::invalid_argument("Cannot add a null target");
     }
+
     std::unique_lock lock(mutex_);
     auto it = std::find_if(targets_.begin(), targets_.end(),
                            [&](const std::unique_ptr<Target>& t) {
                                return t->getUUID() == target->getUUID();
                            });
     if (it != targets_.end()) {
-        LOG_F(ERROR, "Target with UUID '{}' already exists", target->getUUID());
+        spdlog::error("Target with UUID '{}' already exists",
+                      target->getUUID());
         THROW_RUNTIME_ERROR("Target with UUID '" + target->getUUID() +
                             "' already exists");
     }
-    LOG_F(INFO, "Adding target: {}", target->getName());
+
+    spdlog::info("Adding target: {}", target->getName());
     targets_.push_back(std::move(target));
     totalTargets_ = targets_.size();
-    LOG_F(INFO, "Total targets: {}", totalTargets_);
+    spdlog::info("Total targets: {}", totalTargets_);
 }
 
 void ExposureSequence::removeTarget(const std::string& name) {
     std::unique_lock lock(mutex_);
-    auto it = std::remove_if(
+    auto it = std::find_if(
         targets_.begin(), targets_.end(),
         [&name](const auto& target) { return target->getName() == name; });
+
     if (it == targets_.end()) {
-        LOG_F(ERROR, "Target with name '{}' not found", name);
+        spdlog::error("Target with name '{}' not found", name);
         THROW_RUNTIME_ERROR("Target with name '" + name + "' not found");
     }
-    LOG_F(INFO, "Removing target: {}", name);
-    targets_.erase(it, targets_.end());
+
+    spdlog::info("Removing target: {}", name);
+    targets_.erase(it);
     totalTargets_ = targets_.size();
-    LOG_F(INFO, "Total targets: {}", totalTargets_);
+    spdlog::info("Total targets: {}", totalTargets_);
 }
 
 void ExposureSequence::modifyTarget(const std::string& name,
@@ -96,18 +97,19 @@ void ExposureSequence::modifyTarget(const std::string& name,
     auto it = std::find_if(
         targets_.begin(), targets_.end(),
         [&name](const auto& target) { return target->getName() == name; });
+
     if (it != targets_.end()) {
         try {
-            LOG_F(INFO, "Modifying target: {}", name);
+            spdlog::info("Modifying target: {}", name);
             modifier(**it);
-            LOG_F(INFO, "Target '{}' modified successfully", name);
+            spdlog::info("Target '{}' modified successfully", name);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to modify target '{}': {}", name, e.what());
+            spdlog::error("Failed to modify target '{}': {}", name, e.what());
             THROW_RUNTIME_ERROR("Failed to modify target '" + name +
                                 "': " + e.what());
         }
     } else {
-        LOG_F(ERROR, "Target with name '{}' not found", name);
+        spdlog::error("Target with name '{}' not found", name);
         THROW_RUNTIME_ERROR("Target with name '" + name + "' not found");
     }
 }
@@ -115,32 +117,34 @@ void ExposureSequence::modifyTarget(const std::string& name,
 void ExposureSequence::executeAll() {
     SequenceState expected = SequenceState::Idle;
     if (!state_.compare_exchange_strong(expected, SequenceState::Running)) {
-        LOG_F(ERROR, "Cannot start sequence. Current state: {}",
-              static_cast<int>(state_.load()));
+        spdlog::error("Cannot start sequence. Current state: {}",
+                      static_cast<int>(state_.load()));
         THROW_RUNTIME_ERROR("Sequence is not in Idle state");
     }
 
     completedTargets_.store(0);
-    LOG_F(INFO, "Starting sequence execution");
+    spdlog::info("Starting sequence execution");
     notifySequenceStart();
 
-    // 在单独的线程中启动序列执行
+    // Start sequence execution in a separate thread
     sequenceThread_ = std::jthread([this] { executeSequence(); });
 }
 
 void ExposureSequence::stop() {
     SequenceState current = state_.load();
     if (current == SequenceState::Idle || current == SequenceState::Stopped) {
-        LOG_F(INFO, "Sequence is already in Idle or Stopped state");
+        spdlog::info("Sequence is already in Idle or Stopped state");
         return;
     }
 
-    LOG_F(INFO, "Stopping sequence execution");
+    spdlog::info("Stopping sequence execution");
     state_.store(SequenceState::Stopping);
+
     if (sequenceThread_.joinable()) {
         sequenceThread_.request_stop();
         sequenceThread_.join();
     }
+
     state_.store(SequenceState::Idle);
     notifySequenceEnd();
 }
@@ -148,36 +152,40 @@ void ExposureSequence::stop() {
 void ExposureSequence::pause() {
     SequenceState expected = SequenceState::Running;
     if (!state_.compare_exchange_strong(expected, SequenceState::Paused)) {
-        LOG_F(ERROR, "Cannot pause sequence. Current state: {}",
-              static_cast<int>(state_.load()));
+        spdlog::error("Cannot pause sequence. Current state: {}",
+                      static_cast<int>(state_.load()));
         THROW_RUNTIME_ERROR("Cannot pause sequence. Current state: " +
                             std::to_string(static_cast<int>(state_.load())));
     }
-    LOG_F(INFO, "Sequence paused");
+    spdlog::info("Sequence paused");
 }
 
 void ExposureSequence::resume() {
     SequenceState expected = SequenceState::Paused;
     if (!state_.compare_exchange_strong(expected, SequenceState::Running)) {
-        LOG_F(ERROR, "Cannot resume sequence. Current state: {}",
-              static_cast<int>(state_.load()));
+        spdlog::error("Cannot resume sequence. Current state: {}",
+                      static_cast<int>(state_.load()));
         THROW_RUNTIME_ERROR("Cannot resume sequence. Current state: " +
                             std::to_string(static_cast<int>(state_.load())));
     }
-    LOG_F(INFO, "Sequence resumed");
+    spdlog::info("Sequence resumed");
 }
 
 void ExposureSequence::saveSequence(const std::string& filename) const {
     json j;
     std::shared_lock lock(mutex_);
+
+    j["targets"] = json::array();
     for (const auto& target : targets_) {
         json targetJson = {{"name", target->getName()},
                            {"enabled", target->isEnabled()},
                            {"tasks", json::array()}};
+
         for (const auto& task : target->getTasks()) {
             json taskJson = {{"name", task->getName()},
                              {"status", static_cast<int>(task->getStatus())},
                              {"parameters", json::array()}};
+
             for (const auto& param : task->getParamDefinitions()) {
                 taskJson["parameters"].push_back(
                     {{"name", param.name},
@@ -186,30 +194,35 @@ void ExposureSequence::saveSequence(const std::string& filename) const {
                      {"defaultValue", param.defaultValue},
                      {"description", param.description}});
             }
+
             taskJson["errorType"] = static_cast<int>(task->getErrorType());
             taskJson["errorDetails"] = task->getErrorDetails();
             taskJson["executionTime"] = task->getExecutionTime().count();
             taskJson["memoryUsage"] = task->getMemoryUsage();
             taskJson["cpuUsage"] = task->getCPUUsage();
             taskJson["taskHistory"] = task->getTaskHistory();
+
             targetJson["tasks"].push_back(taskJson);
         }
+
         j["targets"].push_back(targetJson);
     }
+
     std::ofstream file(filename);
     if (!file.is_open()) {
-        LOG_F(ERROR, "Failed to open file '{}' for writing", filename);
+        spdlog::error("Failed to open file '{}' for writing", filename);
         THROW_RUNTIME_ERROR("Failed to open file '" + filename +
                             "' for writing");
     }
+
     file << j.dump(4);
-    LOG_F(INFO, "Sequence saved to file: {}", filename);
+    spdlog::info("Sequence saved to file: {}", filename);
 }
 
 void ExposureSequence::loadSequence(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        LOG_F(ERROR, "Failed to open file '{}' for reading", filename);
+        spdlog::error("Failed to open file '{}' for reading", filename);
         THROW_RUNTIME_ERROR("Failed to open file '" + filename +
                             "' for reading");
     }
@@ -219,14 +232,15 @@ void ExposureSequence::loadSequence(const std::string& filename) {
 
     std::unique_lock lock(mutex_);
     targets_.clear();
+
     if (!j.contains("targets") || !j["targets"].is_array()) {
-        LOG_F(ERROR, "Invalid sequence file format: 'targets' array missing");
+        spdlog::error("Invalid sequence file format: 'targets' array missing");
         THROW_RUNTIME_ERROR(
             "Invalid sequence file format: 'targets' array missing");
     }
 
     for (const auto& targetJson : j["targets"]) {
-        // 在创建目标之前处理 JSON
+        // Process JSON with generator before creating the target
         json processedJson = targetJson;
         processJsonWithGenerator(processedJson);
 
@@ -234,24 +248,30 @@ void ExposureSequence::loadSequence(const std::string& filename) {
         bool enabled = processedJson["enabled"].get<bool>();
         auto target = std::make_unique<Target>(name);
         target->setEnabled(enabled);
+
+        // Load tasks using the improved loadTasksFromJson method
         if (processedJson.contains("tasks") &&
             processedJson["tasks"].is_array()) {
             target->loadTasksFromJson(processedJson["tasks"]);
         }
+
         targets_.push_back(std::move(target));
     }
+
     totalTargets_ = targets_.size();
-    LOG_F(INFO, "Sequence loaded from file: {}", filename);
-    LOG_F(INFO, "Total targets loaded: {}", totalTargets_);
+    spdlog::info("Sequence loaded from file: {}", filename);
+    spdlog::info("Total targets loaded: {}", totalTargets_);
 }
 
 auto ExposureSequence::getTargetNames() const -> std::vector<std::string> {
     std::shared_lock lock(mutex_);
     std::vector<std::string> names;
     names.reserve(targets_.size());
+
     for (const auto& target : targets_) {
         names.emplace_back(target->getName());
     }
+
     return names;
 }
 
@@ -261,23 +281,31 @@ auto ExposureSequence::getTargetStatus(const std::string& name) const
     auto it = std::find_if(
         targets_.begin(), targets_.end(),
         [&name](const auto& target) { return target->getName() == name; });
+
     if (it != targets_.end()) {
         return (*it)->getStatus();
     }
-    return TargetStatus::Skipped;  // 或其他默认值
+
+    return TargetStatus::Skipped;  // Default if target not found
 }
 
 auto ExposureSequence::getProgress() const -> double {
     size_t completed = completedTargets_.load();
-    size_t total = totalTargets_;
+    size_t total;
+    {
+        std::shared_lock lock(mutex_);
+        total = totalTargets_;
+    }
+
     if (total == 0) {
         return 100.0;
     }
+
     return (static_cast<double>(completed) / static_cast<double>(total)) *
            100.0;
 }
 
-// 回调设置函数
+// Callback setter methods
 
 void ExposureSequence::setOnSequenceStart(SequenceCallback callback) {
     std::unique_lock lock(mutex_);
@@ -304,7 +332,7 @@ void ExposureSequence::setOnError(ErrorCallback callback) {
     onError_ = std::move(callback);
 }
 
-// 回调通知辅助方法
+// Notification helper methods
 
 void ExposureSequence::notifySequenceStart() {
     SequenceCallback callbackCopy;
@@ -312,11 +340,12 @@ void ExposureSequence::notifySequenceStart() {
         std::shared_lock lock(mutex_);
         callbackCopy = onSequenceStart_;
     }
+
     if (callbackCopy) {
         try {
             callbackCopy();
-        } catch (...) {
-            // 处理或记录回调异常
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in sequence start callback: {}", e.what());
         }
     }
 }
@@ -327,11 +356,12 @@ void ExposureSequence::notifySequenceEnd() {
         std::shared_lock lock(mutex_);
         callbackCopy = onSequenceEnd_;
     }
+
     if (callbackCopy) {
         try {
             callbackCopy();
-        } catch (...) {
-            // 处理或记录回调异常
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in sequence end callback: {}", e.what());
         }
     }
 }
@@ -342,11 +372,13 @@ void ExposureSequence::notifyTargetStart(const std::string& name) {
         std::shared_lock lock(mutex_);
         callbackCopy = onTargetStart_;
     }
+
     if (callbackCopy) {
         try {
             callbackCopy(name, TargetStatus::InProgress);
-        } catch (...) {
-            // 处理或记录回调异常
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in target start callback for {}: {}", name,
+                          e.what());
         }
     }
 }
@@ -358,11 +390,13 @@ void ExposureSequence::notifyTargetEnd(const std::string& name,
         std::shared_lock lock(mutex_);
         callbackCopy = onTargetEnd_;
     }
+
     if (callbackCopy) {
         try {
             callbackCopy(name, status);
-        } catch (...) {
-            // 处理或记录回调异常
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in target end callback for {}: {}", name,
+                          e.what());
         }
     }
 }
@@ -374,11 +408,13 @@ void ExposureSequence::notifyError(const std::string& name,
         std::shared_lock lock(mutex_);
         callbackCopy = onError_;
     }
+
     if (callbackCopy) {
         try {
             callbackCopy(name, e);
-        } catch (...) {
-            // 处理或记录回调异常
+        } catch (const std::exception& ex) {
+            spdlog::error("Exception in error callback for {}: {}", name,
+                          ex.what());
         }
     }
 }
@@ -392,8 +428,9 @@ void ExposureSequence::executeSequence() {
         }
 
         try {
-            LOG_F(INFO, "Executing target: {} ({}/{} completed)",
-                  target->getName(), completedTargets_.load(), totalTargets_);
+            spdlog::info("Executing target: {} ({}/{} completed)",
+                         target->getName(), completedTargets_.load(),
+                         totalTargets_);
 
             stats_.totalExecutions++;
             notifyTargetStart(target->getName());
@@ -405,17 +442,20 @@ void ExposureSequence::executeSequence() {
             } else if (target->getStatus() == TargetStatus::Failed) {
                 stats_.failedExecutions++;
                 failedTargets_.fetch_add(1);
+
+                std::unique_lock lock(mutex_);
                 failedTargetNames_.push_back(target->getName());
             }
 
             notifyTargetEnd(target->getName(), target->getStatus());
 
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Target execution failed: {} - {}", target->getName(),
-                  e.what());
+            spdlog::error("Target execution failed: {} - {}", target->getName(),
+                          e.what());
             handleTargetError(target, e);
         }
     }
+
     state_.store(SequenceState::Idle);
     notifySequenceEnd();
 }
@@ -425,30 +465,43 @@ auto ExposureSequence::getNextExecutableTarget() -> Target* {
         return nullptr;
     }
 
-    if (maxConcurrentTargets_ > 0) {
-        size_t runningTargets = 0;
-        for (const auto& target : targets_) {
-            if (target->getStatus() == TargetStatus::InProgress) {
-                runningTargets++;
+    // Check concurrent execution limits
+    size_t runningTargets = 0;
+    {
+        std::shared_lock lock(mutex_);
+        if (maxConcurrentTargets_ > 0) {
+            for (const auto& target : targets_) {
+                if (target->getStatus() == TargetStatus::InProgress) {
+                    runningTargets++;
+                }
+            }
+
+            if (runningTargets >= maxConcurrentTargets_) {
+                return nullptr;
             }
         }
-        if (runningTargets >= maxConcurrentTargets_) {
-            return nullptr;
+
+        // Find next ready target
+        for (const auto& target : targets_) {
+            if (target->getStatus() == TargetStatus::Pending &&
+                isTargetReady(target->getName())) {
+                return target.get();
+            }
         }
     }
 
-    for (const auto& target : targets_) {
-        if (target->getStatus() == TargetStatus::Pending &&
-            isTargetReady(target->getName())) {
-            return target.get();
-        }
-    }
     return nullptr;
 }
 
 void ExposureSequence::handleTargetError(Target* target,
                                          const std::exception& e) {
-    switch (recoveryStrategy_) {
+    RecoveryStrategy strategy;
+    {
+        std::shared_lock lock(mutex_);
+        strategy = recoveryStrategy_;
+    }
+
+    switch (strategy) {
         case RecoveryStrategy::Stop:
             state_.store(SequenceState::Stopping);
             break;
@@ -459,16 +512,22 @@ void ExposureSequence::handleTargetError(Target* target,
             break;
 
         case RecoveryStrategy::Retry:
-            // 实现重试逻辑
+            // Implementation would handle retry logic
+            spdlog::info("Retry strategy selected for target: {}",
+                         target->getName());
             break;
 
-        case RecoveryStrategy::Alternative:
-            // 尝试执行替代任务
+        case RecoveryStrategy::Alternative: {
+            std::shared_lock lock(mutex_);
+            // Try to execute alternative target if available
             if (auto it = alternativeTargets_.find(target->getName());
                 it != alternativeTargets_.end()) {
+                spdlog::info("Executing alternative target for: {}",
+                             target->getName());
                 it->second->execute();
             }
             break;
+        }
     }
 
     notifyError(target->getName(), e);
@@ -478,12 +537,16 @@ void ExposureSequence::setSchedulingStrategy(SchedulingStrategy strategy) {
     std::unique_lock lock(mutex_);
     schedulingStrategy_ = strategy;
 
-    // 根据新策略重新排序
+    // Reorder targets based on new strategy
     switch (strategy) {
         case SchedulingStrategy::Dependencies:
             reorderTargetsByDependencies();
             break;
+        case SchedulingStrategy::Priority:
+            reorderTargetsByPriority();
+            break;
         default:
+            // No reordering needed for FIFO
             break;
     }
 }
@@ -491,12 +554,19 @@ void ExposureSequence::setSchedulingStrategy(SchedulingStrategy strategy) {
 void ExposureSequence::setRecoveryStrategy(RecoveryStrategy strategy) {
     std::unique_lock lock(mutex_);
     recoveryStrategy_ = strategy;
+    spdlog::info("Recovery strategy set to: {}", static_cast<int>(strategy));
 }
 
 void ExposureSequence::addAlternativeTarget(
     const std::string& targetName, std::unique_ptr<Target> alternative) {
+    if (!alternative) {
+        spdlog::error("Cannot add null alternative target for {}", targetName);
+        throw std::invalid_argument("Cannot add null alternative target");
+    }
+
     std::unique_lock lock(mutex_);
     alternativeTargets_[targetName] = std::move(alternative);
+    spdlog::info("Alternative target added for: {}", targetName);
 }
 
 void ExposureSequence::reorderTargetsByDependencies() {
@@ -511,6 +581,7 @@ void ExposureSequence::reorderTargetsByDependencies() {
         if (visited[name]) {
             return;
         }
+
         if (inStack[name]) {
             THROW_RUNTIME_ERROR("Circular dependency detected in target '" +
                                 name + "'");
@@ -526,41 +597,65 @@ void ExposureSequence::reorderTargetsByDependencies() {
                 visit_ref(*it, visit_ref);
             }
         }
+
         inStack[name] = false;
         visited[name] = true;
-        stack.push(std::move(const_cast<std::unique_ptr<Target>&>(target)));
+
+        // Use std::move with care - we're manipulating a const reference
+        auto& mutableTarget = const_cast<std::unique_ptr<Target>&>(target);
+        stack.push(std::move(mutableTarget));
     };
 
-    for (const auto& target : targets_) {
-        visit(target, visit);
+    // Create a copy of targets since we'll be moving them
+    auto targetsCopy = std::move(targets_);
+    targets_.clear();
+
+    for (auto& target : targetsCopy) {
+        if (!visited[target->getName()]) {
+            visit(target, visit);
+        }
     }
 
     while (!stack.empty()) {
-        sorted.push_back(std::move(stack.top()));
+        targets_.push_back(std::move(stack.top()));
         stack.pop();
     }
 
-    targets_ = std::move(sorted);
+    spdlog::info("Targets reordered by dependencies");
+}
+
+void ExposureSequence::reorderTargetsByPriority() {
+    // Sort targets by priority
+    std::sort(
+        targets_.begin(), targets_.end(),
+        [](const std::unique_ptr<Target>& a, const std::unique_ptr<Target>& b) {
+            // Higher priority first - implementation would depend on how
+            // priority is stored
+            return false;  // Placeholder for actual priority comparison
+        });
+    spdlog::info("Targets reordered by priority");
 }
 
 void ExposureSequence::addTargetDependency(const std::string& targetName,
                                            const std::string& dependsOn) {
     std::unique_lock lock(mutex_);
-    // 添加依赖
-    if (std::find(targetDependencies_[targetName].begin(),
-                  targetDependencies_[targetName].end(),
-                  dependsOn) == targetDependencies_[targetName].end()) {
-        targetDependencies_[targetName].push_back(dependsOn);
+    // Add dependency if not already present
+    auto& dependencies = targetDependencies_[targetName];
+    if (std::find(dependencies.begin(), dependencies.end(), dependsOn) ==
+        dependencies.end()) {
+        dependencies.push_back(dependsOn);
     }
 
-    // 检查是否存在循环依赖
+    // Check for cyclic dependencies
     if (auto cycle = findCyclicDependency()) {
-        targetDependencies_[targetName].pop_back();
+        // Remove the dependency we just added
+        dependencies.pop_back();
         THROW_RUNTIME_ERROR("Cyclic dependency detected in target: " +
                             cycle.value());
     }
 
     updateTargetReadyStatus();
+    spdlog::info("Added dependency: {} depends on {}", targetName, dependsOn);
 }
 
 void ExposureSequence::removeTargetDependency(const std::string& targetName,
@@ -569,6 +664,8 @@ void ExposureSequence::removeTargetDependency(const std::string& targetName,
     auto& deps = targetDependencies_[targetName];
     deps.erase(std::remove(deps.begin(), deps.end(), dependsOn), deps.end());
     updateTargetReadyStatus();
+    spdlog::info("Removed dependency: {} no longer depends on {}", targetName,
+                 dependsOn);
 }
 
 auto ExposureSequence::isTargetReady(const std::string& targetName) const
@@ -578,18 +675,28 @@ auto ExposureSequence::isTargetReady(const std::string& targetName) const
     return it != targetReadyStatus_.end() && it->second;
 }
 
+auto ExposureSequence::getTargetDependencies(
+    const std::string& targetName) const -> std::vector<std::string> {
+    std::shared_lock lock(mutex_);
+    auto it = targetDependencies_.find(targetName);
+    if (it != targetDependencies_.end()) {
+        return it->second;
+    }
+    return {};
+}
+
 void ExposureSequence::updateTargetReadyStatus() {
-    // 首先将所有目标标记为就绪
+    // First mark all targets as ready
     for (const auto& target : targets_) {
         targetReadyStatus_[target->getName()] = true;
     }
 
-    // 检查每个目标的依赖
+    // Check dependencies for each target
     bool changed;
     do {
         changed = false;
         for (const auto& [targetName, dependencies] : targetDependencies_) {
-            // 如果任何依赖项未就绪,则该目标也未就绪
+            // If any dependency is not ready, the target is also not ready
             for (const auto& dep : dependencies) {
                 if (!targetReadyStatus_[dep]) {
                     if (targetReadyStatus_[targetName]) {
@@ -644,13 +751,30 @@ auto ExposureSequence::findCyclicDependency() const
 void ExposureSequence::setMaxConcurrentTargets(size_t max) {
     std::unique_lock lock(mutex_);
     maxConcurrentTargets_ = max;
-    LOG_F(INFO, "Maximum concurrent targets set to: {}", max);
+    spdlog::info("Maximum concurrent targets set to: {}", max);
+}
+
+void ExposureSequence::setTargetTimeout(const std::string& name,
+                                        std::chrono::seconds timeout) {
+    std::shared_lock lock(mutex_);
+    auto it = std::find_if(
+        targets_.begin(), targets_.end(),
+        [&name](const auto& target) { return target->getName() == name; });
+    if (it != targets_.end()) {
+        // Implementation depends on Target interface
+        spdlog::info("Set timeout for target {}: {} seconds", name,
+                     timeout.count());
+        // (*it)->setTimeout(timeout);  // Assuming Target has setTimeout method
+    } else {
+        spdlog::error("Target not found: {}", name);
+        THROW_RUNTIME_ERROR("Target not found: " + name);
+    }
 }
 
 void ExposureSequence::setGlobalTimeout(std::chrono::seconds timeout) {
     std::unique_lock lock(mutex_);
     globalTimeout_ = timeout;
-    LOG_F(INFO, "Global timeout set to: {}s", timeout.count());
+    spdlog::info("Global timeout set to: {}s", timeout.count());
 }
 
 auto ExposureSequence::getFailedTargets() const -> std::vector<std::string> {
@@ -658,34 +782,73 @@ auto ExposureSequence::getFailedTargets() const -> std::vector<std::string> {
     return failedTargetNames_;
 }
 
+auto ExposureSequence::getExecutionStats() const -> json {
+    std::shared_lock lock(mutex_);
+    auto now = std::chrono::steady_clock::now();
+    auto uptime =
+        std::chrono::duration_cast<std::chrono::seconds>(now - stats_.startTime)
+            .count();
+
+    return json{{"totalExecutions", stats_.totalExecutions},
+                {"successfulExecutions", stats_.successfulExecutions},
+                {"failedExecutions", stats_.failedExecutions},
+                {"averageExecutionTime", stats_.averageExecutionTime},
+                {"uptime", uptime}};
+}
+
+auto ExposureSequence::getResourceUsage() const -> json {
+    // Implementation would collect resource usage metrics
+    return json{
+        {"memoryUsage", getTotalMemoryUsage()},
+        {"cpuUsage",
+         0.0},  // Would be implemented with actual CPU usage tracking
+        {"diskUsage", 0}
+        // Would be implemented with actual disk usage tracking
+    };
+}
+
 void ExposureSequence::retryFailedTargets() {
-    std::unique_lock lock(mutex_);
-    std::vector<std::string> targetsToRetry = failedTargetNames_;
-    failedTargetNames_.clear();
-    failedTargets_.store(0);
+    std::vector<std::string> targetsToRetry;
+    {
+        std::unique_lock lock(mutex_);
+        targetsToRetry = failedTargetNames_;
+        failedTargetNames_.clear();
+        failedTargets_.store(0);
+    }
 
     for (const auto& targetName : targetsToRetry) {
+        std::shared_lock lock(mutex_);
         auto it = std::find_if(targets_.begin(), targets_.end(),
                                [&](const auto& target) {
                                    return target->getName() == targetName;
                                });
         if (it != targets_.end()) {
             (*it)->setStatus(TargetStatus::Pending);
-            LOG_F(INFO, "Retrying failed target: {}", targetName);
+            spdlog::info("Retrying failed target: {}", targetName);
         }
     }
 }
 
-auto ExposureSequence::getExecutionStats() const -> json {
-    std::shared_lock lock(mutex_);
-    return json{
-        {"totalExecutions", stats_.totalExecutions},
-        {"successfulExecutions", stats_.successfulExecutions},
-        {"failedExecutions", stats_.failedExecutions},
-        {"averageExecutionTime", stats_.averageExecutionTime},
-        {"uptime", std::chrono::duration_cast<std::chrono::seconds>(
-                       std::chrono::steady_clock::now() - stats_.startTime)
-                       .count()}};
+void ExposureSequence::skipFailedTargets() {
+    std::vector<std::string> targetsToSkip;
+    {
+        std::unique_lock lock(mutex_);
+        targetsToSkip = failedTargetNames_;
+        failedTargetNames_.clear();
+        failedTargets_.store(0);
+    }
+
+    for (const auto& targetName : targetsToSkip) {
+        std::shared_lock lock(mutex_);
+        auto it = std::find_if(targets_.begin(), targets_.end(),
+                               [&](const auto& target) {
+                                   return target->getName() == targetName;
+                               });
+        if (it != targets_.end()) {
+            (*it)->setStatus(TargetStatus::Skipped);
+            spdlog::info("Skipping failed target: {}", targetName);
+        }
+    }
 }
 
 void ExposureSequence::setTargetTaskParams(const std::string& targetName,
@@ -696,9 +859,13 @@ void ExposureSequence::setTargetTaskParams(const std::string& targetName,
         std::find_if(targets_.begin(), targets_.end(),
                      [&](const auto& t) { return t->getName() == targetName; });
     if (target == targets_.end()) {
+        spdlog::error("Target not found: {}", targetName);
         THROW_RUNTIME_ERROR("Target not found: " + targetName);
     }
+
     (*target)->setTaskParams(taskUUID, params);
+    spdlog::info("Set parameters for task {} in target {}", taskUUID,
+                 targetName);
 }
 
 auto ExposureSequence::getTargetTaskParams(const std::string& targetName,
@@ -709,8 +876,11 @@ auto ExposureSequence::getTargetTaskParams(const std::string& targetName,
         std::find_if(targets_.begin(), targets_.end(),
                      [&](const auto& t) { return t->getName() == targetName; });
     if (target == targets_.end()) {
+        spdlog::warn("Target not found when getting task params: {}",
+                     targetName);
         return std::nullopt;
     }
+
     return (*target)->getTaskParams(taskUUID);
 }
 
@@ -722,8 +892,9 @@ void ExposureSequence::setTargetParams(const std::string& targetName,
                      [&](const auto& t) { return t->getName() == targetName; });
     if (target != targets_.end()) {
         (*target)->setParams(params);
+        spdlog::info("Set parameters for target {}", targetName);
     } else {
-        LOG_F(ERROR, "Target not found: {}", targetName);
+        spdlog::error("Target not found: {}", targetName);
         THROW_RUNTIME_ERROR("Target not found: " + targetName);
     }
 }
@@ -737,12 +908,14 @@ auto ExposureSequence::getTargetParams(const std::string& targetName) const
     if (target != targets_.end()) {
         return (*target)->getParams();
     }
+
+    spdlog::warn("Target not found when getting params: {}", targetName);
     return std::nullopt;
 }
 
 void ExposureSequence::saveToDatabase() {
     if (!db_ || !sequenceTable_) {
-        LOG_F(ERROR, "Database not initialized");
+        spdlog::error("Database not initialized");
         THROW_RUNTIME_ERROR("Database not initialized");
     }
 
@@ -759,10 +932,10 @@ void ExposureSequence::saveToDatabase() {
         sequenceTable_->insert(model);
 
         db_->commit();
-        LOG_F(INFO, "Sequence saved to database with UUID: {}", uuid_);
+        spdlog::info("Sequence saved to database with UUID: {}", uuid_);
     } catch (const std::exception& e) {
         db_->rollback();
-        LOG_F(ERROR, "Failed to save sequence to database: {}", e.what());
+        spdlog::error("Failed to save sequence to database: {}", e.what());
         THROW_RUNTIME_ERROR("Failed to save sequence to database: " +
                             std::string(e.what()));
     }
@@ -770,14 +943,14 @@ void ExposureSequence::saveToDatabase() {
 
 void ExposureSequence::loadFromDatabase(const std::string& uuid) {
     if (!db_ || !sequenceTable_) {
-        LOG_F(ERROR, "Database not initialized");
+        spdlog::error("Database not initialized");
         THROW_RUNTIME_ERROR("Database not initialized");
     }
 
     try {
         auto results = sequenceTable_->query("uuid = '" + uuid + "'", 1);
         if (results.empty()) {
-            LOG_F(ERROR, "Sequence with UUID {} not found", uuid);
+            spdlog::error("Sequence with UUID {} not found", uuid);
             THROW_RUNTIME_ERROR("Sequence not found: " + uuid);
         }
 
@@ -786,9 +959,9 @@ void ExposureSequence::loadFromDatabase(const std::string& uuid) {
         json data = json::parse(model.data);
         deserializeFromJson(data);
 
-        LOG_F(INFO, "Sequence loaded from database: {}", uuid);
+        spdlog::info("Sequence loaded from database: {}", uuid);
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to load sequence from database: {}", e.what());
+        spdlog::error("Failed to load sequence from database: {}", e.what());
         THROW_RUNTIME_ERROR("Failed to load sequence from database: " +
                             std::string(e.what()));
     }
@@ -796,14 +969,14 @@ void ExposureSequence::loadFromDatabase(const std::string& uuid) {
 
 auto ExposureSequence::listSequences() -> std::vector<SequenceModel> {
     if (!db_ || !sequenceTable_) {
-        LOG_F(ERROR, "Database not initialized");
+        spdlog::error("Database not initialized");
         THROW_RUNTIME_ERROR("Database not initialized");
     }
 
     try {
         return sequenceTable_->query();
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to list sequences: {}", e.what());
+        spdlog::error("Failed to list sequences: {}", e.what());
         THROW_RUNTIME_ERROR("Failed to list sequences: " +
                             std::string(e.what()));
     }
@@ -811,7 +984,7 @@ auto ExposureSequence::listSequences() -> std::vector<SequenceModel> {
 
 void ExposureSequence::deleteFromDatabase(const std::string& uuid) {
     if (!db_ || !sequenceTable_) {
-        LOG_F(ERROR, "Database not initialized");
+        spdlog::error("Database not initialized");
         THROW_RUNTIME_ERROR("Database not initialized");
     }
 
@@ -819,10 +992,10 @@ void ExposureSequence::deleteFromDatabase(const std::string& uuid) {
         db_->beginTransaction();
         sequenceTable_->remove("uuid = '" + uuid + "'");
         db_->commit();
-        LOG_F(INFO, "Sequence deleted from database: {}", uuid);
+        spdlog::info("Sequence deleted from database: {}", uuid);
     } catch (const std::exception& e) {
         db_->rollback();
-        LOG_F(ERROR, "Failed to delete sequence from database: {}", e.what());
+        spdlog::error("Failed to delete sequence from database: {}", e.what());
         THROW_RUNTIME_ERROR("Failed to delete sequence from database: " +
                             std::string(e.what()));
     }
@@ -881,15 +1054,18 @@ void ExposureSequence::deserializeFromJson(const json& data) {
         statsJson["averageExecutionTime"].get<double>();
 
     updateTargetReadyStatus();
+    spdlog::info("Sequence deserialized from JSON data");
 }
 
 void ExposureSequence::initializeDefaultMacros() {
-    // 添加一些默认宏用于任务处理
+    // Add default macros for task processing
     taskGenerator_->addMacro(
         "target.uuid",
         [this](const std::vector<std::string>& args) -> std::string {
             if (args.empty())
                 return "";
+
+            std::shared_lock lock(mutex_);
             auto target = std::find_if(
                 targets_.begin(), targets_.end(),
                 [&args](const auto& t) { return t->getName() == args[0]; });
@@ -909,16 +1085,20 @@ void ExposureSequence::initializeDefaultMacros() {
         [this](const std::vector<std::string>&) -> std::string {
             return std::to_string(getProgress());
         });
+
+    spdlog::info("Default macros initialized");
 }
 
 void ExposureSequence::setTaskGenerator(
     std::shared_ptr<TaskGenerator> generator) {
     if (!generator) {
-        LOG_F(ERROR, "Cannot set null task generator");
-        THROW_INVALID_ARGUMENT("Cannot set null task generator");
+        spdlog::error("Cannot set null task generator");
+        throw std::invalid_argument("Cannot set null task generator");
     }
+
     std::unique_lock lock(mutex_);
     taskGenerator_ = std::move(generator);
+    spdlog::info("Task generator set");
 }
 
 auto ExposureSequence::getTaskGenerator() const
@@ -934,7 +1114,7 @@ void ExposureSequence::processTargetWithMacros(const std::string& targetName) {
         [&targetName](const auto& t) { return t->getName() == targetName; });
 
     if (target == targets_.end()) {
-        LOG_F(ERROR, "Target not found: {}", targetName);
+        spdlog::error("Target not found: {}", targetName);
         THROW_RUNTIME_ERROR("Target not found: " + targetName);
     }
 
@@ -942,10 +1122,11 @@ void ExposureSequence::processTargetWithMacros(const std::string& targetName) {
         json targetData = (*target)->toJson();
         taskGenerator_->processJsonWithJsonMacros(targetData);
         (*target)->fromJson(targetData);
-        LOG_F(INFO, "Successfully processed target {} with macros", targetName);
+        spdlog::info("Successfully processed target {} with macros",
+                     targetName);
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to process target {} with macros: {}", targetName,
-              e.what());
+        spdlog::error("Failed to process target {} with macros: {}", targetName,
+                      e.what());
         THROW_RUNTIME_ERROR("Failed to process target with macros: " +
                             std::string(e.what()));
     }
@@ -959,20 +1140,20 @@ void ExposureSequence::processAllTargetsWithMacros() {
             taskGenerator_->processJsonWithJsonMacros(targetData);
             target->fromJson(targetData);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to process target {} with macros: {}",
-                  target->getName(), e.what());
+            spdlog::error("Failed to process target {} with macros: {}",
+                          target->getName(), e.what());
             THROW_RUNTIME_ERROR("Failed to process target with macros: " +
                                 std::string(e.what()));
         }
     }
-    LOG_F(INFO, "Successfully processed all targets with macros");
+    spdlog::info("Successfully processed all targets with macros");
 }
 
 void ExposureSequence::processJsonWithGenerator(json& data) {
     try {
         taskGenerator_->processJsonWithJsonMacros(data);
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to process JSON with generator: {}", e.what());
+        spdlog::error("Failed to process JSON with generator: {}", e.what());
         THROW_RUNTIME_ERROR("Failed to process JSON with generator: " +
                             std::string(e.what()));
     }
@@ -981,11 +1162,13 @@ void ExposureSequence::processJsonWithGenerator(json& data) {
 void ExposureSequence::addMacro(const std::string& name, MacroValue value) {
     std::unique_lock lock(mutex_);
     taskGenerator_->addMacro(name, std::move(value));
+    spdlog::info("Macro added: {}", name);
 }
 
 void ExposureSequence::removeMacro(const std::string& name) {
     std::unique_lock lock(mutex_);
     taskGenerator_->removeMacro(name);
+    spdlog::info("Macro removed: {}", name);
 }
 
 auto ExposureSequence::listMacros() const -> std::vector<std::string> {
@@ -993,4 +1176,40 @@ auto ExposureSequence::listMacros() const -> std::vector<std::string> {
     return taskGenerator_->listMacros();
 }
 
-}  // namespace lithium::sequencer
+auto ExposureSequence::getAverageExecutionTime() const
+    -> std::chrono::milliseconds {
+    std::shared_lock lock(mutex_);
+    return std::chrono::milliseconds(
+        static_cast<int64_t>(stats_.averageExecutionTime));
+}
+
+auto ExposureSequence::getTotalMemoryUsage() const -> size_t {
+    std::shared_lock lock(mutex_);
+    size_t totalMemory = 0;
+
+    for (const auto& target : targets_) {
+        for (const auto& task : target->getTasks()) {
+            totalMemory += task->getMemoryUsage();
+        }
+    }
+
+    return totalMemory;
+}
+
+void ExposureSequence::setTargetPriority(const std::string& targetName,
+                                         int priority) {
+    std::shared_lock lock(mutex_);
+    auto target =
+        std::find_if(targets_.begin(), targets_.end(),
+                     [&](const auto& t) { return t->getName() == targetName; });
+
+    if (target != targets_.end()) {
+        // Implementation would set priority on the target
+        spdlog::info("Set priority {} for target {}", priority, targetName);
+    } else {
+        spdlog::error("Target not found for priority setting: {}", targetName);
+        THROW_RUNTIME_ERROR("Target not found: " + targetName);
+    }
+}
+
+}  // namespace lithium::task

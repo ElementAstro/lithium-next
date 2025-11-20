@@ -14,8 +14,9 @@
 #include <vector>
 #include "atom/type/json.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 using json = nlohmann::json;
+
 /**
  * @enum TaskStatus
  * @brief Represents the status of a task.
@@ -27,14 +28,17 @@ enum class TaskStatus {
     Failed       ///< Task has failed.
 };
 
-// 在 TaskStatus 枚举后添加
+/**
+ * @enum TaskErrorType
+ * @brief Represents the type of error that occurred during task execution.
+ */
 enum class TaskErrorType {
-    None,
-    Timeout,
-    InvalidParameter,
-    DeviceError,
-    SystemError,
-    Unknown
+    None,              ///< No error has occurred.
+    Timeout,           ///< Task execution timed out.
+    InvalidParameter,  ///< Task parameters were invalid.
+    DeviceError,       ///< An error occurred with a device.
+    SystemError,       ///< A system error occurred.
+    Unknown            ///< An unknown error occurred.
 };
 
 /**
@@ -45,13 +49,16 @@ class Task {
 public:
     using ExceptionCallback = std::function<void(const std::exception&)>;
 
-    // 参数定义结构体
+    /**
+     * @struct ParamDefinition
+     * @brief Defines a parameter for a task.
+     */
     struct ParamDefinition {
-        std::string name;
-        std::string type;
-        bool required;
-        json defaultValue;
-        std::string description;
+        std::string name;         ///< The name of the parameter.
+        std::string type;         ///< The type of the parameter.
+        bool required;            ///< Whether the parameter is required.
+        json defaultValue;        ///< The default value for the parameter.
+        std::string description;  ///< A description of the parameter.
     };
 
     /**
@@ -98,71 +105,238 @@ public:
      */
     [[nodiscard]] auto getError() const -> std::optional<std::string>;
 
-    // 设置任务优先级 (1-10，数字越大优先级越高)
+    /**
+     * @brief Sets the task priority (1-10, higher is more important).
+     * @param priority The priority value.
+     */
     void setPriority(int priority);
+
+    /**
+     * @brief Gets the task priority.
+     * @return The priority value.
+     */
     [[nodiscard]] auto getPriority() const -> int;
 
-    // 添加任务依赖
+    /**
+     * @brief Adds a task dependency.
+     * @param taskId The ID of the task this task depends on.
+     */
     void addDependency(const std::string& taskId);
+
+    /**
+     * @brief Removes a task dependency.
+     * @param taskId The ID of the dependency to remove.
+     */
     void removeDependency(const std::string& taskId);
+
+    /**
+     * @brief Checks if this task has a specific dependency.
+     * @param taskId The task ID to check.
+     * @return True if the task dependency exists.
+     */
     [[nodiscard]] auto hasDependency(const std::string& taskId) const -> bool;
+
+    /**
+     * @brief Gets all task dependencies.
+     * @return Vector of dependency task IDs.
+     */
     [[nodiscard]] auto getDependencies() const
         -> const std::vector<std::string>&;
+
+    /**
+     * @brief Checks if all dependencies are satisfied.
+     * @return True if all dependencies are satisfied.
+     */
     [[nodiscard]] auto isDependencySatisfied() const -> bool;
+
+    /**
+     * @brief Sets the status of a dependency.
+     * @param taskId The task ID of the dependency.
+     * @param status The completion status to set.
+     */
     void setDependencyStatus(const std::string& taskId, bool status);
 
-    // 任务性能监控
+    /**
+     * @brief Gets the task execution time.
+     * @return The execution time in milliseconds.
+     */
     [[nodiscard]] auto getExecutionTime() const -> std::chrono::milliseconds;
+
+    /**
+     * @brief Gets the task memory usage.
+     * @return The memory usage in bytes.
+     */
     [[nodiscard]] auto getMemoryUsage() const -> size_t;
 
-    // 新增日志级别控制
+    /**
+     * @brief Sets the log level for this task.
+     * @param level The log level to set.
+     */
     void setLogLevel(int level);
+
+    /**
+     * @brief Gets the current log level.
+     * @return The current log level.
+     */
     [[nodiscard]] auto getLogLevel() const -> int;
 
-    // 新增错误处理相关
+    /**
+     * @brief Sets the error type for this task.
+     * @param type The error type to set.
+     */
     void setErrorType(TaskErrorType type);
+
+    /**
+     * @brief Gets the current error type.
+     * @return The current error type.
+     */
     [[nodiscard]] auto getErrorType() const -> TaskErrorType;
+
+    /**
+     * @brief Gets detailed error information.
+     * @return The error details as a string.
+     */
     [[nodiscard]] auto getErrorDetails() const -> std::string;
 
-    // 新增性能监控
+    /**
+     * @brief Gets the CPU usage of this task.
+     * @return The CPU usage as a percentage.
+     */
     [[nodiscard]] auto getCPUUsage() const -> double;
+
+    /**
+     * @brief Gets the task execution history.
+     * @return Vector of history entries.
+     */
     [[nodiscard]] auto getTaskHistory() const -> std::vector<std::string>;
+
+    /**
+     * @brief Adds an entry to the task history.
+     * @param entry The history entry to add.
+     */
     void addHistoryEntry(const std::string& entry);
 
-    // 参数相关方法
+    /**
+     * @brief Adds a parameter definition to the task.
+     * @param name The name of the parameter.
+     * @param type The type of the parameter.
+     * @param required Whether the parameter is required.
+     * @param defaultValue The default value for the parameter.
+     * @param description A description of the parameter.
+     */
     void addParamDefinition(const std::string& name, const std::string& type,
                             bool required, const json& defaultValue = nullptr,
                             const std::string& description = "");
+
+    /**
+     * @brief Removes a parameter definition.
+     * @param name The name of the parameter to remove.
+     */
     void removeParamDefinition(const std::string& name);
+
+    /**
+     * @brief Gets all parameter definitions.
+     * @return Vector of parameter definitions.
+     */
     [[nodiscard]] auto getParamDefinitions() const
         -> const std::vector<ParamDefinition>&;
+
+    /**
+     * @brief Validates parameters against their definitions.
+     * @param params The parameters to validate.
+     * @return True if all parameters are valid.
+     */
     [[nodiscard]] auto validateParams(const json& params) -> bool;
+
+    /**
+     * @brief Gets any parameter validation errors.
+     * @return Vector of error messages.
+     */
     [[nodiscard]] auto getParamErrors() const
         -> const std::vector<std::string>&;
 
-    // 前置任务相关方法
+    /**
+     * @brief Adds a pre-task that must complete before this task.
+     * @param task The task to add.
+     */
     void addPreTask(std::unique_ptr<Task> task);
+
+    /**
+     * @brief Removes a pre-task.
+     * @param task The task to remove.
+     */
     void removePreTask(std::unique_ptr<Task> task);
+
+    /**
+     * @brief Gets all pre-tasks.
+     * @return Vector of pre-tasks.
+     */
     [[nodiscard]] auto getPreTasks() const
         -> const std::vector<std::unique_ptr<Task>>&;
+
+    /**
+     * @brief Checks if all pre-tasks have completed.
+     * @return True if all pre-tasks are completed.
+     */
     [[nodiscard]] auto arePreTasksCompleted() const -> bool;
 
-    // 后置任务相关方法
+    /**
+     * @brief Adds a post-task to execute after this task.
+     * @param task The task to add.
+     */
     void addPostTask(std::unique_ptr<Task> task);
+
+    /**
+     * @brief Removes a post-task.
+     * @param task The task to remove.
+     */
     void removePostTask(std::unique_ptr<Task> task);
+
+    /**
+     * @brief Gets all post-tasks.
+     * @return Vector of post-tasks.
+     */
     [[nodiscard]] auto getPostTasks() const
         -> const std::vector<std::unique_ptr<Task>>&;
+
+    /**
+     * @brief Triggers execution of all post-tasks.
+     */
     void triggerPostTasks();
 
-    // 异常处理回调
+    /**
+     * @brief Sets an exception callback function.
+     * @param callback The callback function to set.
+     */
     void setExceptionCallback(ExceptionCallback callback);
+
+    /**
+     * @brief Clears the exception callback function.
+     */
     void clearExceptionCallback();
 
+    /**
+     * @brief Converts the task to a JSON representation.
+     * @return The JSON representation of the task.
+     */
     json toJson() const;
+
+    /**
+     * @brief Sets the task type for factory-based creation.
+     * @param type The task type identifier.
+     */
+    void setTaskType(const std::string& type);
+
+    /**
+     * @brief Gets the task type identifier.
+     * @return The task type identifier.
+     */
+    [[nodiscard]] auto getTaskType() const -> const std::string&;
 
 private:
     std::string name_;  ///< The name of the task.
     std::string uuid_;  ///< The unique identifier of the task.
+    std::string taskType_;  ///< The task type identifier for factory-based creation.
     std::function<void(const json&)>
         action_;  ///< The action to be performed by the task.
     std::chrono::seconds timeout_{0};  ///< The timeout duration for the task.
@@ -170,36 +344,32 @@ private:
         TaskStatus::Pending};  ///< The current status of the task.
     std::optional<std::string>
         error_;        ///< The error message if the task has failed.
-    int priority_{5};  // 默认优先级为5
-    std::vector<std::string> dependencies_;  // 任务依赖列表
-    std::unordered_map<std::string, bool> dependencyStatus_;  // 依赖项完成状态
-    std::chrono::milliseconds executionTime_{0};              // 执行时间
-    size_t memoryUsage_{0};                                   // 内存使用量
-    int logLevel_{2};  // 默认日志级别
-    TaskErrorType errorType_{TaskErrorType::None};
-    std::string errorDetails_;
-    double cpuUsage_{0.0};
-    std::vector<std::string> taskHistory_;
-    std::vector<ParamDefinition> paramDefinitions_;
-    std::vector<std::string> paramErrors_;
-    std::vector<std::unique_ptr<Task>> preTasks_;   // 前置任务列表
-    std::vector<std::unique_ptr<Task>> postTasks_;  // 后置任务列表
-    ExceptionCallback exceptionCallback_;           // 异常处理回调
+    int priority_{5};  ///< Default priority is 5
+    std::vector<std::string> dependencies_;  ///< Task dependency list
+    std::unordered_map<std::string, bool>
+        dependencyStatus_;  ///< Dependency completion status
+    std::chrono::milliseconds executionTime_{0};    ///< Execution time
+    size_t memoryUsage_{0};                         ///< Memory usage
+    int logLevel_{2};                               ///< Default log level
+    TaskErrorType errorType_{TaskErrorType::None};  ///< Type of error
+    std::string errorDetails_;              ///< Detailed error information
+    double cpuUsage_{0.0};                  ///< CPU usage
+    std::vector<std::string> taskHistory_;  ///< Task execution history
+    std::vector<ParamDefinition> paramDefinitions_;  ///< Parameter definitions
+    std::vector<std::string> paramErrors_;  ///< Parameter validation errors
+    std::vector<std::unique_ptr<Task>> preTasks_;   ///< Pre-tasks list
+    std::vector<std::unique_ptr<Task>> postTasks_;  ///< Post-tasks list
+    ExceptionCallback exceptionCallback_;  ///< Exception handler callback
 
+    /**
+     * @brief Validates a parameter value against its type.
+     * @param type The expected type.
+     * @param value The value to validate.
+     * @return True if the value matches the type.
+     */
     bool validateParamType(const std::string& type, const json& value) const;
 };
 
-/**
- * @brief Base class for task creation using static polymorphism.
- */
-template <typename Derived>
-class TaskCreator {
-public:
-    static auto createTask() -> std::unique_ptr<Task> {
-        return std::make_unique<Task>(Derived::taskName(), Derived::execute);
-    }
-};
-
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // TASK_HPP

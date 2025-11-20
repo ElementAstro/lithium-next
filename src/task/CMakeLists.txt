@@ -15,12 +15,19 @@ lithium_component_begin(lithium_task 1.0.0)
 # Source Files
 # ============================================================================
 
+# Gather all custom task sources
+file(GLOB_RECURSE CUSTOM_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/custom/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/custom/*.hpp"
+)
+
 set(PROJECT_SOURCES
     generator.cpp
     sequencer.cpp
     target.cpp
     task.cpp
-    task_camera.cpp
+    imagepath.cpp
+    registration.cpp
 )
 
 set(PROJECT_HEADERS
@@ -28,7 +35,9 @@ set(PROJECT_HEADERS
     sequencer.hpp
     target.hpp
     task.hpp
-    task_camera.hpp
+    imagepath.hpp
+    registration.hpp
+    ${CUSTOM_SRC}
 )
 
 # ============================================================================

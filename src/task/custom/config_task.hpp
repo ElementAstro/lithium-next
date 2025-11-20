@@ -3,7 +3,7 @@
 
 #include "task.hpp"
 
-namespace lithium::sequencer::task {
+namespace lithium::task::task {
 
 class TaskConfigManagement : public Task {
 public:
@@ -12,7 +12,7 @@ public:
     void execute(const json& params) override;
 
 private:
-    // 处理不同的配置管理操作
+    // Original methods
     void handleSetConfig(const json& params);
     void handleGetConfig(const json& params);
     void handleDeleteConfig(const json& params);
@@ -21,15 +21,16 @@ private:
     void handleMergeConfig(const json& params);
     void handleListConfig(const json& params);
 
-    // 参数验证
-    bool validateSetParams(const json& params);
-    bool validateGetParams(const json& params);
-    bool validateDeleteParams(const json& params);
-    bool validateLoadParams(const json& params);
-    bool validateSaveParams(const json& params);
-    bool validateMergeParams(const json& params);
+    // Extended methods for new ConfigManager features
+    void handleValidateConfig(const json& params);
+    void handleSchemaConfig(const json& params);
+    void handleWatchConfig(const json& params);
+    void handleMetricsConfig(const json& params);
+    void handleTidyConfig(const json& params);
+    void handleAppendConfig(const json& params);
+    void handleBatchLoadConfig(const json& params);
 };
 
-}  // namespace lithium::sequencer::task
+}  // namespace lithium::task::task
 
 #endif  // LITHIUM_TASK_CONFIG_MANAGEMENT_HPP

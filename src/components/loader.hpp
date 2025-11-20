@@ -4,14 +4,6 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-3-29
-
-Description: C++20 and Modules Loader
-
-**************************************************/
-
 #ifndef LITHIUM_ADDON_LOADER_HPP
 #define LITHIUM_ADDON_LOADER_HPP
 
@@ -64,8 +56,7 @@ template <typename T>
 concept ModuleFunction =
     std::is_function_v<T> || std::is_function_v<std::remove_pointer_t<T>>;
 
-// Module operation result type using C++23 std::expected (polyfill if
-// necessary)
+// Module operation result type using C++23 std::expected
 template <typename T>
 using ModuleResult = std::expected<T, std::string>;
 
@@ -111,8 +102,8 @@ public:
      * @param name The name of the module.
      * @return Result indicating success or error message.
      */
-    auto loadModule(std::string_view path,
-                    std::string_view name) -> ModuleResult<bool>;
+    auto loadModule(std::string_view path, std::string_view name)
+        -> ModuleResult<bool>;
 
     /**
      * @brief Unloads a module by name.
@@ -262,8 +253,8 @@ public:
      * @param priority The priority value to set.
      * @return Result indicating success or error message.
      */
-    auto setModulePriority(std::string_view name,
-                           int priority) -> ModuleResult<bool>;
+    auto setModulePriority(std::string_view name, int priority)
+        -> ModuleResult<bool>;
 
     /**
      * @brief Loads modules in the order of their dependencies.

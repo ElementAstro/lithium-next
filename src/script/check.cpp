@@ -21,8 +21,8 @@
 #include "atom/async/pool.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "spdlog/spdlog.h"
 
 using json = nlohmann::json;
 
@@ -33,8 +33,8 @@ public:
         try {
             config_ = loadConfig(config_file);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to initialize ScriptAnalyzerImpl: {}",
-                  e.what());
+            spdlog::error("Failed to initialize ScriptAnalyzerImpl: {}",
+                          e.what());
             throw;
         }
     }
@@ -43,7 +43,10 @@ public:
                  ReportFormat format) {
         try {
             std::vector<DangerItem> dangers;
+            dangers.reserve(10);  // Reserve space for better performance
             std::vector<std::future<void>> futures;
+            futures.reserve(5);  // We know we'll add 5 futures
+
             futures.emplace_back(
                 std::async(std::launch::async,
                            &ScriptAnalyzerImpl::detectScriptTypeAndAnalyze,
@@ -68,7 +71,7 @@ public:
             int complexity = calculateComplexity(script);
             generateReport(dangers, complexity, output_json, format);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Analysis failed: {}", e.what());
+            spdlog::error("Analysis failed: {}", e.what());
             throw;
         }
     }
@@ -126,8 +129,11 @@ public:
 #endif
 
     static auto isSkippableLine(const std::string& line) -> bool {
-        return line.empty() || std::regex_match(line, Regex(R"(^\s*#.*)")) ||
-               std::regex_match(line, Regex(R"(^\s*//.*)"));
+        static const Regex comment_regex(R"(^\s*#.*)");
+        static const Regex cpp_comment_regex(R"(^\s*//.*)");
+
+        return line.empty() || std::regex_match(line, comment_regex) ||
+               std::regex_match(line, cpp_comment_regex);
     }
 
     void detectScriptTypeAndAnalyze(const std::string& script,
@@ -174,21 +180,22 @@ public:
 
     void suggestSafeReplacements(const std::string& script,
                                  std::vector<DangerItem>& dangers) {
-        std::unordered_map<std::string, std::string> replacements = {
+        static const std::unordered_map<std::string, std::string> replacements =
+            {
 #ifdef _WIN32
-            {"Remove-Item -Recurse -Force", "Remove-Item -Recurse"},
-            {"Stop-Process -Force", "Stop-Process"},
+                {"Remove-Item -Recurse -Force", "Remove-Item -Recurse"},
+                {"Stop-Process -Force", "Stop-Process"},
 #else
-            {"rm -rf /", "find . -type f -delete"},
-            {"kill -9", "kill -TERM"},
+                {"rm -rf /", "find . -type f -delete"},
+                {"kill -9", "kill -TERM"},
 #endif
-        };
+            };
         checkReplacements(script, replacements, dangers);
     }
 
     void detectExternalCommands(const std::string& script,
                                 std::vector<DangerItem>& dangers) {
-        std::unordered_set<std::string> externalCommands = {
+        static const std::unordered_set<std::string> externalCommands = {
 #ifdef _WIN32
             "Invoke-WebRequest",
             "Invoke-RestMethod",
@@ -202,33 +209,21 @@ public:
 
     void detectEnvironmentVariables(const std::string& script,
                                     std::vector<DangerItem>& dangers) {
-#ifdef ATOM_USE_BOOST_REGEX
-        boost::regex envVarPattern(R"(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)");
-#else
-        std::regex envVarPattern(R"(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)");
-#endif
+        static const Regex envVarPattern(R"(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)");
         checkPattern(script, envVarPattern, "Environment Variable Usage",
                      dangers);
     }
 
     void detectFileOperations(const std::string& script,
                               std::vector<DangerItem>& dangers) {
-#ifdef ATOM_USE_BOOST_REGEX
-        boost::regex fileOpPattern(
+        static const Regex fileOpPattern(
             R"(\b(open|read|write|close|unlink|rename)\b)");
-#else
-        std::regex fileOpPattern(
-            R"(\b(open|read|write|close|unlink|rename)\b)");
-#endif
         checkPattern(script, fileOpPattern, "File Operation", dangers);
     }
 
     static auto calculateComplexity(const std::string& script) -> int {
-#ifdef ATOM_USE_BOOST_REGEX
-        boost::regex complexityPatterns(R"(if\b|while\b|for\b|case\b|&&|\|\|)");
-#else
-        std::regex complexityPatterns(R"(if\b|while\b|for\b|case\b|&&|\|\|)");
-#endif
+        static const Regex complexityPatterns(
+            R"(if\b|while\b|for\b|case\b|&&|\|\|)");
         std::istringstream scriptStream(script);
         std::string line;
         int complexity = 0;
@@ -260,41 +255,42 @@ public:
                              {"reason", item.reason},
                              {"context", item.context.value_or("")}});
                     }
-                    LOG_F(INFO, "Generating JSON report: {}", report.dump(4));
+                    spdlog::info("Generating JSON report: {}", report.dump(4));
                 }
                 break;
             case ReportFormat::XML:
-                LOG_F(INFO, "<Report>");
-                LOG_F(INFO, "  <Complexity>{}</Complexity>", complexity);
-                LOG_F(INFO, "  <Issues>");
+                spdlog::info("<Report>");
+                spdlog::info("  <Complexity>{}</Complexity>", complexity);
+                spdlog::info("  <Issues>");
                 for (const auto& item : dangers) {
-                    LOG_F(INFO, "    <Issue>");
-                    LOG_F(INFO, "      <Category>{}</Category>", item.category);
-                    LOG_F(INFO, "      <Line>{}</Line>", item.line);
-                    LOG_F(INFO, "      <Command>{}</Command>", item.command);
-                    LOG_F(INFO, "      <Reason>{}</Reason>", item.reason);
-                    LOG_F(INFO, "      <Context>{}</Context>",
-                          item.context.value_or(""));
-                    LOG_F(INFO, "    </Issue>");
+                    spdlog::info("    <Issue>");
+                    spdlog::info("      <Category>{}</Category>",
+                                 item.category);
+                    spdlog::info("      <Line>{}</Line>", item.line);
+                    spdlog::info("      <Command>{}</Command>", item.command);
+                    spdlog::info("      <Reason>{}</Reason>", item.reason);
+                    spdlog::info("      <Context>{}</Context>",
+                                 item.context.value_or(""));
+                    spdlog::info("    </Issue>");
                 }
-                LOG_F(INFO, "  </Issues>");
-                LOG_F(INFO, "</Report>");
+                spdlog::info("  </Issues>");
+                spdlog::info("</Report>");
                 break;
             case ReportFormat::TEXT:
             default:
-                LOG_F(INFO, "Shell Script Analysis Report");
-                LOG_F(INFO, "============================");
-                LOG_F(INFO, "Code Complexity: {}", complexity);
+                spdlog::info("Shell Script Analysis Report");
+                spdlog::info("============================");
+                spdlog::info("Code Complexity: {}", complexity);
 
                 if (dangers.empty()) {
-                    LOG_F(INFO, "No potential dangers found.");
+                    spdlog::info("No potential dangers found.");
                 } else {
                     for (const auto& item : dangers) {
-                        LOG_F(INFO,
-                              "Category: {}\nLine: {}\nCommand: {}\nReason: "
-                              "{}\nContext: {}\n",
-                              item.category, item.line, item.command,
-                              item.reason, item.context.value_or(""));
+                        spdlog::info(
+                            "Category: {}\nLine: {}\nCommand: {}\nReason: "
+                            "{}\nContext: {}\n",
+                            item.category, item.line, item.command, item.reason,
+                            item.context.value_or(""));
                     }
                 }
                 break;
@@ -308,7 +304,6 @@ public:
         std::istringstream scriptStream(script);
         std::string line;
         int lineNum = 0;
-        std::vector<std::future<void>> futures;
 
         while (std::getline(scriptStream, line)) {
             lineNum++;
@@ -317,16 +312,12 @@ public:
             }
 
             for (const auto& item : patterns) {
-#ifdef ATOM_USE_BOOST_REGEX
-                boost::regex pattern(item["pattern"]);
-#else
-                std::regex pattern(item["pattern"]);
-#endif
+                Regex pattern(item["pattern"]);
                 std::string reason = item["reason"];
 
                 if (std::regex_search(line, pattern)) {
                     std::string key = std::to_string(lineNum) + ":" + reason;
-                    if (!detectedIssues.contains(key)) {
+                    if (detectedIssues.find(key) == detectedIssues.end()) {
                         dangers.emplace_back(
                             DangerItem{category, line, reason, lineNum, {}});
                         detectedIssues.insert(key);
@@ -352,7 +343,7 @@ public:
 
             if (std::regex_search(line, pattern)) {
                 std::string key = std::to_string(lineNum) + ":" + category;
-                if (!detectedIssues.contains(key)) {
+                if (detectedIssues.find(key) == detectedIssues.end()) {
                     dangers.emplace_back(DangerItem{
                         category, line, "Detected usage", lineNum, {}});
                     detectedIssues.insert(key);
@@ -379,7 +370,7 @@ public:
             for (const auto& command : externalCommands) {
                 if (line.find(command) != std::string::npos) {
                     std::string key = std::to_string(lineNum) + ":" + command;
-                    if (!detectedIssues.contains(key)) {
+                    if (detectedIssues.find(key) == detectedIssues.end()) {
                         dangers.emplace_back(
                             DangerItem{"External Command",
                                        command,
@@ -412,7 +403,7 @@ public:
                 if (line.find(unsafe_command) != std::string::npos) {
                     std::string key =
                         std::to_string(lineNum) + ":" + unsafe_command;
-                    if (!detectedIssues.contains(key)) {
+                    if (detectedIssues.find(key) == detectedIssues.end()) {
                         dangers.emplace_back(
                             DangerItem{"Unsafe Command",
                                        unsafe_command,
@@ -427,9 +418,9 @@ public:
     }
 
     bool detectVulnerablePatterns(const std::string& script) {
-        static const std::vector<std::regex> vulnerable_patterns = {
-            std::regex(R"(eval\s*\()"), std::regex(R"(exec\s*\()"),
-            std::regex(R"(system\s*\()")};
+        static const std::vector<Regex> vulnerable_patterns = {
+            Regex(R"(eval\s*\()"), Regex(R"(exec\s*\()"),
+            Regex(R"(system\s*\()")};
 
         return std::any_of(vulnerable_patterns.begin(),
                            vulnerable_patterns.end(), [&](const auto& pattern) {
@@ -483,7 +474,7 @@ public:
         try {
             std::vector<std::future<std::vector<DangerItem>>> futures;
 
-            // 并行执行多个分析任务
+            // Run multiple analysis tasks in parallel
             futures.push_back(thread_pool_.enqueue([&]() {
                 std::vector<DangerItem> items;
                 detectScriptTypeAndAnalyze(script, items);
@@ -498,7 +489,7 @@ public:
                 }));
             }
 
-            // 使用超时机制收集结果
+            // Use timeout mechanism to collect results
             auto timeout = std::chrono::seconds(options.timeout_seconds);
             result.timeout_occurred = false;
 
@@ -519,11 +510,11 @@ public:
             result.execution_time =
                 std::chrono::duration<double>(end_time - start_time).count();
 
-            // 更新统计信息
+            // Update statistics
             total_analyzed_++;
             total_analysis_time_ += result.execution_time;
 
-            // 触发回调
+            // Trigger callback for each danger item
             if (callback_) {
                 for (const auto& danger : result.dangers) {
                     callback_(danger);
@@ -531,7 +522,7 @@ public:
             }
 
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Analysis failed with error: {}", e.what());
+            spdlog::error("Analysis failed with error: {}", e.what());
             throw;
         }
 
@@ -586,17 +577,17 @@ std::string ScriptAnalyzer::getSafeVersion(const std::string& script) {
         THROW_INVALID_FORMAT("Script contains unsafe patterns");
     }
 
-    // 创建一个临时分析结果
+    // Create a temporary analysis result
     AnalyzerOptions options;
     options.deep_analysis = true;
     auto result = analyzeWithOptions(script, options);
 
-    // 如果没有发现危险项，返回原始脚本
+    // If no dangers found, return original script
     if (result.dangers.empty()) {
         return script;
     }
 
-    // 否则返回经过处理的安全版本
+    // Otherwise return sanitized version
     return impl_->sanitizeScript(script);
 }
 
@@ -611,7 +602,7 @@ void ScriptAnalyzer::addCustomPattern(const std::string& pattern,
         THROW_INVALID_FORMAT("Invalid regex pattern: " + std::string(e.what()));
     }
 
-    // 添加到配置中
+    // Add to configuration
     json pattern_obj;
     pattern_obj["pattern"] = pattern;
     pattern_obj["category"] = category;

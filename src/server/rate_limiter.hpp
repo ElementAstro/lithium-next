@@ -1,6 +1,7 @@
-#ifndef RATE_LIMITER_H
-#define RATE_LIMITER_H
+#ifndef RATE_LIMITER_HPP
+#define RATE_LIMITER_HPP
 
+#include <spdlog/spdlog.h>
 #include <atomic>
 #include <chrono>
 #include <deque>
@@ -8,115 +9,141 @@
 #include <string>
 #include <unordered_map>
 
+
 /**
- * @class RateLimiter
- * @brief A class to limit the rate of requests using a token bucket algorithm.
+ * @brief High-performance token bucket rate limiter with IP and user-based
+ * limiting
+ *
+ * This class implements a **thread-safe rate limiter** using the token bucket
+ * algorithm, with additional **IP-based** and **user-based rate limiting**
+ * capabilities. All operations are **lock-optimized** for maximum performance.
  */
 class RateLimiter {
 public:
     /**
-     * @brief Constructs a RateLimiter with a specified maximum number of tokens
-     * and refill interval.
-     * @param max_tokens The maximum number of tokens.
-     * @param refill_interval The interval at which tokens are refilled.
+     * @brief Constructs a RateLimiter with specified parameters
+     * @param max_tokens **Maximum token capacity** in the bucket
+     * @param refill_interval **Time interval** between token refills
      */
-    RateLimiter(int max_tokens, std::chrono::milliseconds refill_interval);
+    explicit RateLimiter(int max_tokens,
+                         std::chrono::milliseconds refill_interval);
 
     /**
-     * @brief Checks if a request is allowed based on the current token count.
-     * @return True if the request is allowed, false otherwise.
+     * @brief Attempts to consume a token for request processing
+     * @return **true** if request is allowed, **false** if rate limited
+     * @note **Thread-safe** and **high-performance** implementation
      */
     bool allow_request();
 
     /**
-     * @brief Gets the number of requests made within a specified time window.
-     * @param window The time window to count requests.
-     * @return The number of requests made within the specified time window.
+     * @brief Gets request count within specified time window
+     * @param window **Time window** for counting requests
+     * @return **Number of requests** made within the window
      */
     int get_request_count(std::chrono::seconds window);
 
     /**
-     * @brief Sets a new refill rate for the tokens.
-     * @param new_refill_interval The new interval at which tokens are refilled.
+     * @brief Updates the token refill rate dynamically
+     * @param new_refill_interval **New refill interval** to set
      */
     void set_refill_rate(std::chrono::milliseconds new_refill_interval);
 
     /**
-     * @brief Gets the remaining number of tokens.
-     * @return The remaining number of tokens.
+     * @brief Gets current available token count
+     * @return **Remaining tokens** available for consumption
+     * @note Automatically triggers refill calculation
      */
     int get_remaining_tokens();
 
     /**
-     * @brief Checks if a request from a specific IP address is allowed based on
-     * the IP rate limiter.
-     * @param ip The IP address to check.
-     * @return True if the request is allowed, false otherwise.
+     * @brief IP-based rate limiting with per-second throttling
+     * @param ip **IP address** to check for rate limiting
+     * @return **true** if IP request is allowed, **false** if throttled
      */
     bool allow_request_for_ip(const std::string& ip);
 
     /**
-     * @brief Checks if a request from a specific user is allowed based on the
-     * user rate limiter.
-     * @param user_id The user ID to check.
-     * @param max_requests_per_minute The maximum number of requests allowed per
-     * minute.
-     * @return True if the request is allowed, false otherwise.
+     * @brief User-based rate limiting with configurable per-minute limits
+     * @param user_id **User identifier** for rate limiting
+     * @param max_requests_per_minute **Maximum requests** allowed per minute
+     * @return **true** if user request is allowed, **false** if exceeded limit
      */
     bool allow_request_with_limit(const std::string& user_id,
                                   int max_requests_per_minute);
 
 private:
-    int max_tokens_;           ///< The maximum number of tokens.
-    std::atomic<int> tokens_;  ///< The current number of tokens.
-    std::chrono::milliseconds
-        refill_interval_;  ///< The interval at which tokens are refilled.
-    std::chrono::steady_clock::time_point
-        last_refill_time_;  ///< The last time tokens were refilled.
-    std::mutex mutex_;      ///< Mutex to synchronize access to tokens.
+    const int max_tokens_;     ///< **Maximum token capacity**
+    std::atomic<int> tokens_;  ///< **Current available tokens**
+    std::atomic<std::chrono::milliseconds>
+        refill_interval_;  ///< **Token refill interval**
+    std::atomic<std::chrono::steady_clock::time_point>
+        last_refill_time_;  ///< **Last refill timestamp**
+
+    mutable std::mutex token_mutex_;  ///< **Token access synchronization**
     std::deque<std::chrono::steady_clock::time_point>
-        request_times_;  ///< Record of request times.
+        request_timestamps_;  ///< **Request time tracking**
 
     /**
-     * @struct IpRateLimiter
-     * @brief A structure to limit the rate of requests based on IP address.
+     * @brief **High-performance IP rate limiter** with sliding window
      */
     struct IpRateLimiter {
         std::deque<std::chrono::steady_clock::time_point>
-            request_times;  ///< Record of request times.
-        int max_requests_per_second =
-            5;  ///< The maximum number of requests allowed per second.
+            request_timestamps;  ///< **IP request timestamps**
+        static constexpr int MAX_REQUESTS_PER_SECOND =
+            5;  ///< **Default IP rate limit**
 
         /**
-         * @brief Checks if a request is allowed based on the current request
-         * times.
-         * @return True if the request is allowed, false otherwise.
+         * @brief Checks if IP request is within rate limits
+         * @return **true** if allowed, **false** if rate limited
          */
         bool allow_request();
+
+        /**
+         * @brief **Optimized cleanup** of expired timestamps
+         * @param current_time **Current timestamp** for comparison
+         */
+        void cleanup_expired_requests(
+            std::chrono::steady_clock::time_point current_time);
     };
 
-    std::unordered_map<std::string, IpRateLimiter>
-        ip_limiters_;      ///< Map to store rate limiters for each IP address.
-    std::mutex ip_mutex_;  ///< Mutex to synchronize access to IP limiters.
-
     /**
-     * @struct UserRateLimiter
-     * @brief A structure to limit the rate of requests based on user ID.
+     * @brief **User-specific rate limiter** with sliding window
      */
     struct UserRateLimiter {
         std::deque<std::chrono::steady_clock::time_point>
-            request_times;  ///< Record of request times.
+            request_timestamps;  ///< **User request timestamps**
+
+        /**
+         * @brief **Optimized cleanup** of expired requests
+         * @param current_time **Current timestamp** for comparison
+         */
+        void cleanup_expired_requests(
+            std::chrono::steady_clock::time_point current_time);
     };
 
+    std::unordered_map<std::string, IpRateLimiter>
+        ip_rate_limiters_;  ///< **IP-based rate limiters**
     std::unordered_map<std::string, UserRateLimiter>
-        user_limiters_;      ///< Map to store rate limiters for each user ID.
-    std::mutex user_mutex_;  ///< Mutex to synchronize access to user limiters.
+        user_rate_limiters_;  ///< **User-based rate limiters**
+
+    mutable std::mutex ip_limiters_mutex_;  ///< **IP limiters synchronization**
+    mutable std::mutex
+        user_limiters_mutex_;  ///< **User limiters synchronization**
 
     /**
-     * @brief Records the time of a request.
-     * @param now The current time.
+     * @brief **Records request timestamp** for tracking
+     * @param timestamp **Current request timestamp**
      */
-    void record_request_time(std::chrono::steady_clock::time_point now);
+    void record_request_timestamp(
+        std::chrono::steady_clock::time_point timestamp);
+
+    /**
+     * @brief **Optimized token refill** calculation
+     * @param current_time **Current timestamp** for refill calculation
+     * @return **Number of tokens** added during refill
+     */
+    int calculate_token_refill(
+        std::chrono::steady_clock::time_point current_time);
 };
 
-#endif  // RATE_LIMITER_H
+#endif  // RATE_LIMITER_HPP

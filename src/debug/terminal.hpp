@@ -3,12 +3,22 @@
 
 #include <any>
 #include <chrono>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace lithium::debug {
 class CommandChecker;
+struct CommandCheckerErrorProxy {
+    using Error = struct {
+        std::string message;
+        size_t line;
+        size_t column;
+        int severity;
+    };
+};
 class SuggestionEngine;
 /**
  * @brief Class representing a console terminal for debugging purposes.
@@ -102,24 +112,80 @@ public:
     void loadConfig(const std::string& configPath);
 
     /**
-     * @brief 设置命令检查器
+     * @brief Set command checker for syntax validation
      */
     void setCommandChecker(std::shared_ptr<CommandChecker> checker);
 
     /**
-     * @brief 设置建议引擎
+     * @brief Set suggestion engine for command completion
      */
     void setSuggestionEngine(std::shared_ptr<SuggestionEngine> engine);
 
     /**
-     * @brief 启用或禁用命令检查
+     * @brief Enable or disable command checking
      */
     void enableCommandCheck(bool enable);
 
     /**
-     * @brief 获取命令补全建议
+     * @brief Get command completion suggestions
      */
     std::vector<std::string> getCommandSuggestions(const std::string& prefix);
+
+    // --- Unified Debugging Integration ---
+    /**
+     * @brief Load the full debug configuration (checker + suggestion) from a JSON file.
+     */
+    void loadDebugConfig(const std::string& configPath);
+
+    /**
+     * @brief Save the full debug configuration (checker + suggestion) to a JSON file.
+     */
+    void saveDebugConfig(const std::string& configPath) const;
+
+    /**
+     * @brief Export the current debug state (rules, suggestion config, history, stats) as JSON.
+     */
+    std::string exportDebugStateJson() const;
+
+    /**
+     * @brief Import the debug state from a JSON string.
+     */
+    void importDebugStateJson(const std::string& jsonStr);
+
+    /**
+     * @brief Add a command check rule at runtime.
+     */
+    void addCommandCheckRule(const std::string& name, std::function<std::optional<CommandCheckerErrorProxy::Error>(const std::string&, size_t)> check);
+
+    /**
+     * @brief Remove a command check rule by name at runtime.
+     */
+    bool removeCommandCheckRule(const std::string& name);
+
+    /**
+     * @brief Add a suggestion filter at runtime.
+     */
+    void addSuggestionFilter(std::function<bool(const std::string&)> filter);
+
+    /**
+     * @brief Remove all suggestion filters at runtime.
+     */
+    void clearSuggestionFilters();
+
+    /**
+     * @brief Update the suggestion dataset interactively.
+     */
+    void updateSuggestionDataset(const std::vector<std::string>& newItems);
+
+    /**
+     * @brief Update the command checker dangerous commands interactively.
+     */
+    void updateDangerousCommands(const std::vector<std::string>& commands);
+
+    /**
+     * @brief Print a unified debug report (errors + suggestions + stats).
+     */
+    void printDebugReport(const std::string& input, bool useColor = true) const;
 
 private:
     /**
@@ -140,9 +206,12 @@ private:
         true};  ///< Flag indicating whether syntax highlighting is enabled.
     std::chrono::milliseconds commandTimeout_{
         5000};  ///< Command execution timeout duration.
-    bool commandCheckEnabled_{true};
-    std::shared_ptr<CommandChecker> commandChecker_;
-    std::shared_ptr<SuggestionEngine> suggestionEngine_;
+    bool commandCheckEnabled_{
+        true};  ///< Flag indicating whether command checking is enabled.
+    std::shared_ptr<CommandChecker>
+        commandChecker_;  ///< Command checker for syntax validation
+    std::shared_ptr<SuggestionEngine>
+        suggestionEngine_;  ///< Suggestion engine for command completion
 };
 
 /**

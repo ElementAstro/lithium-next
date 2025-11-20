@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "build_helper"
+version = "2.0.0"
+description = "Advanced Build System Helper"
+readme = "README.md"
+authors = [{ name = "Max Qian", email = "lightapt.com" }]
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.10"
+dependencies = ["loguru>=0.6.0"]
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]
+dev = ["pytest", "black", "isort", "mypy"]
+
+[project.scripts]
+build-helper = "build_helper.cli:main"
+
+[tool.setuptools]
+packages = [
+    "build_helper",
+    "build_helper.core",
+    "build_helper.builders",
+    "build_helper.utils",
+]

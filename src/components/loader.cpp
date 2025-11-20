@@ -4,20 +4,12 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-3-29
-
-Description: C++20 and Modules Loader
-
-**************************************************/
-
 #include "loader.hpp"
 
 #include <algorithm>
 #include <chrono>
-#include <execution>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <thread>
 
@@ -33,12 +25,11 @@ Description: C++20 and Modules Loader
 
 #include "atom/algorithm/hash.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
 #include "atom/utils/to_string.hpp"
+#include "spdlog/spdlog.h"
+
 
 namespace fs = std::filesystem;
-namespace rx = std::ranges;
-namespace ex = std::execution;
 
 namespace lithium {
 
@@ -46,35 +37,36 @@ ModuleLoader::ModuleLoader(std::string_view dirName)
     : threadPool_(std::make_shared<atom::async::ThreadPool<>>(
           std::thread::hardware_concurrency())),
       modulesDir_(dirName) {
-    DLOG_F(INFO, "Module manager initialized with directory: {}", dirName);
+    spdlog::debug("Module manager initialized with directory: {}", dirName);
 }
 
 ModuleLoader::~ModuleLoader() {
-    DLOG_F(INFO, "Module manager destroying...");
+    spdlog::debug("Module manager destroying...");
     try {
         auto result = unloadAllModules();
         if (!result) {
-            LOG_F(ERROR, "Failed to unload all modules: {}", result.error());
+            spdlog::error("Failed to unload all modules: {}", result.error());
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception during ModuleLoader destruction: {}", e.what());
+        spdlog::error("Exception during ModuleLoader destruction: {}",
+                      e.what());
     }
 }
 
 auto ModuleLoader::createShared() -> std::shared_ptr<ModuleLoader> {
-    DLOG_F(INFO, "Creating shared ModuleLoader with default directory.");
+    spdlog::debug("Creating shared ModuleLoader with default directory.");
     return std::make_shared<ModuleLoader>("modules");
 }
 
 auto ModuleLoader::createShared(std::string_view dirName)
     -> std::shared_ptr<ModuleLoader> {
-    DLOG_F(INFO, "Creating shared ModuleLoader with directory: {}", dirName);
+    spdlog::debug("Creating shared ModuleLoader with directory: {}", dirName);
     return std::make_shared<ModuleLoader>(dirName);
 }
 
-auto ModuleLoader::loadModule(std::string_view path,
-                              std::string_view name) -> ModuleResult<bool> {
-    DLOG_F(INFO, "Loading module: {} from path: {}", name, path);
+auto ModuleLoader::loadModule(std::string_view path, std::string_view name)
+    -> ModuleResult<bool> {
+    spdlog::debug("Loading module: {} from path: {}", name, path);
 
     if (name.empty() || path.empty()) {
         return std::unexpected("Module name or path cannot be empty");
@@ -110,20 +102,20 @@ auto ModuleLoader::loadModule(std::string_view path,
         // Update statistics
         updateModuleStatistics(name);
 
-        LOG_F(INFO, "Module {} loaded successfully", name);
+        spdlog::info("Module {} loaded successfully", name);
         return true;
     } catch (const FFIException& ex) {
-        LOG_F(ERROR, "FFI exception while loading module {}: {}", name,
-              ex.what());
+        spdlog::error("FFI exception while loading module {}: {}", name,
+                      ex.what());
         return std::unexpected(std::string("FFI exception: ") + ex.what());
     } catch (const std::exception& ex) {
-        LOG_F(ERROR, "Exception while loading module {}: {}", name, ex.what());
+        spdlog::error("Exception while loading module {}: {}", name, ex.what());
         return std::unexpected(std::string("Exception: ") + ex.what());
     }
 }
 
 auto ModuleLoader::unloadModule(std::string_view name) -> ModuleResult<bool> {
-    DLOG_F(INFO, "Unloading module: {}", name);
+    spdlog::debug("Unloading module: {}", name);
 
     if (name.empty()) {
         return std::unexpected("Module name cannot be empty");
@@ -149,11 +141,11 @@ auto ModuleLoader::unloadModule(std::string_view name) -> ModuleResult<bool> {
             iter->second->mLibrary.reset();
             modules_.erase(iter);
 
-            LOG_F(INFO, "Module {} unloaded successfully", name);
+            spdlog::info("Module {} unloaded successfully", name);
             return true;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception while unloading module {}: {}", name,
-                  e.what());
+            spdlog::error("Exception while unloading module {}: {}", name,
+                          e.what());
             return std::unexpected(std::string("Exception: ") + e.what());
         }
     }
@@ -162,7 +154,7 @@ auto ModuleLoader::unloadModule(std::string_view name) -> ModuleResult<bool> {
 }
 
 auto ModuleLoader::unloadAllModules() -> ModuleResult<bool> {
-    DLOG_F(INFO, "Unloading all modules.");
+    spdlog::debug("Unloading all modules.");
     std::unique_lock lock(sharedMutex_);
 
     try {
@@ -181,10 +173,10 @@ auto ModuleLoader::unloadAllModules() -> ModuleResult<bool> {
 
         modules_.clear();
         dependencyGraph_.clear();
-        LOG_F(INFO, "All modules unloaded");
+        spdlog::info("All modules unloaded");
         return true;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception while unloading all modules: {}", e.what());
+        spdlog::error("Exception while unloading all modules: {}", e.what());
         return std::unexpected(std::string("Exception: ") + e.what());
     }
 }
@@ -196,31 +188,31 @@ auto ModuleLoader::hasModule(std::string_view name) const -> bool {
 
     std::shared_lock lock(sharedMutex_);
     bool result = modules_.contains(toStdString(name));
-    DLOG_F(INFO, "Module {} is {}loaded.", name, result ? "" : "not ");
+    spdlog::debug("Module {} is {}loaded.", name, result ? "" : "not ");
     return result;
 }
 
 auto ModuleLoader::getModule(std::string_view name) const
     -> std::shared_ptr<ModuleInfo> {
-    DLOG_F(INFO, "Getting module: {}", name);
+    spdlog::debug("Getting module: {}", name);
 
     if (name.empty()) {
-        DLOG_F(WARNING, "Empty module name provided");
+        spdlog::warn("Empty module name provided");
         return nullptr;
     }
 
     std::shared_lock lock(sharedMutex_);
     auto iter = modules_.find(toStdString(name));
     if (iter != modules_.end()) {
-        DLOG_F(INFO, "Module {} found.", name);
+        spdlog::debug("Module {} found.", name);
         return iter->second;
     }
-    DLOG_F(INFO, "Module {} not found.", name);
+    spdlog::debug("Module {} not found.", name);
     return nullptr;
 }
 
 auto ModuleLoader::enableModule(std::string_view name) -> ModuleResult<bool> {
-    DLOG_F(INFO, "Enabling module: {}", name);
+    spdlog::debug("Enabling module: {}", name);
 
     if (name.empty()) {
         return std::unexpected("Module name cannot be empty");
@@ -240,17 +232,17 @@ auto ModuleLoader::enableModule(std::string_view name) -> ModuleResult<bool> {
         }
 
         mod->enabled.store(true);
-        mod->currentStatus = ModuleInfo::Status::ACTIVE;
-        LOG_F(INFO, "Module {} enabled.", name);
+        mod->currentStatus = ModuleInfo::Status::LOADED;
+        spdlog::info("Module {} enabled.", name);
         return true;
     }
 
-    LOG_F(WARNING, "Module {} is already enabled.", name);
+    spdlog::warn("Module {} is already enabled.", name);
     return std::unexpected("Module is already enabled: " + toStdString(name));
 }
 
 auto ModuleLoader::disableModule(std::string_view name) -> ModuleResult<bool> {
-    DLOG_F(INFO, "Disabling module: {}", name);
+    spdlog::debug("Disabling module: {}", name);
 
     if (name.empty()) {
         return std::unexpected("Module name cannot be empty");
@@ -283,16 +275,16 @@ auto ModuleLoader::disableModule(std::string_view name) -> ModuleResult<bool> {
 
         mod->enabled.store(false);
         mod->currentStatus = ModuleInfo::Status::LOADED;
-        LOG_F(INFO, "Module {} disabled.", name);
+        spdlog::info("Module {} disabled.", name);
         return true;
     }
 
-    LOG_F(WARNING, "Module {} is already disabled.", name);
+    spdlog::warn("Module {} is already disabled.", name);
     return std::unexpected("Module is already disabled: " + toStdString(name));
 }
 
 auto ModuleLoader::isModuleEnabled(std::string_view name) const -> bool {
-    DLOG_F(INFO, "Checking if module {} is enabled.", name);
+    spdlog::debug("Checking if module {} is enabled.", name);
 
     if (name.empty()) {
         return false;
@@ -301,12 +293,12 @@ auto ModuleLoader::isModuleEnabled(std::string_view name) const -> bool {
     std::shared_lock lock(sharedMutex_);
     auto mod = getModule(name);
     bool result = mod && mod->enabled.load();
-    DLOG_F(INFO, "Module {} is {}enabled.", name, result ? "" : "not ");
+    spdlog::debug("Module {} is {}enabled.", name, result ? "" : "not ");
     return result;
 }
 
 auto ModuleLoader::getAllExistedModules() const -> std::vector<std::string> {
-    DLOG_F(INFO, "Getting all loaded modules.");
+    spdlog::debug("Getting all loaded modules.");
     std::shared_lock lock(sharedMutex_);
 
     std::vector<std::string> moduleNames;
@@ -319,13 +311,13 @@ auto ModuleLoader::getAllExistedModules() const -> std::vector<std::string> {
     // Sort for consistent results
     std::ranges::sort(moduleNames);
 
-    DLOG_F(INFO, "Loaded modules: {}", atom::utils::toString(moduleNames));
+    spdlog::debug("Loaded modules: {}", atom::utils::toString(moduleNames));
     return moduleNames;
 }
 
 auto ModuleLoader::hasFunction(std::string_view name,
                                std::string_view functionName) const -> bool {
-    DLOG_F(INFO, "Checking if module {} has function: {}", name, functionName);
+    spdlog::debug("Checking if module {} has function: {}", name, functionName);
 
     if (name.empty() || functionName.empty()) {
         return false;
@@ -340,18 +332,18 @@ auto ModuleLoader::hasFunction(std::string_view name,
     try {
         bool result =
             iter->second->mLibrary->hasFunction(toStdString(functionName));
-        DLOG_F(INFO, "Module {} {} function: {}", name,
-               result ? "has" : "does not have", functionName);
+        spdlog::debug("Module {} {} function: {}", name,
+                      result ? "has" : "does not have", functionName);
         return result;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception checking function {} in module {}: {}",
-              functionName, name, e.what());
+        spdlog::error("Exception checking function {} in module {}: {}",
+                      functionName, name, e.what());
         return false;
     }
 }
 
 auto ModuleLoader::reloadModule(std::string_view name) -> ModuleResult<bool> {
-    DLOG_F(INFO, "Reloading module: {}", name);
+    spdlog::debug("Reloading module: {}", name);
 
     if (name.empty()) {
         return std::unexpected("Module name cannot be empty");
@@ -382,34 +374,34 @@ auto ModuleLoader::reloadModule(std::string_view name) -> ModuleResult<bool> {
 
 auto ModuleLoader::getModuleStatus(std::string_view name) const
     -> ModuleInfo::Status {
-    DLOG_F(INFO, "Getting status for module: {}", name);
+    spdlog::debug("Getting status for module: {}", name);
 
     std::shared_lock lock(sharedMutex_);
     auto mod = getModule(name);
     auto status = mod ? mod->currentStatus : ModuleInfo::Status::UNLOADED;
 
-    DLOG_F(INFO, "Module {} status: {}", name, static_cast<int>(status));
+    spdlog::debug("Module {} status: {}", name, static_cast<int>(status));
     return status;
 }
 
 auto ModuleLoader::getModuleStatistics(std::string_view name) const
     -> ModuleInfo::Statistics {
-    DLOG_F(INFO, "Getting statistics for module: {}", name);
+    spdlog::debug("Getting statistics for module: {}", name);
 
     std::shared_lock lock(sharedMutex_);
     auto mod = getModule(name);
     if (!mod) {
-        LOG_F(WARNING, "Tried to get statistics for non-existent module: {}",
-              name);
+        spdlog::warn("Tried to get statistics for non-existent module: {}",
+                     name);
         return {};
     }
 
     return mod->stats;
 }
 
-auto ModuleLoader::setModulePriority(std::string_view name,
-                                     int priority) -> ModuleResult<bool> {
-    DLOG_F(INFO, "Setting priority for module {} to {}", name, priority);
+auto ModuleLoader::setModulePriority(std::string_view name, int priority)
+    -> ModuleResult<bool> {
+    spdlog::debug("Setting priority for module {} to {}", name, priority);
 
     if (name.empty()) {
         return std::unexpected("Module name cannot be empty");
@@ -426,15 +418,15 @@ auto ModuleLoader::setModulePriority(std::string_view name,
     }
 
     mod->priority = priority;
-    LOG_F(INFO, "Priority for module {} set to {}", name, priority);
+    spdlog::info("Priority for module {} set to {}", name, priority);
     return true;
 }
 
 auto ModuleLoader::validateDependencies(std::string_view name) const -> bool {
-    DLOG_F(INFO, "Validating dependencies for module: {}", name);
+    spdlog::debug("Validating dependencies for module: {}", name);
 
     if (name.empty()) {
-        LOG_F(WARNING, "Empty module name provided for dependency validation");
+        spdlog::warn("Empty module name provided for dependency validation");
         return false;
     }
 
@@ -442,7 +434,7 @@ auto ModuleLoader::validateDependencies(std::string_view name) const -> bool {
 }
 
 auto ModuleLoader::loadModulesInOrder() -> ModuleResult<bool> {
-    DLOG_F(INFO, "Loading modules in dependency order");
+    spdlog::debug("Loading modules in dependency order");
 
     try {
         auto sortedModulesOpt = dependencyGraph_.topologicalSort();
@@ -472,8 +464,8 @@ auto ModuleLoader::loadModulesInOrder() -> ModuleResult<bool> {
             auto result = futures[i].get();
             if (!result) {
                 failedModules.push_back(modulesToLoad[i].second);
-                LOG_F(ERROR, "Failed to load module {}: {}",
-                      modulesToLoad[i].second, result.error());
+                spdlog::error("Failed to load module {}: {}",
+                              modulesToLoad[i].second, result.error());
             }
         }
 
@@ -484,17 +476,17 @@ auto ModuleLoader::loadModulesInOrder() -> ModuleResult<bool> {
 
         return true;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception during module loading in order: {}", e.what());
+        spdlog::error("Exception during module loading in order: {}", e.what());
         return std::unexpected(std::string("Exception: ") + e.what());
     }
 }
 
 auto ModuleLoader::getDependencies(std::string_view name) const
     -> std::vector<std::string> {
-    DLOG_F(INFO, "Getting dependencies for module: {}", name);
+    spdlog::debug("Getting dependencies for module: {}", name);
 
     if (name.empty()) {
-        LOG_F(WARNING, "Empty module name provided for dependency retrieval");
+        spdlog::warn("Empty module name provided for dependency retrieval");
         return {};
     }
 
@@ -502,10 +494,10 @@ auto ModuleLoader::getDependencies(std::string_view name) const
 }
 
 void ModuleLoader::setThreadPoolSize(size_t size) {
-    DLOG_F(INFO, "Setting thread pool size to {}", size);
+    spdlog::debug("Setting thread pool size to {}", size);
 
     if (size == 0) {
-        LOG_F(ERROR, "Thread pool size cannot be zero");
+        spdlog::error("Thread pool size cannot be zero");
         throw std::invalid_argument("Thread pool size cannot be zero");
     }
 
@@ -515,7 +507,7 @@ void ModuleLoader::setThreadPoolSize(size_t size) {
 auto ModuleLoader::loadModulesAsync(
     std::span<const std::pair<std::string, std::string>> modules)
     -> std::vector<std::future<ModuleResult<bool>>> {
-    DLOG_F(INFO, "Asynchronously loading {} modules", modules.size());
+    spdlog::debug("Asynchronously loading {} modules", modules.size());
 
     std::vector<std::future<ModuleResult<bool>>> results;
     results.reserve(modules.size());
@@ -524,7 +516,7 @@ auto ModuleLoader::loadModulesAsync(
     {
         std::unique_lock lock(sharedMutex_);
         for (const auto& [_, name] : modules) {
-            if (!dependencyGraph_.hasNode(name)) {
+            if (dependencyGraph_.getDependencies(name).empty()) {
                 dependencyGraph_.addNode(name, Version());
             }
         }
@@ -540,7 +532,7 @@ auto ModuleLoader::loadModulesAsync(
 
 auto ModuleLoader::getModuleByHash(std::size_t hash) const
     -> std::shared_ptr<ModuleInfo> {
-    DLOG_F(INFO, "Looking for module with hash: {}", hash);
+    spdlog::debug("Looking for module with hash: {}", hash);
 
     std::shared_lock lock(sharedMutex_);
 
@@ -550,11 +542,11 @@ auto ModuleLoader::getModuleByHash(std::size_t hash) const
     });
 
     if (it != modules_.end()) {
-        DLOG_F(INFO, "Found module {} with matching hash", it->first);
+        spdlog::debug("Found module {} with matching hash", it->first);
         return it->second;
     }
 
-    DLOG_F(INFO, "No module found with hash {}", hash);
+    spdlog::debug("No module found with hash {}", hash);
     return nullptr;
 }
 
@@ -563,7 +555,7 @@ auto ModuleLoader::computeModuleHash(std::string_view path) const
     try {
         return atom::algorithm::computeHash(toStdString(path));
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception computing hash for {}: {}", path, e.what());
+        spdlog::error("Exception computing hash for {}: {}", path, e.what());
         return 0;
     }
 }
@@ -608,39 +600,144 @@ auto ModuleLoader::loadModuleAsync(std::string_view path, std::string_view name)
 
 auto ModuleLoader::verifyModuleIntegrity(
     const std::filesystem::path& path) const -> bool {
-    DLOG_F(INFO, "Verifying integrity of module: {}", path.string());
+    spdlog::debug("Verifying integrity of module: {}", path.string());
 
     try {
-        // Basic file checks
-        if (!fs::exists(path)) {
-            LOG_F(ERROR, "Module file does not exist: {}", path.string());
+        // Basic file existence check
+        if (!atom::io::isFileExists(path.string())) {
+            spdlog::error("Module file does not exist: {}", path.string());
             return false;
         }
 
+        // Empty file check
         if (fs::is_empty(path)) {
-            LOG_F(ERROR, "Module file is empty: {}", path.string());
+            spdlog::error("Module file is empty: {}", path.string());
             return false;
         }
 
-        if (fs::file_size(path) <
-            1024) {  // Minimum reasonable size for a shared library
-            LOG_F(WARNING, "Module file is suspiciously small: {} ({} bytes)",
-                  path.string(), fs::file_size(path));
+        // File permissions check
+        std::error_code ec;
+        auto perms = fs::status(path, ec).permissions();
+        if (ec) {
+            spdlog::error("Failed to check file permissions for {}: {}",
+                          path.string(), ec.message());
+            return false;
         }
 
-// Platform-specific checks could be added here
+        // Ensure file is readable
+        if ((perms & fs::perms::owner_read) == fs::perms::none &&
+            (perms & fs::perms::group_read) == fs::perms::none &&
+            (perms & fs::perms::others_read) == fs::perms::none) {
+            spdlog::error("Module file is not readable: {}", path.string());
+            return false;
+        }
+
+        if (atom::io::getFileSize(path.string()) == 0) {
+            spdlog::error("Module file is empty: {}", path.string());
+            return false;
+        }
+
+        auto fileSize = atom::io::getFileSize(path.string());
+        if (fileSize < 1024) {  // Minimum reasonable size for a shared library
+            spdlog::warn("Module file is suspiciously small: {} ({} bytes)",
+                         path.string(), fileSize);
+        }
+
+        // Check file extension matches expected platform
+        auto extension = path.extension().string();
+        bool validExtension = false;
+
 #ifdef _WIN32
-// Windows PE file format check
-// This would require more detailed implementation
-#else
-// ELF format check for Linux/Unix
-// This would require more detailed implementation
+        if (extension == ".dll") {
+            validExtension = true;
+        }
+#elif defined(__APPLE__)
+        if (extension == ".dylib" || extension == ".so") {
+            validExtension = true;
+        }
+#else  // Assume Linux/Unix
+        if (extension == ".so") {
+            validExtension = true;
+        }
 #endif
 
+        if (!validExtension) {
+            spdlog::warn("Module has unexpected extension: {} (expected: {})",
+                         path.string(),
+#ifdef _WIN32
+                         ".dll"
+#elif defined(__APPLE__)
+                         ".dylib or .so"
+#else
+                         ".so"
+#endif
+            );
+            // Continue despite warning
+        }
+
+        // File header signature check
+        std::ifstream file(path, std::ios::binary);
+        if (!file.is_open()) {
+            spdlog::error("Failed to open file for header verification: {}",
+                          path.string());
+            return false;
+        }
+
+        // Read first few bytes for format identification
+        std::array<unsigned char, 4> header;
+        if (!file.read(reinterpret_cast<char*>(header.data()), header.size())) {
+            spdlog::error("Failed to read file header from {}", path.string());
+            return false;
+        }
+
+#ifdef _WIN32
+        // Windows PE files start with MZ signature (0x4D 0x5A)
+        if (header[0] != 0x4D || header[1] != 0x5A) {
+            spdlog::error("File is not a valid PE/DLL format: {}",
+                          path.string());
+            return false;
+        }
+#elif defined(__linux__) || defined(__unix__)
+        // ELF files start with 0x7F 'E' 'L' 'F'
+        if (header[0] != 0x7F || header[1] != 'E' || header[2] != 'L' ||
+            header[3] != 'F') {
+            spdlog::error("File is not a valid ELF format: {}", path.string());
+            return false;
+        }
+#elif defined(__APPLE__)
+        // Mach-O format has several possible magic numbers
+        // This is a simplification - would need more detailed checks for
+        // production
+        const std::array<std::array<unsigned char, 4>, 4> machoMagics = {{
+            {0xCA, 0xFE, 0xBA, 0xBE},  // Universal binary
+            {0xFE, 0xED, 0xFA, 0xCE},  // 32-bit
+            {0xFE, 0xED, 0xFA, 0xCF},  // 64-bit
+            {0xCE, 0xFA, 0xED, 0xFE}   // Little endian variant
+        }};
+
+        bool validMacho = std::any_of(
+            machoMagics.begin(), machoMagics.end(),
+            [&header](const auto& magic) {
+                return std::equal(magic.begin(), magic.end(), header.begin());
+            });
+
+        if (!validMacho) {
+            spdlog::error("File is not a valid Mach-O format: {}",
+                          path.string());
+            return false;
+        }
+#endif
+
+        // Compute and store hash for future integrity comparisons
+        auto hash = computeModuleHash(path.string());
+        spdlog::debug("Module hash calculated: {} - {}", path.string(), hash);
+
+        spdlog::info("Module integrity verification passed for {}",
+                     path.string());
         return true;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception during module integrity check for {}: {}",
-              path.string(), e.what());
+        spdlog::error("Exception during module integrity check for {}: {}",
+                      path.string(), e.what());
         return false;
     }
 }
@@ -649,13 +746,13 @@ auto ModuleLoader::updateModuleStatistics(std::string_view name) -> void {
     auto nameStr = toStdString(name);
     auto it = modules_.find(nameStr);
     if (it != modules_.end()) {
-        it->second->stats.accessCount++;
+        it->second->stats.functionCalls++;
         it->second->stats.lastAccess = std::chrono::system_clock::now();
     }
 }
 
 auto ModuleLoader::buildDependencyGraph() -> void {
-    DLOG_F(INFO, "Building dependency graph");
+    spdlog::debug("Building dependency graph");
 
     try {
         std::shared_lock lock(sharedMutex_);
@@ -678,26 +775,26 @@ auto ModuleLoader::buildDependencyGraph() -> void {
                     if (getDepFunc) {
                         auto deps = getDepFunc();
                         for (const auto& dep : deps) {
-                            dependencyGraph_.addDependency(name, dep);
+                            dependencyGraph_.addDependency(name, dep,
+                                                           Version());
                         }
                     }
                 } catch (const std::exception& e) {
-                    LOG_F(ERROR,
-                          "Exception getting dependencies for module {}: {}",
-                          name, e.what());
+                    spdlog::error(
+                        "Exception getting dependencies for module {}: {}",
+                        name, e.what());
                 }
             }
         }
 
         // Validate the graph
-        auto result = dependencyGraph_.validate();
-        if (!result) {
-            LOG_F(ERROR, "Dependency graph validation failed: {}", *result);
+        if (dependencyGraph_.hasCycle()) {
+            spdlog::error("Dependency graph validation failed: cycle detected");
         } else {
-            LOG_F(INFO, "Dependency graph built and validated successfully");
+            spdlog::info("Dependency graph built and validated successfully");
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception building dependency graph: {}", e.what());
+        spdlog::error("Exception building dependency graph: {}", e.what());
     }
 }
 
@@ -705,13 +802,15 @@ auto ModuleLoader::topologicalSort() const -> std::vector<std::string> {
     try {
         auto sorted = dependencyGraph_.topologicalSort();
         if (!sorted) {
-            LOG_F(ERROR,
-                  "Topological sort failed due to circular dependencies");
+            spdlog::error(
+                "Topological sort failed due to circular dependencies");
             return {};
         }
         return *sorted;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception during topological sort: {}", e.what());
+        spdlog::error("Exception during topological sort: {}", e.what());
         return {};
     }
 }
+
+}  // namespace lithium

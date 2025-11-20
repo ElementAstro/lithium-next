@@ -1,4 +1,9 @@
-// target.hpp
+/**
+ * @file target.hpp
+ * @brief Defines the Target class for managing task execution with
+ * dependencies.
+ */
+
 #ifndef LITHIUM_TARGET_HPP
 #define LITHIUM_TARGET_HPP
 
@@ -15,7 +20,7 @@
 #include "atom/async/safetype.hpp"
 #include "task.hpp"
 
-namespace lithium::sequencer {
+namespace lithium::task {
 
 /**
  * @enum TargetStatus
@@ -40,7 +45,7 @@ using TargetErrorCallback =
 class Target;
 
 /**
- * @brief Target modifier type definition.
+ * @brief Target modifier function type definition.
  */
 using TargetModifier = std::function<void(Target&)>;
 
@@ -155,8 +160,16 @@ public:
      */
     void loadTasksFromJson(const json& tasksJson);
 
+    /**
+     * @brief Gets the dependencies for this target.
+     * @return Vector of dependency strings.
+     */
     auto getDependencies() -> std::vector<std::string>;
 
+    /**
+     * @brief Gets the tasks in this target.
+     * @return Vector of tasks.
+     */
     auto getTasks() -> const std::vector<std::unique_ptr<Task>>&;
 
     /**
@@ -198,23 +211,68 @@ public:
      */
     auto fromJson(const json& data) -> void;
 
-    // 任务组管理方法
+    /**
+     * @brief Creates a new task group.
+     * @param groupName The name of the group.
+     */
     void createTaskGroup(const std::string& groupName);
+
+    /**
+     * @brief Adds a task to a group.
+     * @param groupName The name of the group.
+     * @param taskUUID The UUID of the task to add.
+     */
     void addTaskToGroup(const std::string& groupName,
                         const std::string& taskUUID);
+
+    /**
+     * @brief Removes a task from a group.
+     * @param groupName The name of the group.
+     * @param taskUUID The UUID of the task to remove.
+     */
     void removeTaskFromGroup(const std::string& groupName,
                              const std::string& taskUUID);
+
+    /**
+     * @brief Gets the tasks in a group.
+     * @param groupName The name of the group.
+     * @return Vector of task UUIDs in the group.
+     */
     std::vector<std::string> getTaskGroup(const std::string& groupName) const;
 
-    // 依赖管理方法
+    /**
+     * @brief Adds a dependency between tasks.
+     * @param taskUUID The UUID of the task.
+     * @param dependsOnUUID The UUID of the task it depends on.
+     */
     void addTaskDependency(const std::string& taskUUID,
                            const std::string& dependsOnUUID);
+
+    /**
+     * @brief Removes a dependency between tasks.
+     * @param taskUUID The UUID of the task.
+     * @param dependsOnUUID The UUID of the task it depends on.
+     */
     void removeTaskDependency(const std::string& taskUUID,
                               const std::string& dependsOnUUID);
+
+    /**
+     * @brief Checks if all dependencies for a task are satisfied.
+     * @param taskUUID The UUID of the task.
+     * @return True if all dependencies are satisfied.
+     */
     bool checkDependencies(const std::string& taskUUID) const;
 
-    // 执行控制
+    /**
+     * @brief Executes all tasks in a group.
+     * @param groupName The name of the group.
+     */
     void executeGroup(const std::string& groupName);
+
+    /**
+     * @brief Aborts execution of a task group.
+     * @param groupName The name of the group.
+     */
     void abortGroup(const std::string& groupName);
 
 private:
@@ -233,7 +291,7 @@ private:
 
     // Progress tracking
     std::atomic<size_t> completedTasks_{0};  ///< The number of completed tasks.
-    size_t totalTasks_ = 0;                  ///< The total number of tasks.
+    size_t totalTasks_{0};                   ///< The total number of tasks.
 
     // Callback functions
     TargetStartCallback
@@ -245,32 +303,46 @@ private:
 
     // Retry mechanism
     int maxRetries_;  ///< The maximum number of retries for each task.
-    mutable std::shared_mutex callbackMutex_;  ///< Mutex for thread-safe access
-                                               ///< to callback functions.
+    mutable std::shared_mutex callbackMutex_;  ///< Mutex for callback access
 
     std::shared_ptr<atom::async::LockFreeHashTable<std::string, json>>
         queue_;  ///< The task queue.
 
     // Task parameters storage
-    std::unordered_map<std::string, json> taskParams_;
-    mutable std::shared_mutex paramsMutex_;
+    std::unordered_map<std::string, json>
+        taskParams_;                         ///< Individual task parameters
+    mutable std::shared_mutex paramsMutex_;  ///< Mutex for parameter access
 
     json params_;  ///< Parameters for all tasks in this target
 
-    // 任务组管理
-    std::unordered_map<std::string, std::vector<std::string>> taskGroups_;
-    std::shared_mutex groupMutex_;
+    // Task group management
+    std::unordered_map<std::string, std::vector<std::string>>
+        taskGroups_;                ///< Task groups
+    std::shared_mutex groupMutex_;  ///< Mutex for group access
 
-    // 任务依赖关系
-    std::unordered_map<std::string, std::vector<std::string>> taskDependencies_;
-    std::shared_mutex depMutex_;
+    // Task dependency relationships
+    std::unordered_map<std::string, std::vector<std::string>>
+        taskDependencies_;                ///< Task dependencies
+    mutable std::shared_mutex depMutex_;  ///< Mutex for dependency access
 
-    // Helper methods
+    /**
+     * @brief Notifies that the target has started.
+     */
     void notifyStart();
+
+    /**
+     * @brief Notifies that the target has ended.
+     * @param status The final status of the target.
+     */
     void notifyEnd(TargetStatus status);
+
+    /**
+     * @brief Notifies that an error occurred in the target.
+     * @param e The exception that occurred.
+     */
     void notifyError(const std::exception& e);
 };
 
-}  // namespace lithium::sequencer
+}  // namespace lithium::task
 
 #endif  // LITHIUM_TARGET_HPP

@@ -2,11 +2,16 @@
 #define LITHIUM_TASK_SCRIPT_TASK_HPP
 
 #include <chrono>
+#include <condition_variable>
+#include <future>
 #include <memory>
+#include <queue>
 #include <shared_mutex>
 #include <string>
 #include <vector>
+#include "atom/type/json.hpp"
 #include "script/check.hpp"
+#include "script/python_caller.hpp"
 #include "script/sheller.hpp"
 #include "task.hpp"
 
@@ -35,8 +40,28 @@ struct ScriptStatus {
     std::optional<int> exitCode;                      // 退出码
 };
 
-namespace lithium::sequencer::task {
+// 新增脚本类型枚举
+enum class ScriptType {
+    Shell,   // Shell/PowerShell脚本
+    Python,  // Python脚本
+    Mixed,   // 同时包含Shell和Python组件的脚本
+    Auto     // 自动检测脚本类型
+};
 
+// 扩展的脚本执行上下文
+struct ScriptExecutionContext {
+    ScriptType type;
+    std::string workingDirectory;
+    std::unordered_map<std::string, std::string> environment;
+    std::vector<std::string> dependencies;
+    bool requiresElevation;
+    std::chrono::seconds maxExecutionTime;
+    size_t maxMemoryUsage;
+    int maxCpuUsage;
+};
+
+namespace lithium::task::task {
+using json = nlohmann::json;
 // 脚本分析结果结构
 struct ScriptAnalysisResult {
     bool isValid;
@@ -47,7 +72,7 @@ struct ScriptAnalysisResult {
 
 /**
  * @class ScriptTask
- * @brief 统一的脚本执行任务类，整合了所有脚本管理和执行功能
+ * @brief Enhanced unified script execution task with Python and shell support
  */
 class ScriptTask : public Task {
 public:
@@ -86,7 +111,7 @@ public:
         std::function<void(const std::string&, int)> hook);
 
     // 新增配置方法
-    void setPriority(const std::string& name, ScriptPriority priority);
+    void setScriptPriority(const std::string& name, ScriptPriority priority);
     void setConcurrencyLimit(int limit);
     void setResourceLimit(const std::string& name, size_t memoryLimit,
                           int cpuLimit);
@@ -102,6 +127,102 @@ public:
     float getResourceUsage(const std::string& name) const;
     std::chrono::milliseconds getExecutionTime(const std::string& name) const;
 
+    // 新增Python特定方法
+    void registerPythonScript(const std::string& name,
+                              const std::string& content);
+    void loadPythonModule(const std::string& moduleName,
+                          const std::string& alias = "");
+
+    template <typename ReturnType, typename... Args>
+    ReturnType callPythonFunction(const std::string& alias,
+                                  const std::string& functionName,
+                                  Args... args);
+
+    template <typename T>
+    T getPythonVariable(const std::string& alias, const std::string& varName);
+
+    void setPythonVariable(const std::string& alias, const std::string& varName,
+                           const py::object& value);
+
+    // 扩展的执行方法
+    void executeWithContext(const std::string& scriptName,
+                            const ScriptExecutionContext& context);
+
+    std::future<ScriptStatus> executeAsync(const std::string& scriptName,
+                                           const json& params = {});
+
+    void executePipeline(const std::vector<std::string>& scriptNames,
+                         const json& sharedContext = {});
+
+    // 脚本工作流管理
+    void createWorkflow(const std::string& workflowName,
+                        const std::vector<std::string>& scriptSequence);
+
+    void executeWorkflow(const std::string& workflowName,
+                         const json& params = {});
+
+    void pauseWorkflow(const std::string& workflowName);
+    void resumeWorkflow(const std::string& workflowName);
+    void abortWorkflow(const std::string& workflowName);
+
+    // 资源管理
+    void setResourcePool(size_t maxConcurrentScripts, size_t totalMemoryLimit);
+
+    void reserveResources(const std::string& scriptName, size_t memoryMB,
+                          int cpuPercent);
+
+    void releaseResources(const std::string& scriptName);
+
+    // 依赖管理
+    void addScriptDependency(const std::string& scriptName,
+                             const std::string& dependencyName);
+
+    bool checkDependencies(const std::string& scriptName);
+    void resolveDependencies(const std::string& scriptName);
+
+    // 事件处理
+    void addEventListener(const std::string& eventType,
+                          std::function<void(const json&)> handler);
+
+    void removeEventListener(const std::string& eventType);
+    void fireEvent(const std::string& eventType, const json& data);
+
+    // 缓存和优化
+    void enableScriptCaching(bool enable = true);
+    void precompileScript(const std::string& scriptName);
+    void clearScriptCache();
+
+    // 调试和性能分析
+    void enableDebugMode(const std::string& scriptName, bool enable = true);
+    void setBreakpoint(const std::string& scriptName, int lineNumber);
+    void stepExecution(const std::string& scriptName);
+    void getCallStack(const std::string& scriptName);
+
+    struct ProfilingData {
+        std::chrono::milliseconds executionTime;
+        size_t memoryUsage;
+        float cpuUsage;
+        size_t ioOperations;
+        std::map<std::string, std::chrono::milliseconds> functionTimes;
+    };
+
+    ProfilingData getProfilingData(const std::string& scriptName);
+
+    // 脚本模板和参数化
+    void registerTemplate(const std::string& templateName,
+                          const std::string& templateContent);
+
+    void instantiateFromTemplate(const std::string& templateName,
+                                 const std::string& scriptName,
+                                 const json& parameters);
+
+    // 多语言支持
+    void executeHybridScript(const std::string& scriptName,
+                             const std::vector<ScriptType>& languages);
+
+    void bridgeLanguages(const std::string& fromScript,
+                         const std::string& toScript, const json& data);
+
 private:
     std::string scriptConfigPath_;
     std::shared_ptr<ScriptManager> scriptManager_;
@@ -115,7 +236,33 @@ private:
     int concurrencyLimit_{4};
     std::shared_mutex statusMutex_;
     std::atomic<bool> shouldStop_{false};
-    TaskStatus status_{TaskStatus::Pending};
+
+    // 新组件
+    std::unique_ptr<PythonWrapper> pythonWrapper_;
+    std::map<std::string, ScriptExecutionContext> executionContexts_;
+    std::map<std::string, std::vector<std::string>> workflows_;
+    std::map<std::string, std::vector<std::string>> dependencies_;
+    std::map<std::string, std::function<void(const json&)>> eventHandlers_;
+    std::map<std::string, std::string> scriptTemplates_;
+
+    // 资源管理
+    struct ResourcePool {
+        size_t maxConcurrentScripts;
+        size_t totalMemoryLimit;
+        size_t usedMemory;
+        std::queue<std::string> waitingQueue;
+        std::condition_variable resourceAvailable;
+        std::mutex resourceMutex;
+    } resourcePool_;
+
+    // 缓存
+    std::map<std::string, py::object> compiledPythonScripts_;
+    std::map<std::string, std::string> cachedShellScripts_;
+    bool cachingEnabled_{false};
+
+    // 调试
+    std::map<std::string, std::set<int>> breakpoints_;
+    std::map<std::string, bool> debugModeEnabled_;
 
     // 内部方法
     void setupDefaults();
@@ -138,8 +285,58 @@ private:
                             const ScriptStatus& status);
     void cleanupScript(const std::string& name);
     std::string validateAndPreprocessScript(const std::string& content);
+
+    // 新增方法实现
+    ScriptType detectScriptType(const std::string& content);
+    void initializePythonEnvironment();
+    void setupResourcePool();
+    void validateExecutionContext(const ScriptExecutionContext& context);
+    void waitForResources(const std::string& scriptName);
+    void executeScriptWithType(const std::string& scriptName, ScriptType type,
+                               const json& params);
+    void handleLanguageBridge(const std::string& fromLang,
+                              const std::string& toLang, const json& data);
+    void processTemplate(const std::string& templateContent,
+                         const json& parameters, std::string& result);
 };
 
-}  // namespace lithium::sequencer::task
+// 模板实现
+template <typename ReturnType, typename... Args>
+ReturnType ScriptTask::callPythonFunction(const std::string& alias,
+                                          const std::string& functionName,
+                                          Args... args) {
+    if (!pythonWrapper_) {
+        throw std::runtime_error("Python wrapper not initialized");
+    }
+
+    try {
+        addHistoryEntry("Calling Python function: " + alias +
+                        "::" + functionName);
+        return pythonWrapper_->call_function<ReturnType>(alias, functionName,
+                                                         args...);
+    } catch (const std::exception& e) {
+        handleScriptError(
+            alias, "Python function call failed: " + std::string(e.what()));
+        throw;
+    }
+}
+
+template <typename T>
+T ScriptTask::getPythonVariable(const std::string& alias,
+                                const std::string& varName) {
+    if (!pythonWrapper_) {
+        throw std::runtime_error("Python wrapper not initialized");
+    }
+
+    try {
+        return pythonWrapper_->get_variable<T>(alias, varName);
+    } catch (const std::exception& e) {
+        handleScriptError(
+            alias, "Failed to get Python variable: " + std::string(e.what()));
+        throw;
+    }
+}
+
+}  // namespace lithium::task::task
 
 #endif  // LITHIUM_TASK_SCRIPT_TASK_HPP

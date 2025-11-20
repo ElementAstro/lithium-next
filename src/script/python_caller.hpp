@@ -1,16 +1,15 @@
-#ifndef LITHIUM_SCRIPT_PYCALLER_HPP
-#define LITHIUM_SCRIPT_PYCALLER_HPP
+#ifndef LITHIUM_SCRIPT_PYTHON_WRAPPER_HPP
+#define LITHIUM_SCRIPT_PYTHON_WRAPPER_HPP
 
 #include <pybind11/embed.h>
 #include <pybind11/iostream.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <spdlog/spdlog.h>
 
 #include <barrier>
-#include <chrono>
 #include <concepts>
 #include <coroutine>
-#include <fstream>
 #include <future>
 #include <latch>
 #include <memory>
@@ -19,16 +18,15 @@
 #include <shared_mutex>
 #include <span>
 #include <string>
-#include <thread>
 #include <vector>
-
-#include "atom/log/loguru.hpp"
 
 namespace py = pybind11;
 
 namespace lithium {
 
-// 新增: 类型约束
+/**
+ * @brief Concept for types that can be converted between C++ and Python
+ */
 template <typename T>
 concept PythonConvertible = requires(T a) {
     { py::cast(a) } -> std::convertible_to<py::object>;
@@ -178,166 +176,206 @@ public:
      */
     std::vector<std::string> list_scripts() const;
 
-    void add_sys_path(const std::string& path) {
-        py::module_ sys = py::module_::import("sys");
-        py::list sys_path = sys.attr("path");
-        sys_path.append(path);
-    }
+    /**
+     * @brief Adds a path to the Python sys.path list.
+     * @param path The path to add.
+     */
+    void add_sys_path(const std::string& path);
 
-    // 同步变量到 Python 全局变量
-    void sync_variable_to_python(const std::string& name, py::object value) {
-        py::globals()[name.c_str()] = value;
-    }
+    /**
+     * @brief Synchronizes a variable to Python global namespace.
+     * @param name The name of the variable.
+     * @param value The value to synchronize.
+     */
+    void sync_variable_to_python(const std::string& name, py::object value);
 
-    // 从 Python 全局变量同步到 C++
-    py::object sync_variable_from_python(const std::string& name) {
-        return py::globals()[name.c_str()];
-    }
+    /**
+     * @brief Synchronizes a variable from Python global namespace.
+     * @param name The name of the variable.
+     * @return The synchronized value.
+     */
+    py::object sync_variable_from_python(const std::string& name);
 
-    // 多线程运行 Python 脚本
-    void execute_script_multithreaded(const std::vector<std::string>& scripts) {
-        std::vector<std::thread> threads;
-        std::mutex print_mutex;
+    /**
+     * @brief Executes multiple Python scripts in parallel threads.
+     * @param scripts The scripts to execute.
+     */
+    void execute_script_multithreaded(const std::vector<std::string>& scripts);
 
-        for (const auto& script : scripts) {
-            threads.emplace_back([&, script]() {
-                try {
-                    py::exec(script);
-                } catch (const py::error_already_set& e) {
-                    std::lock_guard<std::mutex> lock(print_mutex);
-                    std::cerr << "Error in thread: " << e.what() << std::endl;
-                }
-            });
-        }
+    /**
+     * @brief Executes a Python script with performance profiling.
+     * @param script_content The content of the script to execute.
+     */
+    void execute_with_profiling(const std::string& script_content);
 
-        for (auto& t : threads) {
-            t.join();
-        }
-    }
+    /**
+     * @brief Injects code into the Python runtime.
+     * @param code_snippet The code to inject.
+     */
+    void inject_code(const std::string& code_snippet);
 
-    // 执行并统计脚本性能
-    void execute_with_profiling(const std::string& script_content) {
-        auto start_time = std::chrono::high_resolution_clock::now();
+    /**
+     * @brief Registers a C++ function to be callable from Python.
+     * @param name The name to register the function under.
+     * @param func The function to register.
+     */
+    void register_function(const std::string& name, std::function<void()> func);
 
-        try {
-            py::exec(script_content);
-        } catch (const py::error_already_set& e) {
-            handle_exception(e);
-        }
+    /**
+     * @brief Gets Python memory usage information.
+     * @return Python object containing memory usage data.
+     */
+    py::object get_memory_usage();
 
-        auto end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration = end_time - start_time;
+    /**
+     * @brief Handles Python exceptions.
+     * @param e The exception to handle.
+     */
+    static void handle_exception(const py::error_already_set& e);
 
-        std::cout << "Execution time: " << duration.count() << " seconds."
-                  << std::endl;
-    }
-
-    // 动态代码注入
-    void inject_code(const std::string& code_snippet) {
-        try {
-            py::exec(code_snippet);
-        } catch (const py::error_already_set& e) {
-            handle_exception(e);
-        }
-    }
-
-    // Python 调用 C++ 方法支持
-    void register_function(const std::string& name,
-                           std::function<void()> func) {
-        py::globals()[name.c_str()] = py::cpp_function(func);
-    }
-
-    // 内存诊断工具
-    py::object get_memory_usage() {
-        py::module_ gc = py::module_::import("gc");
-        return gc.attr("get_objects")();
-    }
-
-    // 捕获详细异常信息
-    static void handle_exception(const py::error_already_set& e) {
-        std::cerr << "Python Exception:\n" << e.what() << "\n";
-
-        py::module_ traceback = py::module_::import("traceback");
-        py::object tb = traceback.attr("format_exc")();
-        std::cerr << "Traceback:\n" << py::cast<std::string>(tb) << std::endl;
-    }
-
-    // 执行带日志支持的脚本
+    /**
+     * @brief Executes a Python script with logging to a file.
+     * @param script_content The content of the script to execute.
+     * @param log_file The file to log output to.
+     */
     void execute_script_with_logging(const std::string& script_content,
-                                     const std::string& log_file) {
-        std::ofstream log_stream(log_file, std::ios::app);
-        if (!log_stream.is_open()) {
-            throw std::runtime_error("Cannot open log file: " + log_file);
-        }
+                                     const std::string& log_file);
 
-        py::scoped_ostream_redirect stream_redirect(
-            log_stream, py::module_::import("sys").attr("stdout"));
-        try {
-            py::exec(script_content);
-        } catch (const py::error_already_set& e) {
-            handle_exception(e);
-        }
-    }
-
-    // 新增: Python 错误处理策略
+    /**
+     * @brief Error handling strategy options
+     */
     enum class ErrorHandlingStrategy {
-        THROW_EXCEPTION,
-        RETURN_DEFAULT,
-        LOG_AND_CONTINUE
+        THROW_EXCEPTION,  ///< Throw exceptions on errors
+        RETURN_DEFAULT,   ///< Return default values on errors
+        LOG_AND_CONTINUE  ///< Log errors and continue execution
     };
 
-    // 新增: 设置错误处理策略
+    /**
+     * @brief Sets the error handling strategy.
+     * @param strategy The strategy to use.
+     */
     void set_error_handling_strategy(ErrorHandlingStrategy strategy);
 
-    // 新增: 性能优化相关配置
+    /**
+     * @brief Configuration structure for performance tuning.
+     */
     struct PerformanceConfig {
-        bool enable_threading;
-        bool enable_gil_optimization;
-        size_t thread_pool_size;
-        bool enable_caching;
+        bool enable_threading;         ///< Whether to use threading
+        bool enable_gil_optimization;  ///< Whether to optimize GIL usage
+        size_t thread_pool_size;       ///< Size of thread pool
+        bool enable_caching;           ///< Whether to use caching
     };
+
+    /**
+     * @brief Configures performance settings.
+     * @param config The configuration to use.
+     */
     void configure_performance(const PerformanceConfig& config);
 
-    // 新增: 异步执行 Python 函数
+    /**
+     * @brief Asynchronously calls a Python function.
+     * @tparam ReturnType The return type of the function.
+     * @param alias The alias of the script containing the function.
+     * @param function_name The name of the function to call.
+     * @return A future that will contain the result.
+     */
     template <typename ReturnType>
     std::future<ReturnType> async_call_function(
         const std::string& alias, const std::string& function_name);
 
-    // 新增: 批量执行 Python 函数
+    /**
+     * @brief Executes multiple Python functions in batch mode.
+     * @tparam ReturnType The return type of the functions.
+     * @param alias The alias of the script containing the functions.
+     * @param function_names The names of the functions to call.
+     * @return A vector containing the results.
+     */
     template <typename ReturnType>
     std::vector<ReturnType> batch_execute(
         const std::string& alias,
         const std::vector<std::string>& function_names);
 
-    // 新增: Python对象生命周期管理
+    /**
+     * @brief Manages the lifecycle of a Python object.
+     * @param alias The alias of the script containing the object.
+     * @param object_name The name of the object.
+     * @param auto_cleanup Whether to automatically clean up the object.
+     */
     void manage_object_lifecycle(const std::string& alias,
                                  const std::string& object_name,
                                  bool auto_cleanup = true);
 
-    // 新增: 数据类型转换支持
+    /**
+     * @brief Converts a C++ value to a Python object.
+     * @tparam T The type of the value.
+     * @param value The value to convert.
+     * @return The converted Python object.
+     */
     template <typename T>
     py::object cpp_to_python(const T& value);
 
+    /**
+     * @brief Converts a Python object to a C++ value.
+     * @tparam T The type to convert to.
+     * @param obj The Python object to convert.
+     * @return The converted C++ value.
+     */
     template <typename T>
     T python_to_cpp(const py::object& obj);
 
-    // 新增: 内存管理优化
+    /**
+     * @brief Optimizes memory usage.
+     */
     void optimize_memory_usage();
+
+    /**
+     * @brief Clears unused resources.
+     */
     void clear_unused_resources();
 
-    // 新增: 调试支持
+    /**
+     * @brief Enables or disables debug mode.
+     * @param enable Whether to enable debug mode.
+     */
     void enable_debug_mode(bool enable = true);
+
+    /**
+     * @brief Sets a breakpoint in a Python script.
+     * @param alias The alias of the script.
+     * @param line_number The line number to set the breakpoint at.
+     */
     void set_breakpoint(const std::string& alias, int line_number);
 
-    // 新增: Python包管理
+    /**
+     * @brief Installs a Python package.
+     * @param package_name The name of the package to install.
+     * @return Whether the installation was successful.
+     */
     bool install_package(const std::string& package_name);
+
+    /**
+     * @brief Uninstalls a Python package.
+     * @param package_name The name of the package to uninstall.
+     * @return Whether the uninstallation was successful.
+     */
     bool uninstall_package(const std::string& package_name);
 
-    // 新增: 环境隔离
+    /**
+     * @brief Creates a Python virtual environment.
+     * @param env_name The name of the environment to create.
+     */
     void create_virtual_environment(const std::string& env_name);
+
+    /**
+     * @brief Activates a Python virtual environment.
+     * @param env_name The name of the environment to activate.
+     */
     void activate_virtual_environment(const std::string& env_name);
 
-    // 新增: 协程支持
+    /**
+     * @brief Coroutine generator type for asynchronous operations.
+     * @tparam T The type yielded by the generator.
+     */
     template <typename T>
     struct AsyncGenerator {
         struct promise_type {
@@ -363,43 +401,76 @@ public:
             if (handle)
                 handle.destroy();
         }
+
+        /**
+         * @brief Gets the current value of the generator.
+         * @return The current value.
+         */
         T current_value() { return handle.promise().value; }
+
+        /**
+         * @brief Advances the generator to the next value.
+         * @return Whether there is another value.
+         */
         bool move_next() {
             handle.resume();
             return !handle.done();
         }
     };
 
-    // 新增: 基于ranges的批处理操作
+    /**
+     * @brief Processes a range of elements using a Python function.
+     * @tparam R The range type.
+     * @param alias The alias of the script containing the function.
+     * @param function_name The name of the function to call.
+     * @param range The range of elements to process.
+     */
     template <std::ranges::range R>
         requires PythonConvertible<std::ranges::range_value_t<R>>
     void batch_process(const std::string& alias,
                        const std::string& function_name, R&& range);
 
-    // 新增: 支持span的接口
+    /**
+     * @brief Processes data using a Python function.
+     * @tparam T The type of the data elements.
+     * @param alias The alias of the script containing the function.
+     * @param function_name The name of the function to call.
+     * @param data The data to process.
+     */
     template <typename T>
     void process_data(const std::string& alias,
                       const std::string& function_name, std::span<T> data);
 
-    // 新增: 线程安全的资源获取
+    /**
+     * @brief Gets a shared resource.
+     * @tparam T The type of the resource.
+     * @param resource_name The name of the resource.
+     * @return The shared resource.
+     */
     template <typename T>
     std::shared_ptr<T> get_shared_resource(const std::string& resource_name);
 
-    // 新增: 支持Python异步操作
+    /**
+     * @brief Executes a Python script asynchronously.
+     * @param script The script to execute.
+     * @return An async generator that yields the results.
+     */
     AsyncGenerator<py::object> async_execute(const std::string& script);
 
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;
 
-    // 新增: 并发控制
+    // Concurrency control
     mutable std::shared_mutex resource_mutex_;
-    std::counting_semaphore<> task_semaphore_{10};  // 限制并发任务数
-    std::barrier<> sync_point_{2};                  // 用于同步操作
-    std::latch completion_latch_{1};                // 用于等待操作完成
+    std::counting_semaphore<> task_semaphore_{10};  // Limits concurrent tasks
+    std::barrier<> sync_point_{2};                  // For synchronization
+    std::latch completion_latch_{1};                // For waiting completion
 };
 
-// 新增: 智能指针自定义删除器
+/**
+ * @brief Custom deleter for Python objects.
+ */
 struct PythonObjectDeleter {
     void operator()(py::object* obj) {
         py::gil_scoped_acquire gil;
@@ -407,10 +478,19 @@ struct PythonObjectDeleter {
     }
 };
 
-// 新增: RAII风格的GIL管理器
+/**
+ * @brief RAII wrapper for the Python GIL.
+ */
 class GILManager {
 public:
+    /**
+     * @brief Constructs a GILManager and acquires the GIL.
+     */
     GILManager() : gil_state_(PyGILState_Ensure()) {}
+
+    /**
+     * @brief Destroys the GILManager and releases the GIL.
+     */
     ~GILManager() { PyGILState_Release(gil_state_); }
 
 private:
@@ -419,4 +499,4 @@ private:
 
 }  // namespace lithium
 
-#endif  // LITHIUM_SCRIPT_PYCALLER_HPP
+#endif  // LITHIUM_SCRIPT_PYTHON_WRAPPER_HPP

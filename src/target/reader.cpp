@@ -2,19 +2,17 @@
 
 #include <algorithm>
 #include <cctype>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include <spdlog/spdlog.h>
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"
-#include "atom/utils/utf.hpp"
 
 namespace lithium::target {
-// Dialect 构造函数实现
+// Dialect constructor implementation
 Dialect::Dialect(char delim, char quote, bool dquote, bool skipspace,
                  std::string lineterm, Quoting quote_mode)
     : delimiter(delim),
@@ -24,7 +22,7 @@ Dialect::Dialect(char delim, char quote, bool dquote, bool skipspace,
       lineterminator(std::move(lineterm)),
       quoting(quote_mode) {}
 
-// DictReader 实现
+// DictReader implementation
 class DictReader::Impl {
 public:
     Impl(std::istream& input, const std::vector<std::string>& fieldnames,
@@ -79,7 +77,7 @@ public:
     }
 
     auto detectEncoding() -> bool {
-        // 读取前4个字节来检测BOM
+        // Read first 4 bytes to detect BOM
         char bom[4];
         input_.read(bom, 4);
         input_.seekg(0);
@@ -129,7 +127,7 @@ public:
     auto readNextLine() -> bool {
         if (std::getline(input_, current_line_)) {
             ++line_number_;
-            // 处理不同操作系统的换行符
+            // Handle different OS line endings
             if (!current_line_.empty() && current_line_.back() == '\r') {
                 current_line_.pop_back();
             }
@@ -139,7 +137,6 @@ public:
     }
 
 private:
-    // 新增的私有成员
     std::vector<char> buffer_;
     size_t line_number_;
     CSVError last_error_;
@@ -148,13 +145,13 @@ private:
 
     void validateAndInitialize() {
         if (fieldnames_.empty()) {
-            THROW_INVALID_ARGUMENT("字段名不能为空");
+            THROW_INVALID_ARGUMENT("Field names cannot be empty");
         }
 
-        // 预热缓冲区
+        // Pre-warm buffer for improved IO performance
         input_.rdbuf()->pubsetbuf(buffer_.data(), buffer_.size());
 
-        // 检测文件编码和BOM
+        // Detect file encoding and BOM
         detectEncoding();
 
         if (!fieldnames_.empty()) {
@@ -166,7 +163,7 @@ private:
         std::vector<std::string> parsedFields = parseLine(current_line_);
 
         if (validate_fields_ && parsedFields.size() != fieldnames_.size()) {
-            THROW_RUNTIME_ERROR("字段数量不匹配");
+            THROW_RUNTIME_ERROR("Field count mismatch");
         }
 
         row.clear();
@@ -180,7 +177,7 @@ private:
 
     void handleError(const std::exception& e) {
         last_error_ = CSVError::INVALID_FORMAT;
-        LOG_F(ERROR, "处理第 %zu 行时发生错误: %s", line_number_, e.what());
+        spdlog::error("Error processing line {}: {}", line_number_, e.what());
 
         if (!dialect_.ignore_errors) {
             throw;
@@ -199,18 +196,18 @@ private:
     }
 
     auto detectDialect(std::istream& input) -> bool {
-        // 简单检测分隔符和引用字符
+        // Simple detection of delimiter and quote character
         std::string line;
         if (std::getline(input, line)) {
             size_t comma = std::count(line.begin(), line.end(), ',');
             size_t semicolon = std::count(line.begin(), line.end(), ';');
             delimiter_ = (semicolon > comma) ? ';' : ',';
             dialect_.delimiter = delimiter_;
-            // 检测是否使用引号
+            // Check for quotes usage
             size_t quoteCount =
                 std::count(line.begin(), line.end(), dialect_.quotechar);
             dialect_.quoting = (quoteCount > 0) ? Quoting::ALL : Quoting::NONE;
-            // 重置流
+            // Reset stream position
             input.clear();
             input.seekg(0, std::ios::beg);
             return true;
@@ -258,7 +255,7 @@ DictReader::DictReader(std::istream& input,
                        const std::vector<std::string>& fieldnames,
                        Dialect dialect, Encoding encoding)
     : impl_(std::make_unique<Impl>(input, fieldnames, std::move(dialect),
-                                    encoding)) {}
+                                   encoding)) {}
 
 DictReader::~DictReader() = default;
 
@@ -300,7 +297,7 @@ auto DictReader::readRows(size_t count)
     return results;
 }
 
-// DictWriter 实现
+// DictWriter implementation
 class DictWriter::Impl {
 public:
     Impl(std::ostream& output, const std::vector<std::string>& fieldnames,
@@ -315,14 +312,19 @@ public:
 
     void writeRow(const std::unordered_map<std::string, std::string>& row) {
         std::vector<std::string> outputRow;
+        outputRow.reserve(fieldnames_.size());
+
         for (const auto& fieldname : fieldnames_) {
-            if (row.find(fieldname) != row.end()) {
-                outputRow.push_back(escape(row.at(fieldname)));
+            auto it = row.find(fieldname);
+            if (it != row.end()) {
+                outputRow.push_back(escape(it->second));
             } else {
                 outputRow.emplace_back("");
             }
         }
         writeLine(outputRow);
+        written_rows_++;
+        updateProgress();
     }
 
     void setProgressCallback(ProgressCallback callback) {
@@ -338,30 +340,31 @@ public:
     }
 
 private:
-    void writeHeader() { writeLine(fieldnames_); }
+    void writeHeader() {
+        writeLine(fieldnames_);
+        written_rows_++;
+    }
 
     void writeLine(const std::vector<std::string>& line) {
         for (size_t i = 0; i < line.size(); ++i) {
             if (i > 0) {
                 output_ << dialect_.delimiter;
             }
+
+            std::string field = line[i];
+            if (quote_all_ || needsQuotes(field)) {
+                field.insert(field.begin(), dialect_.quotechar);
+                field.push_back(dialect_.quotechar);
+            }
+
             if (encoding_ == Encoding::UTF16) {
-                // TODO: This will cause a strange linking error
-                /*
-                std::u16string field = atom::utils::utf8toUtF16(line[i]);
-                if (quote_all_ || needsQuotes(line[i])) {
-                    field.insert(field.begin(), dialect_.quotechar);
-                    field.push_back(dialect_.quotechar);
-                }
-                output_ << atom::utils::utf16toUtF8(field);
-                */
-            } else {
-                std::string field = line[i];
-                if (quote_all_ || needsQuotes(field)) {
-                    field.insert(field.begin(), dialect_.quotechar);
-                    field.push_back(dialect_.quotechar);
-                }
-                output_ << field;
+                spdlog::warn("UTF-16 encoding output not fully implemented");
+            }
+
+            output_ << field;
+
+            if (checksum_enabled_) {
+                updateChecksum(field);
             }
         }
         output_ << dialect_.lineterminator;
@@ -388,7 +391,6 @@ private:
         return field;
     }
 
-    // 添加新的私有成员
     ProgressCallback progress_callback_;
     bool checksum_enabled_{false};
     size_t written_rows_{0};
@@ -404,7 +406,7 @@ private:
 
     void updateProgress() {
         if (progress_callback_) {
-            progress_callback_(written_rows_, 0);  // 0表示总行数未知
+            progress_callback_(written_rows_, 0);  // 0 indicates unknown total
         }
     }
 
@@ -419,7 +421,7 @@ DictWriter::DictWriter(std::ostream& output,
                        const std::vector<std::string>& fieldnames,
                        Dialect dialect, bool quote_all, Encoding encoding)
     : impl_(std::make_unique<Impl>(output, fieldnames, std::move(dialect),
-                                    quote_all, encoding)) {}
+                                   quote_all, encoding)) {}
 
 DictWriter::~DictWriter() = default;
 

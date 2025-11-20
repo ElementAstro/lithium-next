@@ -4,38 +4,33 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#ifndef LITHIUM_SERVER_CONTROLLER_CONFIG_HPP
-#define LITHIUM_SERVER_CONTROLLER_CONFIG_HPP
+#pragma once
 
-#include "controller.hpp"
-
+#include <spdlog/spdlog.h>
 #include <functional>
 #include <memory>
 #include <string>
-
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
-#include "atom/type/json.hpp"
 #include "config/configor.hpp"
 #include "constant/constant.hpp"
+#include "controller.hpp"
 #include "utils/format.hpp"
+
 
 class ConfigController : public Controller {
 private:
     static std::weak_ptr<lithium::ConfigManager> mConfigManager;
 
-    // Utility function to handle all configuration actions
     static auto handleConfigAction(
         const crow::json::rvalue& body, const std::string& command,
         std::function<bool(std::shared_ptr<lithium::ConfigManager>)> func) {
-        LOG_F(INFO, "Handling config action: {}", command);
+        spdlog::info("Handling config action: {}", command);
 
-        // Ensure the 'path' parameter is not empty (only for non-reloadConfig)
         if (command != "reloadConfig" &&
-            (!body["path"] || body["path"].s().size() == 0)) {
-            LOG_F(WARNING,
-                  "The 'path' parameter is missing or empty for command: {}",
-                  command);
+            (!body["path"] || std::string(body["path"].s()).empty())) {
+            spdlog::warn(
+                "The 'path' parameter is missing or empty for command: {}",
+                command);
             return crow::response(
                 400, "The 'path' parameter is required and cannot be empty.");
         }
@@ -46,25 +41,25 @@ private:
         try {
             auto configManager = mConfigManager.lock();
             if (!configManager) {
-                LOG_F(ERROR, "ConfigManager instance is null. Command: {}",
-                      command);
+                spdlog::error("ConfigManager instance is null. Command: {}",
+                              command);
                 res["status"] = "error";
                 res["code"] = 500;
                 res["error"] =
                     "Internal Server Error: ConfigManager instance is null.";
                 return crow::response(500, res);
             } else {
-                LOG_F(INFO, "Executing function for command: {}", command);
+                spdlog::info("Executing function for command: {}", command);
                 bool success = func(configManager);
                 if (success) {
-                    LOG_F(INFO, "Command {} executed successfully.", command);
+                    spdlog::info("Command {} executed successfully.", command);
                     res["status"] = "success";
                     res["code"] = 200;
                     if (command != "reloadConfig") {
-                        res["path"] = body["path"].s();
+                        res["path"] = std::string(body["path"].s());
                     }
                 } else {
-                    LOG_F(WARNING, "Command {} failed to execute.", command);
+                    spdlog::warn("Command {} failed to execute.", command);
                     res["status"] = "error";
                     res["code"] = 404;
                     res["error"] =
@@ -73,8 +68,8 @@ private:
                 }
             }
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception occurred while executing command {}: {}",
-                  command, e.what());
+            spdlog::error("Exception occurred while executing command {}: {}",
+                          command, e.what());
             res["status"] = "error";
             res["code"] = 500;
             res["error"] =
@@ -82,54 +77,89 @@ private:
                 e.what();
         }
 
-        LOG_F(INFO, "Config action {} completed.", command);
+        spdlog::info("Config action {} completed.", command);
         return crow::response(200, res);
     }
 
 public:
     void registerRoutes(crow::SimpleApp& app) override {
-        LOG_F(INFO, "Registering config routes.");
-        // Create a weak pointer to the ConfigManager
+        spdlog::info("Registering config routes.");
         GET_OR_CREATE_WEAK_PTR(mConfigManager, lithium::ConfigManager,
                                Constants::CONFIG_MANAGER);
-        // Define the routes
+
         CROW_ROUTE(app, "/config/get")
-            .methods("POST"_method)(&ConfigController::getConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->getConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/set")
-            .methods("POST"_method)(&ConfigController::setConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->setConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/delete")
-            .methods("POST"_method)(&ConfigController::deleteConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->deleteConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/load")
-            .methods("POST"_method)(&ConfigController::loadConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->loadConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/reload")
-            .methods("POST"_method)(&ConfigController::reloadConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->reloadConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/save")
-            .methods("POST"_method)(&ConfigController::saveConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->saveConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/append")
-            .methods("POST"_method)(&ConfigController::appendConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->appendConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/has")
-            .methods("POST"_method)(&ConfigController::hasConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->hasConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/keys")
-            .methods("GET"_method)(&ConfigController::listConfigKeys, this);
+            .methods("GET"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->listConfigKeys(req, res);
+                });
         CROW_ROUTE(app, "/config/paths")
-            .methods("GET"_method)(&ConfigController::listConfigPaths, this);
+            .methods("GET"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->listConfigPaths(req, res);
+                });
         CROW_ROUTE(app, "/config/tidy")
-            .methods("POST"_method)(&ConfigController::tidyConfig, this);
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->tidyConfig(req, res);
+                });
         CROW_ROUTE(app, "/config/clear")
-            .methods("POST"_method)(&ConfigController::clearConfig, this);
-        LOG_F(INFO, "Config routes registered successfully.");
+            .methods("POST"_method)(
+                [this](const crow::request& req, crow::response& res) {
+                    this->clearConfig(req, res);
+                });
+        spdlog::info("Config routes registered successfully.");
     }
 
-    // Endpoint to get config from ConfigManager
     void getConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "getConfig called.");
+        spdlog::info("getConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "getConfig request body: {}", req.body);
+        spdlog::info("getConfig request body: {}", req.body);
+        std::string path = body["path"].s();
         res = handleConfigAction(body, "getConfig", [&](auto configManager) {
-            LOG_F(INFO, "Retrieving config for path: {}", body["path"].s());
-            if (auto tmp = configManager->get(body["path"].s())) {
-                LOG_F(INFO, "Config retrieved successfully for path: {}",
-                      body["path"].s());
+            spdlog::info("Retrieving config for path: {}", path);
+            if (auto tmp = configManager->get(path)) {
+                spdlog::info("Config retrieved successfully for path: {}",
+                             path);
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
@@ -138,176 +168,161 @@ public:
                 res.write(response.dump());
                 return true;
             }
-            LOG_F(WARNING, "Config not found for path: {}", body["path"].s());
+            spdlog::warn("Config not found for path: {}", path);
             return false;
         });
-        LOG_F(INFO, "getConfig completed.");
+        spdlog::info("getConfig completed.");
     }
 
-    // Endpoint to set config to ConfigManager
     void setConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "setConfig called.");
+        spdlog::info("setConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "setConfig request body: {}", req.body);
-        if (body["value"].s().size() == 0) {
-            LOG_F(WARNING, "Missing 'value' parameter in setConfig.");
+        spdlog::info("setConfig request body: {}", req.body);
+        std::string path = body["path"].s();
+        std::string value = body["value"].s();
+        if (value.empty()) {
+            spdlog::warn("Missing 'value' parameter in setConfig.");
             res.code = 400;
             res.write("Missing Parameters");
             return;
         }
 
         res = handleConfigAction(body, "setConfig", [&](auto configManager) {
-            LOG_F(INFO, "Setting config for path: {} with value: {}",
-                  body["path"].s(), body["value"].s());
-            bool result =
-                configManager->set(body["path"].s(), body["value"].s());
+            spdlog::info("Setting config for path: {} with value: {}", path,
+                         value);
+            bool result = configManager->set(path, value);
             if (result) {
-                LOG_F(INFO, "Config set successfully for path: {}",
-                      body["path"].s());
+                spdlog::info("Config set successfully for path: {}", path);
             } else {
-                LOG_F(WARNING, "Failed to set config for path: {}",
-                      body["path"].s());
+                spdlog::warn("Failed to set config for path: {}", path);
             }
             return result;
         });
-        LOG_F(INFO, "setConfig completed.");
+        spdlog::info("setConfig completed.");
     }
 
-    // Endpoint to delete config from ConfigManager
     void deleteConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "deleteConfig called.");
+        spdlog::info("deleteConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "deleteConfig request body: {}", req.body);
+        spdlog::info("deleteConfig request body: {}", req.body);
+        std::string path = body["path"].s();
         res = handleConfigAction(body, "deleteConfig", [&](auto configManager) {
-            LOG_F(INFO, "Deleting config for path: {}", body["path"].s());
-            bool result = configManager->remove(body["path"].s());
+            spdlog::info("Deleting config for path: {}", path);
+            bool result = configManager->remove(path);
             if (result) {
-                LOG_F(INFO, "Config deleted successfully for path: {}",
-                      body["path"].s());
+                spdlog::info("Config deleted successfully for path: {}", path);
             } else {
-                LOG_F(WARNING, "Failed to delete config for path: {}",
-                      body["path"].s());
+                spdlog::warn("Failed to delete config for path: {}", path);
             }
             return result;
         });
-        LOG_F(INFO, "deleteConfig completed.");
+        spdlog::info("deleteConfig completed.");
     }
 
-    // Endpoint to load config from file
     void loadConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "loadConfig called.");
+        spdlog::info("loadConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "loadConfig request body: {}", req.body);
+        spdlog::info("loadConfig request body: {}", req.body);
+        std::string path = body["path"].s();
         res = handleConfigAction(body, "loadConfig", [&](auto configManager) {
-            LOG_F(INFO, "Loading config from file: {}", body["path"].s());
-            bool result =
-                configManager->loadFromFile(std::string(body["path"].s()));
+            spdlog::info("Loading config from file: {}", path);
+            bool result = configManager->loadFromFile(path);
             if (result) {
-                LOG_F(INFO, "Config loaded successfully from file: {}",
-                      body["path"].s());
+                spdlog::info("Config loaded successfully from file: {}", path);
             } else {
-                LOG_F(WARNING, "Failed to load config from file: {}",
-                      body["path"].s());
+                spdlog::warn("Failed to load config from file: {}", path);
             }
             return result;
         });
-        LOG_F(INFO, "loadConfig completed.");
+        spdlog::info("loadConfig completed.");
     }
 
-    // Endpoint to reload config from file
     void reloadConfig([[maybe_unused]] const crow::request& req,
                       crow::response& res) {
-        LOG_F(INFO, "reloadConfig called.");
+        spdlog::info("reloadConfig called.");
         res = handleConfigAction(
             crow::json::rvalue{}, "reloadConfig", [&](auto configManager) {
-                LOG_F(INFO, "Reloading config from default file.");
+                spdlog::info("Reloading config from default file.");
                 bool result = configManager->loadFromFile("config/config.json");
                 if (result) {
-                    LOG_F(INFO,
-                          "Config reloaded successfully from default file.");
+                    spdlog::info(
+                        "Config reloaded successfully from default file.");
                 } else {
-                    LOG_F(WARNING,
-                          "Failed to reload config from default file.");
+                    spdlog::warn("Failed to reload config from default file.");
                 }
                 return result;
             });
-        LOG_F(INFO, "reloadConfig completed.");
+        spdlog::info("reloadConfig completed.");
     }
 
-    // Endpoint to save config to file
     void saveConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "saveConfig called.");
+        spdlog::info("saveConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "saveConfig request body: {}", req.body);
+        spdlog::info("saveConfig request body: {}", req.body);
+        std::string path = body["path"].s();
         res = handleConfigAction(body, "saveConfig", [&](auto configManager) {
-            LOG_F(INFO, "Saving config to file: {}", body["path"].s());
-            bool result = configManager->save(std::string(body["path"].s()));
+            spdlog::info("Saving config to file: {}", path);
+            bool result = configManager->save(path);
             if (result) {
-                LOG_F(INFO, "Config saved successfully to file: {}",
-                      body["path"].s());
+                spdlog::info("Config saved successfully to file: {}", path);
             } else {
-                LOG_F(WARNING, "Failed to save config to file: {}",
-                      body["path"].s());
+                spdlog::warn("Failed to save config to file: {}", path);
             }
             return result;
         });
-        LOG_F(INFO, "saveConfig completed.");
+        spdlog::info("saveConfig completed.");
     }
 
-    // Endpoint to append config to an array in ConfigManager
     void appendConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "appendConfig called.");
+        spdlog::info("appendConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "appendConfig request body: {}", req.body);
-        if (body["value"].s().size() == 0) {
-            LOG_F(WARNING, "Missing 'value' parameter in appendConfig.");
+        spdlog::info("appendConfig request body: {}", req.body);
+        std::string path = body["path"].s();
+        std::string value = body["value"].s();
+        if (value.empty()) {
+            spdlog::warn("Missing 'value' parameter in appendConfig.");
             res.code = 400;
             res.write("Missing Parameters");
             return;
         }
 
         res = handleConfigAction(body, "appendConfig", [&](auto configManager) {
-            LOG_F(INFO, "Appending config to path: {} with value: {}",
-                  body["path"].s(), body["value"].s());
-            bool result =
-                configManager->append(body["path"].s(), body["value"].s());
+            spdlog::info("Appending config to path: {} with value: {}", path,
+                         value);
+            bool result = configManager->append(path, value);
             if (result) {
-                LOG_F(INFO, "Config appended successfully to path: {}",
-                      body["path"].s());
+                spdlog::info("Config appended successfully to path: {}", path);
             } else {
-                LOG_F(WARNING, "Failed to append config to path: {}",
-                      body["path"].s());
+                spdlog::warn("Failed to append config to path: {}", path);
             }
             return result;
         });
-        LOG_F(INFO, "appendConfig completed.");
+        spdlog::info("appendConfig completed.");
     }
 
-    // Endpoint to check if a config exists in ConfigManager
     void hasConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "hasConfig called.");
+        spdlog::info("hasConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "hasConfig request body: {}", req.body);
+        spdlog::info("hasConfig request body: {}", req.body);
+        std::string path = body["path"].s();
         res = handleConfigAction(body, "hasConfig", [&](auto configManager) {
-            LOG_F(INFO, "Checking existence of config at path: {}",
-                  body["path"].s());
-            bool exists = configManager->has(body["path"].s());
-            LOG_F(INFO, "Config at path {} exists: {}", body["path"].s(),
-                  exists ? "true" : "false");
+            spdlog::info("Checking existence of config at path: {}", path);
+            bool exists = configManager->has(path);
+            spdlog::info("Config at path {} exists: {}", path,
+                         exists ? "true" : "false");
             return exists;
         });
-        LOG_F(INFO, "hasConfig completed.");
+        spdlog::info("hasConfig completed.");
     }
 
-    // Endpoint to list all config keys in ConfigManager
     void listConfigKeys([[maybe_unused]] const crow::request& req,
                         crow::response& res) {
-        LOG_F(INFO, "listConfigKeys called.");
+        spdlog::info("listConfigKeys called.");
         res = handleConfigAction(
             crow::json::rvalue{}, "listConfigKeys", [&](auto configManager) {
-                LOG_F(INFO, "Listing all config keys.");
+                spdlog::info("Listing all config keys.");
                 auto keys = configManager->getKeys();
-                LOG_F(INFO, "Retrieved %zu config keys.", keys.size());
+                spdlog::info("Retrieved {} config keys.", keys.size());
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
@@ -315,18 +330,17 @@ public:
                 res.write(response.dump());
                 return true;
             });
-        LOG_F(INFO, "listConfigKeys completed.");
+        spdlog::info("listConfigKeys completed.");
     }
 
-    // Endpoint to list all config paths in ConfigManager
     void listConfigPaths([[maybe_unused]] const crow::request& req,
                          crow::response& res) {
-        LOG_F(INFO, "listConfigPaths called.");
+        spdlog::info("listConfigPaths called.");
         res = handleConfigAction(
             crow::json::rvalue{}, "listConfigPaths", [&](auto configManager) {
-                LOG_F(INFO, "Listing all config paths.");
+                spdlog::info("Listing all config paths.");
                 auto paths = configManager->listPaths();
-                LOG_F(INFO, "Retrieved %zu config paths.", paths.size());
+                spdlog::info("Retrieved {} config paths.", paths.size());
                 crow::json::wvalue response;
                 response["status"] = "success";
                 response["code"] = 200;
@@ -334,59 +348,55 @@ public:
                 res.write(response.dump());
                 return true;
             });
-        LOG_F(INFO, "listConfigPaths completed.");
+        spdlog::info("listConfigPaths completed.");
     }
 
-    // Endpoint to tidy config in ConfigManager
     void tidyConfig([[maybe_unused]] const crow::request& req,
                     crow::response& res) {
-        LOG_F(INFO, "tidyConfig called.");
-        res = handleConfigAction(crow::json::rvalue{}, "tidyConfig",
-                                 [&](auto configManager) {
-                                     LOG_F(INFO, "Tidying config.");
-                                     configManager->tidy();
-                                     LOG_F(INFO, "Config tidied successfully.");
-                                     return true;
-                                 });
-        LOG_F(INFO, "tidyConfig completed.");
-    }
-
-    // Endpoint to clear config in ConfigManager
-    void clearConfig([[maybe_unused]] const crow::request& req,
-                     crow::response& res) {
-        LOG_F(INFO, "clearConfig called.");
+        spdlog::info("tidyConfig called.");
         res = handleConfigAction(
-            crow::json::rvalue{}, "clearConfig", [&](auto configManager) {
-                LOG_F(INFO, "Clearing all config.");
-                configManager->clear();
-                LOG_F(INFO, "All config cleared successfully.");
+            crow::json::rvalue{}, "tidyConfig", [&](auto configManager) {
+                spdlog::info("Tidying config.");
+                configManager->tidy();
+                spdlog::info("Config tidied successfully.");
                 return true;
             });
-        LOG_F(INFO, "clearConfig completed.");
+        spdlog::info("tidyConfig completed.");
     }
 
-    // Endpoint to merge config in ConfigManager
+    void clearConfig([[maybe_unused]] const crow::request& req,
+                     crow::response& res) {
+        spdlog::info("clearConfig called.");
+        res = handleConfigAction(
+            crow::json::rvalue{}, "clearConfig", [&](auto configManager) {
+                spdlog::info("Clearing all config.");
+                configManager->clear();
+                spdlog::info("All config cleared successfully.");
+                return true;
+            });
+        spdlog::info("clearConfig completed.");
+    }
+
     void mergeConfig(const crow::request& req, crow::response& res) {
-        LOG_F(INFO, "mergeConfig called.");
+        spdlog::info("mergeConfig called.");
         auto body = crow::json::load(req.body);
-        LOG_F(INFO, "mergeConfig request body: {}", req.body);
-        if (body["value"].s().size() == 0) {
-            LOG_F(WARNING, "Missing 'value' parameter in mergeConfig.");
+        spdlog::info("mergeConfig request body: {}", req.body);
+        std::string value = body["value"].s();
+        if (value.empty()) {
+            spdlog::warn("Missing 'value' parameter in mergeConfig.");
             res.code = 400;
             res.write("Missing Parameters");
             return;
         }
 
-        LOG_F(INFO, "Merging config with value: {}", body["value"].s());
+        spdlog::info("Merging config with value: {}", value);
         res = handleConfigAction(body, "mergeConfig", [&](auto configManager) {
-            configManager->merge(body["value"].s());
-            LOG_F(INFO, "Config merged successfully.");
+            configManager->merge(value);
+            spdlog::info("Config merged successfully.");
             return true;
         });
-        LOG_F(INFO, "mergeConfig completed.");
+        spdlog::info("mergeConfig completed.");
     }
 };
 
 inline std::weak_ptr<lithium::ConfigManager> ConfigController::mConfigManager;
-
-#endif  // LITHIUM_SERVER_CONTROLLER_CONFIG_HPP

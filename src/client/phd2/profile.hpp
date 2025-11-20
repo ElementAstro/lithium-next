@@ -137,8 +137,9 @@ public:
      * @param profile2 The name of the second profile.
      * @return True if the profiles are identical, false otherwise.
      */
-    [[nodiscard]] auto compareProfiles(
-        const std::string& profile1, const std::string& profile2) const -> bool;
+    [[nodiscard]] auto compareProfiles(const std::string& profile1,
+                                       const std::string& profile2) const
+        -> bool;
 
     /**
      * @brief Prints the details of a profile.

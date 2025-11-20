@@ -1,159 +1,189 @@
 #include "command.hpp"
 #include "eventloop.hpp"
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 
 namespace lithium::app {
+
 CommandDispatcher::CommandDispatcher(std::shared_ptr<EventLoop> eventLoop,
                                      const Config& config)
-    : eventLoop_(std::move(eventLoop)), config_(config) {
-    LOG_F(INFO, "CommandDispatcher initialized with custom config");
+    : eventLoop_(std::move(eventLoop)), configuration_(config) {
+    spdlog::info(
+        "CommandDispatcher initialized with max_history={}, "
+        "default_timeout={}ms, max_concurrent={}",
+        config.maxHistorySize, config.defaultTimeout.count(),
+        config.maxConcurrentCommands);
 }
 
 void CommandDispatcher::unregisterCommand(const CommandID& id) {
-    std::unique_lock lock(mutex_);
-    handlers_.erase(id);
+    std::unique_lock lock(accessMutex_);
+    commandHandlers_.erase(id);
     undoHandlers_.erase(id);
-    LOG_F(INFO, "Unregistered command: {}", id);
+    spdlog::debug("Unregistered command handler: {}", id);
 }
 
-void CommandDispatcher::recordHistory(const CommandID& id,
-                                      const std::any& command) {
-    auto& commandHistory = history_[id];
-    commandHistory.push_back(command);
-    if (commandHistory.size() > maxHistorySize_) {
-        commandHistory.erase(commandHistory.begin());
+void CommandDispatcher::recordCommandHistory(const CommandID& id,
+                                             const std::any& command) {
+    auto& history = commandHistory_[id];
+    history.push_back(command);
+    if (history.size() > configuration_.maxHistorySize) {
+        history.erase(history.begin());
     }
-    LOG_F(INFO, "Recorded history for command: {}", id);
+    spdlog::trace("Recorded command history for: {} (total: {})", id,
+                  history.size());
 }
 
-void CommandDispatcher::notifySubscribers(const CommandID& id,
-                                          const std::any& command) {
-    auto it = subscribers_.find(id);
-    if (it != subscribers_.end()) {
-        for (auto& [_, callback] : it->second) {
-            callback(id, command);
+void CommandDispatcher::notifyEventSubscribers(const CommandID& id,
+                                               const std::any& command) {
+    auto subscriberIt = eventSubscribers_.find(id);
+    if (subscriberIt != eventSubscribers_.end()) {
+        for (const auto& [token, callback] : subscriberIt->second) {
+            try {
+                callback(id, command);
+            } catch (const std::exception& e) {
+                spdlog::warn(
+                    "Event subscriber callback failed for command {}: {}", id,
+                    e.what());
+            }
         }
-        LOG_F(INFO, "Notified subscribers for command: {}", id);
+        spdlog::trace("Notified {} subscribers for command: {}",
+                      subscriberIt->second.size(), id);
     }
 }
 
 int CommandDispatcher::subscribe(const CommandID& id, EventCallback callback) {
-    std::unique_lock lock(mutex_);
-    int token = nextSubscriberId_++;
-    subscribers_[id][token] = std::move(callback);
-    LOG_F(INFO, "Subscribed to command: {} with token: {}", id, token);
+    std::unique_lock lock(accessMutex_);
+    int token = nextSubscriberToken_++;
+    eventSubscribers_[id][token] = std::move(callback);
+    spdlog::debug("Subscribed to command events: {} (token: {})", id, token);
     return token;
 }
 
 void CommandDispatcher::unsubscribe(const CommandID& id, int token) {
-    std::unique_lock lock(mutex_);
-    auto& callbacks = subscribers_[id];
+    std::unique_lock lock(accessMutex_);
+    auto& callbacks = eventSubscribers_[id];
     callbacks.erase(token);
     if (callbacks.empty()) {
-        subscribers_.erase(id);
+        eventSubscribers_.erase(id);
     }
-    LOG_F(INFO, "Unsubscribed from command: {} with token: {}", id, token);
+    spdlog::debug("Unsubscribed from command events: {} (token: {})", id,
+                  token);
 }
 
 void CommandDispatcher::clearHistory() {
-    std::unique_lock lock(mutex_);
-    history_.clear();
-    LOG_F(INFO, "Cleared all command history");
+    std::unique_lock lock(accessMutex_);
+    size_t totalCleared = 0;
+    for (const auto& [id, history] : commandHistory_) {
+        totalCleared += history.size();
+    }
+    commandHistory_.clear();
+    spdlog::info("Cleared all command history ({} entries)", totalCleared);
 }
 
 void CommandDispatcher::clearCommandHistory(const CommandID& id) {
-    std::unique_lock lock(mutex_);
-    history_.erase(id);
-    LOG_F(INFO, "Cleared history for command: {}", id);
+    std::unique_lock lock(accessMutex_);
+    auto historyIt = commandHistory_.find(id);
+    if (historyIt != commandHistory_.end()) {
+        size_t cleared = historyIt->second.size();
+        commandHistory_.erase(historyIt);
+        spdlog::debug("Cleared command history for: {} ({} entries)", id,
+                      cleared);
+    }
 }
 
 auto CommandDispatcher::getActiveCommands() const -> std::vector<CommandID> {
-    std::shared_lock lock(mutex_);
+    std::shared_lock lock(accessMutex_);
     std::vector<CommandID> activeCommands;
-    activeCommands.reserve(handlers_.size());
-    for (const auto& [id, _] : handlers_) {
-        activeCommands.push_back(id);
+    activeCommands.reserve(commandHandlers_.size());
+
+    for (const auto& [id, handler] : commandHandlers_) {
+        auto statusIt = commandStatusMap_.find(id);
+        if (statusIt != commandStatusMap_.end() &&
+            (statusIt->second == CommandStatus::PENDING ||
+             statusIt->second == CommandStatus::RUNNING)) {
+            activeCommands.push_back(id);
+        }
     }
-    LOG_F(INFO, "Retrieved active commands");
+
+    spdlog::trace("Retrieved {} active commands", activeCommands.size());
     return activeCommands;
 }
 
 void CommandDispatcher::cancelCommand(const CommandID& id) {
-    std::unique_lock lock(mutex_);
+    std::unique_lock lock(accessMutex_);
     updateCommandStatus(id, CommandStatus::CANCELLED);
-    LOG_F(INFO, "Command cancelled: {}", id);
+    spdlog::info("Command cancelled: {}", id);
 }
 
 void CommandDispatcher::setTimeout(const CommandID& id,
                                    const std::chrono::milliseconds& timeout) {
-    std::unique_lock lock(mutex_);
-    timeouts_[id] = timeout;
+    std::unique_lock lock(accessMutex_);
+    commandTimeouts_[id] = timeout;
+    spdlog::debug("Set timeout for command {}: {}ms", id, timeout.count());
 }
 
 CommandStatus CommandDispatcher::getCommandStatus(const CommandID& id) const {
-    std::shared_lock lock(mutex_);
-    auto it = commandStatus_.find(id);
-    return it != commandStatus_.end() ? it->second : CommandStatus::PENDING;
+    std::shared_lock lock(accessMutex_);
+    auto statusIt = commandStatusMap_.find(id);
+    return statusIt != commandStatusMap_.end() ? statusIt->second
+                                               : CommandStatus::PENDING;
 }
 
 void CommandDispatcher::updateCommandStatus(const CommandID& id,
                                             CommandStatus status) {
     auto now = std::chrono::system_clock::now();
-    auto timeout = timeouts_.find(id) != timeouts_.end()
-                       ? timeouts_[id]
-                       : config_.defaultTimeout;
+    auto timeout = commandTimeouts_.find(id) != commandTimeouts_.end()
+                       ? commandTimeouts_[id]
+                       : configuration_.defaultTimeout;
 
-    commandInfo_[id] = {status, now, timeout};
+    executionInfoMap_[id] = {status, now, timeout};
+    commandStatusMap_[id] = status;
 
-    commandStatus_[id] = status;
-    notifySubscribers(id, status);
+    // **Notify subscribers about status change**
+    notifyEventSubscribers(id, static_cast<int>(status));
 
     if (status == CommandStatus::COMPLETED || status == CommandStatus::FAILED ||
         status == CommandStatus::CANCELLED) {
-        cleanupCommand(id);
+        cleanupCommandResources(id);
     }
+
+    spdlog::trace("Updated command status: {} -> {}", id,
+                  static_cast<int>(status));
 }
 
-bool CommandDispatcher::checkTimeout(const CommandID& id) const {
-    auto it = commandInfo_.find(id);
-    if (it == commandInfo_.end()) {
+bool CommandDispatcher::checkCommandTimeout(const CommandID& id) const {
+    auto infoIt = executionInfoMap_.find(id);
+    if (infoIt == executionInfoMap_.end()) {
         return false;
     }
 
     auto now = std::chrono::system_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now - it->second.startTime);
+        now - infoIt->second.startTime);
 
-    return duration > it->second.timeout;
+    bool timedOut = duration > infoIt->second.timeout;
+    if (timedOut) {
+        spdlog::warn("Command timeout detected: {} ({}ms > {}ms)", id,
+                     duration.count(), infoIt->second.timeout.count());
+    }
+
+    return timedOut;
 }
 
-void CommandDispatcher::cleanupCommand(const CommandID& id) {
-    timeouts_.erase(id);
-    commandStatus_.erase(id);
-    commandInfo_.erase(id);
+void CommandDispatcher::cleanupCommandResources(const CommandID& id) {
+    commandTimeouts_.erase(id);
+    commandStatusMap_.erase(id);
+    executionInfoMap_.erase(id);
 
-    // 清理相关的内存和资源
-    auto historyIt = history_.find(id);
-    if (historyIt != history_.end() && !historyIt->second.empty()) {
-        // 保留最后一条历史记录
-        auto lastRecord = historyIt->second.back();
+    // **Preserve last history entry for potential undo/redo operations**
+    auto historyIt = commandHistory_.find(id);
+    if (historyIt != commandHistory_.end() && !historyIt->second.empty()) {
+        auto lastRecord = std::move(historyIt->second.back());
         historyIt->second.clear();
         historyIt->second.push_back(std::move(lastRecord));
     }
 
-    // 清理优先队列中的相关命令
-    std::priority_queue<std::pair<int, CommandID>> tempQueue;
-    while (!priorityQueue_.empty()) {
-        auto item = priorityQueue_.top();
-        priorityQueue_.pop();
-        if (item.second != id) {
-            tempQueue.push(item);
-        }
-    }
-    priorityQueue_ = std::move(tempQueue);
-
-    LOG_F(INFO, "Cleaned up resources for command: {}", id);
+    spdlog::trace("Cleaned up resources for command: {}", id);
 }
 
 }  // namespace lithium::app

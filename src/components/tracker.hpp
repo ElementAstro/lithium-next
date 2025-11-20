@@ -19,13 +19,11 @@ namespace fs = std::filesystem;
 
 namespace lithium {
 
-// File concept for defining valid file handler operations
 template <typename T>
 concept FileHandler = requires(T handler, const fs::path& path) {
     { handler(path) } -> std::same_as<void>;
 };
 
-// Callback concept for change notifications
 template <typename T>
 concept ChangeNotifier =
     requires(T callback, const fs::path& path, const std::string& changeType) {
@@ -165,8 +163,10 @@ public:
     /**
      * @brief Sets a callback function to be called when a change is detected.
      * @param callback The callback function.
-     * @throws std::invalid_argument if callback is invalid
      */
+    // 推荐：非模板重载，解决 linkage 问题
+    void setChangeCallback(std::function<void(const fs::path&, const std::string&)> callback);
+
     template <ChangeNotifier Callback>
     void setChangeCallback(Callback&& callback);
 
@@ -174,7 +174,7 @@ public:
      * @brief Processes a batch of files using a specified processor function.
      * @param files The files to process.
      * @param processor The processor function.
-     * @throws std::invalid_argument if files is empty or processor is invalid
+     * @throws std::invalid_argument if files is empty
      */
     template <FileHandler Processor>
     void batchProcess(const std::vector<fs::path>& files,
@@ -203,14 +203,12 @@ public:
      * @brief Struct for storing file statistics.
      */
     struct FileStats {
-        size_t totalFiles{0};     ///< Total number of files.
-        size_t modifiedFiles{0};  ///< Number of modified files.
-        size_t newFiles{0};       ///< Number of new files.
-        size_t deletedFiles{0};   ///< Number of deleted files.
-        std::chrono::system_clock::time_point
-            lastScanTime;  ///< Time of the last scan.
+        size_t totalFiles{0};
+        size_t modifiedFiles{0};
+        size_t newFiles{0};
+        size_t deletedFiles{0};
+        std::chrono::system_clock::time_point lastScanTime;
 
-        // Added equality comparison operator for testing
         bool operator==(const FileStats& other) const noexcept {
             return totalFiles == other.totalFiles &&
                    modifiedFiles == other.modifiedFiles &&
@@ -229,7 +227,10 @@ public:
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
+    // 存储 std::function 回调
+    std::function<void(const fs::path&, const std::string&)> changeCallback_;
 };
+
 }  // namespace lithium
 
 #endif  // LITHIUM_ADDON_TRACKER_HPP

@@ -18,8 +18,6 @@ lithium_component_begin(lithium_components 1.0.0)
 set(PROJECT_SOURCES
     dependency.cpp
     loader.cpp
-    manager.cpp
-    system_dependency.cpp
     tracker.cpp
     version.cpp
     debug/dump.cpp
@@ -40,13 +38,19 @@ set(PROJECT_LIBRARIES
 )
 
 # ============================================================================
+# Add subdirectories
+# ============================================================================
+
+add_subdirectory(manager)
+
+# ============================================================================
 # Build Library
 # ============================================================================
 
 lithium_add_library(
     NAME ${PROJECT_NAME}
     SOURCES ${PROJECT_SOURCES}
-    LIBRARIES ${PROJECT_LIBRARIES}
+    LIBRARIES ${PROJECT_LIBRARIES} lithium_components_manager
     VERSION ${PROJECT_VERSION}
     TYPE STATIC
     DESCRIPTION "Component management and dependency tracking"

@@ -18,8 +18,8 @@
 #include <variant>
 #include <vector>
 
+#include <spdlog/spdlog.h>
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
 
 namespace lithium::database {
 
@@ -142,6 +142,18 @@ public:
      * @param pragmas Map of PRAGMA name to value
      */
     void configure(const std::unordered_map<std::string, std::string>& pragmas);
+
+    /**
+     * @brief Commits the current transaction.
+     * @throws TransactionError if commit fails
+     */
+    void commit();
+
+    /**
+     * @brief Rolls back the current transaction.
+     * @throws TransactionError if rollback fails
+     */
+    void rollback();
 
 private:
     std::unique_ptr<sqlite3, decltype(&sqlite3_close)> db{nullptr,
@@ -1144,7 +1156,7 @@ void Column<T, Model>::readFromStatement(const Statement& stmt, int index,
 // Table implementation
 template <typename T>
 Table<T>::Table(Database& db) : db(db) {
-    LOG_F(INFO, "Table instance created for {}", tableName());
+    spdlog::info("Table instance created for {}", tableName());
 }
 
 template <typename T>
@@ -1152,27 +1164,27 @@ void Table<T>::createTable(bool ifNotExists) {
     std::string sql = "CREATE TABLE " +
                       std::string(ifNotExists ? "IF NOT EXISTS " : "") +
                       tableName() + " (" + columnsDefinition() + ");";
-    LOG_F(INFO, "Creating table with SQL: {}", sql);
+    spdlog::info("Creating table with SQL: {}", sql);
     execute(sql);
-    LOG_F(INFO, "Table {} created successfully", tableName());
+    spdlog::info("Table {} created successfully", tableName());
 }
 
 template <typename T>
 void Table<T>::insert(const T& model) {
     validateModel(model);
     auto stmt = prepareInsert(model);
-    LOG_F(INFO, "Inserting record with SQL: {}", stmt->getSql());
+    spdlog::info("Inserting record with SQL: {}", stmt->getSql());
     stmt->execute();
-    LOG_F(INFO, "Record inserted successfully into {}", tableName());
+    spdlog::info("Record inserted successfully into {}", tableName());
 }
 
 template <typename T>
 void Table<T>::update(const T& model, const std::string& condition) {
     validateModel(model);
     auto stmt = prepareUpdate(model, condition);
-    LOG_F(INFO, "Updating record with SQL: {}", stmt->getSql());
+    spdlog::info("Updating record with SQL: {}", stmt->getSql());
     stmt->execute();
-    LOG_F(INFO, "Record updated successfully in {}", tableName());
+    spdlog::info("Record updated successfully in {}", tableName());
 }
 
 template <typename T>
@@ -1182,9 +1194,9 @@ void Table<T>::remove(const std::string& condition) {
     }
     std::string sql =
         "DELETE FROM " + tableName() + " WHERE " + condition + ";";
-    LOG_F(INFO, "Deleting record with SQL: {}", sql);
+    spdlog::info("Deleting record with SQL: {}", sql);
     execute(sql);
-    LOG_F(INFO, "Record deleted successfully from {}", tableName());
+    spdlog::info("Record deleted successfully from {}", tableName());
 }
 
 template <typename T>
@@ -1200,9 +1212,9 @@ std::vector<T> Table<T>::query(const std::string& condition, int limit,
     if (offset > 0) {
         sql += " OFFSET " + std::to_string(offset);
     }
-    LOG_F(INFO, "Executing query: {}", sql);
+    spdlog::info("Executing query: {}", sql);
     auto results = executeQuery(sql);
-    LOG_F(INFO, "Query returned {} results", results.size());
+    spdlog::info("Query returned {} results", results.size());
     return results;
 }
 
@@ -1216,11 +1228,11 @@ std::future<std::vector<T>> Table<T>::queryAsync(const std::string& condition,
 template <typename T>
 void Table<T>::batchInsert(const std::vector<T>& models, size_t chunkSize) {
     if (models.empty()) {
-        LOG_F(WARNING, "Batch insert called with empty models vector");
+        spdlog::warn("Batch insert called with empty models vector");
         return;
     }
 
-    LOG_F(INFO, "Starting batch insert of {} records", models.size());
+    spdlog::info("Starting batch insert of {} records", models.size());
     auto transaction = db.beginTransaction();
     try {
         for (size_t i = 0; i < models.size(); i += chunkSize) {
@@ -1232,9 +1244,9 @@ void Table<T>::batchInsert(const std::vector<T>& models, size_t chunkSize) {
             transaction = db.beginTransaction();
         }
         transaction->commit();
-        LOG_F(INFO, "Batch insert completed successfully");
+        spdlog::info("Batch insert completed successfully");
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Batch insert failed: {}", e.what());
+        spdlog::error("Batch insert failed: {}", e.what());
         transaction->rollback();
         throw;
     }
@@ -1245,11 +1257,11 @@ void Table<T>::batchUpdate(
     const std::vector<T>& models,
     std::function<std::string(const T&)> conditionBuilder, size_t chunkSize) {
     if (models.empty()) {
-        LOG_F(WARNING, "Batch update called with empty models vector");
+        spdlog::warn("Batch update called with empty models vector");
         return;
     }
 
-    LOG_F(INFO, "Starting batch update of {} records", models.size());
+    spdlog::info("Starting batch update of {} records", models.size());
     auto transaction = db.beginTransaction();
     try {
         for (size_t i = 0; i < models.size(); i += chunkSize) {
@@ -1261,9 +1273,9 @@ void Table<T>::batchUpdate(
             transaction = db.beginTransaction();
         }
         transaction->commit();
-        LOG_F(INFO, "Batch update completed successfully");
+        spdlog::info("Batch update completed successfully");
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Batch update failed: {}", e.what());
+        spdlog::error("Batch update failed: {}", e.what());
         transaction->rollback();
         throw;
     }
@@ -1286,9 +1298,9 @@ void Table<T>::createIndex(const std::string& indexName,
         sql += columns[i];
     }
     sql += ");";
-    LOG_F(INFO, "Creating index with SQL: {}", sql);
+    spdlog::info("Creating index with SQL: {}", sql);
     execute(sql);
-    LOG_F(INFO, "Index {} created successfully", indexName);
+    spdlog::info("Index {} created successfully", indexName);
 }
 
 template <typename T>
@@ -1297,7 +1309,7 @@ int64_t Table<T>::count(const std::string& condition) {
     if (!condition.empty()) {
         sql += " WHERE " + condition;
     }
-    LOG_F(INFO, "Executing count query: {}", sql);
+    spdlog::info("Executing count query: {}", sql);
     auto stmt = db.prepare(sql);
     if (!stmt->step()) {
         THROW_SQL_EXECUTION_ERROR("Failed to execute count query");
@@ -1309,7 +1321,7 @@ template <typename T>
 bool Table<T>::exists(const std::string& condition) {
     std::string sql =
         "SELECT 1 FROM " + tableName() + " WHERE " + condition + " LIMIT 1;";
-    LOG_F(INFO, "Executing exists query: {}", sql);
+    spdlog::info("Executing exists query: {}", sql);
     auto stmt = db.prepare(sql);
     return stmt->step();
 }
@@ -1400,7 +1412,7 @@ void Table<T>::execute(const std::string& sql) {
     if (sqlite3_exec(db.get(), sql.c_str(), nullptr, nullptr, &errMsg) !=
         SQLITE_OK) {
         std::string error = "SQL Error: " + std::string(errMsg);
-        LOG_F(ERROR, "{}", error);
+        spdlog::error("{}", error);
         sqlite3_free(errMsg);
         THROW_SQL_EXECUTION_ERROR(error);
     }
@@ -1414,57 +1426,6 @@ std::vector<T> Table<T>::executeQuery(const std::string& sql) {
         results.push_back(modelFromStatement(*stmt));
     }
     return results;
-}
-
-// Statement::bindNamed implementations
-template <>
-Statement& Statement::bindNamed<int>(const std::string& name,
-                                     const int& value) {
-    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
-    if (index == 0) {
-        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
-    }
-    return bind(index, value);
-}
-
-template <>
-Statement& Statement::bindNamed<int64_t>(const std::string& name,
-                                         const int64_t& value) {
-    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
-    if (index == 0) {
-        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
-    }
-    return bind(index, value);
-}
-
-template <>
-Statement& Statement::bindNamed<double>(const std::string& name,
-                                        const double& value) {
-    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
-    if (index == 0) {
-        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
-    }
-    return bind(index, value);
-}
-
-template <>
-Statement& Statement::bindNamed<std::string>(const std::string& name,
-                                             const std::string& value) {
-    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
-    if (index == 0) {
-        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
-    }
-    return bind(index, value);
-}
-
-template <>
-Statement& Statement::bindNamed<std::nullptr_t>(const std::string& name,
-                                                const std::nullptr_t& value) {
-    int index = sqlite3_bind_parameter_index(stmt.get(), (":" + name).c_str());
-    if (index == 0) {
-        THROW_PREPARE_STATEMENT_ERROR("Parameter :" + name + " not found");
-    }
-    return bindNull(index);
 }
 
 // QueryBuilder::where implementations

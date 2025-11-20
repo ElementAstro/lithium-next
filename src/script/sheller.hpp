@@ -4,13 +4,11 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-1-13
-
-Description: System Script Manager
-
-**************************************************/
+/**
+ * @file sheller.hpp
+ * @brief System Script Manager
+ * @date 2024-1-13
+ */
 
 #ifndef LITHIUM_SCRIPT_SHELLER_HPP
 #define LITHIUM_SCRIPT_SHELLER_HPP
@@ -45,6 +43,7 @@ struct ScriptMetadata {
 };
 
 enum class RetryStrategy { None, Linear, Exponential, Custom };
+
 /**
  * @brief Forward declaration of the implementation class for ScriptManager.
  */
@@ -125,14 +124,20 @@ public:
      * failure.
      * @return An optional pair containing the script output and exit status.
      */
-    auto runScript(
-        std::string_view name,
-        const std::unordered_map<std::string, std::string>& args,
-        bool safe = true, std::optional<int> timeoutMs = std::nullopt,
-        int retryCount = 0) -> std::optional<std::pair<std::string, int>>;
+    auto runScript(std::string_view name,
+                   const std::unordered_map<std::string, std::string>& args,
+                   bool safe = true,
+                   std::optional<int> timeoutMs = std::nullopt,
+                   int retryCount = 0)
+        -> std::optional<std::pair<std::string, int>>;
 
     /**
-     * @brief 异步执行脚本并返回future对象
+     * @brief Executes a script asynchronously and returns a future object.
+     *
+     * @param name The name of the script to run asynchronously.
+     * @param args A map of arguments to pass to the script.
+     * @param safe A flag indicating whether to run the script in a safe mode.
+     * @return A future object that will contain the script result when ready.
      */
     auto runScriptAsync(
         std::string_view name,
@@ -141,37 +146,53 @@ public:
         -> std::future<std::optional<std::pair<std::string, int>>>;
 
     /**
-     * @brief 获取脚本执行进度
+     * @brief Gets the execution progress of a script.
+     *
+     * @param name The name of the script.
+     * @return The current progress as a float between 0.0 and 1.0.
      */
     auto getScriptProgress(std::string_view name) const -> float;
 
     /**
-     * @brief 中止正在执行的脚本
+     * @brief Aborts a currently executing script.
+     *
+     * @param name The name of the script to abort.
      */
     void abortScript(std::string_view name);
 
     /**
-     * @brief 添加脚本执行前的钩子函数
+     * @brief Adds a hook function to execute before script execution.
+     *
+     * @param name The name of the script to add the hook for.
+     * @param hook The function to call before script execution.
      */
     void addPreExecutionHook(std::string_view name,
                              std::function<void(const std::string&)> hook);
 
     /**
-     * @brief 添加脚本执行后的钩子函数
+     * @brief Adds a hook function to execute after script execution.
+     *
+     * @param name The name of the script to add the hook for.
+     * @param hook The function to call after script execution.
      */
     void addPostExecutionHook(
         std::string_view name,
         std::function<void(const std::string&, int)> hook);
 
     /**
-     * @brief 设置脚本的环境变量
+     * @brief Sets environment variables for a script.
+     *
+     * @param name The name of the script.
+     * @param vars A map of environment variable names to values.
      */
     void setScriptEnvironmentVars(
         std::string_view name,
         const std::unordered_map<std::string, std::string>& vars);
 
     /**
-     * @brief 导入PowerShell模块
+     * @brief Imports a PowerShell module.
+     *
+     * @param moduleName The name of the PowerShell module to import.
      */
     void importPowerShellModule(std::string_view moduleName);
 
@@ -291,32 +312,43 @@ public:
     [[nodiscard]] auto getScriptInfo(std::string_view name) const
         -> std::string;
 
-    // 新增方法:
-
     /**
-     * @brief 批量导入脚本
+     * @brief Imports multiple scripts in batch.
+     *
+     * @param scripts A span of pairs containing script names and content.
      */
     void importScripts(std::span<const std::pair<std::string, Script>> scripts);
 
     /**
-     * @brief 获取脚本元数据
+     * @brief Gets metadata for a script.
+     *
+     * @param name The name of the script.
+     * @return An optional ScriptMetadata object if metadata exists.
      */
     [[nodiscard]] auto getScriptMetadata(std::string_view name) const
         -> std::optional<ScriptMetadata>;
 
     /**
-     * @brief 设置脚本超时处理器
+     * @brief Sets a timeout handler for a script.
+     *
+     * @param name The name of the script.
+     * @param handler The function to call when script execution times out.
      */
     void setTimeoutHandler(std::string_view name,
                            std::function<void()> handler);
 
     /**
-     * @brief 设置脚本重试策略
+     * @brief Sets the retry strategy for a script.
+     *
+     * @param name The name of the script.
+     * @param strategy The retry strategy to use.
      */
     void setRetryStrategy(std::string_view name, RetryStrategy strategy);
 
     /**
-     * @brief 获取正在运行的脚本列表
+     * @brief Gets a list of currently running scripts.
+     *
+     * @return A vector of script names that are currently running.
      */
     [[nodiscard]] auto getRunningScripts() const -> std::vector<std::string>;
 };

@@ -4,13 +4,11 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-1-13
-
-Description: System Script Manager
-
-**************************************************/
+/**
+ * @file sheller.cpp
+ * @brief System Script Manager implementation
+ * @date 2024-1-13
+ */
 
 #include "sheller.hpp"
 
@@ -27,7 +25,7 @@ Description: System Script Manager
 #include <utility>
 #include <vector>
 
-#include "atom/log/loguru.hpp"
+#include <spdlog/spdlog.h>
 #include "atom/sysinfo/os.hpp"
 #include "atom/type/json.hpp"
 
@@ -76,14 +74,14 @@ public:
                        bool safe, std::optional<int> timeoutMs, int retryCount)
         -> std::optional<std::pair<std::string, int>>;
 
-    // 新增成员变量
+    // Additional member variables
     mutable std::shared_mutex mMetadataMutex_;
     std::unordered_map<std::string, ScriptMetadata> scriptMetadata_;
     std::unordered_map<std::string, std::jthread> runningScripts_;
     std::unordered_map<std::string, std::function<void()>> timeoutHandlers_;
     std::unordered_map<std::string, RetryStrategy> retryStrategies_;
 
-    // 使用C++20 atomic等待
+    // Use C++20 atomic waiting
     std::atomic_flag scriptAborted_;
 
     std::osyncstream syncOut_{std::cout.rdbuf()};
@@ -95,11 +93,12 @@ public:
     void deleteScript(std::string_view name);
     void updateScript(std::string_view name, const Script& script);
 
-    auto runScript(
-        std::string_view name,
-        const std::unordered_map<std::string, std::string>& args,
-        bool safe = true, std::optional<int> timeoutMs = std::nullopt,
-        int retryCount = 0) -> std::optional<std::pair<std::string, int>>;
+    auto runScript(std::string_view name,
+                   const std::unordered_map<std::string, std::string>& args,
+                   bool safe = true,
+                   std::optional<int> timeoutMs = std::nullopt,
+                   int retryCount = 0)
+        -> std::optional<std::pair<std::string, int>>;
     auto getScriptOutput(std::string_view name) const
         -> std::optional<std::string>;
     auto getScriptStatus(std::string_view name) const -> std::optional<int>;
@@ -129,8 +128,8 @@ public:
 
     auto runScriptAsync(
         std::string_view name,
-        const std::unordered_map<std::string, std::string>& args,
-        bool safe) -> std::future<std::optional<std::pair<std::string, int>>>;
+        const std::unordered_map<std::string, std::string>& args, bool safe)
+        -> std::future<std::optional<std::pair<std::string, int>>>;
 
     auto getScriptProgress(std::string_view name) const -> float;
 
@@ -139,7 +138,7 @@ public:
     [[nodiscard]] auto getScriptInfo(std::string_view name) const
         -> std::string;
 
-    // 新增方法实现
+    // Additional method implementations
     template <typename T>
         requires std::ranges::range<T>
     void importScripts(T&& scripts) {
@@ -160,7 +159,7 @@ public:
     }
 
 private:
-    // 新增辅助方法
+    // Helper method for retry handling
     auto handleRetry(std::string_view name,
                      const std::unordered_map<std::string, std::string>& args,
                      bool safe, std::optional<int> timeoutMs, int retryCount)
@@ -223,8 +222,8 @@ void ScriptManager::updateScript(std::string_view name, const Script& script) {
 auto ScriptManager::runScript(
     std::string_view name,
     const std::unordered_map<std::string, std::string>& args, bool safe,
-    std::optional<int> timeoutMs,
-    int retryCount) -> std::optional<std::pair<std::string, int>> {
+    std::optional<int> timeoutMs, int retryCount)
+    -> std::optional<std::pair<std::string, int>> {
     return pImpl_->runScript(name, args, safe, timeoutMs, retryCount);
 }
 
@@ -241,16 +240,16 @@ auto ScriptManager::getScriptStatus(std::string_view name) const
 auto ScriptManager::runScriptsSequentially(
     const std::vector<std::pair<
         std::string, std::unordered_map<std::string, std::string>>>& scripts,
-    bool safe,
-    int retryCount) -> std::vector<std::optional<std::pair<std::string, int>>> {
+    bool safe, int retryCount)
+    -> std::vector<std::optional<std::pair<std::string, int>>> {
     return pImpl_->runScriptsSequentially(scripts, safe, retryCount);
 }
 
 auto ScriptManager::runScriptsConcurrently(
     const std::vector<std::pair<
         std::string, std::unordered_map<std::string, std::string>>>& scripts,
-    bool safe,
-    int retryCount) -> std::vector<std::optional<std::pair<std::string, int>>> {
+    bool safe, int retryCount)
+    -> std::vector<std::optional<std::pair<std::string, int>>> {
     return pImpl_->runScriptsConcurrently(scripts, safe, retryCount);
 }
 
@@ -281,8 +280,8 @@ auto ScriptManager::getScriptLogs(std::string_view name) const
 
 auto ScriptManager::runScriptAsync(
     std::string_view name,
-    const std::unordered_map<std::string, std::string>& args,
-    bool safe) -> std::future<std::optional<std::pair<std::string, int>>> {
+    const std::unordered_map<std::string, std::string>& args, bool safe)
+    -> std::future<std::optional<std::pair<std::string, int>>> {
     return std::async(std::launch::async, [this, name, args, safe]() {
         return this->runScript(name, args, safe);
     });
@@ -356,7 +355,7 @@ void ScriptManagerImpl::deleteScript(std::string_view name) {
     scriptConditions_.erase(nameStr);
     executionEnvironments_.erase(nameStr);
     scriptLogs_.erase(nameStr);
-    LOG_F(INFO, "Script deleted: {}", nameStr);
+    spdlog::info("Script deleted: {}", nameStr);
 }
 
 void ScriptManagerImpl::updateScript(std::string_view name,
@@ -387,21 +386,21 @@ void ScriptManagerImpl::updateScript(std::string_view name,
 auto ScriptManagerImpl::runScriptImpl(
     std::string_view name,
     const std::unordered_map<std::string, std::string>& args, bool safe,
-    std::optional<int> timeoutMs,
-    int retryCount) -> std::optional<std::pair<std::string, int>> {
+    std::optional<int> timeoutMs, int retryCount)
+    -> std::optional<std::pair<std::string, int>> {
     std::string nameStr(name);
 
-    // 执行前置钩子
+    // Execute pre-execution hooks
     for (const auto& hook : preHooks_[nameStr]) {
         hook(nameStr);
     }
 
-    // 重置进度
+    // Reset progress
     progressTrackers_[nameStr].store(0.0f);
     abortFlags_[nameStr].store(false);
 
     try {
-        // 构建环境变量
+        // Build environment variables
         std::string envVarsCmd;
         if (environmentVars_.contains(nameStr)) {
             for (const auto& [key, value] : environmentVars_[nameStr]) {
@@ -413,7 +412,7 @@ auto ScriptManagerImpl::runScriptImpl(
             }
         }
 
-        // PowerShell特定优化
+        // PowerShell specific optimizations
         std::string powershellSetup;
         if (powerShellScripts_.contains(nameStr)) {
             powershellSetup = "$ErrorActionPreference = 'Stop';\n";
@@ -422,7 +421,7 @@ auto ScriptManagerImpl::runScriptImpl(
             }
         }
 
-        // 执行脚本并监控进度
+        // Execute script and monitor progress
         std::string scriptCmd;
         {
             std::shared_lock lock(mSharedMutex_);
@@ -437,12 +436,12 @@ auto ScriptManagerImpl::runScriptImpl(
             }
         }
 
-        // 添加参数
+        // Add parameters
         for (const auto& [key, value] : args) {
             scriptCmd += " \"" + key + "=" + value + "\"";
         }
 
-        // 使用管道实现进度跟踪和中止
+        // Use pipe for progress tracking and abort capability
         FILE* pipe = popen(scriptCmd.c_str(), "r");
         if (!pipe) {
             throw ScriptException("Failed to create pipe for script execution");
@@ -453,7 +452,7 @@ auto ScriptManagerImpl::runScriptImpl(
         while (!abortFlags_[nameStr].load() &&
                fgets(buffer, sizeof(buffer), pipe) != nullptr) {
             output += buffer;
-            // 更新进度(示例实现)
+            // Update progress (example implementation)
             if (output.find("PROGRESS:") != std::string::npos) {
                 float progress = std::stof(output.substr(output.find(":") + 1));
                 progressTrackers_[nameStr].store(progress);
@@ -462,12 +461,12 @@ auto ScriptManagerImpl::runScriptImpl(
 
         int status = pclose(pipe);
 
-        // 如果被中止,则返回特殊状态码
+        // If aborted, return special status code
         if (abortFlags_[nameStr].load()) {
             status = -999;
         }
 
-        // 执行后置钩子
+        // Execute post-execution hooks
         for (const auto& hook : postHooks_[nameStr]) {
             hook(output, status);
         }
@@ -475,7 +474,7 @@ auto ScriptManagerImpl::runScriptImpl(
         return std::make_pair(output, status);
 
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error executing script '{}': {}", nameStr, e.what());
+        spdlog::error("Error executing script '{}': {}", nameStr, e.what());
         throw ScriptException(std::string("Script execution failed: ") +
                               e.what());
     }
@@ -484,10 +483,10 @@ auto ScriptManagerImpl::runScriptImpl(
 auto ScriptManagerImpl::runScript(
     std::string_view name,
     const std::unordered_map<std::string, std::string>& args, bool safe,
-    std::optional<int> timeoutMs,
-    int retryCount) -> std::optional<std::pair<std::string, int>> {
+    std::optional<int> timeoutMs, int retryCount)
+    -> std::optional<std::pair<std::string, int>> {
     try {
-        // 使用stop_token支持取消
+        // Use stop_token for cancellation support
         std::stop_source stopSource;
         auto future = std::async(
             std::launch::async,
@@ -495,7 +494,7 @@ auto ScriptManagerImpl::runScript(
                 return runScriptImpl(name, args, safe, timeoutMs, retryCount);
             });
 
-        // 超时处理
+        // Handle timeout
         if (timeoutMs) {
             if (future.wait_for(std::chrono::milliseconds(*timeoutMs)) ==
                 std::future_status::timeout) {
@@ -511,17 +510,17 @@ auto ScriptManagerImpl::runScript(
         try {
             return future.get();
         } catch (const std::exception& e) {
-            // 重试逻辑
+            // Retry logic
             if (retryCount > 0) {
                 return handleRetry(name, args, safe, timeoutMs, retryCount);
             }
             throw;
         }
     } catch (const ScriptException& e) {
-        LOG_F(ERROR, "ScriptException: {}", e.what());
+        spdlog::error("ScriptException: {}", e.what());
         throw;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception during script execution: {}", e.what());
+        spdlog::error("Exception during script execution: {}", e.what());
         throw ScriptException("Unknown error during script execution.");
     }
 }
@@ -549,8 +548,8 @@ auto ScriptManagerImpl::getScriptStatus(std::string_view name) const
 auto ScriptManagerImpl::runScriptsSequentially(
     const std::vector<std::pair<
         std::string, std::unordered_map<std::string, std::string>>>& scripts,
-    bool safe,
-    int retryCount) -> std::vector<std::optional<std::pair<std::string, int>>> {
+    bool safe, int retryCount)
+    -> std::vector<std::optional<std::pair<std::string, int>>> {
     std::vector<std::optional<std::pair<std::string, int>>> results;
     results.reserve(scripts.size());
     for (const auto& [name, args] : scripts) {
@@ -558,7 +557,7 @@ auto ScriptManagerImpl::runScriptsSequentially(
             results.emplace_back(
                 runScriptImpl(name, args, safe, std::nullopt, retryCount));
         } catch (const ScriptException& e) {
-            LOG_F(ERROR, "Error running script '{}': {}", name, e.what());
+            spdlog::error("Error running script '{}': {}", name, e.what());
             results.emplace_back(std::nullopt);
         }
     }
@@ -568,8 +567,8 @@ auto ScriptManagerImpl::runScriptsSequentially(
 auto ScriptManagerImpl::runScriptsConcurrently(
     const std::vector<std::pair<
         std::string, std::unordered_map<std::string, std::string>>>& scripts,
-    bool safe,
-    int retryCount) -> std::vector<std::optional<std::pair<std::string, int>>> {
+    bool safe, int retryCount)
+    -> std::vector<std::optional<std::pair<std::string, int>>> {
     std::vector<std::future<std::optional<std::pair<std::string, int>>>>
         futures;
     futures.reserve(scripts.size());
@@ -584,11 +583,12 @@ auto ScriptManagerImpl::runScriptsConcurrently(
         try {
             results.emplace_back(future.get());
         } catch (const ScriptException& e) {
-            LOG_F(ERROR, "ScriptException during concurrent execution: {}",
-                  e.what());
+            spdlog::error("ScriptException during concurrent execution: {}",
+                          e.what());
             results.emplace_back(std::nullopt);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Exception during concurrent execution: {}", e.what());
+            spdlog::error("Exception during concurrent execution: {}",
+                          e.what());
             results.emplace_back(std::nullopt);
         }
     }
@@ -609,17 +609,17 @@ void ScriptManagerImpl::enableVersioning() {
             scriptVersions_[name].erase(scriptVersions_[name].begin());
         }
     }
-    LOG_F(INFO, "Versioning enabled for all scripts.");
+    spdlog::info("Versioning enabled for all scripts.");
 }
 
-auto ScriptManagerImpl::rollbackScript(std::string_view name,
-                                       int version) -> bool {
+auto ScriptManagerImpl::rollbackScript(std::string_view name, int version)
+    -> bool {
     std::unique_lock lock(mSharedMutex_);
     std::string nameStr(name);
     if (!scriptVersions_.contains(nameStr) || version < 0 ||
         version >= static_cast<int>(scriptVersions_[nameStr].size())) {
-        LOG_F(ERROR, "Invalid rollback attempt for script '{}' to version %d.",
-              nameStr, version);
+        spdlog::error("Invalid rollback attempt for script '{}' to version {}",
+                      nameStr, version);
         return false;
     }
     if (scripts_.contains(nameStr)) {
@@ -627,7 +627,7 @@ auto ScriptManagerImpl::rollbackScript(std::string_view name,
     } else if (powerShellScripts_.contains(nameStr)) {
         powerShellScripts_[nameStr] = scriptVersions_[nameStr][version];
     } else {
-        LOG_F(ERROR, "Script '{}' not found for rollback.", nameStr);
+        spdlog::error("Script '{}' not found for rollback", nameStr);
         return false;
     }
     scriptOutputs_[nameStr] = "";
@@ -659,7 +659,7 @@ void ScriptManagerImpl::setMaxScriptVersions(int maxVersions) {
             versions.erase(versions.begin());
         }
     }
-    LOG_F(INFO, "Max script versions set to %d.", maxVersions_);
+    spdlog::info("Max script versions set to {}", maxVersions_);
 }
 
 auto ScriptManagerImpl::getScriptLogs(std::string_view name) const
@@ -700,7 +700,7 @@ auto ScriptManagerImpl::getScriptInfo(std::string_view name) const
     return info.dump();
 }
 
-// 实现新的公共接口
+// Implementation of missing public interfaces
 void ScriptManager::importScripts(
     std::span<const std::pair<std::string, Script>> scripts) {
     pImpl_->importScripts(scripts);
@@ -709,6 +709,44 @@ void ScriptManager::importScripts(
 auto ScriptManager::getScriptMetadata(std::string_view name) const
     -> std::optional<ScriptMetadata> {
     return pImpl_->getScriptMetadata(name);
+}
+
+void ScriptManager::addPreExecutionHook(
+    std::string_view name, std::function<void(const std::string&)> hook) {
+    pImpl_->preHooks_[std::string(name)].push_back(std::move(hook));
+}
+
+void ScriptManager::addPostExecutionHook(
+    std::string_view name, std::function<void(const std::string&, int)> hook) {
+    pImpl_->postHooks_[std::string(name)].push_back(std::move(hook));
+}
+
+void ScriptManager::setScriptEnvironmentVars(
+    std::string_view name,
+    const std::unordered_map<std::string, std::string>& vars) {
+    pImpl_->environmentVars_[std::string(name)] = vars;
+}
+
+void ScriptManager::importPowerShellModule(std::string_view moduleName) {
+    pImpl_->loadedPowerShellModules_.push_back(std::string(moduleName));
+}
+
+void ScriptManager::setTimeoutHandler(std::string_view name,
+                                      std::function<void()> handler) {
+    pImpl_->timeoutHandlers_[std::string(name)] = std::move(handler);
+}
+
+void ScriptManager::setRetryStrategy(std::string_view name,
+                                     RetryStrategy strategy) {
+    pImpl_->retryStrategies_[std::string(name)] = strategy;
+}
+
+auto ScriptManager::getRunningScripts() const -> std::vector<std::string> {
+    std::vector<std::string> result;
+    for (const auto& [name, _] : pImpl_->runningScripts_) {
+        result.push_back(name);
+    }
+    return result;
 }
 
 }  // namespace lithium
