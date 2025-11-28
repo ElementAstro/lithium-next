@@ -8,8 +8,8 @@
 #define LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP
 
 #include <crow/json.h>
-#include "controller.hpp"
 #include "../utils/response.hpp"
+#include "controller.hpp"
 
 #include <filesystem>
 #include <functional>
@@ -35,128 +35,74 @@ private:
 
     // Utility function to handle all script actions
     static auto handleScriptAction(
-        const crow::request& req, const crow::json::rvalue& body,
+        const crow::request& req, const nlohmann::json& body,
         const std::string& command,
-        std::function<bool(std::shared_ptr<lithium::ScriptManager>)> func) {
-        crow::json::wvalue res;
-        res["command"] = command;
-
+        std::function<crow::response(std::shared_ptr<lithium::ScriptManager>)>
+            func) -> crow::response {
         try {
             auto scriptManager = mScriptManager.lock();
             if (!scriptManager) {
-                res["status"] = "error";
-                res["code"] = 500;
-                res["error"] =
-                    "Internal Server Error: ScriptManager instance is null.";
                 LOG_ERROR(
-                      "ScriptManager instance is null. Unable to proceed with "
-                      "command: {}",
-                      command);
-                return crow::response(500, res);
-            } else {
-                bool success = func(scriptManager);
-                if (success) {
-                    res["status"] = "success";
-                    res["code"] = 200;
-                } else {
-                    res["status"] = "error";
-                    res["code"] = 404;
-                    res["error"] = "Not Found: The specified operation failed.";
-                }
+                    "ScriptManager instance is null. Unable to proceed with "
+                    "command: {}",
+                    command);
+                return ResponseBuilder::internalError(
+                    "ScriptManager instance is null.");
             }
+            return func(scriptManager);
         } catch (const std::invalid_argument& e) {
-            res["status"] = "error";
-            res["code"] = 400;
-            res["error"] =
-                std::string("Bad Request: Invalid argument - ") + e.what();
             LOG_ERROR(
-                  "Invalid argument while executing command: {}. Exception: {}",
-                  command, e.what());
+                "Invalid argument while executing command: {}. Exception: {}",
+                command, e.what());
+            return ResponseBuilder::badRequest(e.what());
         } catch (const std::runtime_error& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Runtime error - ") +
-                e.what();
             LOG_ERROR(
-                  "Runtime error while executing command: {}. Exception: {}",
-                  command, e.what());
+                "Runtime error while executing command: {}. Exception: {}",
+                command, e.what());
+            return ResponseBuilder::internalError(e.what());
         } catch (const std::exception& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Exception occurred - ") +
-                e.what();
             LOG_ERROR(
                 "Exception occurred while executing command: {}. Exception: {}",
                 command, e.what());
+            return ResponseBuilder::internalError(e.what());
         }
-
-        return crow::response(200, res);
     }
 
     static std::weak_ptr<lithium::ScriptAnalyzer> mScriptAnalyzer;
 
     // Utility function to handle all script analyzer actions
     static auto handleAnalyzerAction(
-        const crow::request& req, const crow::json::rvalue& body,
+        const crow::request& req, const nlohmann::json& body,
         const std::string& command,
-        std::function<bool(std::shared_ptr<lithium::ScriptAnalyzer>)> func) {
-        crow::json::wvalue res;
-        res["command"] = command;
-
+        std::function<crow::response(std::shared_ptr<lithium::ScriptAnalyzer>)>
+            func) -> crow::response {
         try {
             auto scriptAnalyzer = mScriptAnalyzer.lock();
             if (!scriptAnalyzer) {
-                res["status"] = "error";
-                res["code"] = 500;
-                res["error"] =
-                    "Internal Server Error: ScriptAnalyzer instance is null.";
                 LOG_ERROR(
-                      "ScriptAnalyzer instance is null. Unable to proceed with "
-                      "command: {}",
-                      command);
-                return crow::response(500, res);
-            } else {
-                bool success = func(scriptAnalyzer);
-                if (success) {
-                    res["status"] = "success";
-                    res["code"] = 200;
-                } else {
-                    res["status"] = "error";
-                    res["code"] = 404;
-                    res["error"] = "Not Found: The specified operation failed.";
-                }
+                    "ScriptAnalyzer instance is null. Unable to proceed with "
+                    "command: {}",
+                    command);
+                return ResponseBuilder::internalError(
+                    "ScriptAnalyzer instance is null.");
             }
+            return func(scriptAnalyzer);
         } catch (const std::invalid_argument& e) {
-            res["status"] = "error";
-            res["code"] = 400;
-            res["error"] =
-                std::string("Bad Request: Invalid argument - ") + e.what();
             LOG_ERROR(
-                  "Invalid argument while executing command: {}. Exception: {}",
-                  command, e.what());
+                "Invalid argument while executing command: {}. Exception: {}",
+                command, e.what());
+            return ResponseBuilder::badRequest(e.what());
         } catch (const std::runtime_error& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Runtime error - ") +
-                e.what();
             LOG_ERROR(
-                  "Runtime error while executing command: {}. Exception: {}",
-                  command, e.what());
+                "Runtime error while executing command: {}. Exception: {}",
+                command, e.what());
+            return ResponseBuilder::internalError(e.what());
         } catch (const std::exception& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Exception occurred - ") +
-                e.what();
             LOG_ERROR(
                 "Exception occurred while executing command: {}. Exception: {}",
                 command, e.what());
+            return ResponseBuilder::internalError(e.what());
         }
-
-        return crow::response(200, res);
     }
 
 public:
@@ -214,9 +160,11 @@ public:
         CROW_ROUTE(app, "/script/discover")
             .methods("POST"_method)(&ScriptController::discoverScripts, this);
         CROW_ROUTE(app, "/script/statistics")
-            .methods("POST"_method)(&ScriptController::getScriptStatistics, this);
+            .methods("POST"_method)(&ScriptController::getScriptStatistics,
+                                    this);
         CROW_ROUTE(app, "/script/globalStatistics")
-            .methods("GET"_method)(&ScriptController::getGlobalStatistics, this);
+            .methods("GET"_method)(&ScriptController::getGlobalStatistics,
+                                   this);
         CROW_ROUTE(app, "/script/resourceLimits")
             .methods("POST"_method)(&ScriptController::setResourceLimits, this);
         CROW_ROUTE(app, "/script/resourceUsage")
@@ -233,209 +181,238 @@ public:
 
     // Endpoint to register a script
     void registerScript(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "registerScript", [&](auto scriptManager) {
-                scriptManager->registerScript(std::string(body["name"].s()),
-                                              std::string(body["script"].s()));
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "registerScript",
+                [&](auto scriptManager) -> crow::response {
+                    scriptManager->registerScript(
+                        body["name"].get<std::string>(),
+                        body["script"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to delete a script
     void deleteScript(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "deleteScript", [&](auto scriptManager) {
-                scriptManager->deleteScript(std::string(body["name"].s()));
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "deleteScript",
+                [&](auto scriptManager) -> crow::response {
+                    scriptManager->deleteScript(
+                        body["name"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to update a script
     void updateScript(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "updateScript", [&](auto scriptManager) {
-                scriptManager->updateScript(std::string(body["name"].s()),
-                                            std::string(body["script"].s()));
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "updateScript",
+                [&](auto scriptManager) -> crow::response {
+                    scriptManager->updateScript(
+                        body["name"].get<std::string>(),
+                        body["script"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to run a script
     void runScript(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        std::unordered_map<std::string, std::string> args;
-        for (const auto& p : body["args"]) {
-            args[p.key()] = p.s();
-        }
-        res =
-            handleScriptAction(req, body, "runScript", [&](auto scriptManager) {
-                auto result = scriptManager->runScript(
-                    std::string(body["name"].s()), args);
-                if (result) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["output"] = result->first;
-                    response["exitStatus"] = result->second;
-                    res.write(response.dump());
-                    return true;
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            std::unordered_map<std::string, std::string> args;
+            if (body.contains("args") && body["args"].is_object()) {
+                for (auto& [key, value] : body["args"].items()) {
+                    args[key] = value.get<std::string>();
                 }
-                return false;
-            });
+            }
+            res = handleScriptAction(
+                req, body, "runScript",
+                [&](auto scriptManager) -> crow::response {
+                    auto result = scriptManager->runScript(
+                        body["name"].get<std::string>(), args);
+                    if (result) {
+                        nlohmann::json data = {{"output", result->first},
+                                               {"exitStatus", result->second}};
+                        return ResponseBuilder::success(data);
+                    }
+                    return ResponseBuilder::notFound("Script");
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to run a script asynchronously
     void runScriptAsync(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        std::unordered_map<std::string, std::string> args;
-        for (const auto& p : body["args"]) {
-            args[p.key()] = p.s();
-        }
-        res = handleScriptAction(
-            req, body, "runScriptAsync", [&](auto scriptManager) {
-                auto future = scriptManager->runScriptAsync(
-                    std::string(body["name"].s()), args);
-                auto result = future.get();
-                if (result) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["output"] = result->first;
-                    response["exitStatus"] = result->second;
-                    res.write(response.dump());
-                    return true;
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            std::unordered_map<std::string, std::string> args;
+            if (body.contains("args") && body["args"].is_object()) {
+                for (auto& [key, value] : body["args"].items()) {
+                    args[key] = value.get<std::string>();
                 }
-                return false;
-            });
+            }
+            res = handleScriptAction(
+                req, body, "runScriptAsync",
+                [&](auto scriptManager) -> crow::response {
+                    auto future = scriptManager->runScriptAsync(
+                        body["name"].get<std::string>(), args);
+                    auto result = future.get();
+                    if (result) {
+                        nlohmann::json data = {{"output", result->first},
+                                               {"exitStatus", result->second}};
+                        return ResponseBuilder::success(data);
+                    }
+                    return ResponseBuilder::notFound("Script");
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get the output of a script
     void getScriptOutput(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "getScriptOutput", [&](auto scriptManager) {
-                auto output = scriptManager->getScriptOutput(
-                    std::string(body["name"].s()));
-                if (output) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["output"] = output.value();
-                    res.write(response.dump());
-                    return true;
-                }
-                return false;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "getScriptOutput",
+                [&](auto scriptManager) -> crow::response {
+                    auto output = scriptManager->getScriptOutput(
+                        body["name"].get<std::string>());
+                    if (output) {
+                        nlohmann::json data = {{"output", output.value()}};
+                        return ResponseBuilder::success(data);
+                    }
+                    return ResponseBuilder::notFound("Script");
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get the status of a script
     void getScriptStatus(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "getScriptStatus", [&](auto scriptManager) {
-                auto status = scriptManager->getScriptStatus(
-                    std::string(body["name"].s()));
-                if (status) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["status"] = status.value();
-                    res.write(response.dump());
-                    return true;
-                }
-                return false;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "getScriptStatus",
+                [&](auto scriptManager) -> crow::response {
+                    auto status = scriptManager->getScriptStatus(
+                        body["name"].get<std::string>());
+                    if (status) {
+                        nlohmann::json data = {{"status", status.value()}};
+                        return ResponseBuilder::success(data);
+                    }
+                    return ResponseBuilder::notFound("Script");
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get the logs of a script
     void getScriptLogs(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "getScriptLogs", [&](auto scriptManager) {
-                auto logs =
-                    scriptManager->getScriptLogs(std::string(body["name"].s()));
-                if (!logs.empty()) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["logs"] = logs;
-                    res.write(response.dump());
-                    return true;
-                }
-                return false;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "getScriptLogs",
+                [&](auto scriptManager) -> crow::response {
+                    auto logs = scriptManager->getScriptLogs(
+                        body["name"].get<std::string>());
+                    if (!logs.empty()) {
+                        nlohmann::json data = {{"logs", logs}};
+                        return ResponseBuilder::success(data);
+                    }
+                    return ResponseBuilder::notFound("Script");
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to list all scripts
     void listScripts(const crow::request& req, crow::response& res) {
         res = handleScriptAction(
-            req, crow::json::rvalue{}, "listScripts", [&](auto scriptManager) {
+            req, nlohmann::json{}, "listScripts",
+            [&](auto scriptManager) -> crow::response {
                 auto scripts = scriptManager->getAllScripts();
-                std::vector<std::string> scriptNames;
+                nlohmann::json scriptNames = nlohmann::json::array();
                 for (const auto& script : scripts) {
                     scriptNames.push_back(script.first);
                 }
                 if (!scripts.empty()) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["scripts"] = scriptNames;
-                    res.write(response.dump());
-                    return true;
+                    nlohmann::json data = {{"scripts", scriptNames}};
+                    return ResponseBuilder::success(data);
                 }
-                return false;
+                return ResponseBuilder::success(
+                    nlohmann::json{{"scripts", nlohmann::json::array()}});
             });
     }
 
     // Endpoint to get script information
     void getScriptInfo(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "getScriptInfo", [&](auto scriptManager) {
-                auto info =
-                    scriptManager->getScriptInfo(std::string(body["name"].s()));
-                if (!info.empty()) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["info"] = info;
-                    res.write(response.dump());
-                    return true;
-                }
-                return false;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "getScriptInfo",
+                [&](auto scriptManager) -> crow::response {
+                    auto info = scriptManager->getScriptInfo(
+                        body["name"].get<std::string>());
+                    if (!info.empty()) {
+                        nlohmann::json data = {{"info", info}};
+                        return ResponseBuilder::success(data);
+                    }
+                    return ResponseBuilder::notFound("Script");
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to analyze a script
     void analyzeScript(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleAnalyzerAction(
-            req, body, "analyzeScript", [&](auto scriptAnalyzer) {
-                scriptAnalyzer->analyze(
-                    std::string(body["script"].s()), body["output_json"].b(),
-                    static_cast<lithium::ReportFormat>(body["format"].i()));
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleAnalyzerAction(
+                req, body, "analyzeScript",
+                [&](auto scriptAnalyzer) -> crow::response {
+                    scriptAnalyzer->analyze(body["script"].get<std::string>(),
+                                            body.value("output_json", false),
+                                            static_cast<lithium::ReportFormat>(
+                                                body.value("format", 0)));
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
-    crow::json::wvalue to_json(const lithium::DangerItem& item) {
-        crow::json::wvalue json;
-        // Assuming DangerItem has fields like 'id' and 'name'
-        json["category"] = item.category;
-        json["command"] = item.command;
-        json["reason"] = item.reason;
-        json["line"] = item.line;
-        json["context"] = item.context.value_or("");
-        return json;
+    nlohmann::json to_json(const lithium::DangerItem& item) {
+        return nlohmann::json{{"category", item.category},
+                              {"command", item.command},
+                              {"reason", item.reason},
+                              {"line", item.line},
+                              {"context", item.context.value_or("")}};
     }
 
-    crow::json::wvalue to_json(const std::vector<lithium::DangerItem>& items) {
-        crow::json::wvalue json;
-        for (size_t i = 0; i < items.size(); i++) {
-            json[i] = to_json(items[i]);
+    nlohmann::json to_json(const std::vector<lithium::DangerItem>& items) {
+        nlohmann::json json = nlohmann::json::array();
+        for (const auto& item : items) {
+            json.push_back(to_json(item));
         }
         return json;
     }
@@ -443,125 +420,125 @@ public:
     // Endpoint to analyze a script with options
     void analyzeScriptWithOptions(const crow::request& req,
                                   crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleAnalyzerAction(
-            req, body, "analyzeScriptWithOptions", [&](auto scriptAnalyzer) {
-                lithium::AnalyzerOptions options;
-                options.async_mode = body["options"]["async_mode"].b();
-                options.deep_analysis = body["options"]["deep_analysis"].b();
-                options.thread_count = body["options"]["thread_count"].i();
-                options.timeout_seconds =
-                    body["options"]["timeout_seconds"].i();
-                for (const auto& pattern : body["options"]["ignore_patterns"]) {
-                    options.ignore_patterns.push_back(pattern.s());
-                }
-                auto result = scriptAnalyzer->analyzeWithOptions(
-                    std::string(body["script"].s()), options);
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["complexity"] = result.complexity;
-                response["execution_time"] = result.execution_time;
-                response["timeout_occurred"] = result.timeout_occurred;
-                response["dangers"] = crow::json::wvalue::list();
-                std::vector<lithium::DangerItem> dangers;
-                for (const auto& danger : result.dangers) {
-                    crow::json::wvalue danger_item;
-                    danger_item["category"] = danger.category;
-                    danger_item["command"] = danger.command;
-                    danger_item["reason"] = danger.reason;
-                    danger_item["line"] = danger.line;
-                    danger_item["context"] = danger.context.value_or("");
-                    dangers.push_back(danger);
-                }
-                response["dangers"] = to_json(dangers);
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleAnalyzerAction(
+                req, body, "analyzeScriptWithOptions",
+                [&](auto scriptAnalyzer) -> crow::response {
+                    lithium::AnalyzerOptions options;
+                    auto opts = body["options"];
+                    options.async_mode = opts.value("async_mode", false);
+                    options.deep_analysis = opts.value("deep_analysis", false);
+                    options.thread_count = opts.value("thread_count", 1);
+                    options.timeout_seconds = opts.value("timeout_seconds", 0);
+                    if (opts.contains("ignore_patterns") &&
+                        opts["ignore_patterns"].is_array()) {
+                        for (const auto& pattern : opts["ignore_patterns"]) {
+                            options.ignore_patterns.push_back(
+                                pattern.get<std::string>());
+                        }
+                    }
+                    auto result = scriptAnalyzer->analyzeWithOptions(
+                        body["script"].get<std::string>(), options);
+
+                    nlohmann::json data = {
+                        {"complexity", result.complexity},
+                        {"execution_time", result.execution_time},
+                        {"timeout_occurred", result.timeout_occurred},
+                        {"dangers", to_json(result.dangers)}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to update the configuration
     void updateConfig(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleAnalyzerAction(
-            req, body, "updateConfig", [&](auto scriptAnalyzer) {
-                scriptAnalyzer->updateConfig(
-                    std::string(body["config_file"].s()));
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleAnalyzerAction(
+                req, body, "updateConfig",
+                [&](auto scriptAnalyzer) -> crow::response {
+                    scriptAnalyzer->updateConfig(
+                        body["config_file"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to add a custom pattern
     void addCustomPattern(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleAnalyzerAction(req, body, "addCustomPattern",
-                                   [&](auto scriptAnalyzer) {
-                                       scriptAnalyzer->addCustomPattern(
-                                           std::string(body["pattern"].s()),
-                                           std::string(body["category"].s()));
-                                       return true;
-                                   });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleAnalyzerAction(
+                req, body, "addCustomPattern",
+                [&](auto scriptAnalyzer) -> crow::response {
+                    scriptAnalyzer->addCustomPattern(
+                        body["pattern"].get<std::string>(),
+                        body["category"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to validate a script
     void validateScript(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleAnalyzerAction(
-            req, body, "validateScript", [&](auto scriptAnalyzer) {
-                bool isValid = scriptAnalyzer->validateScript(
-                    std::string(body["script"].s()));
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["is_valid"] = isValid;
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleAnalyzerAction(
+                req, body, "validateScript",
+                [&](auto scriptAnalyzer) -> crow::response {
+                    bool isValid = scriptAnalyzer->validateScript(
+                        body["script"].get<std::string>());
+                    nlohmann::json data = {{"is_valid", isValid}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get the safe version of a script
     void getSafeVersion(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleAnalyzerAction(
-            req, body, "getSafeVersion", [&](auto scriptAnalyzer) {
-                std::string safeScript = scriptAnalyzer->getSafeVersion(
-                    std::string(body["script"].s()));
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["safe_script"] = safeScript;
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleAnalyzerAction(
+                req, body, "getSafeVersion",
+                [&](auto scriptAnalyzer) -> crow::response {
+                    std::string safeScript = scriptAnalyzer->getSafeVersion(
+                        body["script"].get<std::string>());
+                    nlohmann::json data = {{"safe_script", safeScript}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get the total number of analyzed scripts
     void getTotalAnalyzed(const crow::request& req, crow::response& res) {
         res = handleAnalyzerAction(
-            req, crow::json::rvalue{}, "getTotalAnalyzed",
-            [&](auto scriptAnalyzer) {
+            req, nlohmann::json{}, "getTotalAnalyzed",
+            [&](auto scriptAnalyzer) -> crow::response {
                 size_t totalAnalyzed = scriptAnalyzer->getTotalAnalyzed();
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["total_analyzed"] = totalAnalyzed;
-                res.write(response.dump());
-                return true;
+                nlohmann::json data = {{"total_analyzed", totalAnalyzed}};
+                return ResponseBuilder::success(data);
             });
     }
 
     // Endpoint to get the average analysis time
     void getAverageAnalysisTime(const crow::request& req, crow::response& res) {
         res = handleAnalyzerAction(
-            req, crow::json::rvalue{}, "getAverageAnalysisTime",
-            [&](auto scriptAnalyzer) {
+            req, nlohmann::json{}, "getAverageAnalysisTime",
+            [&](auto scriptAnalyzer) -> crow::response {
                 double avgTime = scriptAnalyzer->getAverageAnalysisTime();
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["average_analysis_time"] = avgTime;
-                res.write(response.dump());
-                return true;
+                nlohmann::json data = {{"average_analysis_time", avgTime}};
+                return ResponseBuilder::success(data);
             });
     }
 
@@ -571,236 +548,245 @@ public:
 
     // Endpoint to discover scripts from a directory
     void discoverScripts(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "discoverScripts", [&](auto scriptManager) {
-                std::string directory = body["directory"].s();
-                bool recursive = body.has("recursive") ? body["recursive"].b() : true;
-                
-                std::vector<std::string> extensions = {".py", ".sh"};
-                if (body.has("extensions")) {
-                    extensions.clear();
-                    for (const auto& ext : body["extensions"]) {
-                        extensions.push_back(ext.s());
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "discoverScripts",
+                [&](auto scriptManager) -> crow::response {
+                    std::string directory =
+                        body["directory"].get<std::string>();
+                    bool recursive = body.value("recursive", true);
+
+                    std::vector<std::string> extensions = {".py", ".sh"};
+                    if (body.contains("extensions") &&
+                        body["extensions"].is_array()) {
+                        extensions.clear();
+                        for (const auto& ext : body["extensions"]) {
+                            extensions.push_back(ext.get<std::string>());
+                        }
                     }
-                }
-                
-                size_t count = scriptManager->discoverScripts(
-                    std::filesystem::path(directory), extensions, recursive);
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["scripts_discovered"] = count;
-                res.write(response.dump());
-                return true;
-            });
+
+                    size_t count = scriptManager->discoverScripts(
+                        std::filesystem::path(directory), extensions,
+                        recursive);
+
+                    nlohmann::json data = {{"scripts_discovered", count}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get script statistics
     void getScriptStatistics(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "getScriptStatistics", [&](auto scriptManager) {
-                auto stats = scriptManager->getScriptStatistics(
-                    std::string(body["name"].s()));
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                for (const auto& [key, value] : stats) {
-                    response["statistics"][key] = value;
-                }
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "getScriptStatistics",
+                [&](auto scriptManager) -> crow::response {
+                    auto stats = scriptManager->getScriptStatistics(
+                        body["name"].get<std::string>());
+
+                    nlohmann::json statistics = nlohmann::json::object();
+                    for (const auto& [key, value] : stats) {
+                        statistics[key] = value;
+                    }
+                    nlohmann::json data = {{"statistics", statistics}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get global statistics
     void getGlobalStatistics(const crow::request& req, crow::response& res) {
         res = handleScriptAction(
-            req, crow::json::rvalue{}, "getGlobalStatistics",
-            [&](auto scriptManager) {
+            req, nlohmann::json{}, "getGlobalStatistics",
+            [&](auto scriptManager) -> crow::response {
                 auto stats = scriptManager->getGlobalStatistics();
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
+
+                nlohmann::json statistics = nlohmann::json::object();
                 for (const auto& [key, value] : stats) {
-                    response["statistics"][key] = value;
+                    statistics[key] = value;
                 }
-                res.write(response.dump());
-                return true;
+                nlohmann::json data = {{"statistics", statistics}};
+                return ResponseBuilder::success(data);
             });
     }
 
     // Endpoint to set resource limits
     void setResourceLimits(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "setResourceLimits", [&](auto scriptManager) {
-                lithium::ScriptResourceLimits limits;
-                limits.maxMemoryMB = body.has("maxMemoryMB") 
-                    ? static_cast<size_t>(body["maxMemoryMB"].i()) : 1024;
-                limits.maxCpuPercent = body.has("maxCpuPercent") 
-                    ? static_cast<int>(body["maxCpuPercent"].i()) : 100;
-                limits.maxExecutionTime = std::chrono::seconds(
-                    body.has("maxExecutionTimeSeconds") 
-                        ? body["maxExecutionTimeSeconds"].i() : 3600);
-                limits.maxConcurrentScripts = body.has("maxConcurrentScripts") 
-                    ? static_cast<int>(body["maxConcurrentScripts"].i()) : 4;
-                
-                scriptManager->setResourceLimits(limits);
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["message"] = "Resource limits updated";
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "setResourceLimits",
+                [&](auto scriptManager) -> crow::response {
+                    lithium::ScriptResourceLimits limits;
+                    limits.maxMemoryMB = body.value("maxMemoryMB", 1024);
+                    limits.maxCpuPercent = body.value("maxCpuPercent", 100);
+                    limits.maxExecutionTime = std::chrono::seconds(
+                        body.value("maxExecutionTimeSeconds", 3600));
+                    limits.maxConcurrentScripts =
+                        body.value("maxConcurrentScripts", 4);
+
+                    scriptManager->setResourceLimits(limits);
+
+                    nlohmann::json data = {
+                        {"message", "Resource limits updated"}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get resource usage
     void getResourceUsage(const crow::request& req, crow::response& res) {
         res = handleScriptAction(
-            req, crow::json::rvalue{}, "getResourceUsage",
-            [&](auto scriptManager) {
+            req, nlohmann::json{}, "getResourceUsage",
+            [&](auto scriptManager) -> crow::response {
                 auto usage = scriptManager->getResourceUsage();
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
+
+                nlohmann::json usageJson = nlohmann::json::object();
                 for (const auto& [key, value] : usage) {
-                    response["usage"][key] = value;
+                    usageJson[key] = value;
                 }
-                res.write(response.dump());
-                return true;
+                nlohmann::json data = {{"usage", usageJson}};
+                return ResponseBuilder::success(data);
             });
     }
 
     // Endpoint to execute script with configuration
     void executeWithConfig(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "executeWithConfig", [&](auto scriptManager) {
-                std::string name = body["name"].s();
-                std::unordered_map<std::string, std::string> args;
-                if (body.has("args")) {
-                    for (const auto& p : body["args"]) {
-                        args[p.key()] = p.s();
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "executeWithConfig",
+                [&](auto scriptManager) -> crow::response {
+                    std::string name = body["name"].get<std::string>();
+                    std::unordered_map<std::string, std::string> args;
+                    if (body.contains("args") && body["args"].is_object()) {
+                        for (auto& [key, value] : body["args"].items()) {
+                            args[key] = value.get<std::string>();
+                        }
                     }
-                }
-                
-                lithium::RetryConfig config;
-                if (body.has("retryConfig")) {
-                    config.maxRetries = body["retryConfig"].has("maxRetries") 
-                        ? static_cast<int>(body["retryConfig"]["maxRetries"].i()) : 0;
-                    config.strategy = static_cast<lithium::RetryStrategy>(
-                        body["retryConfig"].has("strategy") 
-                            ? body["retryConfig"]["strategy"].i() : 0);
-                }
-                
-                auto result = scriptManager->executeWithConfig(name, args, config);
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["result"]["success"] = result.success;
-                response["result"]["exitCode"] = result.exitCode;
-                response["result"]["output"] = result.output;
-                response["result"]["errorOutput"] = result.errorOutput;
-                response["result"]["executionTimeMs"] = result.executionTime.count();
-                res.write(response.dump());
-                return true;
-            });
+
+                    lithium::RetryConfig config;
+                    if (body.contains("retryConfig")) {
+                        auto retryConfig = body["retryConfig"];
+                        config.maxRetries = retryConfig.value("maxRetries", 0);
+                        config.strategy = static_cast<lithium::RetryStrategy>(
+                            retryConfig.value("strategy", 0));
+                    }
+
+                    auto result =
+                        scriptManager->executeWithConfig(name, args, config);
+
+                    nlohmann::json resultData = {
+                        {"success", result.success},
+                        {"exitCode", result.exitCode},
+                        {"output", result.output},
+                        {"errorOutput", result.errorOutput},
+                        {"executionTimeMs", result.executionTime.count()}};
+                    nlohmann::json data = {{"result", resultData}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to execute pipeline
     void executePipeline(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "executePipeline", [&](auto scriptManager) {
-                std::vector<std::string> scripts;
-                for (const auto& s : body["scripts"]) {
-                    scripts.push_back(s.s());
-                }
-                
-                std::unordered_map<std::string, std::string> context;
-                if (body.has("context")) {
-                    for (const auto& p : body["context"]) {
-                        context[p.key()] = p.s();
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "executePipeline",
+                [&](auto scriptManager) -> crow::response {
+                    std::vector<std::string> scripts;
+                    if (body.contains("scripts") &&
+                        body["scripts"].is_array()) {
+                        for (const auto& s : body["scripts"]) {
+                            scripts.push_back(s.get<std::string>());
+                        }
                     }
-                }
-                
-                bool stopOnError = body.has("stopOnError") ? body["stopOnError"].b() : true;
-                
-                auto results = scriptManager->executePipeline(scripts, context, stopOnError);
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["results"] = crow::json::wvalue::list();
-                
-                for (size_t i = 0; i < results.size(); i++) {
-                    crow::json::wvalue resultItem;
-                    resultItem["script"] = scripts[i];
-                    resultItem["success"] = results[i].success;
-                    resultItem["exitCode"] = results[i].exitCode;
-                    resultItem["output"] = results[i].output;
-                    resultItem["executionTimeMs"] = results[i].executionTime.count();
-                    response["results"][i] = std::move(resultItem);
-                }
-                
-                res.write(response.dump());
-                return true;
-            });
+
+                    std::unordered_map<std::string, std::string> context;
+                    if (body.contains("context") &&
+                        body["context"].is_object()) {
+                        for (auto& [key, value] : body["context"].items()) {
+                            context[key] = value.get<std::string>();
+                        }
+                    }
+
+                    bool stopOnError = body.value("stopOnError", true);
+
+                    auto results = scriptManager->executePipeline(
+                        scripts, context, stopOnError);
+
+                    nlohmann::json resultsArray = nlohmann::json::array();
+                    for (size_t i = 0; i < results.size(); i++) {
+                        nlohmann::json resultItem = {
+                            {"script", scripts[i]},
+                            {"success", results[i].success},
+                            {"exitCode", results[i].exitCode},
+                            {"output", results[i].output},
+                            {"executionTimeMs",
+                             results[i].executionTime.count()}};
+                        resultsArray.push_back(resultItem);
+                    }
+
+                    nlohmann::json data = {{"results", resultsArray}};
+                    return ResponseBuilder::success(data);
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get script metadata
     void getScriptMetadata(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleScriptAction(
-            req, body, "getScriptMetadata", [&](auto scriptManager) {
-                auto metadata = scriptManager->getScriptMetadata(
-                    std::string(body["name"].s()));
-                
-                if (metadata) {
-                    crow::json::wvalue response;
-                    response["status"] = "success";
-                    response["code"] = 200;
-                    response["metadata"]["description"] = metadata->description;
-                    response["metadata"]["version"] = metadata->version;
-                    response["metadata"]["author"] = metadata->author;
-                    response["metadata"]["isPython"] = metadata->isPython;
-                    response["metadata"]["language"] = static_cast<int>(metadata->language);
-                    
-                    crow::json::wvalue tags = crow::json::wvalue::list();
-                    for (size_t i = 0; i < metadata->tags.size(); i++) {
-                        tags[i] = metadata->tags[i];
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleScriptAction(
+                req, body, "getScriptMetadata",
+                [&](auto scriptManager) -> crow::response {
+                    auto metadata = scriptManager->getScriptMetadata(
+                        body["name"].get<std::string>());
+
+                    if (metadata) {
+                        nlohmann::json tagsArray = nlohmann::json::array();
+                        for (const auto& tag : metadata->tags) {
+                            tagsArray.push_back(tag);
+                        }
+
+                        nlohmann::json metadataData = {
+                            {"description", metadata->description},
+                            {"version", metadata->version},
+                            {"author", metadata->author},
+                            {"isPython", metadata->isPython},
+                            {"language", static_cast<int>(metadata->language)},
+                            {"tags", tagsArray}};
+                        nlohmann::json data = {{"metadata", metadataData}};
+                        return ResponseBuilder::success(data);
                     }
-                    response["metadata"]["tags"] = std::move(tags);
-                    
-                    res.write(response.dump());
-                    return true;
-                }
-                return false;
-            });
+                    return ResponseBuilder::notFound("Script");
+                });
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to check Python availability
     void isPythonAvailable(const crow::request& req, crow::response& res) {
         res = handleScriptAction(
-            req, crow::json::rvalue{}, "isPythonAvailable",
-            [&](auto scriptManager) {
+            req, nlohmann::json{}, "isPythonAvailable",
+            [&](auto scriptManager) -> crow::response {
                 bool available = scriptManager->isPythonAvailable();
-                
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["python_available"] = available;
-                res.write(response.dump());
-                return true;
+                nlohmann::json data = {{"python_available", available}};
+                return ResponseBuilder::success(data);
             });
     }
 };
