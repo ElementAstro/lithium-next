@@ -27,16 +27,30 @@ public:
 Task::Task(std::string name, std::function<void(const json&)> action)
     : name_(std::move(name)),
       uuid_(atom::utils::UUID().toString()),
-      action_(std::move(action)) {
+      action_(std::move(action)),
+      creationTime_(std::chrono::system_clock::now()) {
     spdlog::info("Task created with name: {}, uuid: {}", name_, uuid_);
 }
 
 void Task::execute(const json& params) {
     auto start = std::chrono::high_resolution_clock::now();
+    
+    // Record start time
+    markStartTime();
 
     try {
+        // Check if already cancelled
+        if (cancelled_.load()) {
+            status_ = TaskStatus::Failed;
+            errorType_ = TaskErrorType::Cancelled;
+            error_ = "Task was cancelled before execution";
+            markEndTime();
+            return;
+        }
+
         // Check if pre-tasks are completed
         if (!arePreTasksCompleted()) {
+            errorType_ = TaskErrorType::DependencyFailed;
             throw std::runtime_error("Pre-tasks not completed");
         }
 
@@ -44,13 +58,18 @@ void Task::execute(const json& params) {
         if (!validateParams(params)) {
             status_ = TaskStatus::Failed;
             errorType_ = TaskErrorType::InvalidParameter;
-            error_ =
-                "Parameter validation failed: " +
-                std::accumulate(std::next(paramErrors_.begin()),
-                                paramErrors_.end(), paramErrors_[0],
-                                [](const std::string& a, const std::string& b) {
-                                    return a + "; " + b;
-                                });
+            if (!paramErrors_.empty()) {
+                error_ =
+                    "Parameter validation failed: " +
+                    std::accumulate(std::next(paramErrors_.begin()),
+                                    paramErrors_.end(), paramErrors_[0],
+                                    [](const std::string& a, const std::string& b) {
+                                        return a + "; " + b;
+                                    });
+            } else {
+                error_ = "Parameter validation failed";
+            }
+            markEndTime();
             return;
         }
 
@@ -58,6 +77,7 @@ void Task::execute(const json& params) {
         status_ = TaskStatus::InProgress;
         error_.reset();
         errorType_ = TaskErrorType::None;
+        addHistoryEntry("Task execution started");
 
         if (timeout_ > std::chrono::seconds{0}) {
             spdlog::info("Task {} with uuid {} executing with timeout {}s",
@@ -73,11 +93,19 @@ void Task::execute(const json& params) {
                          name_, uuid_);
             action_(params);
         }
-        status_ = TaskStatus::Completed;
-        addHistoryEntry("Task executed successfully");
-
-        // Trigger post-tasks
-        triggerPostTasks();
+        
+        // Check if cancelled during execution
+        if (cancelled_.load()) {
+            status_ = TaskStatus::Failed;
+            errorType_ = TaskErrorType::Cancelled;
+            error_ = "Task was cancelled during execution";
+            addHistoryEntry("Task cancelled during execution");
+        } else {
+            status_ = TaskStatus::Completed;
+            addHistoryEntry("Task executed successfully");
+            // Trigger post-tasks only on success
+            triggerPostTasks();
+        }
 
     } catch (const std::exception& e) {
         status_ = TaskStatus::Failed;
@@ -93,19 +121,27 @@ void Task::execute(const json& params) {
             }
         }
 
-        // Set appropriate error type
-        if (dynamic_cast<const TaskTimeoutException*>(&e)) {
-            setErrorType(TaskErrorType::Timeout);
-        } else if (dynamic_cast<const std::invalid_argument*>(&e)) {
-            setErrorType(TaskErrorType::InvalidParameter);
-        } else {
-            setErrorType(TaskErrorType::Unknown);
+        // Set appropriate error type if not already set
+        if (errorType_ == TaskErrorType::None) {
+            if (dynamic_cast<const TaskTimeoutException*>(&e)) {
+                setErrorType(TaskErrorType::Timeout);
+            } else if (dynamic_cast<const std::invalid_argument*>(&e)) {
+                setErrorType(TaskErrorType::InvalidParameter);
+            } else {
+                setErrorType(TaskErrorType::ExecutionFailed);
+            }
         }
         errorDetails_ = e.what();
+        addHistoryEntry("Task failed: " + std::string(e.what()));
         spdlog::error("Task {} with uuid {} failed: {}", name_, uuid_,
                       e.what());
     }
-    spdlog::info("Task {} with uuid {} completed", name_, uuid_);
+    
+    // Record end time
+    markEndTime();
+    
+    spdlog::info("Task {} with uuid {} completed with status {}", name_, uuid_,
+                 static_cast<int>(status_));
 
     auto end = std::chrono::high_resolution_clock::now();
     executionTime_ =
@@ -398,6 +434,62 @@ json Task::toJson() const {
         {"paramDefinitions", paramDefs},
         {"preTasks", json::array()},
         {"postTasks", json::array()},
+        {"cancelled", cancelled_.load()},
     };
 }
+
+bool Task::cancel() {
+    if (status_ == TaskStatus::InProgress) {
+        cancelled_.store(true);
+        status_ = TaskStatus::Failed;
+        errorType_ = TaskErrorType::Cancelled;
+        error_ = "Task was cancelled";
+        spdlog::info("Task {} cancelled", name_);
+        return true;
+    }
+    return false;
+}
+
+auto Task::isCancelled() const -> bool {
+    return cancelled_.load();
+}
+
+void Task::setStatus(TaskStatus status) {
+    status_ = status;
+    spdlog::debug("Task {} status changed to {}", name_, static_cast<int>(status));
+}
+
+void Task::setError(const std::string& error) {
+    error_ = error;
+    errorDetails_ = error;
+}
+
+void Task::clearError() {
+    error_.reset();
+    errorType_ = TaskErrorType::None;
+    errorDetails_.clear();
+}
+
+auto Task::getCreationTime() const -> std::chrono::system_clock::time_point {
+    return creationTime_;
+}
+
+auto Task::getStartTime() const 
+    -> std::optional<std::chrono::system_clock::time_point> {
+    return startTime_;
+}
+
+auto Task::getEndTime() const 
+    -> std::optional<std::chrono::system_clock::time_point> {
+    return endTime_;
+}
+
+void Task::markStartTime() {
+    startTime_ = std::chrono::system_clock::now();
+}
+
+void Task::markEndTime() {
+    endTime_ = std::chrono::system_clock::now();
+}
+
 }  // namespace lithium::task

@@ -1375,6 +1375,73 @@ def export_package_manager():
         pass
 
 
+# Module metadata
+__version__ = "2.0.0"
+__author__ = "Max Qian"
+__license__ = "GPL-3.0-or-later"
+
+
+def get_tool_info() -> dict:
+    """
+    Return metadata about this tool for discovery by PythonWrapper.
+
+    This function follows the Lithium-Next Python tool discovery convention,
+    allowing the C++ PythonWrapper to introspect and catalog this module's
+    capabilities.
+
+    Returns:
+        Dict containing tool metadata including name, version, description,
+        available functions, requirements, and platform compatibility.
+    """
+    return {
+        "name": "package_manager",
+        "version": __version__,
+        "description": "Advanced Python package management with security checking",
+        "author": __author__,
+        "license": __license__,
+        "supported": True,
+        "platform": ["windows", "linux", "macos"],
+        "functions": [
+            # Installation
+            "install_package",
+            "upgrade_package",
+            "uninstall_package",
+            "batch_install",
+            # Queries
+            "is_package_installed",
+            "get_package_info",
+            "get_installed_version",
+            "list_installed_packages",
+            "search_packages",
+            # Analysis
+            "analyze_dependencies",
+            "compare_packages",
+            "check_security",
+            "validate_package",
+            # Virtual environments
+            "create_virtual_env",
+            # Requirements
+            "generate_requirements",
+        ],
+        "requirements": ["requests", "packaging"],
+        "capabilities": [
+            "package_installation",
+            "package_upgrade",
+            "security_checking",
+            "dependency_analysis",
+            "virtualenv_management",
+            "requirements_generation",
+            "pypi_integration",
+            "concurrent_operations",
+        ],
+        "classes": {
+            "PackageManager": "Main package manager interface",
+            "OutputFormat": "Output format enumeration",
+            "PackageInfo": "Package information dataclass",
+        }
+    }
+
+
 # Entry point for command-line execution
 if __name__ == "__main__":
     main()

@@ -159,9 +159,9 @@ private:
 public:
     /**
      * @brief Register all consolidated target management routes
-     * @param app The crow application instance
+     * @param app The lithium::server::ServerApp instance
      */
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         // ==================== BASIC CRUD OPERATIONS ====================
 
         // Add a target to the sequence

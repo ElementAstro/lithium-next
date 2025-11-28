@@ -90,7 +90,7 @@ public:
      * @brief Register all sequence management routes
      * @param app The crow application instance
      */
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         // Save sequence to file
         CROW_ROUTE(app, "/api/sequence/save")
             .methods("POST"_method)([](const crow::request& req) {

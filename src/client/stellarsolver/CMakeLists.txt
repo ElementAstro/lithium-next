@@ -1,52 +1,113 @@
-# 基本设置
-cmake_minimum_required(VERSION 3.5)
-project(ssbindings)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# ============================================================================
+# CMakeLists.txt for lithium.client.stellarsolver
+# ============================================================================
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Lithium StellarSolver Client
+# Description: StellarSolver plate solver client implementation
+# Author: Max Qian
+# License: GPL3
+# ============================================================================
 
-# 查找依赖包
-find_package(pybind11 REQUIRED)
+cmake_minimum_required(VERSION 3.20)
+project(lithium_client_stellarsolver)
 
-# 优先尝试查找Qt6,如果没有则查找Qt5
+# ============================================================================
+# Dependencies Check
+# ============================================================================
+
+# Check for StellarSolver
+find_package(StellarSolver QUIET)
+if(NOT STELLARSOLVER_FOUND)
+    message(STATUS "StellarSolver not found - lithium_client_stellarsolver will be skipped")
+    return()
+endif()
+
+# Check for Qt
 find_package(Qt6 COMPONENTS Core QUIET)
 if(NOT Qt6_FOUND)
-    find_package(Qt5 COMPONENTS Core REQUIRED)
+    find_package(Qt5 COMPONENTS Core QUIET)
+    if(NOT Qt5_FOUND)
+        message(STATUS "Qt not found - lithium_client_stellarsolver will be skipped")
+        return()
+    endif()
     set(QT_VERSION_MAJOR 5)
 else()
     set(QT_VERSION_MAJOR 6)
 endif()
 
-# 改为可选查找StellarSolver
-find_package(StellarSolver QUIET)
+# ============================================================================
+# Source Files
+# ============================================================================
 
-if(NOT STELLARSOLVER_FOUND)
-    message(STATUS "StellarSolver not found - ssbindings module will be skipped")
-    return()
-endif()
-
-# 源文件定义
 set(SOURCE_FILES
-    binding.cpp
     statistic.cpp
     stellarsolver.cpp
+    stellarsolver_client.cpp
 )
 
-# 创建 PyBind11 模块
-pybind11_add_module(ssbindings MODULE ${SOURCE_FILES})
+set(HEADER_FILES
+    config.h
+    statistic.hpp
+    stellarsolver.hpp
+    stellarsolver_client.hpp
+)
 
-# 设置目标属性和包含目录
-target_include_directories(ssbindings PRIVATE
-    ${pybind11_INCLUDE_DIRS}
-    ${Qt${QT_VERSION_MAJOR}Core_INCLUDE_DIRS}
+# ============================================================================
+# Build Library
+# ============================================================================
+
+add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES} ${HEADER_FILES})
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${CMAKE_SOURCE_DIR}/src/tools
     ${STELLARSOLVER_INCLUDE_DIRS}
 )
 
-# 链接依赖库
-target_link_libraries(ssbindings PRIVATE
+target_link_libraries(${PROJECT_NAME} PUBLIC
+    lithium_client_common
+    lithium_tools
     Qt${QT_VERSION_MAJOR}::Core
     stellarsolver
+    spdlog::spdlog
 )
 
-# 启用 Qt MOC
-set_target_properties(ssbindings PROPERTIES
+# Enable Qt MOC
+set_target_properties(${PROJECT_NAME} PROPERTIES
     AUTOMOC ON
+    FOLDER "Client/Solvers"
 )
+
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+
+message(STATUS "  ├─ Client lib: lithium_client_stellarsolver configured")
+
+# ============================================================================
+# Python Bindings (Optional)
+# ============================================================================
+
+find_package(pybind11 QUIET)
+if(pybind11_FOUND)
+    pybind11_add_module(ssbindings MODULE binding.cpp)
+    
+    target_include_directories(ssbindings PRIVATE
+        ${pybind11_INCLUDE_DIRS}
+        ${Qt${QT_VERSION_MAJOR}Core_INCLUDE_DIRS}
+        ${STELLARSOLVER_INCLUDE_DIRS}
+    )
+    
+    target_link_libraries(ssbindings PRIVATE
+        ${PROJECT_NAME}
+        Qt${QT_VERSION_MAJOR}::Core
+        stellarsolver
+    )
+    
+    set_target_properties(ssbindings PROPERTIES
+        AUTOMOC ON
+        FOLDER "Client/Solvers/Bindings"
+    )
+    
+    message(STATUS "    └─ Python bindings: ssbindings configured")
+endif()

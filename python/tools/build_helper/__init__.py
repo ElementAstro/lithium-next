@@ -3,7 +3,7 @@
 """
 Advanced Build System Helper
 
-A versatile build system utility supporting CMake, Meson, and Bazel with both 
+A versatile build system utility supporting CMake, Meson, and Bazel with both
 command-line and pybind11 embedding capabilities.
 """
 
@@ -29,8 +29,71 @@ logger.add(
     colorize=True
 )
 
-# Package version
+# Package metadata
 __version__ = "2.0.0"
+__author__ = "Max Qian"
+__license__ = "GPL-3.0-or-later"
+
+
+def get_tool_info() -> dict:
+    """
+    Get comprehensive metadata about the build_helper module.
+
+    Returns:
+        dict: Module metadata including name, version, description, author,
+              license, supported platforms, available functions, requirements,
+              capabilities, and classes.
+    """
+    return {
+        "name": "build_helper",
+        "version": __version__,
+        "description": "Advanced build system helper supporting CMake, Meson, and Bazel with command-line and pybind11 embedding capabilities",
+        "author": __author__,
+        "license": __license__,
+        "supported": True,
+        "platform": ["windows", "linux", "macos"],
+        "functions": [
+            "configure",
+            "build",
+            "install",
+            "test",
+            "generate_docs",
+            "clean",
+            "get_status",
+            "get_last_result",
+            "get_tool_info"
+        ],
+        "requirements": [
+            "cmake>=3.20",
+            "meson",
+            "bazel",
+            "python>=3.7",
+            "loguru",
+            "pybind11"
+        ],
+        "capabilities": [
+            "multi-build-system-support",
+            "parallel-building",
+            "async-execution",
+            "caching",
+            "environment-variables",
+            "custom-generators",
+            "documentation-generation",
+            "testing-integration"
+        ],
+        "classes": {
+            "BuildHelperBase": "Abstract base class for build helpers",
+            "CMakeBuilder": "CMake-specific build system implementation",
+            "MesonBuilder": "Meson-specific build system implementation",
+            "BazelBuilder": "Bazel-specific build system implementation",
+            "BuilderFactory": "Factory for creating appropriate builder instances",
+            "BuildConfig": "Configuration management for build systems",
+            "BuildResult": "Data class for storing build operation results",
+            "BuildStatus": "Enumeration of build status values",
+            "BuildOptions": "Type definition for build options dictionary"
+        }
+    }
+
 
 # Import core components for easy access
 
@@ -44,5 +107,6 @@ __all__ = [
     'TestError', 'InstallationError',
     'CMakeBuilder', 'MesonBuilder', 'BazelBuilder',
     'BuilderFactory', 'BuildConfig',
-    '__version__'
+    'get_tool_info',
+    '__version__', '__author__', '__license__'
 ]

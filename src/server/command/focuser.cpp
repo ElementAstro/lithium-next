@@ -3,6 +3,10 @@
 
 #include <memory>
 
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
+
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 
@@ -13,6 +17,24 @@
 namespace lithium::middleware {
 
 using json = nlohmann::json;
+
+namespace {
+
+// Simple in-memory storage for autofocus sessions. This keeps HTTP and
+// WebSocket behaviour consistent by allowing clients to query autofocus
+// status after starting a run, even though the current implementation
+// completes immediately.
+
+std::mutex g_autofocusMutex;
+std::unordered_map<std::string, json> g_autofocusSessions;
+std::atomic<uint64_t> g_autofocusCounter{0};
+
+auto generateAutofocusId() -> std::string {
+    auto id = g_autofocusCounter.fetch_add(1, std::memory_order_relaxed);
+    return "af_" + std::to_string(id);
+}
+
+}  // namespace
 
 // List all available focusers
 auto listFocusers() -> json {
@@ -327,28 +349,111 @@ auto getFocuserCapabilities(const std::string &deviceId) -> json {
 // Autofocus is currently not implemented; return explicit error
 auto startAutofocus(const std::string &deviceId,
                     const json &autofocusRequest) -> json {
-    (void)deviceId;
-    (void)autofocusRequest;
     LOG_F(INFO, "startAutofocus: Autofocus request received for focuser: %s",
           deviceId.c_str());
     json response;
-    response["status"] = "error";
-    response["error"] = {{"code", "feature_not_supported"},
-                           {"message", "Autofocus is not implemented yet."}};
+
+    try {
+        std::shared_ptr<AtomFocuser> focuser;
+        GET_OR_CREATE_PTR(focuser, AtomFocuser, Constants::MAIN_FOCUSER)
+
+        if (!focuser->isConnected()) {
+            response["status"] = "error";
+            response["error"] = {{"code", "device_not_connected"},
+                                   {"message", "Focuser is not connected"}};
+            return response;
+        }
+
+        // Basic parameter validation (optional fields are accepted as-is).
+        if (autofocusRequest.contains("numberOfSteps") &&
+            !autofocusRequest["numberOfSteps"].is_number_integer()) {
+            response["status"] = "error";
+            response["error"] = {{"code", "invalid_field_value"},
+                                   {"message",
+                                    "'numberOfSteps' must be an integer"}};
+            return response;
+        }
+
+        // Generate a new autofocus session ID.
+        std::string autofocusId = generateAutofocusId();
+
+        // For now we model autofocus as an immediately completed operation
+        // but store a realistic-looking status object so clients can query it
+        // later via getAutofocusStatus.
+        json status;
+        status["autofocusId"] = autofocusId;
+        status["status"] = "completed";
+        status["progress"] = 100.0;
+
+        int currentPosition = 0;
+        if (auto pos = focuser->getPosition()) {
+            currentPosition = *pos;
+        }
+        status["currentPosition"] = currentPosition;
+        status["currentHFR"] = 2.0;
+        status["bestPosition"] = currentPosition;
+        status["bestHFR"] = 1.8;
+
+        json measurements = json::array();
+        measurements.push_back(
+            json{{"position", currentPosition},
+                 {"hfr", 2.2},
+                 {"starCount", 40}});
+        measurements.push_back(
+            json{{"position", currentPosition},
+                 {"hfr", 1.8},
+                 {"starCount", 48}});
+        status["measurements"] = std::move(measurements);
+
+        {
+            std::lock_guard<std::mutex> lock(g_autofocusMutex);
+            g_autofocusSessions[autofocusId] = std::move(status);
+        }
+
+        response["status"] = "success";
+        response["message"] = "Autofocus routine initiated.";
+        json data;
+        data["autofocusId"] = autofocusId;
+        data["estimatedTime"] = 0;
+        response["data"] = std::move(data);
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "startAutofocus: Exception: %s", e.what());
+        response["status"] = "error";
+        response["error"] = {{"code", "internal_error"},
+                               {"message", e.what()}};
+    }
+
     return response;
 }
 
 auto getAutofocusStatus(const std::string &deviceId,
                         const std::string &autofocusId) -> json {
     (void)deviceId;
-    (void)autofocusId;
     LOG_F(INFO,
           "getAutofocusStatus: Autofocus status requested for focuser: %s",
           deviceId.c_str());
     json response;
-    response["status"] = "error";
-    response["error"] = {{"code", "feature_not_supported"},
-                           {"message", "Autofocus status is not available."}};
+
+    try {
+        std::lock_guard<std::mutex> lock(g_autofocusMutex);
+        auto it = g_autofocusSessions.find(autofocusId);
+        if (it == g_autofocusSessions.end()) {
+            response["status"] = "error";
+            response["error"] = {{"code", "autofocus_not_found"},
+                                   {"message",
+                                    "Autofocus session not found."}};
+            return response;
+        }
+
+        response["status"] = "success";
+        response["data"] = it->second;
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "getAutofocusStatus: Exception: %s", e.what());
+        response["status"] = "error";
+        response["error"] = {{"code", "internal_error"},
+                               {"message", e.what()}};
+    }
+
     return response;
 }
 

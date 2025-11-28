@@ -240,30 +240,6 @@ void focusingLooping() {
             dpMainCamera->setFrame(cameraX, cameraY, boxSideLength,
                                    boxSideLength);
         }
-        /*
-        int cameraX =
-            glROI_x * cameraResolution.width() / (double)CaptureViewWidth;
-        int cameraY =
-            glROI_y * cameraResolution.height() / (double)CaptureViewHeight;
-
-        if (cameraX < glMainCCDSizeX - ROI.width() &&
-            cameraY < glMainCCDSizeY - ROI.height()) {
-            indi_Client->setCCDFrameInfo(
-                dpMainCamera, cameraX, cameraY, BoxSideLength,
-                BoxSideLength);  // add by CJQ 2023.2.15
-            indi_Client->takeExposure(dpMainCamera, expTime_sec);
-        } else {
-            qDebug("Too close to the edge, please reselect the area.");  //
-        TODO: if (cameraX + ROI.width() > glMainCCDSizeX) cameraX =
-        glMainCCDSizeX - ROI.width(); if (cameraY + ROI.height() >
-        glMainCCDSizeY) cameraY = glMainCCDSizeY - ROI.height();
-
-            indi_Client->setCCDFrameInfo(dpMainCamera, cameraX, cameraY,
-                                         ROI.width(),
-                                         ROI.height());  // add by CJQ 2023.2.15
-            indi_Client->takeExposure(dpMainCamera, expTime_sec);
-        }
-        */
         dpMainCamera->startExposure(expTimeSec);
     }
 }
@@ -803,8 +779,15 @@ void autofocus() {
             lostStarNum++;
             if (lostStarNum >= 3) {
                 LOG_F(INFO, "AutoFocus | Too many number of lost star points.");
-                // TODO: Implement FocusGotoAndCalFWHM(initialPosition -
-                // stepIncrement * 5);
+                
+                // Return to starting point (or slight offset as per original intent)
+                int targetPos = initialPosition - stepIncrement * 5;
+                int currentPos = internal::getFocuserPosition();
+                int diff = targetPos - currentPos;
+                if (diff != 0) {
+                    focusMoveAndCalHFR(diff > 0, std::abs(diff));
+                }
+                
                 LOG_F(INFO, "AutoFocus | Returned to the starting point.");
                 stopAutoFocus();
                 return;
@@ -887,7 +870,14 @@ void autofocus() {
         focusMeasures.emplace_back(currentPosition, HFR);
     }
 
-    // TODO: Implement FocusGotoAndCalFWHM(minPointX);
+    // Move to best focus position
+    int currentPos = internal::getFocuserPosition();
+    int diff = minPointX - currentPos;
+    if (diff != 0) {
+        LOG_F(INFO, "AutoFocus | Moving to best focus point: {}", minPointX);
+        focusMoveAndCalHFR(diff > 0, std::abs(diff));
+    }
+
     LOG_F(INFO, "Auto focus complete. Best step: {}", minPointX);
     messageBusPtr->publish("main", "AutoFocusOver:true");
 }
@@ -1025,53 +1015,25 @@ void deviceConnect() {
         return;
     }
     LOG_F(INFO, "DeviceConnect | Device connection complete");
-    int index;
-    int total_errors = 0;
 
     int connectedDevice = std::count_if(
         systemDeviceListPtr->systemDevices.begin(),
         systemDeviceListPtr->systemDevices.end(),
         [](const auto& device) { return device.driver != nullptr; });
-    for (int i = 0; i < connectedDevice; i++) {
-        LOG_F(INFO, "DeviceConnect | Device: {}",
-              systemDeviceListPtr->systemDevices[i].deviceIndiName);
 
-        // take one device from indi_Client detected devices and get the index
-        // number in pre-selected systemDeviceListPtr->systemDevices
-        auto ret = internal::getIndexFromSystemDeviceList(
-            *systemDeviceListPtr, internal::getDeviceNameFromList(index),
-            index);
-        if (ret) {
+    for (const auto& device : systemDeviceListPtr->systemDevices) {
+        if (device.driver != nullptr) {
+            LOG_F(INFO, "DeviceConnect | Device: {}", device.deviceIndiName);
             LOG_F(INFO, "DeviceConnect | Device: {} is connected",
-                  systemDeviceListPtr->systemDevices[index].deviceIndiName);
-            systemDeviceListPtr->systemDevices[index].isConnect = true;
-            systemDeviceListPtr->systemDevices[index].driver->connect(
-                systemDeviceListPtr->systemDevices[index].deviceIndiName, 60,
-                5);
+                  device.deviceIndiName);
 
-            systemDeviceListPtr->systemDevices[index].isConnect = false;
-            if (index == 1) {
-                internal::callPHDWhichCamera(
-                    systemDeviceListPtr->systemDevices[i]
-                        .driver->getName());  // PHD2 Guider Connect
+            device.isConnect = true;
+            if (device.deviceIndiName == "PHD2 Guider") {
+                internal::callPHDWhichCamera(device.driver->getName());  // PHD2 Guider Connect
             } else {
-                systemDeviceListPtr->systemDevices[index].driver->connect(
-                    systemDeviceListPtr->systemDevices[index].deviceIndiName,
-                    60, 5);
+                device.driver->connect(device.deviceIndiName, 60, 5);
             }
-            // guider will be control by PHD2, so that the watch device should
-            // exclude the guider
-            // indi_Client->StartWatch(systemDeviceListPtr->systemDevices[index].dp);
-        } else {
-            total_errors++;
         }
-    }
-    if (total_errors > 0) {
-        LOG_F(ERROR,
-              "DeviceConnect | Error: There is some detected list is not in "
-              "the pre-select system list, total mismatch device: {}",
-              total_errors);
-        // return;
     }
 
     // connecting.....
@@ -1081,23 +1043,10 @@ void deviceConnect() {
     while (timer.elapsed() < timeoutMs) {
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         int totalConnected = 0;
-        for (int i = 0; i < connectedDevice; i++) {
-            int index;
-            auto ret = internal::getIndexFromSystemDeviceList(
-                *systemDeviceListPtr, internal::getDeviceNameFromList(index),
-                index);
-            if (ret) {
-                if (systemDeviceListPtr->systemDevices[index].driver &&
-                    systemDeviceListPtr->systemDevices[index]
-                        .driver->isConnected()) {
-                    systemDeviceListPtr->systemDevices[index].isConnect = true;
-                    totalConnected++;
-                }
-            } else {
-                LOG_F(ERROR,
-                      "DeviceConnect |Warn: {} is found in the client list but "
-                      "not in pre-select system list",
-                      internal::getDeviceNameFromList(index));
+        for (const auto& device : systemDeviceListPtr->systemDevices) {
+            if (device.driver != nullptr && device.driver->isConnected()) {
+                device.isConnect = true;
+                totalConnected++;
             }
         }
 
@@ -1114,34 +1063,39 @@ void deviceConnect() {
     } else {
         LOG_F(INFO, "DeviceConnect | Device connected success");
     }
-    if (systemDeviceListPtr->systemDevices[0].isConnect) {
+    if (systemDeviceListPtr->systemDevices.size() > 0 &&
+        systemDeviceListPtr->systemDevices[0].isConnect) {
         AddPtr<AtomTelescope>(
             Constants::MAIN_TELESCOPE,
             std::static_pointer_cast<AtomTelescope>(
                 systemDeviceListPtr->systemDevices[0].driver));
     }
-    if (systemDeviceListPtr->systemDevices[1].isConnect) {
+    if (systemDeviceListPtr->systemDevices.size() > 1 &&
+        systemDeviceListPtr->systemDevices[1].isConnect) {
         AddPtr<AtomGuider>(Constants::MAIN_GUIDER,
                            std::static_pointer_cast<AtomGuider>(
                                systemDeviceListPtr->systemDevices[1].driver));
     }
-    if (systemDeviceListPtr->systemDevices[2].isConnect) {
+    if (systemDeviceListPtr->systemDevices.size() > 2 &&
+        systemDeviceListPtr->systemDevices[2].isConnect) {
         AddPtr<AtomFilterWheel>(
             Constants::MAIN_FILTERWHEEL,
             std::static_pointer_cast<AtomFilterWheel>(
                 systemDeviceListPtr->systemDevices[2].driver));
     }
-    if (systemDeviceListPtr->systemDevices[20].isConnect) {
+    if (systemDeviceListPtr->systemDevices.size() > 20 &&
+        systemDeviceListPtr->systemDevices[20].isConnect) {
         AddPtr<AtomCamera>(Constants::MAIN_CAMERA,
                            std::static_pointer_cast<AtomCamera>(
                                systemDeviceListPtr->systemDevices[20].driver));
     }
-    if (systemDeviceListPtr->systemDevices[22].isConnect) {
+    if (systemDeviceListPtr->systemDevices.size() > 22 &&
+        systemDeviceListPtr->systemDevices[22].isConnect) {
         AddPtr<AtomFocuser>(Constants::MAIN_FOCUSER,
                             std::static_pointer_cast<AtomFocuser>(
                                 systemDeviceListPtr->systemDevices[22].driver));
     }
-    // printSystemDeviceList(systemDeviceListPtr->systemDevicesiceConnect();
+    // printSystemDeviceList(systemDeviceListPtr->systemDevices);
 }
 
 void initINDIServer() {

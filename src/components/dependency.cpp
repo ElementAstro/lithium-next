@@ -889,4 +889,25 @@ auto DependencyGraph::validateDependencies(const Node& node) const noexcept
     }
 }
 
+DependencyGraph::DependencyGenerator DependencyGraph::resolveDependenciesAsync(
+    const Node& directory) {
+    spdlog::info("Starting async dependency resolution for directory: {}", directory);
+    
+    try {
+        // Get all dependencies for this directory
+        std::vector<Node> directories = {directory};
+        auto resolved = resolveDependencies(directories);
+        
+        // Yield each resolved dependency one by one
+        for (const auto& dep : resolved) {
+            spdlog::debug("Yielding dependency: {}", dep);
+            co_yield dep;
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("Error in async dependency resolution: {}", e.what());
+    }
+    
+    spdlog::info("Completed async dependency resolution for directory: {}", directory);
+}
+
 }  // namespace lithium

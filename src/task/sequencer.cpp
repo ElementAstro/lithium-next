@@ -332,6 +332,21 @@ void ExposureSequence::setOnError(ErrorCallback callback) {
     onError_ = std::move(callback);
 }
 
+void ExposureSequence::setProgressCallback(ProgressCallback callback) {
+    std::unique_lock lock(mutex_);
+    onProgress_ = std::move(callback);
+}
+
+void ExposureSequence::setOnTaskStart(TaskCallback callback) {
+    std::unique_lock lock(mutex_);
+    onTaskStart_ = std::move(callback);
+}
+
+void ExposureSequence::setOnTaskEnd(TaskCallback callback) {
+    std::unique_lock lock(mutex_);
+    onTaskEnd_ = std::move(callback);
+}
+
 // Notification helper methods
 
 void ExposureSequence::notifySequenceStart() {
@@ -417,6 +432,108 @@ void ExposureSequence::notifyError(const std::string& name,
                           ex.what());
         }
     }
+}
+
+void ExposureSequence::notifyProgress() {
+    ProgressCallback callbackCopy;
+    {
+        std::shared_lock lock(mutex_);
+        callbackCopy = onProgress_;
+    }
+
+    if (callbackCopy) {
+        try {
+            json progressJson = buildProgressJson();
+            callbackCopy(progressJson);
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in progress callback: {}", e.what());
+        }
+    }
+}
+
+void ExposureSequence::notifyTaskStart(const std::string& targetName,
+                                       const std::string& taskName,
+                                       const json& taskInfo) {
+    // Update current tracking
+    currentTargetName_ = targetName;
+    currentTaskName_ = taskName;
+
+    TaskCallback callbackCopy;
+    {
+        std::shared_lock lock(mutex_);
+        callbackCopy = onTaskStart_;
+    }
+
+    if (callbackCopy) {
+        try {
+            callbackCopy(targetName, taskName, taskInfo);
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in task start callback for {}/{}: {}",
+                          targetName, taskName, e.what());
+        }
+    }
+
+    // Also notify progress
+    notifyProgress();
+}
+
+void ExposureSequence::notifyTaskEnd(const std::string& targetName,
+                                     const std::string& taskName,
+                                     const json& taskInfo) {
+    TaskCallback callbackCopy;
+    {
+        std::shared_lock lock(mutex_);
+        callbackCopy = onTaskEnd_;
+    }
+
+    if (callbackCopy) {
+        try {
+            callbackCopy(targetName, taskName, taskInfo);
+        } catch (const std::exception& e) {
+            spdlog::error("Exception in task end callback for {}/{}: {}",
+                          targetName, taskName, e.what());
+        }
+    }
+
+    // Also notify progress
+    notifyProgress();
+}
+
+json ExposureSequence::buildProgressJson() const {
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        now - stats_.startTime).count();
+
+    // Calculate estimated remaining time
+    double progress = getProgress();
+    int64_t estimatedRemaining = 0;
+    if (progress > 0.0 && progress < 100.0) {
+        estimatedRemaining = static_cast<int64_t>(
+            (elapsed / progress) * (100.0 - progress));
+    }
+
+    // Get state string
+    std::string stateStr;
+    switch (state_.load()) {
+        case SequenceState::Idle: stateStr = "idle"; break;
+        case SequenceState::Running: stateStr = "running"; break;
+        case SequenceState::Paused: stateStr = "paused"; break;
+        case SequenceState::Stopping: stateStr = "stopping"; break;
+        case SequenceState::Stopped: stateStr = "stopped"; break;
+    }
+
+    return json{
+        {"sequenceId", uuid_},
+        {"state", stateStr},
+        {"progress", progress},
+        {"completedTargets", completedTargets_.load()},
+        {"totalTargets", totalTargets_},
+        {"currentTarget", currentTargetName_},
+        {"currentTask", currentTaskName_},
+        {"elapsedTime", elapsed},
+        {"estimatedRemaining", estimatedRemaining},
+        {"failedTargets", failedTargets_.load()}
+    };
 }
 
 void ExposureSequence::executeSequence() {
@@ -625,13 +742,16 @@ void ExposureSequence::reorderTargetsByDependencies() {
 }
 
 void ExposureSequence::reorderTargetsByPriority() {
-    // Sort targets by priority
+    // Sort targets by priority using targetDependencies_ count as a simple
+    // proxy for priority (targets with fewer dependencies execute first)
     std::sort(
         targets_.begin(), targets_.end(),
-        [](const std::unique_ptr<Target>& a, const std::unique_ptr<Target>& b) {
-            // Higher priority first - implementation would depend on how
-            // priority is stored
-            return false;  // Placeholder for actual priority comparison
+        [this](const std::unique_ptr<Target>& a, const std::unique_ptr<Target>& b) {
+            auto itA = targetDependencies_.find(a->getName());
+            auto itB = targetDependencies_.find(b->getName());
+            size_t depsA = (itA != targetDependencies_.end()) ? itA->second.size() : 0;
+            size_t depsB = (itB != targetDependencies_.end()) ? itB->second.size() : 0;
+            return depsA < depsB;  // Fewer dependencies = higher priority
         });
     spdlog::info("Targets reordered by priority");
 }
@@ -1058,7 +1178,13 @@ void ExposureSequence::deserializeFromJson(const json& data) {
 }
 
 void ExposureSequence::initializeDefaultMacros() {
-    // Add default macros for task processing
+    // Initialize built-in macros (date, time, math, string, etc.)
+    taskGenerator_->initializeBuiltInMacros();
+    
+    // Register default task templates
+    taskGenerator_->registerDefaultTemplates();
+
+    // Add sequence-specific macros
     taskGenerator_->addMacro(
         "target.uuid",
         [this](const std::vector<std::string>& args) -> std::string {
@@ -1084,6 +1210,19 @@ void ExposureSequence::initializeDefaultMacros() {
         "sequence.progress",
         [this](const std::vector<std::string>&) -> std::string {
             return std::to_string(getProgress());
+        });
+
+    taskGenerator_->addMacro(
+        "sequence.uuid",
+        [this](const std::vector<std::string>&) -> std::string {
+            return uuid_;
+        });
+
+    taskGenerator_->addMacro(
+        "sequence.target_count",
+        [this](const std::vector<std::string>&) -> std::string {
+            std::shared_lock lock(mutex_);
+            return std::to_string(targets_.size());
         });
 
     spdlog::info("Default macros initialized");
@@ -1210,6 +1349,467 @@ void ExposureSequence::setTargetPriority(const std::string& targetName,
         spdlog::error("Target not found for priority setting: {}", targetName);
         THROW_RUNTIME_ERROR("Target not found: " + targetName);
     }
+}
+
+// Execution Strategy Methods
+
+void ExposureSequence::setExecutionStrategy(ExecutionStrategy strategy) {
+    std::unique_lock lock(mutex_);
+    executionStrategy_ = strategy;
+    spdlog::info("Execution strategy set to: {}", static_cast<int>(strategy));
+}
+
+auto ExposureSequence::getExecutionStrategy() const -> ExecutionStrategy {
+    std::shared_lock lock(mutex_);
+    return executionStrategy_;
+}
+
+void ExposureSequence::setConcurrencyLimit(size_t limit) {
+    std::unique_lock lock(mutex_);
+    concurrencyLimit_ = limit;
+    spdlog::info("Concurrency limit set to: {}", limit);
+}
+
+auto ExposureSequence::getConcurrencyLimit() const -> size_t {
+    std::shared_lock lock(mutex_);
+    return concurrencyLimit_;
+}
+
+void ExposureSequence::enableMonitoring(bool enabled) {
+    monitoringEnabled_ = enabled;
+    spdlog::info("Monitoring {}", enabled ? "enabled" : "disabled");
+}
+
+auto ExposureSequence::isMonitoringEnabled() const -> bool {
+    return monitoringEnabled_;
+}
+
+void ExposureSequence::enableScriptIntegration(bool enabled) {
+    scriptIntegrationEnabled_ = enabled;
+    spdlog::info("Script integration {}", enabled ? "enabled" : "disabled");
+}
+
+void ExposureSequence::setResourceLimits(double maxCpuUsage, size_t maxMemoryUsage) {
+    std::unique_lock lock(mutex_);
+    resourceLimits_.maxCpuUsage = maxCpuUsage;
+    resourceLimits_.maxMemoryUsage = maxMemoryUsage;
+    spdlog::info("Resource limits set: CPU {}%, Memory {}MB",
+                 maxCpuUsage, maxMemoryUsage / (1024 * 1024));
+}
+
+void ExposureSequence::enablePerformanceOptimization(bool enabled) {
+    performanceOptimizationEnabled_ = enabled;
+    spdlog::info("Performance optimization {}", enabled ? "enabled" : "disabled");
+}
+
+auto ExposureSequence::getOptimizationSuggestions() const -> json {
+    return analyzePerformance();
+}
+
+auto ExposureSequence::getMetrics() const -> json {
+    std::shared_lock lock(mutex_);
+    
+    json metrics = {
+        {"totalTargets", totalTargets_},
+        {"completedTargets", completedTargets_.load()},
+        {"failedTargets", failedTargets_.load()},
+        {"progressPercentage", getProgress()},
+        {"state", static_cast<int>(state_.load())},
+        {"executionStrategy", static_cast<int>(executionStrategy_)},
+        {"concurrencyLimit", concurrencyLimit_},
+        {"monitoringEnabled", monitoringEnabled_},
+        {"statistics", {
+            {"totalExecutions", stats_.totalExecutions},
+            {"successfulExecutions", stats_.successfulExecutions},
+            {"failedExecutions", stats_.failedExecutions},
+            {"averageExecutionTime", stats_.averageExecutionTime}
+        }},
+        {"resourceLimits", {
+            {"maxCpuUsage", resourceLimits_.maxCpuUsage},
+            {"maxMemoryUsage", resourceLimits_.maxMemoryUsage}
+        }}
+    };
+    
+    return metrics;
+}
+
+// Strategy Execution Methods
+
+void ExposureSequence::executeSequential(const std::vector<Target*>& targets) {
+    spdlog::info("Executing {} targets sequentially", targets.size());
+    
+    for (auto* target : targets) {
+        if (state_.load() == SequenceState::Stopping) {
+            break;
+        }
+        
+        while (state_.load() == SequenceState::Paused) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        
+        try {
+            notifyTargetStart(target->getName());
+            target->execute();
+            notifyTargetEnd(target->getName(), target->getStatus());
+            
+            if (target->getStatus() == TargetStatus::Completed) {
+                completedTargets_.fetch_add(1);
+            } else if (target->getStatus() == TargetStatus::Failed) {
+                failedTargets_.fetch_add(1);
+            }
+        } catch (const std::exception& e) {
+            spdlog::error("Target execution failed: {} - {}", target->getName(), e.what());
+            handleTargetError(target, e);
+        }
+        
+        if (monitoringEnabled_) {
+            updateResourceMetrics();
+        }
+    }
+}
+
+void ExposureSequence::executeParallel(const std::vector<Target*>& targets) {
+    spdlog::info("Executing {} targets in parallel with concurrency limit: {}",
+                 targets.size(), concurrencyLimit_);
+    
+    std::vector<std::future<void>> futures;
+    size_t activeCount = 0;
+    
+    for (auto* target : targets) {
+        // Wait if concurrency limit reached
+        while (activeCount >= concurrencyLimit_ && state_.load() != SequenceState::Stopping) {
+            futures.erase(
+                std::remove_if(futures.begin(), futures.end(),
+                    [](std::future<void>& f) {
+                        return f.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+                    }),
+                futures.end()
+            );
+            activeCount = futures.size();
+            
+            if (activeCount >= concurrencyLimit_) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+        }
+        
+        if (state_.load() == SequenceState::Stopping) {
+            break;
+        }
+        
+        futures.push_back(std::async(std::launch::async, [this, target]() {
+            try {
+                notifyTargetStart(target->getName());
+                target->execute();
+                notifyTargetEnd(target->getName(), target->getStatus());
+                
+                if (target->getStatus() == TargetStatus::Completed) {
+                    completedTargets_.fetch_add(1);
+                } else if (target->getStatus() == TargetStatus::Failed) {
+                    failedTargets_.fetch_add(1);
+                }
+            } catch (const std::exception& e) {
+                spdlog::error("Parallel target execution failed: {} - {}",
+                             target->getName(), e.what());
+                handleTargetError(target, e);
+            }
+        }));
+        
+        activeCount = futures.size();
+    }
+    
+    // Wait for all remaining tasks
+    for (auto& future : futures) {
+        future.wait();
+    }
+}
+
+void ExposureSequence::executeAdaptive(const std::vector<Target*>& targets) {
+    spdlog::info("Executing targets with adaptive strategy");
+    
+    // Start with sequential, switch to parallel if resources allow
+    if (targets.size() <= 3) {
+        executeSequential(targets);
+    } else {
+        updateResourceMetrics();
+        if (checkResourceAvailability()) {
+            executeParallel(targets);
+        } else {
+            executeSequential(targets);
+        }
+    }
+}
+
+void ExposureSequence::executePriority(const std::vector<Target*>& targets) {
+    spdlog::info("Executing targets with priority strategy");
+    
+    // Sort targets by priority (would need priority field in Target)
+    std::vector<Target*> sortedTargets = targets;
+    // For now, use parallel execution
+    executeParallel(sortedTargets);
+}
+
+void ExposureSequence::updateResourceMetrics() {
+    // Update resource metrics - simplified implementation
+    spdlog::debug("Updating resource metrics");
+    // Would implement actual resource monitoring here
+}
+
+auto ExposureSequence::checkResourceAvailability() const -> bool {
+    // Check if resources are available based on limits
+    // Simplified implementation - always return true for now
+    return true;
+}
+
+auto ExposureSequence::determineOptimalStrategy() const -> ExecutionStrategy {
+    // updateResourceMetrics() is not const, so we skip it here
+    
+    if (!checkResourceAvailability()) {
+        return ExecutionStrategy::Sequential;
+    }
+    
+    // If we have many targets and good resources, use parallel
+    if (totalTargets_ > 5) {
+        return ExecutionStrategy::Parallel;
+    }
+    
+    return ExecutionStrategy::Sequential;
+}
+
+auto ExposureSequence::analyzePerformance() const -> json {
+    json suggestions = json::array();
+    
+    std::shared_lock lock(mutex_);
+    
+    // Analyze failure rate
+    double failureRate = totalTargets_ > 0 ? 
+        (static_cast<double>(failedTargets_.load()) / totalTargets_) * 100.0 : 0.0;
+    
+    if (failureRate > 10.0) {
+        suggestions.push_back({
+            {"type", "high_failure_rate"},
+            {"message", "High target failure rate detected"},
+            {"recommendation", "Review target dependencies and error handling"}
+        });
+    }
+    
+    // Analyze execution time
+    if (executionStrategy_ == ExecutionStrategy::Sequential && totalTargets_ > 10) {
+        suggestions.push_back({
+            {"type", "slow_sequential_execution"},
+            {"message", "Sequential execution with many targets may be slow"},
+            {"recommendation", "Consider using parallel or adaptive execution strategy"}
+        });
+    }
+    
+    // Check concurrency
+    if (executionStrategy_ == ExecutionStrategy::Parallel && concurrencyLimit_ == 1) {
+        suggestions.push_back({
+            {"type", "low_concurrency"},
+            {"message", "Parallel execution with concurrency limit of 1"},
+            {"recommendation", "Increase concurrency limit to utilize parallel execution"}
+        });
+    }
+    
+    return {
+        {"timestamp", std::chrono::system_clock::now().time_since_epoch().count()},
+        {"suggestions", suggestions},
+        {"currentMetrics", getMetrics()}
+    };
+}
+
+// ============================================================================
+// Astronomical Scheduling Methods Implementation
+// ============================================================================
+
+void ExposureSequence::setObserverLocation(const ObserverLocation& location) {
+    std::unique_lock lock(mutex_);
+    observerLocation_ = location;
+    spdlog::info("Observer location set: lat={:.4f}° lon={:.4f}°",
+                 location.latitude, location.longitude);
+}
+
+const ObserverLocation& ExposureSequence::getObserverLocation() const {
+    std::shared_lock lock(mutex_);
+    return observerLocation_;
+}
+
+void ExposureSequence::sortTargetsByObservability() {
+    std::unique_lock lock(mutex_);
+    
+    std::sort(targets_.begin(), targets_.end(),
+        [](const std::unique_ptr<Target>& a, const std::unique_ptr<Target>& b) {
+            // Sort by: 1) Currently observable, 2) Priority, 3) Remaining time
+            bool aObs = a->isObservable();
+            bool bObs = b->isObservable();
+            
+            if (aObs != bObs) return aObs > bObs;  // Observable first
+            
+            int aPri = a->getPriority();
+            int bPri = b->getPriority();
+            if (aPri != bPri) return aPri > bPri;  // Higher priority first
+            
+            // Less remaining time = more urgent
+            return a->getRemainingExposureTime() < b->getRemainingExposureTime();
+        });
+    
+    spdlog::info("Targets sorted by observability");
+}
+
+Target* ExposureSequence::getNextObservableTarget() {
+    std::shared_lock lock(mutex_);
+    
+    for (const auto& target : targets_) {
+        if (target->getStatus() == TargetStatus::Pending &&
+            target->isObservable() &&
+            !target->areExposurePlansComplete()) {
+            return target.get();
+        }
+    }
+    
+    return nullptr;
+}
+
+void ExposureSequence::updateTargetObservability() {
+    std::shared_lock lock(mutex_);
+    
+    for (const auto& target : targets_) {
+        // TODO: Calculate actual observability based on observer location
+        // This would integrate with an astronomical calculation library
+        // For now, just log that we're updating
+        spdlog::debug("Updating observability for target: {}", target->getName());
+    }
+}
+
+std::string ExposureSequence::checkMeridianFlips() const {
+    std::shared_lock lock(mutex_);
+    
+    for (const auto& target : targets_) {
+        if (target->getStatus() == TargetStatus::InProgress &&
+            target->needsMeridianFlip()) {
+            return target->getName();
+        }
+    }
+    
+    return "";
+}
+
+json ExposureSequence::getObservabilitySummary() const {
+    std::shared_lock lock(mutex_);
+    
+    json summary = json::array();
+    
+    for (const auto& target : targets_) {
+        const auto& config = target->getAstroConfig();
+        const auto& obs = target->getObservabilityWindow();
+        const auto& altAz = target->getHorizontalCoordinates();
+        
+        summary.push_back({
+            {"name", target->getName()},
+            {"catalogName", config.catalogName},
+            {"coordinates", config.coordinates.toJson()},
+            {"currentAltitude", altAz.altitude},
+            {"currentAzimuth", altAz.azimuth},
+            {"isObservable", target->isObservable()},
+            {"remainingTime", obs.remainingSeconds()},
+            {"maxAltitude", obs.maxAltitude},
+            {"priority", config.priority},
+            {"exposureProgress", target->getExposureProgress()},
+            {"remainingExposureTime", target->getRemainingExposureTime()}
+        });
+    }
+    
+    return summary;
+}
+
+void ExposureSequence::setMinimumAltitude(double altitude) {
+    std::unique_lock lock(mutex_);
+    minimumAltitude_ = std::clamp(altitude, 0.0, 90.0);
+    spdlog::info("Minimum altitude set to: {:.1f}°", minimumAltitude_);
+}
+
+std::chrono::system_clock::time_point ExposureSequence::getEstimatedCompletionTime() const {
+    std::shared_lock lock(mutex_);
+    
+    double totalRemainingTime = 0.0;
+    for (const auto& target : targets_) {
+        if (target->getStatus() != TargetStatus::Completed &&
+            target->getStatus() != TargetStatus::Skipped) {
+            totalRemainingTime += target->getRemainingExposureTime();
+        }
+    }
+    
+    // Add overhead for slewing, focusing, etc. (estimate 5 min per target)
+    size_t remainingTargets = 0;
+    for (const auto& target : targets_) {
+        if (target->getStatus() == TargetStatus::Pending) {
+            remainingTargets++;
+        }
+    }
+    totalRemainingTime += remainingTargets * 300;  // 5 minutes per target
+    
+    return std::chrono::system_clock::now() + 
+           std::chrono::seconds(static_cast<int64_t>(totalRemainingTime));
+}
+
+bool ExposureSequence::canCompleteBeforeDawn(
+    std::chrono::system_clock::time_point dawnTime) const {
+    auto estimatedCompletion = getEstimatedCompletionTime();
+    bool canComplete = estimatedCompletion <= dawnTime;
+    
+    if (!canComplete) {
+        auto diff = std::chrono::duration_cast<std::chrono::minutes>(
+            estimatedCompletion - dawnTime);
+        spdlog::warn("Sequence will NOT complete before dawn. "
+                     "Estimated completion is {} minutes after dawn",
+                     diff.count());
+    }
+    
+    return canComplete;
+}
+
+std::vector<std::string> ExposureSequence::getTargetsCompletableBeforeDawn(
+    std::chrono::system_clock::time_point dawnTime) const {
+    std::shared_lock lock(mutex_);
+    
+    std::vector<std::string> completableTargets;
+    auto now = std::chrono::system_clock::now();
+    auto availableTime = std::chrono::duration_cast<std::chrono::seconds>(
+        dawnTime - now).count();
+    
+    double accumulatedTime = 0.0;
+    
+    for (const auto& target : targets_) {
+        if (target->getStatus() == TargetStatus::Completed ||
+            target->getStatus() == TargetStatus::Skipped) {
+            continue;
+        }
+        
+        // Estimate time for this target (exposure + 5 min overhead)
+        double targetTime = target->getRemainingExposureTime() + 300;
+        
+        // Check if target is observable and can complete before dawn
+        if (target->isObservable()) {
+            // Also check if target will still be observable
+            const auto& obs = target->getObservabilityWindow();
+            auto targetSetTime = obs.setTime;
+            
+            // Target must complete before it sets or before dawn
+            auto effectiveEndTime = std::min(targetSetTime, dawnTime);
+            auto effectiveAvailableTime = 
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    effectiveEndTime - now).count();
+            
+            if (accumulatedTime + targetTime <= effectiveAvailableTime) {
+                completableTargets.push_back(target->getName());
+                accumulatedTime += targetTime;
+            }
+        }
+    }
+    
+    spdlog::info("Found {} targets completable before dawn (of {} total)",
+                 completableTargets.size(), targets_.size());
+    
+    return completableTargets;
 }
 
 }  // namespace lithium::task

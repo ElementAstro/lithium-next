@@ -3,6 +3,7 @@
 
 #include <future>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -174,6 +175,26 @@ public:
      * @return A vector of PackageManagerInfo objects.
      */
     auto getPackageManagers() const -> std::vector<PackageManagerInfo>;
+
+    /**
+     * @brief Check if a dependency is installed on the system.
+     * @param depName The name of the dependency to check.
+     * @return True if installed, false otherwise.
+     */
+    auto isDependencyInstalled(const std::string& depName) -> bool;
+
+    /**
+     * @brief Get the installed version of a dependency.
+     * @param depName The name of the dependency.
+     * @return Optional containing the version if found, nullopt otherwise.
+     */
+    auto getInstalledVersion(const std::string& depName) 
+        -> std::optional<VersionInfo>;
+
+    /**
+     * @brief Refresh the installation cache by re-checking all dependencies.
+     */
+    void refreshCache();
 
 private:
     /**

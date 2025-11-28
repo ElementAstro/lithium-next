@@ -24,6 +24,11 @@ set(PROJECT_SOURCES
     command/mount.cpp
     command/focuser.cpp
     command/filterwheel.cpp
+    command/device_commands.cpp
+    command/camera_commands.cpp
+    command/mount_commands.cpp
+    command/focuser_commands.cpp
+    command/filterwheel_commands.cpp
 )
 
 # ============================================================================

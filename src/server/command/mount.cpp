@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+#include <mutex>
+
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
@@ -113,6 +115,15 @@ auto formatSexagesimalDec(double degrees) -> std::string {
     std::snprintf(buffer, sizeof(buffer), "%c%02d:%02d:%05.2f", sign, d, m, s);
     return std::string(buffer);
 }
+
+// Stored guide rates for the mount. These values are updated via setGuideRates
+// and reported back in getMountCapabilities to keep the API behaviour
+// consistent, even though the underlying telescope interface does not expose
+// a dedicated guide-rate configuration.
+
+std::mutex g_mountConfigMutex;
+double g_guideRateRA = 0.5;
+double g_guideRateDec = 0.5;
 
 }  // namespace
 
@@ -482,6 +493,7 @@ auto getMountCapabilities(const std::string &deviceId) -> json {
           deviceId.c_str());
     json response;
     try {
+        std::lock_guard<std::mutex> lock(g_mountConfigMutex);
         json caps;
         caps["canPark"] = true;
         caps["canUnpark"] = true;
@@ -499,7 +511,7 @@ auto getMountCapabilities(const std::string &deviceId) -> json {
         caps["axisRates"] = json{{"ra", json{{"min", 0.25}, {"max", 4.0}}},
                                   {"dec", json{{"min", 0.25}, {"max", 4.0}}}};
 
-        caps["guideRates"] = json{{"ra", 0.5}, {"dec", 0.5}};
+        caps["guideRates"] = json{{"ra", g_guideRateRA}, {"dec", g_guideRateDec}};
         caps["slewSettleTime"] = 5;
 
         response["status"] = "success";
@@ -530,11 +542,26 @@ auto setGuideRates(const std::string &deviceId, double raRate,
             return response;
         }
 
+        // Validate guide rates: use a conservative range similar to typical
+        // mount behaviour (0.1x - 1.0x sidereal).
+        if (raRate <= 0.0 || decRate <= 0.0 || raRate > 4.0 || decRate > 4.0) {
+            response["status"] = "error";
+            response["error"] = {{"code", "invalid_field_value"},
+                                   {"message",
+                                    "Guide rates must be within (0, 4.0]."}};
+            return response;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(g_mountConfigMutex);
+            g_guideRateRA = raRate;
+            g_guideRateDec = decRate;
+        }
+
         (void)telescope;
-        (void)raRate;
-        (void)decRate;
         response["status"] = "success";
         response["message"] = "Guide rates updated.";
+        response["data"] = json{{"raRate", raRate}, {"decRate", decRate}};
     } catch (const std::exception &e) {
         LOG_F(ERROR, "setGuideRates: Exception: %s", e.what());
         response["status"] = "error";
@@ -684,9 +711,10 @@ auto performMeridianFlip(const std::string &deviceId) -> json {
         }
 
         (void)telescope;
-        response["status"] = "success";
-        response["message"] = "Meridian flip initiated.";
-        response["data"] = json{{"estimatedTime", 120}};
+        response["status"] = "error";
+        response["error"] = {{"code", "feature_not_supported"},
+                               {"message",
+                                "Meridian flip is not implemented for this mount."}};
     } catch (const std::exception &e) {
         LOG_F(ERROR, "performMeridianFlip: Exception: %s", e.what());
         response["status"] = "error";

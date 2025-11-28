@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(lithium.addons.test LANGUAGES CXX)
+project(lithium_components_tests LANGUAGES CXX)
 
-file(GLOB_RECURSE TEST_SOURCES ${PROJECT_SOURCE_DIR}/*.cpp)
-
-add_executable(${PROJECT_NAME} ${TEST_SOURCES})
-
-target_link_libraries(${PROJECT_NAME} gtest gtest_main lithium_components loguru atom)
+# Add subdirectories for all component test modules
+add_subdirectory(dependency)
+add_subdirectory(loader)
+add_subdirectory(manager)
+add_subdirectory(tracker)
+add_subdirectory(version)
+add_subdirectory(system)
+add_subdirectory(debug)
+add_subdirectory(integration)

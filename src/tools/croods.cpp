@@ -12,19 +12,28 @@
 
 namespace lithium::tools {
 
+// Use constants from constant.hpp
+using lithium::tools::K_PI;
+using lithium::tools::K_SECONDS_IN_MINUTE;
+using lithium::tools::K_SECONDS_IN_HOUR;
+using lithium::tools::K_SECONDS_IN_DAY;
+using lithium::tools::K_MINUTES_IN_HOUR;
+using lithium::tools::K_HOURS_IN_DAY;
+using lithium::tools::K_DEGREES_IN_CIRCLE;
+using lithium::tools::K_RADIANS_TO_DEGREES;
+using lithium::tools::K_DEGREES_TO_RADIANS;
+
 namespace {
-    // Time constants
-    constexpr double SECONDS_IN_MINUTE = 60.0;
-    constexpr double SECONDS_IN_HOUR = 3600.0; // 60 * 60
-    constexpr double SECONDS_IN_DAY = 86400.0; // 24 * 60 * 60
-    constexpr double MINUTES_IN_HOUR = 60.0;
-    constexpr double HOURS_IN_DAY = 24.0;
-    
-    // Angular constants
-    constexpr double PI = std::numbers::pi;
-    constexpr double DEGREES_IN_CIRCLE = 360.0;
-    constexpr double RADIANS_TO_DEGREES = 180.0 / PI;
-    constexpr double DEGREES_TO_RADIANS = PI / 180.0;
+    // Local aliases for cleaner code
+    constexpr double SECONDS_IN_MINUTE = K_SECONDS_IN_MINUTE;
+    constexpr double SECONDS_IN_HOUR = K_SECONDS_IN_HOUR;
+    constexpr double SECONDS_IN_DAY = K_SECONDS_IN_DAY;
+    constexpr double MINUTES_IN_HOUR = K_MINUTES_IN_HOUR;
+    constexpr double HOURS_IN_DAY = K_HOURS_IN_DAY;
+    constexpr double PI = K_PI;
+    constexpr double DEGREES_IN_CIRCLE = K_DEGREES_IN_CIRCLE;
+    constexpr double RADIANS_TO_DEGREES = K_RADIANS_TO_DEGREES;
+    constexpr double DEGREES_TO_RADIANS = K_DEGREES_TO_RADIANS;
 }
 
 double timeToJD(const std::chrono::system_clock::time_point& time) {

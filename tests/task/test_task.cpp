@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "task/task.hpp"
 
-using namespace lithium::sequencer;
+using namespace lithium::task;
 using json = nlohmann::json;
 
 class TaskTest : public ::testing::Test {

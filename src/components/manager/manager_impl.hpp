@@ -18,8 +18,10 @@ Description: Component Manager Implementation (Private)
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <string>
 #include <unordered_map>
-
+#include <vector>
 
 #include "atom/components/component.hpp"
 #include "atom/memory/memory.hpp"
@@ -99,6 +101,8 @@ public:
     void updateComponentState(const std::string& name, ComponentState newState);
     bool validateComponentOperation(const std::string& name);
     bool loadComponentByName(const std::string& name);
+    std::vector<std::string> discoverComponents(const std::string& directory);
+    std::string componentsDirectory_;
 };
 
 }  // namespace lithium

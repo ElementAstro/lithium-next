@@ -6,6 +6,7 @@
 #ifndef TASK_HPP
 #define TASK_HPP
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <optional>
@@ -38,6 +39,10 @@ enum class TaskErrorType {
     InvalidParameter,  ///< Task parameters were invalid.
     DeviceError,       ///< An error occurred with a device.
     SystemError,       ///< A system error occurred.
+    ExecutionFailed,   ///< Task execution failed.
+    Cancelled,         ///< Task was cancelled.
+    DependencyFailed,  ///< A dependency task failed.
+    ResourceUnavailable, ///< Required resource is unavailable.
     Unknown            ///< An unknown error occurred.
 };
 
@@ -67,6 +72,11 @@ public:
      * @param action The action to be performed by the task.
      */
     Task(std::string name, std::function<void(const json&)> action);
+
+    /**
+     * @brief Virtual destructor.
+     */
+    virtual ~Task() = default;
 
     /**
      * @brief Executes the task with the given parameters.
@@ -333,6 +343,67 @@ public:
      */
     [[nodiscard]] auto getTaskType() const -> const std::string&;
 
+    /**
+     * @brief Cancels the task if it is in progress.
+     * @return True if the task was cancelled, false otherwise.
+     */
+    virtual bool cancel();
+
+    /**
+     * @brief Checks if the task has been cancelled.
+     * @return True if the task was cancelled.
+     */
+    [[nodiscard]] auto isCancelled() const -> bool;
+
+    /**
+     * @brief Sets the task status.
+     * @param status The new status.
+     */
+    void setStatus(TaskStatus status);
+
+    /**
+     * @brief Sets the error message.
+     * @param error The error message.
+     */
+    void setError(const std::string& error);
+
+    /**
+     * @brief Clears any error state.
+     */
+    void clearError();
+
+    /**
+     * @brief Gets the creation time of the task.
+     * @return The creation time.
+     */
+    [[nodiscard]] auto getCreationTime() const 
+        -> std::chrono::system_clock::time_point;
+
+    /**
+     * @brief Gets the start time of the task execution.
+     * @return The start time, or nullopt if not started.
+     */
+    [[nodiscard]] auto getStartTime() const 
+        -> std::optional<std::chrono::system_clock::time_point>;
+
+    /**
+     * @brief Gets the end time of the task execution.
+     * @return The end time, or nullopt if not finished.
+     */
+    [[nodiscard]] auto getEndTime() const 
+        -> std::optional<std::chrono::system_clock::time_point>;
+
+protected:
+    /**
+     * @brief Sets the execution start time.
+     */
+    void markStartTime();
+
+    /**
+     * @brief Sets the execution end time.
+     */
+    void markEndTime();
+
 private:
     std::string name_;  ///< The name of the task.
     std::string uuid_;  ///< The unique identifier of the task.
@@ -360,6 +431,10 @@ private:
     std::vector<std::unique_ptr<Task>> preTasks_;   ///< Pre-tasks list
     std::vector<std::unique_ptr<Task>> postTasks_;  ///< Post-tasks list
     ExceptionCallback exceptionCallback_;  ///< Exception handler callback
+    std::atomic<bool> cancelled_{false};   ///< Whether the task was cancelled
+    std::chrono::system_clock::time_point creationTime_;  ///< Task creation time
+    std::optional<std::chrono::system_clock::time_point> startTime_;  ///< Execution start time
+    std::optional<std::chrono::system_clock::time_point> endTime_;    ///< Execution end time
 
     /**
      * @brief Validates a parameter value against its type.

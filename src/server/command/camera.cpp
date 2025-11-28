@@ -9,10 +9,14 @@
 #include "device/template/camera.hpp"
 
 #include "constant/constant.hpp"
+#include "server/models/camera.hpp"
 
 namespace lithium::middleware {
 
 using json = nlohmann::json;
+
+// Tracks the last requested cooling setpoint so that status can report it.
+static std::optional<double> g_lastCoolingSetpoint;
 
 // List all available cameras
 auto listCameras() -> json {
@@ -33,11 +37,9 @@ auto listCameras() -> json {
         std::shared_ptr<AtomCamera> camera;
         try {
             GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-            json cameraInfo;
-            cameraInfo["deviceId"] = "cam-001";
-            cameraInfo["name"] = camera->getName();
-            cameraInfo["isConnected"] = camera->isConnected();
-            cameraList.push_back(cameraInfo);
+            cameraList.push_back(
+                lithium::models::camera::makeCameraSummary(
+                    "cam-001", camera->getName(), camera->isConnected()));
         } catch (...) {
             LOG_F(WARNING, "listCameras: Main camera not available");
         }
@@ -74,57 +76,9 @@ auto getCameraStatus(const std::string& deviceId) -> json {
             return response;
         }
         
-        json data;
-        data["isConnected"] = camera->isConnected();
-        data["cameraState"] = camera->isExposing() ? "Exposing" : "Idle";
-        
-        // Temperature info
-        data["coolerOn"] = camera->isCoolerOn();
-        if (auto temp = camera->getTemperature()) {
-            data["temperature"] = temp.value();
-        }
-        if (auto power = camera->getCoolingPower()) {
-            data["coolerPower"] = power.value();
-        }
-        
-        // Camera settings
-        if (auto gain = camera->getGain()) {
-            data["gain"] = gain.value();
-        }
-        if (auto offset = camera->getOffset()) {
-            data["offset"] = offset.value();
-        }
-        
-        // Binning and ROI
-        if (auto binning = camera->getBinning()) {
-            data["binning"] = {
-                {"x", binning->horizontal},
-                {"y", binning->vertical}
-            };
-        }
-        
-        if (auto resolution = camera->getResolution()) {
-            data["roi"] = {
-                {"x", resolution->x},
-                {"y", resolution->y},
-                {"width", resolution->width},
-                {"height", resolution->height}
-            };
-        }
-        
-        // Sensor info from frame
-        auto frameInfo = camera->getFrameInfo();
-        data["sensor"] = {
-            {"resolution", {
-                {"width", frameInfo.width},
-                {"height", frameInfo.height}
-            }},
-            {"pixelSize", {
-                {"width", frameInfo.pixelWidth},
-                {"height", frameInfo.pixelHeight}
-            }}
-        };
-        
+        json data = lithium::models::camera::makeCameraStatusData(
+            *camera, g_lastCoolingSetpoint);
+
         response["status"] = "success";
         response["data"] = data;
         
@@ -210,8 +164,10 @@ auto updateCameraSettings(const std::string& deviceId, const json& settings) -> 
             if (coolerOn && settings.contains("setpoint")) {
                 double setpoint = settings["setpoint"];
                 camera->startCooling(setpoint);
+                g_lastCoolingSetpoint = setpoint;
             } else if (!coolerOn) {
                 camera->stopCooling();
+                g_lastCoolingSetpoint.reset();
             }
         }
         
@@ -391,50 +347,8 @@ auto getCameraCapabilities(const std::string& deviceId) -> json {
             return response;
         }
         
-        json data;
-        data["canCool"] = camera->hasCooler();
-        data["canSetTemperature"] = camera->hasCooler();
-        data["canAbortExposure"] = true;
-        data["canStopExposure"] = true;
-        data["canGetCoolerPower"] = camera->hasCooler();
-        data["hasMechanicalShutter"] = false;
-        
-        // Gain range - these are typical values, should come from driver
-        data["gainRange"] = {
-            {"min", 0},
-            {"max", 600},
-            {"default", 100}
-        };
-        
-        // Offset range
-        data["offsetRange"] = {
-            {"min", 0},
-            {"max", 100},
-            {"default", 50}
-        };
-        
-        // Temperature range
-        if (camera->hasCooler()) {
-            data["temperatureRange"] = {
-                {"min", -50.0},
-                {"max", 50.0}
-            };
-        }
-        
-        // Binning modes
-        data["binningModes"] = json::array({
-            {{"x", 1}, {"y", 1}},
-            {{"x", 2}, {"y", 2}},
-            {{"x", 3}, {"y", 3}},
-            {{"x", 4}, {"y", 4}}
-        });
-        
-        // Frame info
-        auto frameInfo = camera->getFrameInfo();
-        data["pixelSizeX"] = frameInfo.pixelWidth;
-        data["pixelSizeY"] = frameInfo.pixelHeight;
-        data["maxBinX"] = 4;
-        data["maxBinY"] = 4;
+        json data =
+            lithium::models::camera::makeCameraCapabilitiesData(*camera);
         
         response["status"] = "success";
         response["data"] = data;
@@ -462,21 +376,14 @@ auto getCameraGains(const std::string& deviceId) -> json {
         std::shared_ptr<AtomCamera> camera;
         GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
         
-        // Generate gain values (0-600 in steps of 50)
-        json gains = json::array();
+        std::vector<int> gains;
+        gains.reserve(13);
         for (int i = 0; i <= 600; i += 50) {
             gains.push_back(i);
         }
-        
-        json data;
-        data["gains"] = gains;
-        
-        if (auto currentGain = camera->getGain()) {
-            data["currentGain"] = currentGain.value();
-        }
-        
-        data["defaultGain"] = 100;
-        data["unityGain"] = 139;  // Typical for Sony IMX sensors
+
+        json data =
+            lithium::models::camera::makeGainsData(*camera, gains);
         
         response["status"] = "success";
         response["data"] = data;
@@ -504,20 +411,14 @@ auto getCameraOffsets(const std::string& deviceId) -> json {
         std::shared_ptr<AtomCamera> camera;
         GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
         
-        // Generate offset values (0-100 in steps of 10)
-        json offsets = json::array();
+        std::vector<int> offsets;
+        offsets.reserve(11);
         for (int i = 0; i <= 100; i += 10) {
             offsets.push_back(i);
         }
-        
-        json data;
-        data["offsets"] = offsets;
-        
-        if (auto currentOffset = camera->getOffset()) {
-            data["currentOffset"] = currentOffset.value();
-        }
-        
-        data["defaultOffset"] = 50;
+
+        json data =
+            lithium::models::camera::makeOffsetsData(*camera, offsets);
         
         response["status"] = "success";
         response["data"] = data;
@@ -555,11 +456,13 @@ auto setCoolerPower(const std::string& deviceId, double power,
             return response;
         }
         
-        // Note: Manual cooler power control may not be supported by all cameras
-        // This is a placeholder - actual implementation depends on driver support
-        
-        response["status"] = "success";
-        response["message"] = "Cooler power set to manual mode.";
+        // Manual cooler power control is not supported by the current AtomCamera interface
+        // which only supports setpoint-based cooling (startCooling).
+        response["status"] = "error";
+        response["error"] = {
+            {"code", "feature_not_supported"},
+            {"message", "Manual cooler power control is not supported. Use setpoint cooling instead."},
+        };
 
     } catch (const std::exception& e) {
         LOG_F(ERROR, "setCoolerPower: Exception: %s", e.what());
@@ -596,6 +499,7 @@ auto warmUpCamera(const std::string& deviceId) -> json {
         bool success = camera->stopCooling();
         
         if (success) {
+            g_lastCoolingSetpoint.reset();
             response["status"] = "success";
             response["message"] = "Camera warm-up sequence initiated.";
             response["data"] = {

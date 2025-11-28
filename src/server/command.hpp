@@ -300,13 +300,16 @@ auto CommandDispatcher::dispatch(const CommandID& id,
             std::shared_lock lock(accessMutex_);
             auto handlerIt = commandHandlers_.find(id);
             if (handlerIt != commandHandlers_.end()) {
-                handlerIt->second(*commandCopy);
-                recordCommandHistory(id, *commandCopy);
-                notifyEventSubscribers(id, *commandCopy);
+                // Wrap command in std::any for type-erased handler
+                std::any cmd_any = *commandCopy;
+                handlerIt->second(cmd_any);
+                recordCommandHistory(id, cmd_any);
+                notifyEventSubscribers(id, cmd_any);
 
                 updateCommandStatus(id, CommandStatus::COMPLETED);
 
-                ResultType result = *commandCopy;
+                ResultType result = cmd_any;
+
                 commandCopy->~CommandType();
                 commandMemoryPool_.deallocate(
                     reinterpret_cast<std::byte*>(commandCopy),

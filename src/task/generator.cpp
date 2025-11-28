@@ -13,15 +13,22 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cmath>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
 #include <mutex>
+#include <random>
 #include <shared_mutex>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 using StringMap = emhash8::HashMap<std::string, std::string>;
-using MacroMap = emhash8::HashMap<std::string, MacroValue>;
+using MacroMap = emhash8::HashMap<std::string, lithium::MacroValue>;
 #else
 #include <unordered_map>
 using StringMap = std::unordered_map<std::string, std::string>;
@@ -84,6 +91,18 @@ public:
                                                              const std::string& fromFormat,
                                                              const std::string& toFormat);
 
+    // Task list generation methods
+    TaskGenerator::TaskListResult generateTaskList(const TaskGenerator::TaskListConfig& config);
+    TaskGenerator::TaskListResult generateTaskListFromJson(const json& configJson);
+    json expandTaskRepetitions(const json& tasks);
+    json processConditionalTasks(const json& tasks, const json& context);
+    void initializeBuiltInMacros();
+    void registerDefaultTemplates();
+    bool evaluateCondition(const std::string& condition, const json& context);
+    std::optional<MacroValue> getMacro(const std::string& name) const;
+    void addMacros(const std::unordered_map<std::string, MacroValue>& macros);
+    std::shared_ptr<TaskGenerator> clone() const;
+
     static constexpr size_t DEFAULT_MAX_CACHE_SIZE = 1000;
 
     mutable std::shared_mutex mutex_;
@@ -99,6 +118,9 @@ public:
     TaskGenerator::ScriptConfig scriptConfig_;
     std::unordered_map<std::string, TaskGenerator::ScriptTemplate> scriptTemplates_;
     mutable std::shared_mutex scriptMutex_;
+
+    // Index counter for macros
+    mutable std::atomic<int> indexCounter_{0};
 
     // Precompiled regex patterns
     static const Regex MACRO_PATTERN;
@@ -892,11 +914,241 @@ std::vector<std::string> TaskGenerator::Impl::validateScriptStructure(const json
 
 json TaskGenerator::Impl::optimizeScriptJson(const json& script) {
     json optimized = script;
-    
     // Remove unnecessary fields, combine similar tasks, etc.
-    // For now, just return the original script
-    
+    if (optimized.contains("tasks") && optimized["tasks"].is_array()) {
+        json filteredTasks = json::array();
+        for (const auto& task : optimized["tasks"]) {
+            if (!task.value("name", "").empty()) {
+                filteredTasks.push_back(task);
+            }
+        }
+        optimized["tasks"] = filteredTasks;
+    }
     return optimized;
+}
+
+// ==================== Built-in Macros ====================
+
+void TaskGenerator::Impl::initializeBuiltInMacros() {
+    addMacro("date", [](const std::vector<std::string>& args) -> std::string {
+        auto now = std::chrono::system_clock::now();
+        auto tt = std::chrono::system_clock::to_time_t(now);
+        std::tm tm{};
+#ifdef _WIN32
+        localtime_s(&tm, &tt);
+#else
+        localtime_r(&tt, &tm);
+#endif
+        std::ostringstream oss;
+        oss << std::put_time(&tm, args.empty() ? "%Y-%m-%d" : args[0].c_str());
+        return oss.str();
+    });
+
+    addMacro("time", [](const std::vector<std::string>& args) -> std::string {
+        auto now = std::chrono::system_clock::now();
+        auto tt = std::chrono::system_clock::to_time_t(now);
+        std::tm tm{};
+#ifdef _WIN32
+        localtime_s(&tm, &tt);
+#else
+        localtime_r(&tt, &tm);
+#endif
+        std::ostringstream oss;
+        oss << std::put_time(&tm, args.empty() ? "%H:%M:%S" : args[0].c_str());
+        return oss.str();
+    });
+
+    addMacro("timestamp", [](const std::vector<std::string>&) -> std::string {
+        return std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count());
+    });
+
+    addMacro("add", [](const std::vector<std::string>& args) -> std::string {
+        double r = 0; for (const auto& a : args) r += std::stod(a);
+        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r)) : std::to_string(r);
+    });
+
+    addMacro("sub", [](const std::vector<std::string>& args) -> std::string {
+        if (args.size() != 2) return "0";
+        double r = std::stod(args[0]) - std::stod(args[1]);
+        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r)) : std::to_string(r);
+    });
+
+    addMacro("mul", [](const std::vector<std::string>& args) -> std::string {
+        double r = 1; for (const auto& a : args) r *= std::stod(a);
+        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r)) : std::to_string(r);
+    });
+
+    addMacro("div", [](const std::vector<std::string>& args) -> std::string {
+        if (args.size() != 2 || std::stod(args[1]) == 0) return "0";
+        return std::to_string(std::stod(args[0]) / std::stod(args[1]));
+    });
+
+    addMacro("mod", [](const std::vector<std::string>& args) -> std::string {
+        if (args.size() != 2 || std::stoi(args[1]) == 0) return "0";
+        return std::to_string(std::stoi(args[0]) % std::stoi(args[1]));
+    });
+
+    addMacro("replace", [](const std::vector<std::string>& args) -> std::string {
+        if (args.size() != 3) return args.empty() ? "" : args[0];
+        std::string r = args[0]; size_t p = 0;
+        while ((p = r.find(args[1], p)) != std::string::npos) {
+            r.replace(p, args[1].length(), args[2]); p += args[2].length();
+        }
+        return r;
+    });
+
+    addMacro("substring", [](const std::vector<std::string>& args) -> std::string {
+        if (args.size() < 2) return "";
+        size_t s = std::stoul(args[1]);
+        if (s >= args[0].length()) return "";
+        return (args.size() > 2) ? args[0].substr(s, std::stoul(args[2])) : args[0].substr(s);
+    });
+
+    addMacro("pad", [](const std::vector<std::string>& args) -> std::string {
+        if (args.size() < 2) return args.empty() ? "" : args[0];
+        size_t w = std::stoul(args[1]);
+        char c = (args.size() > 2 && !args[2].empty()) ? args[2][0] : '0';
+        return (args[0].length() >= w) ? args[0] : std::string(w - args[0].length(), c) + args[0];
+    });
+
+    addMacro("uuid", [](const std::vector<std::string>&) -> std::string {
+        static std::random_device rd; static std::mt19937_64 gen(rd());
+        static std::uniform_int_distribution<uint64_t> dis;
+        std::ostringstream oss; oss << std::hex << std::setfill('0');
+        uint64_t p1 = dis(gen), p2 = dis(gen);
+        oss << std::setw(8) << (p1>>32) << '-' << std::setw(4) << ((p1>>16)&0xFFFF)
+            << '-' << std::setw(4) << (p1&0xFFFF) << '-' << std::setw(4) << (p2>>48)
+            << '-' << std::setw(12) << (p2&0xFFFFFFFFFFFFULL);
+        return oss.str();
+    });
+
+    addMacro("env", [](const std::vector<std::string>& args) -> std::string {
+        if (args.empty()) return "";
+        const char* v = std::getenv(args[0].c_str());
+        return v ? v : (args.size() > 1 ? args[1] : "");
+    });
+
+    addMacro("index", [this](const std::vector<std::string>& args) -> std::string {
+        int start = args.empty() ? 0 : std::stoi(args[0]);
+        int step = args.size() > 1 ? std::stoi(args[1]) : 1;
+        return std::to_string(start + indexCounter_.fetch_add(1) * step);
+    });
+
+    addMacro("reset_index", [this](const std::vector<std::string>&) -> std::string {
+        indexCounter_.store(0); return "";
+    });
+    spdlog::info("Built-in macros initialized");
+}
+
+// ==================== Task List Generation ====================
+
+TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskList(const TaskGenerator::TaskListConfig& cfg) {
+    TaskListResult res; res.taskList = json::array();
+    try {
+        for (const auto& td : cfg.tasks) {
+            if (!td.enabled) continue;
+            if (!td.condition.empty() && cfg.processConditions && 
+                !evaluateCondition(td.condition, cfg.globalParams)) continue;
+            int n = cfg.expandRepeats ? td.repeatCount : 1;
+            for (int i = 0; i < n; ++i) {
+                json t; t["type"] = td.type; t["params"] = td.params; t["priority"] = td.priority;
+                t["name"] = (n > 1) ? td.name + "_" + std::to_string(i+1) : td.name;
+                t["dependencies"] = td.dependencies;
+                for (auto& [k,v] : cfg.globalParams.items()) 
+                    if (!t["params"].contains(k)) t["params"][k] = v;
+                if (cfg.applyMacros) processJson(t);
+                res.taskList.push_back(t);
+            }
+        }
+        res.totalTasks = res.taskList.size(); res.success = true;
+    } catch (const std::exception& e) { res.errors.push_back(e.what()); }
+    return res;
+}
+
+TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskListFromJson(const json& j) {
+    TaskListConfig cfg;
+    cfg.globalParams = j.value("global_params", json::object());
+    cfg.expandRepeats = j.value("expand_repeats", true);
+    cfg.processConditions = j.value("process_conditions", true);
+    cfg.applyMacros = j.value("apply_macros", true);
+    if (j.contains("tasks") && j["tasks"].is_array()) {
+        for (const auto& tj : j["tasks"]) {
+            TaskDefinition td;
+            td.type = tj.value("type", ""); td.name = tj.value("name", "Task");
+            td.params = tj.value("params", json::object());
+            td.repeatCount = tj.value("repeat_count", 1);
+            td.condition = tj.value("condition", "");
+            td.priority = tj.value("priority", 0); td.enabled = tj.value("enabled", true);
+            if (tj.contains("dependencies")) 
+                for (const auto& d : tj["dependencies"]) td.dependencies.push_back(d);
+            cfg.tasks.push_back(td);
+        }
+    }
+    return generateTaskList(cfg);
+}
+
+json TaskGenerator::Impl::expandTaskRepetitions(const json& tasks) {
+    json exp = json::array();
+    for (const auto& t : tasks) {
+        int n = t.value("repeat_count", 1); std::string bn = t.value("name", "task");
+        for (int i = 0; i < n; ++i) {
+            json et = t; et.erase("repeat_count");
+            if (n > 1) { et["name"] = bn + "_" + std::to_string(i+1); et["iteration"] = i; }
+            exp.push_back(et);
+        }
+    }
+    return exp;
+}
+
+json TaskGenerator::Impl::processConditionalTasks(const json& tasks, const json& ctx) {
+    json p = json::array();
+    for (const auto& t : tasks) {
+        if (!t.contains("condition") || evaluateCondition(t["condition"], ctx)) p.push_back(t);
+    }
+    return p;
+}
+
+bool TaskGenerator::Impl::evaluateCondition(const std::string& c, const json& ctx) {
+    if (c.empty() || c == "true") return true;
+    if (c == "false") return false;
+    if (c.rfind("equals(", 0) == 0) {
+        auto a = c.substr(7, c.length()-8); auto pos = a.find(',');
+        if (pos != std::string::npos) {
+            auto l = atom::utils::trim(a.substr(0,pos)), r = atom::utils::trim(a.substr(pos+1));
+            if (ctx.contains(l)) l = ctx[l].is_string() ? ctx[l].get<std::string>() : ctx[l].dump();
+            if (ctx.contains(r)) r = ctx[r].is_string() ? ctx[r].get<std::string>() : ctx[r].dump();
+            return l == r;
+        }
+    }
+    return true;
+}
+
+std::optional<MacroValue> TaskGenerator::Impl::getMacro(const std::string& n) const {
+    std::shared_lock lk(mutex_);
+    auto it = macros_.find(n);
+    return (it != macros_.end()) ? std::optional<MacroValue>(it->second) : std::nullopt;
+}
+
+void TaskGenerator::Impl::addMacros(const std::unordered_map<std::string, MacroValue>& m) {
+    std::unique_lock lk(mutex_);
+    for (const auto& [n,v] : m) macros_[n] = v;
+    std::unique_lock cl(cache_mutex_); macro_cache_.clear();
+}
+
+void TaskGenerator::Impl::registerDefaultTemplates() {
+    ScriptTemplate t; t.name = "exposure"; t.category = "imaging"; t.version = "1.0";
+    t.requiredParams = {"exposure_time","filter"};
+    t.content = R"({"type":"exposure","params":{"exposure_time":${exposure_time},"filter":"${filter}"}})";
+    registerScriptTemplate("exposure", t);
+    spdlog::info("Default templates registered");
+}
+
+std::shared_ptr<TaskGenerator> TaskGenerator::Impl::clone() const {
+    auto ng = std::make_shared<TaskGenerator>();
+    std::shared_lock l(mutex_); for (const auto& [n,v] : macros_) ng->addMacro(n,v);
+    std::shared_lock sl(scriptMutex_); for (const auto& [n,t] : scriptTemplates_) ng->registerScriptTemplate(n,t);
+    return ng;
 }
 
 TaskGenerator::TaskGenerator() : impl_(std::make_unique<Impl>()) {}
@@ -906,7 +1158,6 @@ TaskGenerator::~TaskGenerator() = default;
 auto TaskGenerator::createShared() -> std::shared_ptr<TaskGenerator> {
     return std::make_shared<TaskGenerator>();
 }
-
 void TaskGenerator::addMacro(const std::string& name, MacroValue value) {
     impl_->addMacro(name, std::move(value));
 }
@@ -1006,6 +1257,51 @@ TaskGenerator::ScriptGenerationResult TaskGenerator::convertScriptFormat(const s
                                                                          const std::string& fromFormat,
                                                                          const std::string& toFormat) {
     return impl_->convertScriptFormat(script, fromFormat, toFormat);
+}
+
+// Task list generation method implementations
+TaskGenerator::TaskListResult TaskGenerator::generateTaskList(const TaskListConfig& config) {
+    return impl_->generateTaskList(config);
+}
+
+TaskGenerator::TaskListResult TaskGenerator::generateTaskListFromJson(const json& configJson) {
+    return impl_->generateTaskListFromJson(configJson);
+}
+
+json TaskGenerator::expandTaskRepetitions(const json& tasks) {
+    return impl_->expandTaskRepetitions(tasks);
+}
+
+json TaskGenerator::processConditionalTasks(const json& tasks, const json& context) {
+    return impl_->processConditionalTasks(tasks, context);
+}
+
+std::string TaskGenerator::replaceMacros(const std::string& input) const {
+    return impl_->replaceMacros(input);
+}
+
+void TaskGenerator::initializeBuiltInMacros() {
+    impl_->initializeBuiltInMacros();
+}
+
+void TaskGenerator::registerDefaultTemplates() {
+    impl_->registerDefaultTemplates();
+}
+
+bool TaskGenerator::evaluateCondition(const std::string& condition, const json& context) {
+    return impl_->evaluateCondition(condition, context);
+}
+
+std::optional<MacroValue> TaskGenerator::getMacro(const std::string& name) const {
+    return impl_->getMacro(name);
+}
+
+void TaskGenerator::addMacros(const std::unordered_map<std::string, MacroValue>& macros) {
+    impl_->addMacros(macros);
+}
+
+std::shared_ptr<TaskGenerator> TaskGenerator::clone() const {
+    return impl_->clone();
 }
 
 }  // namespace lithium

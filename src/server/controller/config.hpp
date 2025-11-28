@@ -82,7 +82,7 @@ private:
     }
 
 public:
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         spdlog::info("Registering config routes.");
         GET_OR_CREATE_WEAK_PTR(mConfigManager, lithium::ConfigManager,
                                Constants::CONFIG_MANAGER);

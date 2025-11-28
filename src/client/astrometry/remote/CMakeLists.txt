@@ -1,38 +1,53 @@
-cmake_minimum_required(VERSION 3.15)
-project(AstrometryNetClient VERSION 1.0.0 LANGUAGES CXX)
+# ============================================================================
+# CMakeLists.txt for lithium.client.astrometry.remote
+# ============================================================================
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Lithium Astrometry Remote Client
+# Description: Astrometry.net remote API client implementation
+# Author: Max Qian
+# License: GPL3
+# ============================================================================
 
-# Library target
-add_library(astrometry_client 
+cmake_minimum_required(VERSION 3.20)
+project(lithium_client_astrometry_remote VERSION 1.0.0 LANGUAGES CXX)
+
+# ============================================================================
+# Source Files
+# ============================================================================
+
+set(SOURCE_FILES
     client.cpp
     utils.cpp
 )
 
-# Include directories
-target_include_directories(astrometry_client
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
+set(HEADER_FILES
+    client.hpp
+    utils.hpp
 )
 
-# Link dependencies
-target_link_libraries(astrometry_client
-    PUBLIC
-        CURL::libcurl
-        spdlog::spdlog
-        Threads::Threads
+# ============================================================================
+# Build Library
+# ============================================================================
+
+add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES} ${HEADER_FILES})
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${CMAKE_SOURCE_DIR}/src/tools
 )
 
-# Example application
-add_executable(astrometry_example examples/astrometry_example.cpp)
-target_link_libraries(astrometry_example PRIVATE astrometry_client)
+target_link_libraries(${PROJECT_NAME} PUBLIC
+    lithium_client_common
+    lithium_tools
+    CURL::libcurl
+    spdlog::spdlog
+    Threads::Threads
+)
 
-# Unit tests
-option(BUILD_TESTS "Build the tests" ON)
-if(BUILD_TESTS)
-    find_package(Catch2 REQUIRED)
-    add_executable(astrometry_tests tests/test_astrometry_client.cpp)
-    target_link_libraries(astrometry_tests PRIVATE astrometry_client Catch2::Catch2)
-    include(CTest)
-    include(Catch)
-    catch_discover_tests(astrometry_tests)
-endif()
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "Client/Solvers/Remote")
+
+message(STATUS "    └─ Remote client: lithium_client_astrometry_remote configured")

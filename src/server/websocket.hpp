@@ -276,10 +276,12 @@ private:
      *
      * @param conn Reference to the WebSocket connection.
      * @param command The command name.
-     * @param payload The command payload as a string.
+     * @param payload The command payload as JSON.
      */
     void handle_command(crow::websocket::connection& conn,
-                        const std::string& command, const std::string& payload);
+                        const std::string& command,
+                        const nlohmann::json& payload,
+                        const std::string& request_id);
 
     /**
      * @brief Forwards a message to the message bus.

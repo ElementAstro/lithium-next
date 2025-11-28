@@ -12,6 +12,13 @@
 
 #include <eigen3/Eigen/Dense>
 
+namespace lithium::target {
+
+// Forward declarations
+class DictReader;
+class DictWriter;
+struct Dialect;
+
 /**
  * @brief Base exception class for recommendation engine errors
  */
@@ -298,6 +305,22 @@ public:
      * @return String with model statistics
      */
     auto getStats() -> std::string;
+
+    /**
+     * @brief Export ratings and model data to CSV file
+     * @param filename Path to output CSV file
+     * @return True if export was successful
+     */
+    bool exportToCSV(const std::string& filename);
+
+    /**
+     * @brief Import ratings from CSV file
+     * @param filename Path to input CSV file
+     * @return True if import was successful
+     */
+    bool importFromCSV(const std::string& filename);
 };
+
+}  // namespace lithium::target
 
 #endif  // LITHIUM_TARGET_PERFERENCE_HPP

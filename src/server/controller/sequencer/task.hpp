@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <string>
+#include <ctime>
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
@@ -20,6 +21,14 @@
 #include "../../task/custom/camera/filter_tasks.hpp"
 #include "../../task/custom/camera/guide_tasks.hpp"
 #include "../../task/custom/camera/calibration_tasks.hpp"
+#include "../../task/custom/solver_task.hpp"
+
+// Asynchronous task manager
+#include "../../task_manager.hpp"
+
+// Task factory for device/script/config/search tasks
+#include "../../task/custom/factory.hpp"
+#include "task/custom/search_task.hpp"
 
 using json = nlohmann::json;
 
@@ -28,6 +37,44 @@ using json = nlohmann::json;
  */
 class TaskManagementController : public Controller {
 private:
+    static std::shared_ptr<lithium::server::TaskManager> task_manager_;
+
+    static auto taskStatusToString(lithium::server::TaskManager::Status status)
+        -> std::string {
+        using Status = lithium::server::TaskManager::Status;
+        switch (status) {
+            case Status::Pending:
+                return "Pending";
+            case Status::Running:
+                return "Running";
+            case Status::Completed:
+                return "Completed";
+            case Status::Failed:
+                return "Failed";
+            case Status::Cancelled:
+                return "Cancelled";
+        }
+        return "Unknown";
+    }
+
+    static auto mapToFactoryTaskType(const std::string& taskType)
+        -> std::string {
+        if (taskType == "DeviceTask" || taskType == "device_task") {
+            return "device_task";
+        }
+        if (taskType == "ScriptTask" || taskType == "script_task") {
+            return "script_task";
+        }
+        if (taskType == "ConfigTask" || taskType == "config_task") {
+            return "config_task";
+        }
+        if (taskType == "SearchTask" || taskType == "search_task" ||
+            taskType == "CelestialSearch") {
+            return "CelestialSearch";
+        }
+        return taskType;
+    }
+
     /**
      * @brief Utility function to handle task actions with error handling
      */
@@ -71,15 +118,20 @@ private:
     }
 
 public:
+    static void setTaskManager(
+        std::shared_ptr<lithium::server::TaskManager> manager) {
+        task_manager_ = std::move(manager);
+    }
+
     /**
      * @brief Register all task management routes
      * @param app The crow application instance
      */
-    void registerRoutes(crow::SimpleApp &app) override {
+    void registerRoutes(lithium::server::ServerApp &app) override {
         
         // ===== CAMERA TASKS =====
         
-        // Create generic camera task
+        // Create generic camera task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -125,57 +177,55 @@ public:
                     if (body.has("g_exposure")) params["g_exposure"] = body["g_exposure"].d();
                     if (body.has("b_exposure")) params["b_exposure"] = body["b_exposure"].d();
                     
-                    std::unique_ptr<lithium::task::Task> task;
-                    
-                    // Create task based on type
-                    if (taskType == "TakeExposureTask") {
-                        task = lithium::task::task::TakeExposureTask::createEnhancedTask();
-                        lithium::task::task::TakeExposureTask::execute(params);
-                    } else if (taskType == "TakeManyExposureTask") {
-                        task = lithium::task::task::TakeManyExposureTask::createEnhancedTask();
-                        lithium::task::task::TakeManyExposureTask::execute(params);
-                    } else if (taskType == "SubframeExposureTask") {
-                        task = lithium::task::task::SubframeExposureTask::createEnhancedTask();
-                        lithium::task::task::SubframeExposureTask::execute(params);
-                    } else if (taskType == "CameraSettingsTask") {
-                        task = lithium::task::task::CameraSettingsTask::createEnhancedTask();
-                        lithium::task::task::CameraSettingsTask::execute(params);
-                    } else if (taskType == "CameraPreviewTask") {
-                        task = lithium::task::task::CameraPreviewTask::createEnhancedTask();
-                        lithium::task::task::CameraPreviewTask::execute(params);
-                    } else if (taskType == "AutoFocusTask") {
-                        task = lithium::task::task::AutoFocusTask::createEnhancedTask();
-                        lithium::task::task::AutoFocusTask::execute(params);
-                    } else if (taskType == "FilterSequenceTask") {
-                        task = lithium::task::task::FilterSequenceTask::createEnhancedTask();
-                        lithium::task::task::FilterSequenceTask::execute(params);
-                    } else if (taskType == "RGBSequenceTask") {
-                        task = lithium::task::task::RGBSequenceTask::createEnhancedTask();
-                        lithium::task::task::RGBSequenceTask::execute(params);
-                    } else if (taskType == "GuidedExposureTask") {
-                        task = lithium::task::task::GuidedExposureTask::createEnhancedTask();
-                        lithium::task::task::GuidedExposureTask::execute(params);
-                    } else if (taskType == "AutoCalibrationTask") {
-                        task = lithium::task::task::AutoCalibrationTask::createEnhancedTask();
-                        lithium::task::task::AutoCalibrationTask::execute(params);
-                    } else {
-                        throw std::invalid_argument("Unsupported camera task type: " + taskType);
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
-                    if (!task) {
-                        throw std::runtime_error("Failed to create camera task of type: " + taskType);
-                    }
-                    
-                    result["message"] = "Camera task created and executed successfully";
+
+                    // Dispatch to asynchronous task manager
+                    std::string id = task_manager_->submitTask(
+                        taskType, params,
+                        [taskType](const auto& info) {
+                            auto& factory = lithium::task::TaskFactory::getInstance();
+                            std::string factoryType = taskType;
+                            
+                            // Try to adapt task type to factory name if needed
+                            if (!factory.isTaskRegistered(factoryType)) {
+                                // Try removing "Task" suffix (e.g. TakeExposureTask -> TakeExposure)
+                                if (factoryType.size() > 4 && 
+                                    factoryType.rfind("Task") == factoryType.size() - 4) {
+                                    std::string stripped = factoryType.substr(0, factoryType.size() - 4);
+                                    if (factory.isTaskRegistered(stripped)) {
+                                        factoryType = stripped;
+                                    }
+                                }
+                            }
+
+                            if (factory.isTaskRegistered(factoryType)) {
+                                auto task = factory.createTask(factoryType, info->id, info->params);
+                                if (task) {
+                                    task->execute(info->params);
+                                } else {
+                                    throw std::runtime_error("Failed to create task instance: " + factoryType);
+                                }
+                            } else {
+                                throw std::invalid_argument(
+                                    "Unsupported or unregistered camera task type: " +
+                                    taskType);
+                            }
+                        });
+
+                    result["message"] =
+                        "Camera task submitted for asynchronous execution";
                     result["taskType"] = taskType;
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create exposure task
+        // Create exposure task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/exposure")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -189,13 +239,11 @@ public:
                         throw std::invalid_argument("Missing required parameter: exposure");
                     }
                     
-                    // Create and execute the actual exposure task
-                    auto task = lithium::task::task::TakeExposureTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create exposure task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
-                    // Execute the task with parameters
+
                     json params;
                     params["exposure"] = body["exposure"].d();
                     if (body.has("binning")) params["binning"] = body["binning"].i();
@@ -203,19 +251,25 @@ public:
                     if (body.has("offset")) params["offset"] = body["offset"].i();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::task::task::TakeExposureTask::execute(params);
-                    
-                    result["message"] = "Exposure task created and executed successfully";
-                    result["taskType"] = "TakeExposureTask";
-                    result["taskId"] = task->getUUID();
+                    std::string id = task_manager_->submitTask(
+                        "TakeExposure", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("TakeExposure", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Exposure task submitted for asynchronous execution";
+                    result["taskType"] = "TakeExposure";
+                    result["taskId"] = id;
                     result["exposureTime"] = body["exposure"].d();
-                    result["status"] = "executed";
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create multiple exposures task
+        // Create multiple exposures task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/exposures")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -229,13 +283,11 @@ public:
                         throw std::invalid_argument("Missing required parameters: exposure, count");
                     }
                     
-                    // Create and execute the actual multiple exposures task
-                    auto task = lithium::task::task::TakeManyExposureTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create multiple exposures task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
-                    // Execute the task with parameters
+
                     json params;
                     params["exposure"] = body["exposure"].d();
                     params["count"] = body["count"].i();
@@ -245,20 +297,26 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("delay")) params["delay"] = body["delay"].d();
                     
-                    lithium::task::task::TakeManyExposureTask::execute(params);
-                    
-                    result["message"] = "Multiple exposures task created and executed successfully";
-                    result["taskType"] = "TakeManyExposureTask";
-                    result["taskId"] = task->getUUID();
+                    std::string id = task_manager_->submitTask(
+                        "TakeManyExposure", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("TakeManyExposure", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Multiple exposures task submitted for asynchronous execution";
+                    result["taskType"] = "TakeManyExposure";
+                    result["taskId"] = id;
                     result["exposureTime"] = body["exposure"].d();
                     result["count"] = body["count"].i();
-                    result["status"] = "executed";
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create subframe exposure task
+        // Create subframe exposure task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/subframe")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -273,11 +331,11 @@ public:
                         throw std::invalid_argument("Missing required parameters: exposure, x, y, width, height");
                     }
                     
-                    auto task = lithium::task::task::SubframeExposureTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create subframe exposure task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     params["exposure"] = body["exposure"].d();
                     params["x"] = body["x"].i();
@@ -287,18 +345,24 @@ public:
                     if (body.has("binning")) params["binning"] = body["binning"].i();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::task::task::SubframeExposureTask::execute(params);
-                    
-                    result["message"] = "Subframe exposure task created and executed successfully";
-                    result["taskType"] = "SubframeExposureTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    std::string id = task_manager_->submitTask(
+                        "SubframeExposure", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("SubframeExposure", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Subframe exposure task submitted for asynchronous execution";
+                    result["taskType"] = "SubframeExposure";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create camera settings task
+        // Create camera settings task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/settings")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -307,11 +371,11 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::task::task::CameraSettingsTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create camera settings task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("gain")) params["gain"] = body["gain"].d();
@@ -320,18 +384,24 @@ public:
                     if (body.has("temperature")) params["temperature"] = body["temperature"].d();
                     if (body.has("cooler")) params["cooler"] = body["cooler"].b();
                     
-                    lithium::task::task::CameraSettingsTask::execute(params);
-                    
-                    result["message"] = "Camera settings task created and executed successfully";
-                    result["taskType"] = "CameraSettingsTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    std::string id = task_manager_->submitTask(
+                        "CameraSettings", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("CameraSettings", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Camera settings task submitted for asynchronous execution";
+                    result["taskType"] = "CameraSettings";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create camera preview task
+        // Create camera preview task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/preview")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -340,28 +410,34 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::task::task::CameraPreviewTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create camera preview task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     if (body.has("exposure")) params["exposure"] = body["exposure"].d();
                     if (body.has("binning")) params["binning"] = body["binning"].i();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::task::task::CameraPreviewTask::execute(params);
-                    
-                    result["message"] = "Camera preview task created and executed successfully";
-                    result["taskType"] = "CameraPreviewTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    std::string id = task_manager_->submitTask(
+                        "CameraPreview", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("CameraPreview", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Camera preview task submitted for asynchronous execution";
+                    result["taskType"] = "CameraPreview";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create auto focus task
+        // Create auto focus task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/autofocus")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -370,11 +446,11 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::task::task::AutoFocusTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create auto focus task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     if (body.has("exposure")) params["exposure"] = body["exposure"].d();
                     if (body.has("binning")) params["binning"] = body["binning"].i();
@@ -383,18 +459,24 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("focuser")) params["focuser"] = body["focuser"].s();
                     
-                    lithium::task::task::AutoFocusTask::execute(params);
-                    
-                    result["message"] = "Auto focus task created and executed successfully";
-                    result["taskType"] = "AutoFocusTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    std::string id = task_manager_->submitTask(
+                        "AutoFocus", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("AutoFocus", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Auto focus task submitted for asynchronous execution";
+                    result["taskType"] = "AutoFocus";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create filter sequence task
+        // Create filter sequence task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/filter-sequence")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -407,11 +489,11 @@ public:
                         throw std::invalid_argument("Missing required parameters: filters, exposure");
                     }
                     
-                    auto task = lithium::task::task::FilterSequenceTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create filter sequence task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     params["filters"] = body["filters"];
                     params["exposure"] = body["exposure"].d();
@@ -419,18 +501,24 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("filter_wheel")) params["filter_wheel"] = body["filter_wheel"].s();
                     
-                    lithium::task::task::FilterSequenceTask::execute(params);
-                    
-                    result["message"] = "Filter sequence task created and executed successfully";
-                    result["taskType"] = "FilterSequenceTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    std::string id = task_manager_->submitTask(
+                        "FilterSequence", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("FilterSequence", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Filter sequence task submitted for asynchronous execution";
+                    result["taskType"] = "FilterSequence";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create RGB sequence task
+        // Create RGB sequence task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/rgb-sequence")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -439,11 +527,11 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::task::task::RGBSequenceTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create RGB sequence task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     if (body.has("r_exposure")) params["r_exposure"] = body["r_exposure"].d();
                     if (body.has("g_exposure")) params["g_exposure"] = body["g_exposure"].d();
@@ -452,18 +540,24 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("filter_wheel")) params["filter_wheel"] = body["filter_wheel"].s();
                     
-                    lithium::task::task::RGBSequenceTask::execute(params);
-                    
-                    result["message"] = "RGB sequence task created and executed successfully";
-                    result["taskType"] = "RGBSequenceTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    std::string id = task_manager_->submitTask(
+                        "RGBSequence", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("RGBSequence", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "RGB sequence task submitted for asynchronous execution";
+                    result["taskType"] = "RGBSequence";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create guided exposure task
+        // Create guided exposure task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/guided-exposure")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -476,11 +570,11 @@ public:
                         throw std::invalid_argument("Missing required parameter: exposure");
                     }
                     
-                    auto task = lithium::task::task::GuidedExposureTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create guided exposure task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     params["exposure"] = body["exposure"].d();
                     if (body.has("guide_exposure")) params["guide_exposure"] = body["guide_exposure"].d();
@@ -488,18 +582,24 @@ public:
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     if (body.has("guide_camera")) params["guide_camera"] = body["guide_camera"].s();
                     
-                    lithium::task::task::GuidedExposureTask::execute(params);
-                    
-                    result["message"] = "Guided exposure task created and executed successfully";
-                    result["taskType"] = "GuidedExposureTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    std::string id = task_manager_->submitTask(
+                        "GuidedExposure", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("GuidedExposure", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Guided exposure task submitted for asynchronous execution";
+                    result["taskType"] = "GuidedExposure";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
         });
 
-        // Create auto calibration task
+        // Create auto calibration task (asynchronous)
         CROW_ROUTE(app, "/api/tasks/camera/auto-calibration")
         .methods("POST"_method)
         ([](const crow::request& req) {
@@ -508,11 +608,11 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    auto task = lithium::task::task::AutoCalibrationTask::createEnhancedTask();
-                    if (!task) {
-                        throw std::runtime_error("Failed to create auto calibration task");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
+
                     json params;
                     if (body.has("dark_count")) params["dark_count"] = body["dark_count"].i();
                     if (body.has("bias_count")) params["bias_count"] = body["bias_count"].i();
@@ -520,12 +620,75 @@ public:
                     if (body.has("dark_exposure")) params["dark_exposure"] = body["dark_exposure"].d();
                     if (body.has("camera")) params["camera"] = body["camera"].s();
                     
-                    lithium::task::task::AutoCalibrationTask::execute(params);
+                    std::string id = task_manager_->submitTask(
+                        "AutoCalibration", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("AutoCalibration", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Auto calibration task submitted for asynchronous execution";
+                    result["taskType"] = "AutoCalibration";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
-                    result["message"] = "Auto calibration task created and executed successfully";
-                    result["taskType"] = "AutoCalibrationTask";
-                    result["taskId"] = task->getUUID();
-                    result["status"] = "executed";
+                    return result;
+                });
+        });
+
+        // Create solver task (asynchronous)
+        CROW_ROUTE(app, "/api/tasks/solver/solve")
+        .methods("POST"_method)
+        ([](const crow::request& req) {
+            auto body = crow::json::load(req.body);
+            return handleTaskAction(req, body, "createSolverTask",
+                [&body]() -> crow::json::wvalue {
+                    crow::json::wvalue result;
+                    
+                    if (!body.has("filePath")) {
+                        throw std::invalid_argument("Missing required parameter: filePath");
+                    }
+                    
+                    if (!task_manager_) {
+                        throw std::runtime_error("TaskManager is not initialized");
+                    }
+
+                    json params;
+                    params["filePath"] = body["filePath"].s();
+                    if (body.has("ra")) params["ra"] = body["ra"].d();
+                    if (body.has("dec")) params["dec"] = body["dec"].d();
+                    if (body.has("scale")) params["scale"] = body["scale"].d();
+                    if (body.has("radius")) params["radius"] = body["radius"].d();
+                    
+                    // Ensure SolverTask is registered (idempotent check)
+                    auto& factory = lithium::task::TaskFactory::getInstance();
+                    if (!factory.isTaskRegistered("SolverTask")) {
+                        lithium::task::TaskInfo info;
+                        info.name = "SolverTask";
+                        info.description = "Plate solve an image";
+                        info.category = "Astrometry";
+                        info.requiredParameters = {"filePath"};
+                        factory.registerTask<lithium::task::SolverTask>(
+                            "SolverTask",
+                            [](const std::string& name, const json& config) {
+                                return std::make_unique<lithium::task::SolverTask>(name, config);
+                            },
+                            info
+                        );
+                    }
+
+                    std::string id = task_manager_->submitTask(
+                        "SolverTask", params,
+                        [](const auto& info) {
+                            auto task = lithium::task::TaskFactory::getInstance().createTask("SolverTask", info->id, info->params);
+                            task->execute(info->params);
+                        });
+
+                    result["message"] = "Solver task submitted for asynchronous execution";
+                    result["taskType"] = "SolverTask";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
                     
                     return result;
                 });
@@ -541,11 +704,33 @@ public:
             return handleTaskAction(req, body, "getTaskStatus",
                 [&taskId]() -> crow::json::wvalue {
                     crow::json::wvalue result;
-                    
-                    // TODO: Implement task status lookup from task manager
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
+                    }
+
+                    auto info = task_manager_->getTask(taskId);
+                    if (!info) {
+                        result["taskId"] = taskId;
+                        result["exists"] = false;
+                        result["taskStatus"] = "NotFound";
+                        return result;
+                    }
+
                     result["taskId"] = taskId;
-                    result["message"] = "Task status lookup - implementation needed";
-                    result["status"] = "placeholder - implementation needed";
+                    result["exists"] = true;
+                    result["taskType"] = info->type;
+                    result["taskStatus"] =
+                        taskStatusToString(info->status);
+                    result["cancelRequested"] =
+                        info->cancelRequested.load();
+                    if (!info->error.empty()) {
+                        result["error"] = info->error;
+                    }
+                    if (!info->result.is_null()) {
+                        result["result"] = crow::json::load(
+                            info->result.dump());
+                    }
                     
                     return result;
                 });
@@ -559,11 +744,28 @@ public:
             return handleTaskAction(req, body, "getActiveTasks",
                 []() -> crow::json::wvalue {
                     crow::json::wvalue result;
-                    
-                    // TODO: Implement active task listing from task manager
-                    result["message"] = "Active tasks listing - implementation needed";
-                    result["tasks"] = std::vector<std::string>{};
-                    result["status"] = "placeholder - implementation needed";
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
+                    }
+
+                    auto active = task_manager_->listActiveTasks();
+                    std::vector<crow::json::wvalue> taskList;
+                    taskList.reserve(active.size());
+
+                    for (const auto& t : active) {
+                        crow::json::wvalue item;
+                        item["taskId"] = t->id;
+                        item["taskType"] = t->type;
+                        item["taskStatus"] =
+                            taskStatusToString(t->status);
+                        item["cancelRequested"] =
+                            t->cancelRequested.load();
+                        taskList.push_back(std::move(item));
+                    }
+
+                    result["tasks"] = std::move(taskList);
+                    result["count"] = active.size();
                     
                     return result;
                 });
@@ -577,11 +779,17 @@ public:
             return handleTaskAction(req, body, "cancelTask",
                 [&taskId]() -> crow::json::wvalue {
                     crow::json::wvalue result;
-                    
-                    // TODO: Implement task cancellation
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
+                    }
+
+                    bool ok = task_manager_->cancelTask(taskId);
                     result["taskId"] = taskId;
-                    result["message"] = "Task cancellation - implementation needed";
-                    result["status"] = "placeholder - implementation needed";
+                    result["requested"] = ok;
+                    result["message"] =
+                        ok ? "Cancellation requested"
+                           : "Task not found";
                     
                     return result;
                 });
@@ -604,13 +812,51 @@ public:
                     
                     std::string operation = body["operation"].s();
                     std::string deviceName = body["deviceName"].s();
-                    
-                    // TODO: Create device task instance and execute
-                    result["message"] = "Device task created successfully";
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
+                    }
+
+                    json params;
+                    params["operation"] = operation;
+                    params["deviceName"] = deviceName;
+                    if (body.has("deviceType"))
+                        params["deviceType"] = body["deviceType"].s();
+                    if (body.has("timeout"))
+                        params["timeout"] = body["timeout"].i();
+                    if (body.has("retryCount"))
+                        params["retryCount"] = body["retryCount"].i();
+                    if (body.has("port"))
+                        params["port"] = body["port"].s();
+                    if (body.has("config")) {
+                        // Expect JSON string/object; convert via dump/parse
+                        nlohmann::json cfg = nlohmann::json::parse(
+                            static_cast<std::string>(body["config"]));
+                        params["config"] = std::move(cfg);
+                    }
+
+                    std::string id = task_manager_->submitTask(
+                        "DeviceTask", params,
+                        [](const auto& info) {
+                            using lithium::task::TaskFactory;
+                            auto& factory = TaskFactory::getInstance();
+                            auto task = factory.createTask(
+                                "device_task", info->id,
+                                nlohmann::json::object());
+                            if (!task) {
+                                throw std::runtime_error(
+                                    "Failed to create device_task");
+                            }
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Device task submitted for asynchronous execution";
                     result["taskType"] = "DeviceTask";
+                    result["taskId"] = id;
                     result["operation"] = operation;
                     result["deviceName"] = deviceName;
-                    result["status"] = "placeholder - implementation needed";
+                    result["status"] = "queued";
                     
                     return result;
                 });
@@ -627,18 +873,176 @@ public:
                 [&body]() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    if (!body.has("script")) {
-                        throw std::invalid_argument("Missing required parameter: script");
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
                     }
-                    
-                    std::string script = body["script"].s();
-                    
-                    // TODO: Create and execute script task
-                    result["message"] = "Script task created successfully";
+
+                    // Support either explicit scriptName/scriptContent or a
+                    // single 'script' field treated as content
+                    std::string scriptName;
+                    if (body.has("scriptName")) {
+                        scriptName = body["scriptName"].s();
+                    } else {
+                        // Generate a simple name if not provided
+                        scriptName = "script_" +
+                                     std::to_string(
+                                         static_cast<long long>(
+                                             std::time(nullptr)));
+                    }
+
+                    json params;
+                    params["scriptName"] = scriptName;
+
+                    if (body.has("script")) {
+                        params["scriptContent"] = body["script"].s();
+                    }
+                    if (body.has("scriptContent")) {
+                        params["scriptContent"] =
+                            body["scriptContent"].s();
+                    }
+                    if (body.has("allowUnsafe")) {
+                        params["allowUnsafe"] = body["allowUnsafe"].b();
+                    }
+                    if (body.has("timeout")) {
+                        params["timeout"] = body["timeout"].i();
+                    }
+                    if (body.has("retryCount")) {
+                        params["retryCount"] = body["retryCount"].i();
+                    }
+
+                    std::string id = task_manager_->submitTask(
+                        "ScriptTask", params,
+                        [](const auto& info) {
+                            using lithium::task::TaskFactory;
+                            auto& factory = TaskFactory::getInstance();
+                            auto task = factory.createTask(
+                                "script_task", info->id,
+                                nlohmann::json::object());
+                            if (!task) {
+                                throw std::runtime_error(
+                                    "Failed to create script_task");
+                            }
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Script task submitted for asynchronous execution";
                     result["taskType"] = "ScriptTask";
-                    result["script"] = script;
-                    result["status"] = "placeholder - implementation needed";
+                    result["taskId"] = id;
+                    result["scriptName"] = scriptName;
+                    result["status"] = "queued";
                     
+                    return result;
+                });
+        });
+
+        // ===== CONFIG TASKS =====
+        
+        // Create configuration management task (ConfigTask)
+        CROW_ROUTE(app, "/api/tasks/config")
+        .methods("POST"_method)
+        ([](const crow::request& req) {
+            auto body = crow::json::load(req.body.empty() ? "{}" : req.body);
+            return handleTaskAction(req, body, "createConfigTask",
+                [&req]() -> crow::json::wvalue {
+                    crow::json::wvalue result;
+
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
+                    }
+
+                    nlohmann::json params;
+                    try {
+                        params = nlohmann::json::parse(
+                            req.body.empty() ? "{}" : req.body);
+                    } catch (const std::exception& e) {
+                        throw std::invalid_argument(
+                            std::string("Invalid JSON body: ") + e.what());
+                    }
+
+                    std::string id = task_manager_->submitTask(
+                        "ConfigTask", params,
+                        [](const auto& info) {
+                            using lithium::task::TaskFactory;
+                            auto& factory = TaskFactory::getInstance();
+                            auto task = factory.createTask(
+                                "config_task", info->id,
+                                nlohmann::json::object());
+                            if (!task) {
+                                throw std::runtime_error(
+                                    "Failed to create config_task");
+                            }
+                            task->execute(info->params);
+                        });
+
+                    result["message"] =
+                        "Config task submitted for asynchronous execution";
+                    result["taskType"] = "ConfigTask";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
+
+                    return result;
+                });
+        });
+
+        // ===== SEARCH TASKS =====
+        
+        // Create celestial search task (SearchTask)
+        CROW_ROUTE(app, "/api/tasks/search")
+        .methods("POST"_method)
+        ([](const crow::request& req) {
+            auto body = crow::json::load(req.body.empty() ? "{}" : req.body);
+            return handleTaskAction(req, body, "createSearchTask",
+                [&req]() -> crow::json::wvalue {
+                    crow::json::wvalue result;
+
+                    if (!task_manager_) {
+                        throw std::runtime_error(
+                            "TaskManager is not initialized");
+                    }
+
+                    nlohmann::json params;
+                    try {
+                        params = nlohmann::json::parse(
+                            req.body.empty() ? "{}" : req.body);
+                    } catch (const std::exception& e) {
+                        throw std::invalid_argument(
+                            std::string("Invalid JSON body: ") + e.what());
+                    }
+
+                    std::string id = task_manager_->submitTask(
+                        "SearchTask", params,
+                        [](const auto& info) {
+                            using lithium::task::TaskFactory;
+                            auto& factory = TaskFactory::getInstance();
+                            auto taskBase = factory.createTask(
+                                "CelestialSearch", info->id,
+                                nlohmann::json::object());
+                            if (!taskBase) {
+                                throw std::runtime_error(
+                                    "Failed to create CelestialSearch task");
+                            }
+
+                            using lithium::task::task::TaskCelestialSearch;
+                            auto* searchTask =
+                                dynamic_cast<TaskCelestialSearch*>(
+                                    taskBase.get());
+
+                            taskBase->execute(info->params);
+
+                            if (searchTask) {
+                                info->result = searchTask->getLastResults();
+                            }
+                        });
+
+                    result["message"] =
+                        "Search task submitted for asynchronous execution";
+                    result["taskType"] = "SearchTask";
+                    result["taskId"] = id;
+                    result["status"] = "queued";
+
                     return result;
                 });
         });
@@ -654,26 +1058,44 @@ public:
                 []() -> crow::json::wvalue {
                     crow::json::wvalue result;
                     
-                    std::vector<std::string> cameraTaskTypes = {
-                        "TakeExposureTask", "TakeManyExposureTask", "SubframeExposureTask",
-                        "CameraSettingsTask", "CameraPreviewTask", "AutoFocusTask", 
-                        "FocusSeriesTask", "FilterSequenceTask", "RGBSequenceTask",
-                        "GuidedExposureTask", "DitherSequenceTask", "AutoCalibrationTask",
-                        "ThermalCycleTask", "FlatFieldSequenceTask"
-                    };
-                    
-                    std::vector<std::string> deviceTaskTypes = {
-                        "DeviceTask", "ConnectDevice", "ScanDevices", "InitializeDevice"
-                    };
-                    
-                    std::vector<std::string> otherTaskTypes = {
-                        "ScriptTask", "ConfigTask", "SearchTask"
-                    };
-                    
+                    using lithium::task::TaskFactory;
+                    auto& factory = TaskFactory::getInstance();
+                    auto tasksByCategory = factory.getTasksByCategory();
+
+                    std::vector<std::string> cameraTaskTypes;
+                    std::vector<std::string> deviceTaskTypes;
+                    std::vector<std::string> otherTaskTypes;
+                    std::vector<std::string> allTaskTypes;
+
+                    crow::json::wvalue categoriesJson;
+
+                    for (const auto& [category, tasks] : tasksByCategory) {
+                        std::vector<std::string> namesInCategory;
+                        namesInCategory.reserve(tasks.size());
+
+                        for (const auto& info : tasks) {
+                            namesInCategory.push_back(info.name);
+                            allTaskTypes.push_back(info.name);
+
+                            // Map TaskInfo.category to legacy groups
+                            if (category == "camera") {
+                                cameraTaskTypes.push_back(info.name);
+                            } else if (category == "hardware") {
+                                deviceTaskTypes.push_back(info.name);
+                            } else {
+                                otherTaskTypes.push_back(info.name);
+                            }
+                        }
+
+                        categoriesJson[category] = namesInCategory;
+                    }
+
                     result["camera"] = cameraTaskTypes;
                     result["device"] = deviceTaskTypes;
                     result["other"] = otherTaskTypes;
-                    
+                    result["categories"] = std::move(categoriesJson);
+                    result["all"] = allTaskTypes;
+
                     return result;
                 });
         });
@@ -693,11 +1115,28 @@ public:
                     if (taskType.empty()) {
                         throw std::invalid_argument("Missing required parameter: type");
                     }
-                    
-                    // TODO: Implement task parameter schema retrieval
+
+                    // Map external name to factory-registered type
+                    std::string factoryType = mapToFactoryTaskType(taskType);
+
+                    using lithium::task::TaskFactory;
+                    auto& factory = TaskFactory::getInstance();
+                    auto infoOpt = factory.getTaskInfo(factoryType);
+                    if (!infoOpt.has_value()) {
+                        throw std::invalid_argument(
+                            "Unknown task type: " + taskType);
+                    }
+
+                    const auto& info = infoOpt.value();
                     result["taskType"] = taskType;
-                    result["message"] = "Task schema retrieval - placeholder implementation";
-                    result["status"] = "placeholder - implementation needed";
+                    result["factoryType"] = factoryType;
+                    result["name"] = info.name;
+                    result["description"] = info.description;
+                    result["category"] = info.category;
+                    result["version"] = info.version;
+                    result["requiredParameters"] = info.requiredParameters;
+                    result["parameterSchema"] = crow::json::load(
+                        info.parameterSchema.dump());
                     
                     return result;
                 });

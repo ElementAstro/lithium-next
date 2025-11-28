@@ -67,7 +67,7 @@ private:
     }
 
 public:
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         LOG_F(INFO, "Registering module controller routes.");
 
         // Create a weak pointer to the ModuleLoader

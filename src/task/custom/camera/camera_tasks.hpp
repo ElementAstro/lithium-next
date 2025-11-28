@@ -3,33 +3,47 @@
 
 /**
  * @file camera_tasks.hpp
- * @brief Comprehensive header including all camera-related tasks
- * 
- * This file provides a single include point for all camera task functionality,
- * organized into logical groups for better maintainability.
+ * @brief Unified header for camera-related tasks
+ *
+ * This file provides a single include point for camera task functionality.
+ * Camera tasks are those directly related to camera operation and imaging.
+ *
+ * Module structure:
+ * - common/       : Camera-specific base class and validation
+ * - exposure/     : Single/multiple exposure tasks
+ * - settings/     : Camera settings and preview
+ * - calibration/  : Dark, bias, flat frame acquisition
+ * - imaging/      : Deep sky, planetary, timelapse, mosaic
+ *
+ * Note: The following have been moved to separate modules:
+ * - focuser/      : Focus tasks (now in src/task/custom/focuser/)
+ * - filterwheel/  : Filter tasks (now in src/task/custom/filterwheel/)
+ * - guider/       : Guiding tasks (now in src/task/custom/guider/)
+ * - astrometry/   : Plate solving (now in src/task/custom/astrometry/)
+ * - observatory/  : Safety tasks (now in src/task/custom/observatory/)
+ *
+ * @date 2024-12-26
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
 
-// Include all camera task categories
-#include "common.hpp"
-#include "basic_exposure.hpp"
-#include "calibration_tasks.hpp"
-#include "sequence_tasks.hpp"
-#include "focus_tasks.hpp"
-#include "filter_tasks.hpp"
-#include "guide_tasks.hpp"
-#include "safety_tasks.hpp"
-#include "platesolve_tasks.hpp"
+// Common components
+#include "common/camera_task_base.hpp"
 
-namespace lithium::task::task {
+// Camera-specific task modules
+#include "exposure/exposure_tasks.hpp"
+#include "settings/settings_tasks.hpp"
+#include "calibration/calibration_tasks.hpp"
+#include "imaging/imaging_tasks.hpp"
+#include "guiding/guiding_tasks.hpp"
+
+namespace lithium::task {
 
 /**
- * @brief Namespace alias for camera tasks
- * 
- * Provides a convenient way to access camera-specific functionality
- * while maintaining the flat namespace structure for compatibility.
+ * @brief Convenience namespace alias for camera tasks
  */
-namespace camera = lithium::task::task;
+namespace camera_tasks = lithium::task::camera;
 
-}  // namespace lithium::task::task
+}  // namespace lithium::task
 
 #endif  // LITHIUM_TASK_CAMERA_ALL_TASKS_HPP

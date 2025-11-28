@@ -3,7 +3,7 @@
 #include "task/sequencer.hpp"
 #include "task/target.hpp"
 
-using namespace lithium::sequencer;
+using namespace lithium::task;
 
 int main() {
     // Create an instance of ExposureSequence

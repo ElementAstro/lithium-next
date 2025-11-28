@@ -1,402 +1,264 @@
-// test_enhanced_system.cpp - Comprehensive integration tests for enhanced sequence system
+// test_enhanced_system.cpp - Integration tests for task sequence system
 // This project is licensed under the terms of the GPL3 license.
 
 #include <gtest/gtest.h>
 #include <thread>
 #include <chrono>
-#include "task/custom/enhanced_sequencer.hpp"
-#include "task/custom/task_manager.hpp"
-#include "task/custom/task_templates.hpp"
-#include "task/custom/factory.hpp"
-#include "task/custom/script_task.hpp"
-#include "task/custom/device_task.hpp"
-#include "task/custom/config_task.hpp"
 
-using namespace lithium::sequencer;
+#include "task/sequencer.hpp"
+#include "task/target.hpp"
+#include "task/custom/factory.hpp"
+#include "task/registration.hpp"
+
+using namespace lithium::task;
 using namespace std::chrono_literals;
+using json = nlohmann::json;
 
 class EnhancedSystemTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        manager_ = std::make_unique<TaskManager>();
-        sequencer_ = std::make_unique<EnhancedSequencer>(manager_.get());
-        templates_ = std::make_unique<TaskTemplateManager>();
+        registerBuiltInTasks();
+        sequencer_ = std::make_unique<ExposureSequence>();
     }
 
     void TearDown() override {
+        if (sequencer_ && sequencer_->isRunning()) {
+            sequencer_->stop();
+        }
         sequencer_.reset();
-        manager_.reset();
-        templates_.reset();
     }
 
-    std::unique_ptr<TaskManager> manager_;
-    std::unique_ptr<EnhancedSequencer> sequencer_;
-    std::unique_ptr<TaskTemplateManager> templates_;
+    std::unique_ptr<ExposureSequence> sequencer_;
 };
 
 // Test Task Factory Registration
 TEST_F(EnhancedSystemTest, TaskFactoryRegistration) {
     auto& factory = TaskFactory::getInstance();
     
-    // Test script task registration
-    ASSERT_TRUE(factory.isRegistered("script_task"));
-    auto scriptTask = factory.createTask("script_task", "test_script", json{});
-    ASSERT_NE(scriptTask, nullptr);
+    // Test camera task registration
+    ASSERT_TRUE(factory.isTaskRegistered("TakeExposure"));
+    auto exposureTask = factory.createTask("TakeExposure", "test_exposure", json{});
+    ASSERT_NE(exposureTask, nullptr);
     
     // Test device task registration
-    ASSERT_TRUE(factory.isRegistered("device_task"));
-    auto deviceTask = factory.createTask("device_task", "test_device", json{});
+    ASSERT_TRUE(factory.isTaskRegistered("DeviceConnect"));
+    auto deviceTask = factory.createTask("DeviceConnect", "test_device", json{});
     ASSERT_NE(deviceTask, nullptr);
     
     // Test config task registration
-    ASSERT_TRUE(factory.isRegistered("config_task"));
-    auto configTask = factory.createTask("config_task", "test_config", json{});
+    ASSERT_TRUE(factory.isTaskRegistered("LoadConfig"));
+    auto configTask = factory.createTask("LoadConfig", "test_config", json{});
     ASSERT_NE(configTask, nullptr);
 }
 
-// Test Task Template System
-TEST_F(EnhancedSystemTest, TaskTemplateSystem) {
-    // Test template existence
-    ASSERT_TRUE(templates_->hasTemplate("imaging"));
-    ASSERT_TRUE(templates_->hasTemplate("calibration"));
-    ASSERT_TRUE(templates_->hasTemplate("focus"));
-    ASSERT_TRUE(templates_->hasTemplate("platesolve"));
+// Test Task Categories
+TEST_F(EnhancedSystemTest, TaskCategories) {
+    auto& factory = TaskFactory::getInstance();
     
-    // Test template creation
-    json params = {
-        {"target", "M31"},
-        {"exposure_time", 300},
-        {"filter", "Ha"},
-        {"count", 10}
-    };
+    auto tasksByCategory = factory.getTasksByCategory();
     
-    auto imagingTask = templates_->createTask("imaging", "test_imaging", params);
-    ASSERT_NE(imagingTask, nullptr);
+    // Test that we have tasks in various categories
+    ASSERT_TRUE(tasksByCategory.count("Camera") > 0);
+    ASSERT_TRUE(tasksByCategory.count("Focus") > 0);
+    ASSERT_TRUE(tasksByCategory.count("Device") > 0);
     
-    // Test parameter substitution
-    auto templateData = templates_->getTemplate("imaging");
-    auto substituted = templates_->substituteParameters(templateData, params);
-    ASSERT_TRUE(substituted.contains("target"));
-    ASSERT_EQ(substituted["target"], "M31");
+    // Test task info retrieval
+    auto taskInfo = factory.getTaskInfo("TakeExposure");
+    ASSERT_TRUE(taskInfo.has_value());
+    ASSERT_EQ(taskInfo->name, "TakeExposure");
+    ASSERT_EQ(taskInfo->category, "Camera");
 }
 
-// Test Enhanced Sequencer Execution Strategies
+// Test Sequencer Execution Strategies
 TEST_F(EnhancedSystemTest, SequencerExecutionStrategies) {
     // Test sequential execution
-    sequencer_->setExecutionStrategy(ExecutionStrategy::Sequential);
-    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExecutionStrategy::Sequential);
+    sequencer_->setExecutionStrategy(ExposureSequence::ExecutionStrategy::Sequential);
+    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExposureSequence::ExecutionStrategy::Sequential);
     
     // Test parallel execution
-    sequencer_->setExecutionStrategy(ExecutionStrategy::Parallel);
-    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExecutionStrategy::Parallel);
+    sequencer_->setExecutionStrategy(ExposureSequence::ExecutionStrategy::Parallel);
+    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExposureSequence::ExecutionStrategy::Parallel);
     
     // Test adaptive execution
-    sequencer_->setExecutionStrategy(ExecutionStrategy::Adaptive);
-    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExecutionStrategy::Adaptive);
+    sequencer_->setExecutionStrategy(ExposureSequence::ExecutionStrategy::Adaptive);
+    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExposureSequence::ExecutionStrategy::Adaptive);
     
     // Test priority execution
-    sequencer_->setExecutionStrategy(ExecutionStrategy::Priority);
-    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExecutionStrategy::Priority);
+    sequencer_->setExecutionStrategy(ExposureSequence::ExecutionStrategy::Priority);
+    ASSERT_EQ(sequencer_->getExecutionStrategy(), ExposureSequence::ExecutionStrategy::Priority);
 }
 
-// Test Task Dependencies
-TEST_F(EnhancedSystemTest, TaskDependencies) {
-    auto& factory = TaskFactory::getInstance();
+// Test Target Dependencies
+TEST_F(EnhancedSystemTest, TargetDependencies) {
+    // Create targets
+    auto target1 = std::make_unique<Target>("Target1");
+    auto target2 = std::make_unique<Target>("Target2");
+    auto target3 = std::make_unique<Target>("Target3");
     
-    // Create tasks
-    auto task1 = factory.createTask("script_task", "init_task", json{
-        {"script_path", "/tmp/init.py"},
-        {"script_type", "python"}
-    });
+    // Add targets to sequencer
+    sequencer_->addTarget(std::move(target1));
+    sequencer_->addTarget(std::move(target2));
+    sequencer_->addTarget(std::move(target3));
     
-    auto task2 = factory.createTask("device_task", "connect_task", json{
-        {"operation", "connect"},
-        {"deviceName", "camera1"}
-    });
+    // Set up dependencies: target3 depends on target1 and target2
+    sequencer_->addTargetDependency("Target3", "Target1");
+    sequencer_->addTargetDependency("Target3", "Target2");
     
-    auto task3 = factory.createTask("script_task", "capture_task", json{
-        {"script_path", "/tmp/capture.py"},
-        {"script_type", "python"}
-    });
+    // Check dependencies
+    auto deps = sequencer_->getTargetDependencies("Target3");
+    ASSERT_EQ(deps.size(), 2);
     
-    ASSERT_NE(task1, nullptr);
-    ASSERT_NE(task2, nullptr);
-    ASSERT_NE(task3, nullptr);
-    
-    // Add tasks to manager
-    auto id1 = manager_->addTask(std::move(task1));
-    auto id2 = manager_->addTask(std::move(task2));
-    auto id3 = manager_->addTask(std::move(task3));
-    
-    // Set up dependencies: task3 depends on task1 and task2
-    manager_->addDependency(id3, id1);
-    manager_->addDependency(id3, id2);
-    
-    // Test dependency resolution
-    auto readyTasks = manager_->getReadyTasks();
-    ASSERT_EQ(readyTasks.size(), 2); // task1 and task2 should be ready
-    
-    // Check that task3 is not ready until dependencies complete
-    auto task3Status = manager_->getTaskStatus(id3);
-    ASSERT_EQ(task3Status, TaskStatus::Pending);
+    // Target3 should not be ready initially
+    ASSERT_FALSE(sequencer_->isTargetReady("Target3"));
 }
 
-// Test Parallel Execution
-TEST_F(EnhancedSystemTest, ParallelExecution) {
-    auto& factory = TaskFactory::getInstance();
+// Test Scheduling Strategies
+TEST_F(EnhancedSystemTest, SchedulingStrategies) {
+    // Create targets with different priorities
+    auto target1 = std::make_unique<Target>("LowPriority");
+    auto target2 = std::make_unique<Target>("HighPriority");
     
-    // Create multiple independent tasks
-    std::vector<std::string> taskIds;
-    for (int i = 0; i < 5; ++i) {
-        auto task = factory.createTask("script_task", "parallel_task_" + std::to_string(i), json{
-            {"script_path", "/tmp/task_" + std::to_string(i) + ".py"},
-            {"script_type", "python"}
-        });
-        ASSERT_NE(task, nullptr);
-        taskIds.push_back(manager_->addTask(std::move(task)));
-    }
+    sequencer_->addTarget(std::move(target1));
+    sequencer_->addTarget(std::move(target2));
     
-    // Set parallel execution
-    sequencer_->setExecutionStrategy(ExecutionStrategy::Parallel);
+    // Test FIFO scheduling
+    sequencer_->setSchedulingStrategy(ExposureSequence::SchedulingStrategy::FIFO);
     
-    // Start execution in background
-    std::thread executionThread([this, &taskIds]() {
-        auto sequence = json::array();
-        for (const auto& id : taskIds) {
-            sequence.push_back(json{{"task_id", id}});
-        }
-        sequencer_->executeSequence(sequence);
-    });
+    // Test Priority scheduling
+    sequencer_->setSchedulingStrategy(ExposureSequence::SchedulingStrategy::Priority);
     
-    // Wait a bit for tasks to start
-    std::this_thread::sleep_for(100ms);
+    // Test Dependencies scheduling
+    sequencer_->setSchedulingStrategy(ExposureSequence::SchedulingStrategy::Dependencies);
     
-    // Check that multiple tasks are running concurrently
-    int runningCount = 0;
-    for (const auto& id : taskIds) {
-        if (manager_->getTaskStatus(id) == TaskStatus::Running) {
-            runningCount++;
-        }
-    }
-    
-    // Should have multiple tasks running in parallel
-    ASSERT_GT(runningCount, 1);
-    
-    // Cancel all tasks and wait for completion
-    for (const auto& id : taskIds) {
-        manager_->cancelTask(id);
-    }
-    
-    if (executionThread.joinable()) {
-        executionThread.join();
-    }
+    // Verify targets are present
+    auto names = sequencer_->getTargetNames();
+    ASSERT_EQ(names.size(), 2);
 }
 
-// Test Task Monitoring and Metrics
-TEST_F(EnhancedSystemTest, TaskMonitoring) {
-    auto& factory = TaskFactory::getInstance();
-    
-    auto task = factory.createTask("script_task", "monitored_task", json{
-        {"script_path", "/tmp/monitor_test.py"},
-        {"script_type", "python"}
-    });
-    ASSERT_NE(task, nullptr);
-    
-    auto taskId = manager_->addTask(std::move(task));
-    
+// Test Monitoring and Metrics
+TEST_F(EnhancedSystemTest, MonitoringAndMetrics) {
     // Enable monitoring
     sequencer_->enableMonitoring(true);
+    ASSERT_TRUE(sequencer_->isMonitoringEnabled());
     
-    // Execute task
-    auto sequence = json::array();
-    sequence.push_back(json{{"task_id", taskId}});
+    // Add a target
+    auto target = std::make_unique<Target>("TestTarget");
+    sequencer_->addTarget(std::move(target));
     
-    std::thread executionThread([this, &sequence]() {
-        sequencer_->executeSequence(sequence);
-    });
+    // Get execution stats
+    auto stats = sequencer_->getExecutionStats();
+    ASSERT_TRUE(stats.is_object());
+    ASSERT_TRUE(stats.contains("totalExecutions"));
     
-    // Wait for execution to start
-    std::this_thread::sleep_for(50ms);
+    // Get resource usage
+    auto resources = sequencer_->getResourceUsage();
+    ASSERT_TRUE(resources.is_object());
+    ASSERT_TRUE(resources.contains("memoryUsage"));
     
-    // Check metrics
+    // Get metrics
     auto metrics = sequencer_->getMetrics();
-    ASSERT_TRUE(metrics.contains("total_tasks"));
-    ASSERT_TRUE(metrics.contains("completed_tasks"));
-    ASSERT_TRUE(metrics.contains("failed_tasks"));
-    ASSERT_TRUE(metrics.contains("average_execution_time"));
-    
-    // Cancel and wait
-    manager_->cancelTask(taskId);
-    if (executionThread.joinable()) {
-        executionThread.join();
-    }
+    ASSERT_TRUE(metrics.is_object());
 }
 
-// Test Template Parameter Generation
-TEST_F(EnhancedSystemTest, TemplateParameterGeneration) {
-    using namespace TaskUtils;
-    
-    // Test imaging parameters
-    auto imagingParams = CommonTasks::generateImagingParameters(
-        "M31", "Ha", 300, 10, 1, 1.0, true, -10.0
-    );
-    
-    ASSERT_EQ(imagingParams["target"], "M31");
-    ASSERT_EQ(imagingParams["filter"], "Ha");
-    ASSERT_EQ(imagingParams["exposure_time"], 300);
-    ASSERT_EQ(imagingParams["count"], 10);
-    
-    // Test calibration parameters
-    auto calibrationParams = CommonTasks::generateCalibrationParameters(
-        "dark", 300, 10, 1, -10.0
-    );
-    
-    ASSERT_EQ(calibrationParams["frame_type"], "dark");
-    ASSERT_EQ(calibrationParams["exposure_time"], 300);
-    ASSERT_EQ(calibrationParams["count"], 10);
-    
-    // Test focus parameters
-    auto focusParams = CommonTasks::generateFocusParameters(
-        "star", 5.0, 50, 5, 2.0
-    );
-    
-    ASSERT_EQ(focusParams["focus_method"], "star");
-    ASSERT_EQ(focusParams["step_size"], 5.0);
-    ASSERT_EQ(focusParams["max_steps"], 50);
-}
-
-// Test Script Integration
-TEST_F(EnhancedSystemTest, ScriptIntegration) {
+// Test Task Parameter Validation
+TEST_F(EnhancedSystemTest, TaskParameterValidation) {
     auto& factory = TaskFactory::getInstance();
     
-    // Test Python script task
-    auto pythonTask = factory.createTask("script_task", "python_test", json{
+    // Test valid parameters
+    json validParams = {
+        {"exposure", 30.0},
+        {"type", "light"},
+        {"binning", 1},
+        {"gain", 100},
+        {"offset", 10}
+    };
+    ASSERT_TRUE(factory.validateTaskParameters("TakeExposure", validParams));
+    
+    // Test parameter schema retrieval
+    auto taskInfo = factory.getTaskInfo("TakeExposure");
+    ASSERT_TRUE(taskInfo.has_value());
+    ASSERT_FALSE(taskInfo->parameterSchema.empty());
+}
+
+// Test Script Task Creation
+TEST_F(EnhancedSystemTest, ScriptTaskCreation) {
+    auto& factory = TaskFactory::getInstance();
+    
+    // Test RunScript task creation
+    ASSERT_TRUE(factory.isTaskRegistered("RunScript"));
+    
+    auto scriptTask = factory.createTask("RunScript", "test_script", json{
         {"script_path", "/tmp/test.py"},
         {"script_type", "python"},
-        {"timeout", 5000},
-        {"capture_output", true}
+        {"timeout", 5000}
     });
-    ASSERT_NE(pythonTask, nullptr);
-    
-    // Test JavaScript script task
-    auto jsTask = factory.createTask("script_task", "js_test", json{
-        {"script_path", "/tmp/test.js"},
-        {"script_type", "javascript"},
-        {"timeout", 3000}
-    });
-    ASSERT_NE(jsTask, nullptr);
-    
-    // Test shell script task
-    auto shellTask = factory.createTask("script_task", "shell_test", json{
-        {"script_path", "/tmp/test.sh"},
-        {"script_type", "shell"},
-        {"capture_output", false}
-    });
-    ASSERT_NE(shellTask, nullptr);
+    ASSERT_NE(scriptTask, nullptr);
+    ASSERT_EQ(scriptTask->getName(), "test_script");
 }
 
-// Test Error Handling and Recovery
+// Test Error Handling and Recovery Strategies
 TEST_F(EnhancedSystemTest, ErrorHandlingAndRecovery) {
-    auto& factory = TaskFactory::getInstance();
+    // Test recovery strategy setting
+    sequencer_->setRecoveryStrategy(ExposureSequence::RecoveryStrategy::Stop);
     
-    // Create a task that will fail
-    auto failingTask = factory.createTask("script_task", "failing_task", json{
-        {"script_path", "/nonexistent/script.py"},
-        {"script_type", "python"},
-        {"retry_count", 2}
-    });
-    ASSERT_NE(failingTask, nullptr);
+    sequencer_->setRecoveryStrategy(ExposureSequence::RecoveryStrategy::Skip);
     
-    auto taskId = manager_->addTask(std::move(failingTask));
+    sequencer_->setRecoveryStrategy(ExposureSequence::RecoveryStrategy::Retry);
     
-    // Execute and expect failure
-    auto sequence = json::array();
-    sequence.push_back(json{{"task_id", taskId}});
+    sequencer_->setRecoveryStrategy(ExposureSequence::RecoveryStrategy::Alternative);
     
-    // This should complete with failure
-    sequencer_->executeSequence(sequence);
+    // Add alternative target
+    auto mainTarget = std::make_unique<Target>("MainTarget");
+    auto altTarget = std::make_unique<Target>("AlternativeTarget");
     
-    // Check that task failed
-    auto status = manager_->getTaskStatus(taskId);
-    ASSERT_EQ(status, TaskStatus::Failed);
+    sequencer_->addTarget(std::move(mainTarget));
+    sequencer_->addAlternativeTarget("MainTarget", std::move(altTarget));
     
-    // Check error information
-    auto errorInfo = manager_->getTaskResult(taskId);
-    ASSERT_TRUE(errorInfo.contains("error"));
+    // Verify target names
+    auto names = sequencer_->getTargetNames();
+    ASSERT_EQ(names.size(), 1);
+    ASSERT_EQ(names[0], "MainTarget");
 }
 
-// Test Sequence Optimization
-TEST_F(EnhancedSystemTest, SequenceOptimization) {
-    using namespace SequencePatterns;
+// Test Progress Callback
+TEST_F(EnhancedSystemTest, ProgressCallback) {
+    bool callbackCalled = false;
+    json lastProgress;
     
-    // Create sample tasks
-    json tasks = json::array();
-    for (int i = 0; i < 10; ++i) {
-        tasks.push_back(json{
-            {"name", "task_" + std::to_string(i)},
-            {"priority", i % 3 + 1},
-            {"estimated_duration", (i + 1) * 60},
-            {"dependencies", json::array()}
-        });
-    }
-    
-    // Test optimization
-    auto optimized = optimizeSequence(tasks, OptimizationCriteria{
-        .minimizeTime = true,
-        .balanceLoad = true,
-        .respectPriority = true,
-        .maxParallelTasks = 3
+    // Set progress callback
+    sequencer_->setProgressCallback([&callbackCalled, &lastProgress](const json& progress) {
+        callbackCalled = true;
+        lastProgress = progress;
     });
     
-    ASSERT_FALSE(optimized.empty());
-    ASSERT_LE(optimized.size(), tasks.size());
+    // Add a target
+    auto target = std::make_unique<Target>("ProgressTest");
+    sequencer_->addTarget(std::move(target));
     
-    // Test pattern application
-    auto pattern = createOptimalPattern(tasks, "imaging");
-    ASSERT_TRUE(pattern.contains("execution_order"));
-    ASSERT_TRUE(pattern.contains("parallel_groups"));
+    // Get progress
+    auto progress = sequencer_->getProgress();
+    ASSERT_GE(progress, 0.0);
+    ASSERT_LE(progress, 100.0);
 }
 
-// Performance benchmark test
-TEST_F(EnhancedSystemTest, PerformanceBenchmark) {
-    auto& factory = TaskFactory::getInstance();
-    const int numTasks = 100;
+// Test Concurrency Settings
+TEST_F(EnhancedSystemTest, ConcurrencySettings) {
+    // Set concurrency limit
+    sequencer_->setConcurrencyLimit(4);
+    ASSERT_EQ(sequencer_->getConcurrencyLimit(), 4);
     
-    // Create many lightweight tasks
-    std::vector<std::string> taskIds;
-    for (int i = 0; i < numTasks; ++i) {
-        auto task = factory.createTask("script_task", "benchmark_task_" + std::to_string(i), json{
-            {"script_path", "/bin/true"}, // Quick-running command
-            {"script_type", "shell"}
-        });
-        taskIds.push_back(manager_->addTask(std::move(task)));
-    }
+    // Set max concurrent targets
+    sequencer_->setMaxConcurrentTargets(2);
     
-    // Measure parallel execution time
-    auto startTime = std::chrono::high_resolution_clock::now();
+    // Set resource limits
+    sequencer_->setResourceLimits(80.0, 1024 * 1024 * 1024);
     
-    sequencer_->setExecutionStrategy(ExecutionStrategy::Parallel);
-    sequencer_->setConcurrencyLimit(10);
+    // Enable performance optimization
+    sequencer_->enablePerformanceOptimization(true);
     
-    auto sequence = json::array();
-    for (const auto& id : taskIds) {
-        sequence.push_back(json{{"task_id", id}});
-    }
-    
-    sequencer_->executeSequence(sequence);
-    
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    
-    // Should complete reasonably quickly with parallel execution
-    ASSERT_LT(duration.count(), 30000); // Less than 30 seconds
-    
-    // Check all tasks completed
-    for (const auto& id : taskIds) {
-        auto status = manager_->getTaskStatus(id);
-        // Tasks should be completed or failed (depending on system)
-        ASSERT_TRUE(status == TaskStatus::Completed || status == TaskStatus::Failed);
-    }
+    // Get optimization suggestions
+    auto suggestions = sequencer_->getOptimizationSuggestions();
+    ASSERT_TRUE(suggestions.is_object());
 }
 
 int main(int argc, char** argv) {

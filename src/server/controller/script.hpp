@@ -10,6 +10,7 @@
 #include <crow/json.h>
 #include "controller.hpp"
 
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <string>
@@ -156,7 +157,7 @@ private:
     }
 
 public:
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         // Create a weak pointer to the ScriptManager
         GET_OR_CREATE_WEAK_PTR(mScriptManager, lithium::ScriptManager,
                                Constants::SCRIPT_MANAGER);
@@ -205,6 +206,26 @@ public:
         CROW_ROUTE(app, "/analyzer/getAverageAnalysisTime")
             .methods("GET"_method)(&ScriptController::getAverageAnalysisTime,
                                    this);
+
+        // Enhanced Script Management Routes
+        CROW_ROUTE(app, "/script/discover")
+            .methods("POST"_method)(&ScriptController::discoverScripts, this);
+        CROW_ROUTE(app, "/script/statistics")
+            .methods("POST"_method)(&ScriptController::getScriptStatistics, this);
+        CROW_ROUTE(app, "/script/globalStatistics")
+            .methods("GET"_method)(&ScriptController::getGlobalStatistics, this);
+        CROW_ROUTE(app, "/script/resourceLimits")
+            .methods("POST"_method)(&ScriptController::setResourceLimits, this);
+        CROW_ROUTE(app, "/script/resourceUsage")
+            .methods("GET"_method)(&ScriptController::getResourceUsage, this);
+        CROW_ROUTE(app, "/script/executeWithConfig")
+            .methods("POST"_method)(&ScriptController::executeWithConfig, this);
+        CROW_ROUTE(app, "/script/executePipeline")
+            .methods("POST"_method)(&ScriptController::executePipeline, this);
+        CROW_ROUTE(app, "/script/metadata")
+            .methods("POST"_method)(&ScriptController::getScriptMetadata, this);
+        CROW_ROUTE(app, "/script/pythonAvailable")
+            .methods("GET"_method)(&ScriptController::isPythonAvailable, this);
     }
 
     // Endpoint to register a script
@@ -536,6 +557,245 @@ public:
                 response["status"] = "success";
                 response["code"] = 200;
                 response["average_analysis_time"] = avgTime;
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // =========================================================================
+    // Enhanced Script Management Endpoints
+    // =========================================================================
+
+    // Endpoint to discover scripts from a directory
+    void discoverScripts(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleScriptAction(
+            req, body, "discoverScripts", [&](auto scriptManager) {
+                std::string directory = body["directory"].s();
+                bool recursive = body.has("recursive") ? body["recursive"].b() : true;
+                
+                std::vector<std::string> extensions = {".py", ".sh"};
+                if (body.has("extensions")) {
+                    extensions.clear();
+                    for (const auto& ext : body["extensions"]) {
+                        extensions.push_back(ext.s());
+                    }
+                }
+                
+                size_t count = scriptManager->discoverScripts(
+                    std::filesystem::path(directory), extensions, recursive);
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["scripts_discovered"] = count;
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to get script statistics
+    void getScriptStatistics(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleScriptAction(
+            req, body, "getScriptStatistics", [&](auto scriptManager) {
+                auto stats = scriptManager->getScriptStatistics(
+                    std::string(body["name"].s()));
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                for (const auto& [key, value] : stats) {
+                    response["statistics"][key] = value;
+                }
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to get global statistics
+    void getGlobalStatistics(const crow::request& req, crow::response& res) {
+        res = handleScriptAction(
+            req, crow::json::rvalue{}, "getGlobalStatistics",
+            [&](auto scriptManager) {
+                auto stats = scriptManager->getGlobalStatistics();
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                for (const auto& [key, value] : stats) {
+                    response["statistics"][key] = value;
+                }
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to set resource limits
+    void setResourceLimits(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleScriptAction(
+            req, body, "setResourceLimits", [&](auto scriptManager) {
+                lithium::ScriptResourceLimits limits;
+                limits.maxMemoryMB = body.has("maxMemoryMB") 
+                    ? static_cast<size_t>(body["maxMemoryMB"].i()) : 1024;
+                limits.maxCpuPercent = body.has("maxCpuPercent") 
+                    ? static_cast<int>(body["maxCpuPercent"].i()) : 100;
+                limits.maxExecutionTime = std::chrono::seconds(
+                    body.has("maxExecutionTimeSeconds") 
+                        ? body["maxExecutionTimeSeconds"].i() : 3600);
+                limits.maxConcurrentScripts = body.has("maxConcurrentScripts") 
+                    ? static_cast<int>(body["maxConcurrentScripts"].i()) : 4;
+                
+                scriptManager->setResourceLimits(limits);
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["message"] = "Resource limits updated";
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to get resource usage
+    void getResourceUsage(const crow::request& req, crow::response& res) {
+        res = handleScriptAction(
+            req, crow::json::rvalue{}, "getResourceUsage",
+            [&](auto scriptManager) {
+                auto usage = scriptManager->getResourceUsage();
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                for (const auto& [key, value] : usage) {
+                    response["usage"][key] = value;
+                }
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to execute script with configuration
+    void executeWithConfig(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleScriptAction(
+            req, body, "executeWithConfig", [&](auto scriptManager) {
+                std::string name = body["name"].s();
+                std::unordered_map<std::string, std::string> args;
+                if (body.has("args")) {
+                    for (const auto& p : body["args"]) {
+                        args[p.key()] = p.s();
+                    }
+                }
+                
+                lithium::RetryConfig config;
+                if (body.has("retryConfig")) {
+                    config.maxRetries = body["retryConfig"].has("maxRetries") 
+                        ? static_cast<int>(body["retryConfig"]["maxRetries"].i()) : 0;
+                    config.strategy = static_cast<lithium::RetryStrategy>(
+                        body["retryConfig"].has("strategy") 
+                            ? body["retryConfig"]["strategy"].i() : 0);
+                }
+                
+                auto result = scriptManager->executeWithConfig(name, args, config);
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["result"]["success"] = result.success;
+                response["result"]["exitCode"] = result.exitCode;
+                response["result"]["output"] = result.output;
+                response["result"]["errorOutput"] = result.errorOutput;
+                response["result"]["executionTimeMs"] = result.executionTime.count();
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to execute pipeline
+    void executePipeline(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleScriptAction(
+            req, body, "executePipeline", [&](auto scriptManager) {
+                std::vector<std::string> scripts;
+                for (const auto& s : body["scripts"]) {
+                    scripts.push_back(s.s());
+                }
+                
+                std::unordered_map<std::string, std::string> context;
+                if (body.has("context")) {
+                    for (const auto& p : body["context"]) {
+                        context[p.key()] = p.s();
+                    }
+                }
+                
+                bool stopOnError = body.has("stopOnError") ? body["stopOnError"].b() : true;
+                
+                auto results = scriptManager->executePipeline(scripts, context, stopOnError);
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["results"] = crow::json::wvalue::list();
+                
+                for (size_t i = 0; i < results.size(); i++) {
+                    crow::json::wvalue resultItem;
+                    resultItem["script"] = scripts[i];
+                    resultItem["success"] = results[i].success;
+                    resultItem["exitCode"] = results[i].exitCode;
+                    resultItem["output"] = results[i].output;
+                    resultItem["executionTimeMs"] = results[i].executionTime.count();
+                    response["results"][i] = std::move(resultItem);
+                }
+                
+                res.write(response.dump());
+                return true;
+            });
+    }
+
+    // Endpoint to get script metadata
+    void getScriptMetadata(const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        res = handleScriptAction(
+            req, body, "getScriptMetadata", [&](auto scriptManager) {
+                auto metadata = scriptManager->getScriptMetadata(
+                    std::string(body["name"].s()));
+                
+                if (metadata) {
+                    crow::json::wvalue response;
+                    response["status"] = "success";
+                    response["code"] = 200;
+                    response["metadata"]["description"] = metadata->description;
+                    response["metadata"]["version"] = metadata->version;
+                    response["metadata"]["author"] = metadata->author;
+                    response["metadata"]["isPython"] = metadata->isPython;
+                    response["metadata"]["language"] = static_cast<int>(metadata->language);
+                    
+                    crow::json::wvalue tags = crow::json::wvalue::list();
+                    for (size_t i = 0; i < metadata->tags.size(); i++) {
+                        tags[i] = metadata->tags[i];
+                    }
+                    response["metadata"]["tags"] = std::move(tags);
+                    
+                    res.write(response.dump());
+                    return true;
+                }
+                return false;
+            });
+    }
+
+    // Endpoint to check Python availability
+    void isPythonAvailable(const crow::request& req, crow::response& res) {
+        res = handleScriptAction(
+            req, crow::json::rvalue{}, "isPythonAvailable",
+            [&](auto scriptManager) {
+                bool available = scriptManager->isPythonAvailable();
+                
+                crow::json::wvalue response;
+                response["status"] = "success";
+                response["code"] = 200;
+                response["python_available"] = available;
                 res.write(response.dump());
                 return true;
             });

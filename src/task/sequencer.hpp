@@ -21,13 +21,13 @@ using namespace lithium::database;
 /**
  * @enum SequenceState
  * @brief Represents the current state of a sequence.
- */
+     */
 enum class SequenceState { Idle, Running, Paused, Stopping, Stopped };
 
 /**
  * @class SequenceModel
  * @brief Database model for sequence storage and retrieval.
- */
+     */
 class SequenceModel {
 public:
     static std::string tableName() { return "sequences"; }
@@ -54,7 +54,7 @@ public:
 /**
  * @class ExposureSequence
  * @brief Manages and executes a sequence of targets with tasks.
- */
+     */
 class ExposureSequence {
 public:
     // Callback function type definitions
@@ -63,6 +63,10 @@ public:
         std::function<void(const std::string& targetName, TargetStatus status)>;
     using ErrorCallback = std::function<void(const std::string& targetName,
                                              const std::exception& e)>;
+    using ProgressCallback = std::function<void(const json& progress)>;
+    using TaskCallback = std::function<void(const std::string& targetName,
+                                            const std::string& taskName,
+                                            const json& taskInfo)>;
 
     /**
      * @brief Constructor that initializes database and task generator.
@@ -100,6 +104,12 @@ public:
     void modifyTarget(const std::string& name, const TargetModifier& modifier);
 
     // Execution control methods
+
+    /**
+     * @brief Checks if the sequence is currently running.
+     * @return True if the sequence is running.
+     */
+    [[nodiscard]] auto isRunning() const -> bool;
 
     /**
      * @brief Executes all targets in the sequence.
@@ -189,6 +199,37 @@ public:
     void setOnError(ErrorCallback callback);
 
     /**
+     * @brief Sets the callback for progress updates.
+     * @param callback The callback function receiving progress JSON.
+     * 
+     * Progress JSON format:
+     * {
+     *   "sequenceId": "uuid",
+     *   "state": "running|paused|stopping",
+     *   "progress": 0.0-100.0,
+     *   "completedTargets": 0,
+     *   "totalTargets": 0,
+     *   "currentTarget": "targetName",
+     *   "currentTask": "taskName",
+     *   "elapsedTime": 0,
+     *   "estimatedRemaining": 0
+     * }
+     */
+    void setProgressCallback(ProgressCallback callback);
+
+    /**
+     * @brief Sets the callback for task start events.
+     * @param callback The callback function.
+     */
+    void setOnTaskStart(TaskCallback callback);
+
+    /**
+     * @brief Sets the callback for task end events.
+     * @param callback The callback function.
+     */
+    void setOnTaskEnd(TaskCallback callback);
+
+    /**
      * @brief Handles errors that occur during target execution.
      * @param target The target in which the error occurred.
      * @param e The exception that was thrown.
@@ -203,6 +244,17 @@ public:
         FIFO,         ///< First In, First Out
         Priority,     ///< Based on priority values
         Dependencies  ///< Based on dependency relationships
+    };
+
+    /**
+     * @enum ExecutionStrategy
+     * @brief Defines how tasks in a sequence are executed
+     */
+    enum class ExecutionStrategy {
+        Sequential,  ///< Execute tasks one after another
+        Parallel,    ///< Execute independent tasks simultaneously
+        Adaptive,    ///< Dynamically select strategy based on resources
+        Priority     ///< Execute based on priority with preemption
     };
 
     /**
@@ -447,6 +499,145 @@ public:
      */
     auto listMacros() const -> std::vector<std::string>;
 
+    /**
+     * @brief Sets the execution strategy.
+     * @param strategy The execution strategy to use.
+     */
+    void setExecutionStrategy(ExecutionStrategy strategy);
+
+    /**
+     * @brief Gets the current execution strategy.
+     * @return The current execution strategy.
+     */
+    [[nodiscard]] auto getExecutionStrategy() const -> ExecutionStrategy;
+
+    /**
+     * @brief Sets the concurrency limit for parallel execution.
+     * @param limit Maximum number of concurrent tasks.
+     */
+    void setConcurrencyLimit(size_t limit);
+
+    /**
+     * @brief Gets the current concurrency limit.
+     * @return The concurrency limit.
+     */
+    [[nodiscard]] auto getConcurrencyLimit() const -> size_t;
+
+    /**
+     * @brief Enables or disables monitoring.
+     * @param enabled True to enable monitoring.
+     */
+    void enableMonitoring(bool enabled);
+
+    /**
+     * @brief Checks if monitoring is enabled.
+     * @return True if monitoring is enabled.
+     */
+    [[nodiscard]] auto isMonitoringEnabled() const -> bool;
+
+    /**
+     * @brief Enables script integration.
+     * @param enabled True to enable script execution.
+     */
+    void enableScriptIntegration(bool enabled);
+
+    /**
+     * @brief Sets resource limits for execution.
+     * @param maxCpuUsage Maximum CPU usage percentage.
+     * @param maxMemoryUsage Maximum memory usage in bytes.
+     */
+    void setResourceLimits(double maxCpuUsage, size_t maxMemoryUsage);
+
+    /**
+     * @brief Enables performance optimization.
+     * @param enabled True to enable optimization.
+     */
+    void enablePerformanceOptimization(bool enabled);
+
+    /**
+     * @brief Gets optimization suggestions.
+     * @return JSON object with optimization suggestions.
+     */
+    [[nodiscard]] auto getOptimizationSuggestions() const -> json;
+
+    /**
+     * @brief Gets real-time metrics.
+     * @return JSON object with current metrics.
+     */
+    [[nodiscard]] auto getMetrics() const -> json;
+
+    // ========================================================================
+    // Astronomical Scheduling Methods
+    // ========================================================================
+
+    /**
+     * @brief Sets the observer location for astronomical calculations.
+     * @param location The observer's geographic location.
+     */
+    void setObserverLocation(const ObserverLocation& location);
+
+    /**
+     * @brief Gets the current observer location.
+     * @return The observer location.
+     */
+    [[nodiscard]] const ObserverLocation& getObserverLocation() const;
+
+    /**
+     * @brief Sorts targets by observability (best observable first).
+     */
+    void sortTargetsByObservability();
+
+    /**
+     * @brief Gets the next best observable target.
+     * @return Pointer to the best target, or nullptr if none available.
+     */
+    [[nodiscard]] Target* getNextObservableTarget();
+
+    /**
+     * @brief Updates observability windows for all targets.
+     */
+    void updateTargetObservability();
+
+    /**
+     * @brief Checks if any target needs a meridian flip.
+     * @return Name of target needing flip, or empty if none.
+     */
+    [[nodiscard]] std::string checkMeridianFlips() const;
+
+    /**
+     * @brief Gets a summary of tonight's observable targets.
+     * @return JSON array with target observability info.
+     */
+    [[nodiscard]] json getObservabilitySummary() const;
+
+    /**
+     * @brief Sets the minimum altitude constraint for all targets.
+     * @param altitude Minimum altitude in degrees.
+     */
+    void setMinimumAltitude(double altitude);
+
+    /**
+     * @brief Gets estimated completion time for sequence.
+     * @return Estimated completion timestamp.
+     */
+    [[nodiscard]] std::chrono::system_clock::time_point getEstimatedCompletionTime() const;
+
+    /**
+     * @brief Checks if sequence can complete before dawn.
+     * @param dawnTime Time of astronomical dawn.
+     * @return True if sequence can complete in time.
+     */
+    [[nodiscard]] bool canCompleteBeforeDawn(
+        std::chrono::system_clock::time_point dawnTime) const;
+
+    /**
+     * @brief Gets targets that can be completed before dawn.
+     * @param dawnTime Time of astronomical dawn.
+     * @return Vector of target names that can complete in time.
+     */
+    [[nodiscard]] std::vector<std::string> getTargetsCompletableBeforeDawn(
+        std::chrono::system_clock::time_point dawnTime) const;
+
 private:
     std::vector<std::unique_ptr<Target>>
         targets_;                      ///< The targets in the sequence
@@ -465,6 +656,14 @@ private:
     TargetCallback onTargetStart_;      ///< Called when a target starts
     TargetCallback onTargetEnd_;        ///< Called when a target ends
     ErrorCallback onError_;             ///< Called when an error occurs
+    ProgressCallback onProgress_;       ///< Called for progress updates
+    TaskCallback onTaskStart_;          ///< Called when a task starts
+    TaskCallback onTaskEnd_;            ///< Called when a task ends
+
+    // Current execution tracking
+    std::string currentTargetName_;     ///< Name of currently executing target
+    std::string currentTaskName_;       ///< Name of currently executing task
+    std::chrono::steady_clock::time_point executionStartTime_;  ///< When execution started
 
     SchedulingStrategy schedulingStrategy_{
         SchedulingStrategy::FIFO};  ///< Current scheduling strategy
@@ -509,6 +708,37 @@ private:
      * @param e The exception that was thrown.
      */
     void notifyError(const std::string& name, const std::exception& e);
+
+    /**
+     * @brief Notifies progress update.
+     */
+    void notifyProgress();
+
+    /**
+     * @brief Notifies that a task has started.
+     * @param targetName The name of the target.
+     * @param taskName The name of the task.
+     * @param taskInfo Additional task information.
+     */
+    void notifyTaskStart(const std::string& targetName,
+                         const std::string& taskName,
+                         const json& taskInfo);
+
+    /**
+     * @brief Notifies that a task has ended.
+     * @param targetName The name of the target.
+     * @param taskName The name of the task.
+     * @param taskInfo Task result information.
+     */
+    void notifyTaskEnd(const std::string& targetName,
+                       const std::string& taskName,
+                       const json& taskInfo);
+
+    /**
+     * @brief Builds progress JSON object.
+     * @return JSON with current progress information.
+     */
+    [[nodiscard]] json buildProgressJson() const;
 
     // Scheduling helper methods
 
@@ -583,6 +813,18 @@ private:
     std::shared_ptr<TaskGenerator>
         taskGenerator_;  ///< Task generator for processing macros
 
+    // Execution strategy and monitoring
+    ExecutionStrategy executionStrategy_{ExecutionStrategy::Sequential};  ///< Current execution strategy
+    size_t concurrencyLimit_{4};  ///< Maximum concurrent tasks
+    bool monitoringEnabled_{false};  ///< Monitoring flag
+    bool scriptIntegrationEnabled_{false};  ///< Script integration flag
+    bool performanceOptimizationEnabled_{false};  ///< Performance optimization flag
+    
+    struct ResourceLimits {
+        double maxCpuUsage{80.0};  ///< Maximum CPU usage percentage
+        size_t maxMemoryUsage{1024 * 1024 * 1024};  ///< Maximum memory usage (1GB default)
+    } resourceLimits_;  ///< Resource limits
+
     // Helper methods
 
     /**
@@ -595,6 +837,58 @@ private:
      * @param data The JSON data to process.
      */
     void processJsonWithGenerator(json& data);
+
+    /**
+     * @brief Executes sequence with sequential strategy.
+     * @param targets Vector of targets to execute.
+     */
+    void executeSequential(const std::vector<Target*>& targets);
+
+    /**
+     * @brief Executes sequence with parallel strategy.
+     * @param targets Vector of targets to execute.
+     */
+    void executeParallel(const std::vector<Target*>& targets);
+
+    /**
+     * @brief Executes sequence with adaptive strategy.
+     * @param targets Vector of targets to execute.
+     */
+    void executeAdaptive(const std::vector<Target*>& targets);
+
+    /**
+     * @brief Executes sequence with priority strategy.
+     * @param targets Vector of targets to execute.
+     */
+    void executePriority(const std::vector<Target*>& targets);
+
+    /**
+     * @brief Updates resource metrics.
+     */
+    void updateResourceMetrics();
+
+    /**
+     * @brief Checks if resources are available.
+     * @return True if resources are available.
+     */
+    [[nodiscard]] auto checkResourceAvailability() const -> bool;
+
+    /**
+     * @brief Determines optimal execution strategy.
+     * @return Optimal execution strategy.
+     */
+    [[nodiscard]] auto determineOptimalStrategy() const -> ExecutionStrategy;
+
+    /**
+     * @brief Analyzes performance and generates suggestions.
+     * @return Optimization suggestions.
+     */
+    [[nodiscard]] auto analyzePerformance() const -> json;
+
+    // Astronomical scheduling data
+    ObserverLocation observerLocation_;  ///< Observer's geographic location
+    double minimumAltitude_{15.0};       ///< Minimum target altitude (degrees)
+
 };
 
 }  // namespace lithium::task

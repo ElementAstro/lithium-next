@@ -36,7 +36,7 @@ private:
     }
 
 public:
-    void registerRoutes(crow::SimpleApp &app) override {
+    void registerRoutes(lithium::server::ServerApp &app) override {
         CROW_ROUTE(app, "/api/v1/filterwheels")
             .methods("GET"_method)(&FilterWheelController::listFilterWheelsRoute,
                                      this);

@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "atom/sysinfo/os.hpp"
+
 namespace lithium::system {
 
 /**
@@ -41,6 +43,11 @@ public:
     PlatformDetector();
 
     /**
+     * @brief Construct detector with explicit OS info (testing support).
+     */
+    explicit PlatformDetector(const atom::system::OperatingSystemInfo& info);
+
+    /**
      * @brief Get a string identifier for the current platform.
      * @return The platform name (e.g., "linux", "macos", "windows").
      */
@@ -65,6 +72,7 @@ private:
      * Populates the distroType_ and platform_ members.
      */
     void detectPlatform();
+    void detectPlatform(const atom::system::OperatingSystemInfo& info);
 
     DistroType distroType_ =
         DistroType::UNKNOWN;  ///< Detected distribution type.

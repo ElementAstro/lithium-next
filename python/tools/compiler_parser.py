@@ -771,5 +771,65 @@ def main():
     return 0
 
 
+# Module metadata
+__version__ = "1.0.0"
+__author__ = "Max Qian"
+__license__ = "GPL-3.0-or-later"
+
+
+def get_tool_info() -> Dict[str, Any]:
+    """
+    Return metadata about this tool for discovery by PythonWrapper.
+
+    This function follows the Lithium-Next Python tool discovery convention,
+    allowing the C++ PythonWrapper to introspect and catalog this module's
+    capabilities.
+
+    Returns:
+        Dict containing tool metadata including name, version, description,
+        available functions, requirements, and platform compatibility.
+    """
+    return {
+        "name": "compiler_parser",
+        "version": __version__,
+        "description": "Parse and analyze compiler output from GCC, Clang, MSVC, CMake",
+        "author": __author__,
+        "license": __license__,
+        "supported": True,
+        "platform": ["windows", "linux", "macos"],
+        "functions": [
+            "parse_output",
+            "filter_messages",
+            "get_statistics",
+            "write_json",
+            "write_csv",
+            "write_xml",
+            "process_file",
+            "process_files",
+        ],
+        "requirements": ["termcolor"],
+        "capabilities": [
+            "gcc_parsing",
+            "clang_parsing",
+            "msvc_parsing",
+            "cmake_parsing",
+            "json_output",
+            "csv_output",
+            "xml_output",
+            "concurrent_processing",
+            "message_filtering",
+            "statistics_generation",
+        ],
+        "classes": {
+            "CompilerType": "Enum of supported compiler types",
+            "OutputFormat": "Enum of supported output formats",
+            "MessageSeverity": "Enum of message severity levels",
+            "CompilerMessage": "Individual compiler message data",
+            "CompilerOutput": "Collection of compiler messages",
+            "CompilerOutputProcessor": "Main processor class",
+        }
+    }
+
+
 if __name__ == "__main__":
     sys.exit(main())

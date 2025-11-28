@@ -42,6 +42,7 @@ set(PROJECT_LIBRARIES
 # ============================================================================
 
 add_subdirectory(manager)
+add_subdirectory(system)
 
 # ============================================================================
 # Build Library
@@ -50,7 +51,7 @@ add_subdirectory(manager)
 lithium_add_library(
     NAME ${PROJECT_NAME}
     SOURCES ${PROJECT_SOURCES}
-    LIBRARIES ${PROJECT_LIBRARIES} lithium_components_manager
+    LIBRARIES ${PROJECT_LIBRARIES} lithium_components_manager lithium_system_dependency
     VERSION ${PROJECT_VERSION}
     TYPE STATIC
     DESCRIPTION "Component management and dependency tracking"

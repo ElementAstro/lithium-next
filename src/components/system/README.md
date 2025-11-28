@@ -76,4 +76,89 @@ DependencyManager manager;  // 自动映射到 lithium::system::DependencyManage
 - dependency_manager.cpp  
 - platform_detector.cpp
 - package_manager.cpp
-- system_dependency.cpp (向后兼容包装)
+
+## API 示例
+
+### 检查依赖是否已安装
+
+```cpp
+#include "components/system/dependency_system.hpp"
+
+using namespace lithium::system;
+
+DependencyManager manager("./config/package_managers.json");
+
+// 检查包是否已安装
+bool installed = manager.isDependencyInstalled("cmake");
+
+// 获取已安装版本
+auto version = manager.getInstalledVersion("cmake");
+if (version) {
+    std::cout << "cmake v" << version->major << "." 
+              << version->minor << "." << version->patch << std::endl;
+}
+```
+
+### 安装依赖
+
+```cpp
+// 添加托管依赖
+DependencyInfo dep;
+dep.name = "cmake";
+dep.version = {3, 20, 0, ""};
+dep.packageManager = "apt";  // 或 "choco", "brew" 等
+manager.addDependency(dep);
+
+// 异步安装
+auto future = manager.install("cmake");
+auto result = future.get();
+if (result.value) {
+    std::cout << "已安装: " << *result.value << std::endl;
+}
+```
+
+### 版本兼容性检查
+
+```cpp
+auto result = manager.checkVersionCompatibility("cmake", "3.10.0");
+if (result.value && *result.value) {
+    std::cout << "版本兼容" << std::endl;
+}
+```
+
+## 支持的包管理器
+
+| 平台 | 包管理器 |
+|------|---------|
+| Linux | apt, dnf, yum, pacman, zypper, flatpak, snap |
+| macOS | brew, port |
+| Windows | choco, scoop, winget |
+
+## 配置文件
+
+包管理器可通过 JSON 配置：
+
+```json
+{
+    "package_managers": [
+        {
+            "name": "apt",
+            "check_cmd": "dpkg -l {}",
+            "install_cmd": "sudo apt-get install -y {}",
+            "uninstall_cmd": "sudo apt-get remove -y {}",
+            "search_cmd": "apt-cache search {}"
+        }
+    ]
+}
+```
+
+配置文件搜索路径（按优先级依次尝试，可同时加载多个存在的配置）：
+- `./config/package_managers.json`
+- `./package_managers.json`
+- `../config/package_managers.json`
+- `~/.lithium/package_managers.json`
+- `/etc/lithium/package_managers.json`
+- (Windows) `%APPDATA%\lithium\package_managers.json`
+- (Windows) `%PROGRAMDATA%\lithium\package_managers.json`
+
+> 提示：可以通过 `DependencyManager manager("/path/to/custom.json");` 传入额外配置，或将文件放在上述任一路径中，系统会自动合并已找到的配置。

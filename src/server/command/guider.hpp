@@ -142,6 +142,47 @@ inline void guiderFocalLength(int focalLength) {
                              Constants::CONFIG_MANAGER);
     configManager->set("/quarcs/phd/focalLength", focalLength);
 }
+
+/**
+ * @brief Connect to PHD2 (start process if needed).
+ */
+auto connectGuider() -> nlohmann::json;
+
+/**
+ * @brief Disconnect from PHD2 (stop process).
+ */
+auto disconnectGuider() -> nlohmann::json;
+
+/**
+ * @brief Start guiding.
+ */
+auto startGuiding() -> nlohmann::json;
+
+/**
+ * @brief Stop guiding.
+ */
+auto stopGuiding() -> nlohmann::json;
+
+/**
+ * @brief Dither guiding.
+ */
+auto ditherGuider(double pixels) -> nlohmann::json;
+
+/**
+ * @brief Get guider status.
+ */
+auto getGuiderStatus() -> nlohmann::json;
+
+/**
+ * @brief Get guider statistics.
+ */
+auto getGuiderStats() -> nlohmann::json;
+
+/**
+ * @brief Update guider settings.
+ */
+auto setGuiderSettings(const nlohmann::json& settings) -> nlohmann::json;
+
 }  // namespace lithium::middleware
 
 #endif  // LITHIUM_SERVER_COMMAND_GUIDER_HPP

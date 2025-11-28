@@ -11,13 +11,17 @@
  */
 
 #include "sheller.hpp"
+#include "python_caller.hpp"
 
+#include <algorithm>
+#include <fstream>
 #include <future>
 #include <iostream>
 #include <mutex>
 #include <ranges>
 #include <shared_mutex>
 #include <span>
+#include <sstream>
 #include <stdexcept>
 #include <stop_token>
 #include <syncstream>
@@ -85,6 +89,37 @@ public:
     std::atomic_flag scriptAborted_;
 
     std::osyncstream syncOut_{std::cout.rdbuf()};
+
+    // Python integration
+    std::shared_ptr<class PythonWrapper> pythonWrapper_;
+    std::unordered_map<std::string, PythonScriptConfig> pythonConfigs_;
+
+    // Resource management
+    ScriptResourceLimits resourceLimits_;
+    std::atomic<size_t> currentMemoryUsage_{0};
+
+    // Statistics tracking
+    struct ScriptStatistics {
+        size_t executionCount{0};
+        size_t successCount{0};
+        size_t failureCount{0};
+        std::chrono::milliseconds totalExecutionTime{0};
+    };
+    std::unordered_map<std::string, ScriptStatistics> scriptStatistics_;
+
+    // Helper method to update statistics
+    void updateStatistics(const std::string& name,
+                          const ScriptExecutionResult& result) {
+        std::unique_lock lock(mSharedMutex_);
+        auto& stats = scriptStatistics_[name];
+        stats.executionCount++;
+        if (result.success) {
+            stats.successCount++;
+        } else {
+            stats.failureCount++;
+        }
+        stats.totalExecutionTime += result.executionTime;
+    }
 
 public:
     void registerScript(std::string_view name, const Script& script);
@@ -747,6 +782,600 @@ auto ScriptManager::getRunningScripts() const -> std::vector<std::string> {
         result.push_back(name);
     }
     return result;
+}
+
+// =============================================================================
+// Enhanced Python Integration Methods Implementation
+// =============================================================================
+
+void ScriptManager::registerPythonScriptWithConfig(
+    std::string_view name, const PythonScriptConfig& config) {
+    spdlog::info("Registering Python script '{}' with module '{}'",
+                 name, config.moduleName);
+
+    std::unique_lock lock(pImpl_->mSharedMutex_);
+    std::string nameStr(name);
+
+    // Store Python configuration
+    pImpl_->pythonConfigs_[nameStr] = config;
+
+    // Create metadata for the Python script
+    ScriptMetadata metadata;
+    metadata.language = ScriptLanguage::Python;
+    metadata.isPython = true;
+    metadata.createdAt = std::chrono::system_clock::now();
+    metadata.lastModified = metadata.createdAt;
+    metadata.dependencies = config.requiredPackages;
+
+    pImpl_->scriptMetadata_[nameStr] = metadata;
+    pImpl_->scriptLogs_[nameStr].emplace_back(
+        "Python script registered with config");
+
+    spdlog::debug("Python script '{}' registered successfully", name);
+}
+
+auto ScriptManager::executePythonFunction(
+    std::string_view moduleName, std::string_view functionName,
+    const std::unordered_map<std::string, std::string>& args)
+    -> ScriptExecutionResult {
+    spdlog::info("Executing Python function '{}::{}' with {} args",
+                 moduleName, functionName, args.size());
+
+    auto startTime = std::chrono::steady_clock::now();
+    ScriptExecutionResult result;
+    result.detectedLanguage = ScriptLanguage::Python;
+
+    try {
+        if (!pImpl_->pythonWrapper_) {
+            throw std::runtime_error("Python wrapper not initialized");
+        }
+
+        // Load module if not already loaded
+        std::string moduleStr(moduleName);
+        std::string funcStr(functionName);
+
+        pImpl_->pythonWrapper_->load_script(moduleStr, moduleStr);
+
+        // Call the function
+        auto pyResult = pImpl_->pythonWrapper_->call_function<std::string>(
+            moduleStr, funcStr);
+
+        auto endTime = std::chrono::steady_clock::now();
+        result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+            endTime - startTime);
+        result.success = true;
+        result.exitCode = 0;
+        result.output = pyResult;
+
+        spdlog::info("Python function '{}::{}' executed successfully in {}ms",
+                     moduleName, functionName, result.executionTime.count());
+
+    } catch (const std::exception& e) {
+        auto endTime = std::chrono::steady_clock::now();
+        result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+            endTime - startTime);
+        result.success = false;
+        result.exitCode = -1;
+        result.errorOutput = e.what();
+        result.exception = e.what();
+
+        spdlog::error("Python function execution failed: {}", e.what());
+    }
+
+    return result;
+}
+
+auto ScriptManager::loadPythonScriptsFromDirectory(
+    const std::filesystem::path& directory, bool recursive) -> size_t {
+    spdlog::info("Loading Python scripts from directory: {} (recursive={})",
+                 directory.string(), recursive);
+
+    size_t count = 0;
+
+    if (!std::filesystem::exists(directory)) {
+        spdlog::warn("Directory does not exist: {}", directory.string());
+        return 0;
+    }
+
+    auto processFile = [this, &count](const std::filesystem::path& path) {
+        if (path.extension() == ".py") {
+            try {
+                std::string moduleName = path.stem().string();
+                std::string alias = moduleName;
+
+                // Read script content
+                std::ifstream file(path);
+                if (file.is_open()) {
+                    std::stringstream buffer;
+                    buffer << file.rdbuf();
+                    std::string content = buffer.str();
+
+                    // Register the script
+                    registerScript(alias, content);
+
+                    // Update metadata
+                    ScriptMetadata metadata;
+                    metadata.language = ScriptLanguage::Python;
+                    metadata.isPython = true;
+                    metadata.sourcePath = path;
+                    metadata.createdAt = std::chrono::system_clock::now();
+                    metadata.lastModified = metadata.createdAt;
+
+                    setScriptMetadata(alias, metadata);
+                    count++;
+
+                    spdlog::debug("Loaded Python script: {}", path.string());
+                }
+            } catch (const std::exception& e) {
+                spdlog::warn("Failed to load Python script {}: {}",
+                            path.string(), e.what());
+            }
+        }
+    };
+
+    if (recursive) {
+        for (const auto& entry :
+             std::filesystem::recursive_directory_iterator(directory)) {
+            if (entry.is_regular_file()) {
+                processFile(entry.path());
+            }
+        }
+    } else {
+        for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+            if (entry.is_regular_file()) {
+                processFile(entry.path());
+            }
+        }
+    }
+
+    spdlog::info("Loaded {} Python scripts from {}", count, directory.string());
+    return count;
+}
+
+auto ScriptManager::getPythonWrapper() const
+    -> std::shared_ptr<class PythonWrapper> {
+    return pImpl_->pythonWrapper_;
+}
+
+void ScriptManager::setPythonWrapper(
+    std::shared_ptr<class PythonWrapper> wrapper) {
+    spdlog::info("Setting Python wrapper instance");
+    pImpl_->pythonWrapper_ = std::move(wrapper);
+}
+
+auto ScriptManager::isPythonAvailable() const -> bool {
+    return pImpl_->pythonWrapper_ != nullptr;
+}
+
+void ScriptManager::addPythonSysPath(const std::filesystem::path& path) {
+    if (pImpl_->pythonWrapper_) {
+        spdlog::debug("Adding Python sys.path: {}", path.string());
+        pImpl_->pythonWrapper_->add_sys_path(path.string());
+    } else {
+        spdlog::warn("Cannot add sys.path: Python wrapper not initialized");
+    }
+}
+
+// =============================================================================
+// Resource Management Methods Implementation
+// =============================================================================
+
+void ScriptManager::setResourceLimits(const ScriptResourceLimits& limits) {
+    spdlog::info("Setting resource limits: maxMemory={}MB, maxCPU={}%, "
+                 "maxTime={}s, maxConcurrent={}",
+                 limits.maxMemoryMB, limits.maxCpuPercent,
+                 limits.maxExecutionTime.count(), limits.maxConcurrentScripts);
+
+    std::unique_lock lock(pImpl_->mSharedMutex_);
+    pImpl_->resourceLimits_ = limits;
+}
+
+auto ScriptManager::getResourceLimits() const -> ScriptResourceLimits {
+    std::shared_lock lock(pImpl_->mSharedMutex_);
+    return pImpl_->resourceLimits_;
+}
+
+auto ScriptManager::getResourceUsage() const
+    -> std::unordered_map<std::string, double> {
+    std::shared_lock lock(pImpl_->mSharedMutex_);
+
+    std::unordered_map<std::string, double> usage;
+    usage["running_scripts"] = static_cast<double>(pImpl_->runningScripts_.size());
+    usage["total_scripts"] = static_cast<double>(pImpl_->scripts_.size() +
+                                                  pImpl_->powerShellScripts_.size());
+    usage["memory_usage_percent"] =
+        (static_cast<double>(pImpl_->currentMemoryUsage_) /
+         static_cast<double>(pImpl_->resourceLimits_.maxMemoryMB)) * 100.0;
+
+    return usage;
+}
+
+// =============================================================================
+// Script Discovery and Auto-Loading Implementation
+// =============================================================================
+
+auto ScriptManager::discoverScripts(
+    const std::filesystem::path& directory,
+    const std::vector<std::string>& extensions, bool recursive) -> size_t {
+    spdlog::info("Discovering scripts in: {} (extensions: {}, recursive: {})",
+                 directory.string(), extensions.size(), recursive);
+
+    size_t count = 0;
+
+    if (!std::filesystem::exists(directory)) {
+        spdlog::warn("Directory does not exist: {}", directory.string());
+        return 0;
+    }
+
+    auto processFile = [this, &count, &extensions](
+                           const std::filesystem::path& path) {
+        std::string ext = path.extension().string();
+        if (std::find(extensions.begin(), extensions.end(), ext) !=
+            extensions.end()) {
+            try {
+                std::ifstream file(path);
+                if (file.is_open()) {
+                    std::stringstream buffer;
+                    buffer << file.rdbuf();
+                    std::string content = buffer.str();
+
+                    std::string name = path.stem().string();
+                    ScriptLanguage lang = detectScriptLanguage(content);
+
+                    if (lang == ScriptLanguage::Python) {
+                        registerScript(name, content);
+                    } else if (lang == ScriptLanguage::PowerShell) {
+                        registerPowerShellScript(name, content);
+                    } else {
+                        registerScript(name, content);
+                    }
+
+                    // Set metadata
+                    ScriptMetadata metadata;
+                    metadata.language = lang;
+                    metadata.isPython = (lang == ScriptLanguage::Python);
+                    metadata.sourcePath = path;
+                    metadata.createdAt = std::chrono::system_clock::now();
+                    metadata.lastModified = metadata.createdAt;
+
+                    setScriptMetadata(name, metadata);
+                    count++;
+
+                    spdlog::debug("Discovered script: {} ({})", name,
+                                 static_cast<int>(lang));
+                }
+            } catch (const std::exception& e) {
+                spdlog::warn("Failed to load script {}: {}",
+                            path.string(), e.what());
+            }
+        }
+    };
+
+    if (recursive) {
+        for (const auto& entry :
+             std::filesystem::recursive_directory_iterator(directory)) {
+            if (entry.is_regular_file()) {
+                processFile(entry.path());
+            }
+        }
+    } else {
+        for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+            if (entry.is_regular_file()) {
+                processFile(entry.path());
+            }
+        }
+    }
+
+    spdlog::info("Discovered {} scripts in {}", count, directory.string());
+    return count;
+}
+
+auto ScriptManager::detectScriptLanguage(std::string_view content)
+    -> ScriptLanguage {
+    std::string contentStr(content);
+
+    // Check for Python indicators
+    if (contentStr.find("#!/usr/bin/env python") != std::string::npos ||
+        contentStr.find("#!/usr/bin/python") != std::string::npos ||
+        (contentStr.find("import ") != std::string::npos &&
+         contentStr.find("def ") != std::string::npos)) {
+        return ScriptLanguage::Python;
+    }
+
+    // Check for PowerShell indicators
+    if (contentStr.find("param(") != std::string::npos ||
+        contentStr.find("$PSVersionTable") != std::string::npos ||
+        contentStr.find("Write-Host") != std::string::npos ||
+        contentStr.find("Get-") != std::string::npos) {
+        return ScriptLanguage::PowerShell;
+    }
+
+    // Check for shell script indicators
+    if (contentStr.find("#!/bin/bash") != std::string::npos ||
+        contentStr.find("#!/bin/sh") != std::string::npos ||
+        contentStr.find("#!/usr/bin/env bash") != std::string::npos) {
+        return ScriptLanguage::Shell;
+    }
+
+    // Default to shell
+    return ScriptLanguage::Shell;
+}
+
+auto ScriptManager::getScriptContent(std::string_view name) const
+    -> std::optional<std::string> {
+    std::shared_lock lock(pImpl_->mSharedMutex_);
+    std::string nameStr(name);
+
+    if (pImpl_->scripts_.contains(nameStr)) {
+        return pImpl_->scripts_.at(nameStr);
+    }
+    if (pImpl_->powerShellScripts_.contains(nameStr)) {
+        return pImpl_->powerShellScripts_.at(nameStr);
+    }
+
+    return std::nullopt;
+}
+
+void ScriptManager::setScriptMetadata(std::string_view name,
+                                      const ScriptMetadata& metadata) {
+    std::unique_lock lock(pImpl_->mMetadataMutex_);
+    pImpl_->scriptMetadata_[std::string(name)] = metadata;
+    spdlog::debug("Set metadata for script '{}'", name);
+}
+
+// =============================================================================
+// Enhanced Execution Methods Implementation
+// =============================================================================
+
+auto ScriptManager::executeWithConfig(
+    std::string_view name,
+    const std::unordered_map<std::string, std::string>& args,
+    const RetryConfig& config,
+    const std::optional<ScriptResourceLimits>& resourceLimits)
+    -> ScriptExecutionResult {
+    spdlog::info("Executing script '{}' with config (retries={}, strategy={})",
+                 name, config.maxRetries, static_cast<int>(config.strategy));
+
+    auto startTime = std::chrono::steady_clock::now();
+    ScriptExecutionResult result;
+
+    // Apply resource limits if provided
+    ScriptResourceLimits limits = resourceLimits.value_or(pImpl_->resourceLimits_);
+
+    int attempts = 0;
+    std::chrono::milliseconds delay = config.initialDelay;
+
+    while (attempts <= config.maxRetries) {
+        try {
+            // Check resource availability
+            if (pImpl_->runningScripts_.size() >=
+                static_cast<size_t>(limits.maxConcurrentScripts)) {
+                spdlog::warn("Max concurrent scripts reached, waiting...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+
+            // Execute the script
+            auto execResult = runScript(name, args, true,
+                                        static_cast<int>(limits.maxExecutionTime.count() * 1000));
+
+            if (execResult) {
+                result.success = (execResult->second == 0);
+                result.exitCode = execResult->second;
+                result.output = execResult->first;
+            } else {
+                result.success = false;
+                result.exitCode = -1;
+            }
+
+            // Detect language from metadata
+            auto metadata = getScriptMetadata(name);
+            if (metadata) {
+                result.detectedLanguage = metadata->language;
+            }
+
+            auto endTime = std::chrono::steady_clock::now();
+            result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+                endTime - startTime);
+
+            // Check if we should retry
+            if (result.success || config.strategy == RetryStrategy::None) {
+                break;
+            }
+
+            if (config.shouldRetry && !config.shouldRetry(attempts, result)) {
+                break;
+            }
+
+            attempts++;
+            if (attempts <= config.maxRetries) {
+                spdlog::info("Retrying script '{}' (attempt {}/{})",
+                            name, attempts, config.maxRetries);
+
+                // Calculate delay based on strategy
+                switch (config.strategy) {
+                    case RetryStrategy::Linear:
+                        delay += config.initialDelay;
+                        break;
+                    case RetryStrategy::Exponential:
+                        delay = std::chrono::milliseconds(
+                            static_cast<int>(delay.count() * config.multiplier));
+                        break;
+                    default:
+                        break;
+                }
+
+                delay = std::min(delay, config.maxDelay);
+                std::this_thread::sleep_for(delay);
+            }
+
+        } catch (const std::exception& e) {
+            result.success = false;
+            result.exitCode = -1;
+            result.exception = e.what();
+            result.errorOutput = e.what();
+
+            spdlog::error("Script execution error: {}", e.what());
+
+            if (config.strategy == RetryStrategy::None || attempts >= config.maxRetries) {
+                break;
+            }
+            attempts++;
+        }
+    }
+
+    // Update statistics
+    pImpl_->updateStatistics(std::string(name), result);
+
+    return result;
+}
+
+auto ScriptManager::executeAsync(
+    std::string_view name,
+    const std::unordered_map<std::string, std::string>& args,
+    std::function<void(const ScriptProgress&)> progressCallback)
+    -> std::future<ScriptExecutionResult> {
+    spdlog::info("Starting async execution of script '{}'", name);
+
+    std::string nameStr(name);
+    auto argsCopy = args;
+
+    return std::async(std::launch::async,
+        [this, nameStr, argsCopy, progressCallback]() -> ScriptExecutionResult {
+            ScriptProgress progress;
+            progress.status = "Starting";
+            progress.percentage = 0.0f;
+            progress.timestamp = std::chrono::system_clock::now();
+
+            if (progressCallback) {
+                progressCallback(progress);
+            }
+
+            auto result = executeWithConfig(nameStr, argsCopy);
+
+            progress.status = result.success ? "Completed" : "Failed";
+            progress.percentage = 1.0f;
+            progress.timestamp = std::chrono::system_clock::now();
+            progress.output = result.output;
+
+            if (progressCallback) {
+                progressCallback(progress);
+            }
+
+            return result;
+        });
+}
+
+auto ScriptManager::executePipeline(
+    const std::vector<std::string>& scripts,
+    const std::unordered_map<std::string, std::string>& sharedContext,
+    bool stopOnError) -> std::vector<ScriptExecutionResult> {
+    spdlog::info("Executing pipeline with {} scripts (stopOnError={})",
+                 scripts.size(), stopOnError);
+
+    std::vector<ScriptExecutionResult> results;
+    results.reserve(scripts.size());
+
+    auto context = sharedContext;
+
+    for (const auto& scriptName : scripts) {
+        spdlog::debug("Pipeline: executing script '{}'", scriptName);
+
+        auto result = executeWithConfig(scriptName, context);
+        results.push_back(result);
+
+        if (!result.success && stopOnError) {
+            spdlog::warn("Pipeline stopped due to error in script '{}'", scriptName);
+            break;
+        }
+
+        // Pass output to next script as context
+        if (!result.output.empty()) {
+            context["_previous_output"] = result.output;
+        }
+    }
+
+    spdlog::info("Pipeline completed: {}/{} scripts executed",
+                 results.size(), scripts.size());
+    return results;
+}
+
+// =============================================================================
+// Statistics and Monitoring Implementation
+// =============================================================================
+
+auto ScriptManager::getScriptStatistics(std::string_view name) const
+    -> std::unordered_map<std::string, double> {
+    std::shared_lock lock(pImpl_->mSharedMutex_);
+    std::string nameStr(name);
+
+    std::unordered_map<std::string, double> stats;
+
+    if (pImpl_->scriptStatistics_.contains(nameStr)) {
+        const auto& s = pImpl_->scriptStatistics_.at(nameStr);
+        stats["execution_count"] = static_cast<double>(s.executionCount);
+        stats["success_count"] = static_cast<double>(s.successCount);
+        stats["failure_count"] = static_cast<double>(s.failureCount);
+        stats["total_execution_time_ms"] = static_cast<double>(s.totalExecutionTime.count());
+        stats["average_execution_time_ms"] =
+            s.executionCount > 0
+                ? static_cast<double>(s.totalExecutionTime.count()) / s.executionCount
+                : 0.0;
+        stats["success_rate"] =
+            s.executionCount > 0
+                ? (static_cast<double>(s.successCount) / s.executionCount) * 100.0
+                : 0.0;
+    }
+
+    return stats;
+}
+
+auto ScriptManager::getGlobalStatistics() const
+    -> std::unordered_map<std::string, double> {
+    std::shared_lock lock(pImpl_->mSharedMutex_);
+
+    std::unordered_map<std::string, double> stats;
+    size_t totalExecutions = 0;
+    size_t totalSuccesses = 0;
+    size_t totalFailures = 0;
+    std::chrono::milliseconds totalTime{0};
+
+    for (const auto& [name, s] : pImpl_->scriptStatistics_) {
+        totalExecutions += s.executionCount;
+        totalSuccesses += s.successCount;
+        totalFailures += s.failureCount;
+        totalTime += s.totalExecutionTime;
+    }
+
+    stats["total_scripts"] = static_cast<double>(pImpl_->scripts_.size() +
+                                                  pImpl_->powerShellScripts_.size());
+    stats["total_executions"] = static_cast<double>(totalExecutions);
+    stats["total_successes"] = static_cast<double>(totalSuccesses);
+    stats["total_failures"] = static_cast<double>(totalFailures);
+    stats["total_execution_time_ms"] = static_cast<double>(totalTime.count());
+    stats["average_execution_time_ms"] =
+        totalExecutions > 0
+            ? static_cast<double>(totalTime.count()) / totalExecutions
+            : 0.0;
+    stats["global_success_rate"] =
+        totalExecutions > 0
+            ? (static_cast<double>(totalSuccesses) / totalExecutions) * 100.0
+            : 0.0;
+
+    return stats;
+}
+
+void ScriptManager::resetStatistics(std::string_view name) {
+    std::unique_lock lock(pImpl_->mSharedMutex_);
+
+    if (name.empty()) {
+        spdlog::info("Resetting all script statistics");
+        pImpl_->scriptStatistics_.clear();
+    } else {
+        std::string nameStr(name);
+        spdlog::info("Resetting statistics for script '{}'", name);
+        pImpl_->scriptStatistics_.erase(nameStr);
+    }
 }
 
 }  // namespace lithium

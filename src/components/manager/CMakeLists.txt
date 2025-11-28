@@ -13,14 +13,14 @@ set(COMPONENT_MANAGER_HEADERS
     exceptions.hpp
 )
 
-# Create the component manager library
-add_library(component_manager STATIC
+# Create the component manager library (name matches parent CMakeLists.txt reference)
+add_library(lithium_components_manager STATIC
     ${COMPONENT_MANAGER_SOURCES}
     ${COMPONENT_MANAGER_HEADERS}
 )
 
 # Set target properties
-target_include_directories(component_manager
+target_include_directories(lithium_components_manager
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src
@@ -28,15 +28,15 @@ target_include_directories(component_manager
 )
 
 # Link required libraries
-target_link_libraries(component_manager
+target_link_libraries(lithium_components_manager
     PUBLIC
-        atom_components
-        atom_memory
-        atom_error
+        atom
+        loguru
+        nlohmann_json::nlohmann_json
 )
 
 # Set compiler features
-target_compile_features(component_manager PUBLIC cxx_std_20)
+target_compile_features(lithium_components_manager PUBLIC cxx_std_20)
 
 # Add alias for better namespace support
-add_library(lithium::component_manager ALIAS component_manager)
+add_library(lithium::components_manager ALIAS lithium_components_manager)

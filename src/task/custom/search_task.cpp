@@ -121,6 +121,9 @@ void TaskCelestialSearch::execute(const json& params) {
             THROW_INVALID_ARGUMENT("Unknown search type: " + searchType);
         }
 
+        // Cache results for external consumers (e.g. TaskManager)
+        lastResults_ = results;
+
         // Store results in task history
         addHistoryEntry("Search completed with " +
                         std::to_string(results.contains("matches")

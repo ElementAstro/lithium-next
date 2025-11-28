@@ -36,6 +36,8 @@ public:
      */
     void execute(const json& params) override;
 
+    const json& getLastResults() const { return lastResults_; }
+
 private:
     /**
      * @brief Initialize the search engine with data files
@@ -90,6 +92,7 @@ private:
 
     std::shared_ptr<target::SearchEngine>
         searchEngine_;  ///< Search engine instance
+    json lastResults_{};  ///< Last search results snapshot
 
     static constexpr int DEFAULT_FUZZY_TOLERANCE =
         2;  ///< Default fuzzy search tolerance

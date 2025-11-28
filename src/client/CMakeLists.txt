@@ -19,11 +19,15 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Note: This includes atom library paths for client implementations
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/atom/atom)
 
+# Add common base library first
+add_subdirectory(common)
+
 # Recursively discover and add client library subdirectories
 lithium_message(INFO "Discovering client implementations...")
 lithium_add_subdirectories_recursive(
     ${CMAKE_CURRENT_SOURCE_DIR}
     MESSAGE_PREFIX "  ├─ Client lib"
+    EXCLUDE_DIRS "common"
 )
 
 lithium_message(SUCCESS "Client libraries configured")

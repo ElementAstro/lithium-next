@@ -28,15 +28,21 @@ set(PROJECT_SOURCES
     task.cpp
     imagepath.cpp
     registration.cpp
+    integration_utils.cpp
+    api_adapter.cpp
 )
 
 set(PROJECT_HEADERS
+    lithium_task.hpp
     generator.hpp
     sequencer.hpp
     target.hpp
     task.hpp
     imagepath.hpp
     registration.hpp
+    integration_utils.hpp
+    api_adapter.hpp
+    astro_types.hpp
     ${CUSTOM_SRC}
 )
 

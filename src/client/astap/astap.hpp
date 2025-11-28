@@ -2,12 +2,12 @@
 #define LITHIUM_CLIENT_ASTAP_HPP
 
 #include <spdlog/spdlog.h>
-#include <cmath>
 #include <future>
 #include <optional>
 #include <string>
 #include <vector>
 #include "device/template/solver.hpp"
+#include "tools/constant.hpp"
 
 /**
  * @brief Implementation of a plate solver using ASTAP software
@@ -105,7 +105,7 @@ protected:
      * @return Angle in radians
      */
     auto toRadians(double degrees) -> double override {
-        return degrees * M_PI / 180.0;
+        return degrees * K_DEGREES_TO_RADIANS;
     }
 
     /**
@@ -114,7 +114,7 @@ protected:
      * @return Angle in degrees
      */
     auto toDegrees(double radians) -> double override {
-        return radians * 180.0 / M_PI;
+        return radians * K_RADIANS_TO_DEGREES;
     }
 
     /**
@@ -123,7 +123,7 @@ protected:
      * @return Angle in degrees
      */
     auto arcsecToDegree(double arcsec) -> double override {
-        return arcsec / 3600.0;
+        return arcsec / lithium::tools::K_ARCSEC_PER_DEGREE;
     }
 
     /**

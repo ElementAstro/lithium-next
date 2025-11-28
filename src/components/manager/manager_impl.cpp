@@ -16,6 +16,7 @@ Description: Component Manager Implementation
 #include "exceptions.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <format>
 #include <future>
 #include <numeric>
@@ -27,14 +28,34 @@ namespace lithium {
 
 ComponentManagerImpl::ComponentManagerImpl()
     : moduleLoader_(ModuleLoader::createShared()),
-      fileTracker_(std::make_unique<FileTracker>(
-          "/components", "package.json",
-          std::vector<std::string>{".so", ".dll"})),
       component_pool_(std::make_shared<
                       atom::memory::ObjectPool<std::shared_ptr<Component>>>(
           100, 10)),
       memory_pool_(std::make_unique<MemoryPool<char, 4096>>()) {
-    LOG_F(INFO, "ComponentManager initialized with memory pools");
+#ifdef _WIN32
+    constexpr const char* kDefaultComponentsDir = "components";
+#else
+    constexpr const char* kDefaultComponentsDir = "./components";
+#endif
+
+    if (const char* customDir = std::getenv("LITHIUM_COMPONENTS_DIR")) {
+        componentsDirectory_ = customDir;
+        LOG_F(INFO, "Using custom components directory from env: {}",
+              componentsDirectory_);
+    } else {
+        componentsDirectory_ = kDefaultComponentsDir;
+    }
+
+    if (fs::exists(componentsDirectory_)) {
+        fileTracker_ = std::make_unique<FileTracker>(
+            componentsDirectory_, "package.json",
+            std::vector<std::string>{".so", ".dll", ".dylib"});
+    } else {
+        LOG_F(WARNING, "Components directory '{}' does not exist", componentsDirectory_);
+    }
+
+    LOG_F(INFO, "ComponentManager initialized with memory pools (components dir: {})",
+          componentsDirectory_);
 }
 
 ComponentManagerImpl::~ComponentManagerImpl() {
@@ -44,13 +65,31 @@ ComponentManagerImpl::~ComponentManagerImpl() {
 
 auto ComponentManagerImpl::initialize() -> bool {
     try {
-        fileTracker_->scan();
-        fileTracker_->startWatching();
-        fileTracker_->setChangeCallback(
-            std::function<void(const fs::path&, const std::string&)>(
-                [this](const fs::path& path, const std::string& change) {
-                    handleFileChange(path, change);
-                }));
+        // Only initialize FileTracker if it was successfully created
+        if (fileTracker_) {
+            fileTracker_->scan();
+            fileTracker_->startWatching();
+            fileTracker_->setChangeCallback(
+                std::function<void(const fs::path&, const std::string&)>(
+                    [this](const fs::path& path, const std::string& change) {
+                        handleFileChange(path, change);
+                    }));
+            LOG_F(INFO, "FileTracker initialized and watching for changes");
+        } else {
+            LOG_F(WARNING, "FileTracker not initialized - components directory may not exist");
+        }
+
+        if (!componentsDirectory_.empty()) {
+            auto discovered = discoverComponents(componentsDirectory_);
+            if (!discovered.empty()) {
+                LOG_F(INFO, "Discovered {} components in {}", discovered.size(),
+                      componentsDirectory_);
+                batchLoad(discovered);
+            } else {
+                LOG_F(INFO, "No components discovered in {}", componentsDirectory_);
+            }
+        }
+        
         LOG_F(INFO, "ComponentManager initialized successfully");
         return true;
     } catch (const std::exception& e) {
@@ -61,7 +100,11 @@ auto ComponentManagerImpl::initialize() -> bool {
 
 auto ComponentManagerImpl::destroy() -> bool {
     try {
-        fileTracker_->stopWatching();
+        // Stop file watching if FileTracker exists
+        if (fileTracker_) {
+            fileTracker_->stopWatching();
+        }
+        
         auto unloadResult = moduleLoader_->unloadAllModules();
         if (!unloadResult) {
             LOG_F(ERROR, "Failed to unload all modules");
@@ -69,6 +112,7 @@ auto ComponentManagerImpl::destroy() -> bool {
         }
         components_.clear();
         componentOptions_.clear();
+        componentStates_.clear();
         LOG_F(INFO, "ComponentManager destroyed successfully");
         return true;
     } catch (const std::exception& e) {
@@ -175,17 +219,31 @@ auto ComponentManagerImpl::unloadComponent(const json& params) -> bool {
 
 auto ComponentManagerImpl::scanComponents(const std::string& path) -> std::vector<std::string> {
     try {
-        fileTracker_->scan();
-        fileTracker_->compare();
-        auto differences = fileTracker_->getDifferences();
-        
-        std::vector<std::string> newFiles;
-        for (auto& [path, info] : differences.items()) {
-            if (info["status"] == "new") {
-                newFiles.push_back(path);
-            }
+        const std::string targetPath = path.empty() ? componentsDirectory_ : path;
+        if (targetPath.empty()) {
+            LOG_F(WARNING, "No components directory configured; skip scanning");
+            return {};
         }
-        return newFiles;
+
+        if (fileTracker_ && targetPath == componentsDirectory_) {
+            fileTracker_->scan();
+            fileTracker_->compare();
+            auto differences = fileTracker_->getDifferences();
+
+            std::vector<std::string> newFiles;
+            for (auto& [filePath, info] : differences.items()) {
+                if (info["status"] == "new") {
+                    newFiles.push_back(filePath);
+                }
+            }
+            LOG_F(INFO, "FileTracker detected {} new components", newFiles.size());
+            return newFiles;
+        }
+
+        auto discovered = discoverComponents(targetPath);
+        LOG_F(INFO, "Discovered {} components via direct scan ({})", discovered.size(),
+              targetPath);
+        return discovered;
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to scan components: {}", e.what());
         return {};
@@ -437,6 +495,14 @@ void ComponentManagerImpl::handleFileChange(const fs::path& path, const std::str
         // Handle new file
         std::string name = path.stem().string();
         loadComponentByName(name);
+    } else if (change == "removed" || change == "deleted") {
+        std::string name = path.stem().string();
+        if (hasComponent(name)) {
+            LOG_F(INFO, "Unloading component {} due to file removal", name);
+            json params;
+            params["name"] = name;
+            unloadComponent(params);
+        }
     }
 }
 
@@ -457,10 +523,79 @@ bool ComponentManagerImpl::validateComponentOperation(const std::string& name) {
 }
 
 bool ComponentManagerImpl::loadComponentByName(const std::string& name) {
+    if (componentsDirectory_.empty()) {
+        LOG_F(ERROR, "Components directory is not configured; cannot load {}", name);
+        return false;
+    }
+
+    // Construct component path based on platform
+#ifdef _WIN32
+    const std::string componentExt = ".dll";
+    const std::string pathSep = "\\";
+#elif defined(__APPLE__)
+    const std::string componentExt = ".dylib";
+    const std::string pathSep = "/";
+#else
+    const std::string componentExt = ".so";
+    const std::string pathSep = "/";
+#endif
+
+    fs::path basePath = fs::path(componentsDirectory_);
+
+    // Try to find component in the components directory
+    fs::path componentPath = basePath / (name + componentExt);
+    
+    // Check if file exists, if not try with lib prefix (common on Unix)
+    if (!fs::exists(componentPath)) {
+        componentPath = basePath / ("lib" + name + componentExt);
+    }
+    
+    if (!fs::exists(componentPath)) {
+        LOG_F(ERROR, "Component file not found: {}", name);
+        return false;
+    }
+
     json params;
     params["name"] = name;
-    params["path"] = "/path/to/" + name;
+    params["path"] = componentPath.string();
     return loadComponent(params);
+}
+
+std::vector<std::string> ComponentManagerImpl::discoverComponents(
+    const std::string& directory) {
+    std::vector<std::string> discovered;
+    try {
+        if (directory.empty() || !fs::exists(directory)) {
+            return discovered;
+        }
+
+#if defined(_WIN32)
+        const std::vector<std::string> extensions = {".dll"};
+#elif defined(__APPLE__)
+        const std::vector<std::string> extensions = {".dylib", ".so"};
+#else
+        const std::vector<std::string> extensions = {".so"};
+#endif
+
+        for (const auto& entry : fs::directory_iterator(directory)) {
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+
+            const auto& path = entry.path();
+            const auto extension = path.extension().string();
+            if (std::find(extensions.begin(), extensions.end(), extension) ==
+                extensions.end()) {
+                continue;
+            }
+
+            discovered.push_back(path.stem().string());
+        }
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to discover components in {}: {}", directory, e.what());
+    }
+
+    return discovered;
 }
 
 }  // namespace lithium

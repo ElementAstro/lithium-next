@@ -89,7 +89,7 @@ private:
     }
 
 public:
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         // Create a weak pointer to the SearchEngine
         GET_OR_CREATE_WEAK_PTR(mSearchEngine, lithium::target::SearchEngine,
                                Constants::SEARCH_ENGINE);
@@ -387,7 +387,32 @@ public:
                 }
                 lithium::target::Dialect dialect;
                 if (body.has("dialect")) {
-                    // TODO: Implement dialect parsing
+                    const auto& d = body["dialect"];
+                    if (d.has("delimiter") &&
+                        d["delimiter"].t() == crow::json::type::String) {
+                        std::string s = d["delimiter"].s();
+                        if (!s.empty()) dialect.delimiter = s[0];
+                    }
+                    if (d.has("quotechar") &&
+                        d["quotechar"].t() == crow::json::type::String) {
+                        std::string s = d["quotechar"].s();
+                        if (!s.empty()) dialect.quotechar = s[0];
+                    }
+                    if (d.has("doublequote")) {
+                        dialect.doublequote = d["doublequote"].b();
+                    }
+                    if (d.has("skip_initial_space")) {
+                        dialect.skip_initial_space = d["skip_initial_space"].b();
+                    }
+                    if (d.has("lineterminator") &&
+                        d["lineterminator"].t() == crow::json::type::String) {
+                        dialect.lineterminator = d["lineterminator"].s();
+                    }
+                    if (d.has("quoting") &&
+                        d["quoting"].t() == crow::json::type::Number) {
+                        dialect.quoting = static_cast<lithium::target::Quoting>(
+                            d["quoting"].i());
+                    }
                 }
                 searchEngine->loadFromCSV(body["filename"].s(), requiredFields,
                                           dialect);
@@ -424,7 +449,32 @@ public:
                 }
                 lithium::target::Dialect dialect;
                 if (body.has("dialect")) {
-                    // TODO: Implement dialect parsing
+                    const auto& d = body["dialect"];
+                    if (d.has("delimiter") &&
+                        d["delimiter"].t() == crow::json::type::String) {
+                        std::string s = d["delimiter"].s();
+                        if (!s.empty()) dialect.delimiter = s[0];
+                    }
+                    if (d.has("quotechar") &&
+                        d["quotechar"].t() == crow::json::type::String) {
+                        std::string s = d["quotechar"].s();
+                        if (!s.empty()) dialect.quotechar = s[0];
+                    }
+                    if (d.has("doublequote")) {
+                        dialect.doublequote = d["doublequote"].b();
+                    }
+                    if (d.has("skip_initial_space")) {
+                        dialect.skip_initial_space = d["skip_initial_space"].b();
+                    }
+                    if (d.has("lineterminator") &&
+                        d["lineterminator"].t() == crow::json::type::String) {
+                        dialect.lineterminator = d["lineterminator"].s();
+                    }
+                    if (d.has("quoting") &&
+                        d["quoting"].t() == crow::json::type::Number) {
+                        dialect.quoting = static_cast<lithium::target::Quoting>(
+                            d["quoting"].i());
+                    }
                 }
                 searchEngine->exportToCSV(body["filename"].s(), fields,
                                           dialect);

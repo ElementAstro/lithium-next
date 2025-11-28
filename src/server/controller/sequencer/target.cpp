@@ -8,4 +8,4 @@
 
 // Static member definition
 std::weak_ptr<lithium::task::ExposureSequence>
-    SequenceManagementController::mExposureSequence;
+    TargetController::mExposureSequence;

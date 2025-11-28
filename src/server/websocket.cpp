@@ -5,6 +5,8 @@
 
 #include "atom/type/json.hpp"
 #include "atom/utils/to_string.hpp"
+#include "command/device_commands.hpp"
+#include "middleware/auth.hpp"
 #include <spdlog/spdlog.h>
 
 using namespace std::chrono_literals;
@@ -58,7 +60,10 @@ void WebSocketServer::on_message(crow::websocket::connection& conn,
 
         std::string type = json["type"];
         if (type == "command" && json.contains("command")) {
-            handle_command(conn, json["command"], json["payload"].dump());
+            const nlohmann::json& payload =
+                json.contains("payload") ? json["payload"] : json["params"];
+            std::string requestId = json.value("requestId", std::string());
+            handle_command(conn, json["command"], payload, requestId);
         } else if (type == "message" && json.contains("topic")) {
             forward_to_message_bus(json["topic"], json["payload"].dump());
         } else if (type == "auth" && json.contains("token")) {
@@ -77,38 +82,59 @@ void WebSocketServer::on_message(crow::websocket::connection& conn,
 
 void WebSocketServer::handle_command(crow::websocket::connection& conn,
                                      const std::string& command,
-                                     const std::string& payload) {
-    spdlog::info("Handling command from client {}: command: {}, payload: {}",
-          conn.get_remote_ip(), command, payload);
+                                     const nlohmann::json& payload,
+                                     const std::string& request_id) {
+    spdlog::info(
+        "Handling command from client {}: command: {}, payload: {}",
+        conn.get_remote_ip(), command, payload.dump());
           
-    auto callback = [this, conn_ptr = &conn](
+    auto callback = [this, conn_ptr = &conn, request_id](
         const std::string& cmd_id,
         const lithium::app::CommandDispatcher::ResultType& result) {
         
-        nlohmann::json response = {
-            {"type", "command_result"},
-            {"command", cmd_id},
-            {"status", "completed"}
-        };
+        nlohmann::json response;
+        response["type"] = "response";
+        response["command"] = cmd_id;
+        if (!request_id.empty()) {
+            response["requestId"] = request_id;
+        }
+        response["timestamp"] =
+            std::chrono::system_clock::now().time_since_epoch().count();
 
         if (std::holds_alternative<std::any>(result)) {
             try {
-                response["result"] = std::any_cast<nlohmann::json>(
+                auto payload_json = std::any_cast<nlohmann::json>(
                     std::get<std::any>(result));
-            } catch (const std::bad_any_cast&) {
-                try {
-                    response["result"] = std::any_cast<std::string>(
-                        std::get<std::any>(result));
-                } catch (const std::bad_any_cast&) {
-                    response["result"] = "Result type not supported";
+
+                std::string status = payload_json.value("status", "success");
+                bool success = (status == "success");
+                response["success"] = success;
+
+                if (success) {
+                    response["data"] =
+                        payload_json.value("data", nlohmann::json::object());
+                    if (payload_json.contains("message")) {
+                        response["message"] = payload_json["message"];
+                    }
+                } else {
+                    response["error"] =
+                        payload_json.value("error", nlohmann::json::object());
                 }
+            } catch (const std::bad_any_cast&) {
+                response["success"] = false;
+                response["error"] =
+                    nlohmann::json{{"code", "result_cast_error"},
+                                   {"message",
+                                    "Result type not supported for JSON response"}};
             }
         } else {
             try {
                 std::rethrow_exception(std::get<std::exception_ptr>(result));
             } catch (const std::exception& e) {
-                response["status"] = "error";
-                response["error"] = e.what();
+                response["success"] = false;
+                response["error"] =
+                    nlohmann::json{{"code", "internal_error"},
+                                   {"message", e.what()}};
             }
         }
 
@@ -152,7 +178,7 @@ void WebSocketServer::stop() {
 }
 
 void WebSocketServer::run_server() {
-    auto& route = CROW_WEBSOCKET_ROUTE(app_, "/ws")
+    auto& route = CROW_WEBSOCKET_ROUTE(app_, "/api/v1/ws")
         .onopen([this](crow::websocket::connection& conn) { on_open(conn); })
         .onclose([this](crow::websocket::connection& conn,
                         const std::string& reason, uint16_t code) { 
@@ -254,7 +280,7 @@ void WebSocketServer::set_subprotocols(const std::vector<std::string>& protocols
 }
 
 bool validate_token(const std::string& token) {
-    bool is_valid = token == "valid_token";
+    bool is_valid = lithium::server::middleware::ApiKeyAuth::isValidApiKey(token);
     spdlog::debug("Token validation result for token {}: {}", token, is_valid);
     return is_valid;
 }
@@ -310,19 +336,33 @@ void WebSocketServer::setup_message_bus_handlers() {
 }
 
 void WebSocketServer::setup_command_handlers() {
-    command_dispatcher_->registerCommand<std::string>(
-        "ping", [this](const std::string& payload) { return "pong"; });
+    // Simple ping command: logs payload; result echo is provided by dispatcher
+    command_dispatcher_->registerCommand<nlohmann::json>(
+        "ping", [this](const nlohmann::json& payload) {
+            spdlog::info("Ping command received with payload: {}",
+                         payload.dump());
+        });
     spdlog::info("Registered command handler for 'ping'");
 
+    // Subscribe command: subscribes server to a message-bus topic
     command_dispatcher_->registerCommand<nlohmann::json>(
         "subscribe", [this](const nlohmann::json& payload) {
             if (payload.contains("topic")) {
                 subscribe_to_topic(payload["topic"]);
-                return nlohmann::json{{"status", "subscribed"}};
+                spdlog::info("Subscribe command processed for topic: {}",
+                             payload["topic"].get<std::string>());
+                return;  // void
             }
             throw std::runtime_error("Invalid subscribe command payload");
         });
     spdlog::info("Registered command handler for 'subscribe'");
+
+    // Device commands (camera, mount, focuser, filterwheel, etc.) are registered in command module
+    lithium::app::registerCameraCommands(command_dispatcher_);
+    lithium::app::registerMountCommands(command_dispatcher_);
+    lithium::app::registerFocuserCommands(command_dispatcher_);
+    lithium::app::registerFilterWheelCommands(command_dispatcher_);
+    lithium::app::registerDomeCommands(command_dispatcher_);
 }
 
 void WebSocketServer::subscribe_to_topic(const std::string& topic) {
@@ -526,11 +566,30 @@ void WebSocketServer::broadcast_batch(const std::vector<std::string>& messages) 
 }
 
 bool WebSocketServer::validate_message_format(const nlohmann::json& message) {
-    bool valid = message.contains("type") && message.contains("payload");
-    if (!valid) {
-        spdlog::error("Invalid message format: {}", message.dump());
+    if (!message.contains("type") || !message["type"].is_string()) {
+        spdlog::error("Invalid message format: missing or invalid 'type': {}",
+                      message.dump());
+        return false;
     }
-    return valid;
+
+    std::string type = message["type"];
+
+    if (type == "command") {
+        bool hasCommand = message.contains("command") &&
+                          message["command"].is_string();
+        bool hasParams =
+            (message.contains("payload") && !message["payload"].is_null()) ||
+            (message.contains("params") && !message["params"].is_null());
+
+        if (!hasCommand || !hasParams) {
+            spdlog::error(
+                "Invalid command message format (expect 'command' and 'payload' or 'params'): {}",
+                message.dump());
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void WebSocketServer::handle_connection_error(crow::websocket::connection& conn,

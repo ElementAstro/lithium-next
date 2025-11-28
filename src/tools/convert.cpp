@@ -5,26 +5,40 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
-#include <numbers>
 #include <sstream>
 
 namespace lithium::tools {
 
+// Use constants from constant.hpp
+using lithium::tools::K_PI;
+using lithium::tools::K_TWO_PI;
+using lithium::tools::K_HALF_PI;
+using lithium::tools::K_DEGREES_IN_CIRCLE;
+using lithium::tools::K_HOURS_IN_DAY;
+using lithium::tools::K_MINUTES_IN_HOUR;
+using lithium::tools::K_SECONDS_IN_MINUTE;
+using lithium::tools::K_SECONDS_IN_HOUR;
+using lithium::tools::K_DEGREES_TO_RADIANS;
+using lithium::tools::K_RADIANS_TO_DEGREES;
+using lithium::tools::K_HOURS_TO_DEGREES;
+using lithium::tools::K_DEGREES_TO_HOURS;
+using lithium::tools::K_EPSILON_HIGH_PRECISION;
+
 namespace {
-// Mathematical constants
-constexpr double PI = std::numbers::pi;
-constexpr double TWO_PI = 2.0 * PI;
-constexpr double HALF_PI = PI / 2.0;
-constexpr double DEGREES_IN_CIRCLE = 360.0;
-constexpr double HOURS_IN_DAY = 24.0;
-constexpr double MINUTES_IN_HOUR = 60.0;
-constexpr double SECONDS_IN_MINUTE = 60.0;
-constexpr double SECONDS_IN_HOUR = MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
-constexpr double DEGREES_TO_RADIANS = PI / 180.0;
-constexpr double RADIANS_TO_DEGREES = 180.0 / PI;
-constexpr double HOURS_TO_DEGREES = 15.0;
-constexpr double DEGREES_TO_HOURS = 1.0 / HOURS_TO_DEGREES;
-constexpr double EPSILON = 1.0e-10;
+// Local aliases for cleaner code
+constexpr double PI = K_PI;
+constexpr double TWO_PI = K_TWO_PI;
+constexpr double HALF_PI = K_HALF_PI;
+constexpr double DEGREES_IN_CIRCLE = K_DEGREES_IN_CIRCLE;
+constexpr double HOURS_IN_DAY = K_HOURS_IN_DAY;
+constexpr double MINUTES_IN_HOUR = K_MINUTES_IN_HOUR;
+constexpr double SECONDS_IN_MINUTE = K_SECONDS_IN_MINUTE;
+constexpr double SECONDS_IN_HOUR = K_SECONDS_IN_HOUR;
+constexpr double DEGREES_TO_RADIANS = K_DEGREES_TO_RADIANS;
+constexpr double RADIANS_TO_DEGREES = K_RADIANS_TO_DEGREES;
+constexpr double HOURS_TO_DEGREES = K_HOURS_TO_DEGREES;
+constexpr double DEGREES_TO_HOURS = K_DEGREES_TO_HOURS;
+constexpr double EPSILON = K_EPSILON_HIGH_PRECISION;
 }  // namespace
 
 auto rangeTo(double value, double maxVal, double minVal) -> double {

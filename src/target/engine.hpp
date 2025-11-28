@@ -528,6 +528,42 @@ public:
      */
     [[nodiscard]] auto getCacheStats() const -> std::string;
 
+    /**
+     * @brief Optimize the recommendation engine
+     */
+    void optimizeRecommendationEngine();
+
+    /**
+     * @brief Get recommendation engine statistics
+     * 
+     * @return String with recommendation engine stats
+     */
+    [[nodiscard]] auto getRecommendationEngineStats() const -> std::string;
+
+    /**
+     * @brief Add implicit feedback (view, click) for a user-item pair
+     * 
+     * @param user User identifier
+     * @param item Item identifier
+     */
+    void addImplicitFeedback(const std::string& user, const std::string& item);
+
+    /**
+     * @brief Export recommendation data to CSV
+     * 
+     * @param filename Path to output CSV file
+     * @return True if export was successful
+     */
+    bool exportRecommendationDataToCSV(const std::string& filename) const;
+
+    /**
+     * @brief Import recommendation data from CSV
+     * 
+     * @param filename Path to input CSV file
+     * @return True if import was successful
+     */
+    bool importRecommendationDataFromCSV(const std::string& filename);
+
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl_;  ///< Implementation details (PIMPL idiom)

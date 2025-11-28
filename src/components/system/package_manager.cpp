@@ -501,7 +501,9 @@ void PackageManagerRegistry::configurePackageManagers() {
     loadSystemPackageManagers();
 
     const std::vector<std::string> configPaths = {
+        "./config/package_managers.json",
         "./package_managers.json",
+        "../config/package_managers.json",
         std::string(std::getenv("HOME") ? std::getenv("HOME") : "") +
             "/.lithium/package_managers.json",
         "/etc/lithium/package_managers.json"

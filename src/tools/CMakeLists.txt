@@ -47,6 +47,12 @@ lithium_add_library(
     DESCRIPTION "Astronomy calculation and utility tools"
 )
 
+# Add public include directory for constant.hpp and other headers
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include/lithium/tools>
+)
+
 # Apply standard compiler flags
 lithium_apply_compiler_flags(${PROJECT_NAME})
 

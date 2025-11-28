@@ -607,10 +607,35 @@ auto ElfParser::getDependencies() const -> std::vector<std::string> {
     if (!dynstr || !dynamic) {
         return deps;
     }
-    // 解析动态链接依赖
+
     auto dynstrData = getSectionData(*dynstr);
-    auto dynamicData = getSectionData(*dynamic);
-    // TODO: 实现具体的依赖解析逻辑
+
+    const auto extractString = [&dynstrData](uint64_t offset) -> std::string {
+        if (offset >= dynstrData.size()) {
+            return {};
+        }
+
+        const char* begin =
+            reinterpret_cast<const char*>(dynstrData.data() + offset);
+        size_t length = 0;
+        while (offset + length < dynstrData.size() && begin[length] != '\0') {
+            ++length;
+        }
+        return std::string(begin, length);
+    };
+
+    const auto& entries = pImpl_->dynamicEntries_;
+    for (const auto& entry : entries) {
+        if (entry.tag != DT_NEEDED) {
+            continue;
+        }
+
+        std::string dependency = extractString(entry.d_un.val);
+        if (!dependency.empty()) {
+            deps.push_back(std::move(dependency));
+        }
+    }
+
     return deps;
 }
 

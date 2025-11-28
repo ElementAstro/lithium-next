@@ -76,25 +76,7 @@ void ComponentManager::updateDependencyGraph(
                                  dependencies_version);
 }
 
-template <typename T>
-auto ComponentManager::createComponent(const std::string& name,
-                                       const ComponentOptions& options)
-    -> std::shared_ptr<T> {
-    json params;
-    params["name"] = name;
-    params["config"] = options.config;
-    params["autoStart"] = options.autoStart;
-    params["priority"] = options.priority;
-
-    if (loadComponent(params)) {
-        auto comp = getComponent(name);
-        if (comp) {
-            auto component = comp->lock();
-            return std::dynamic_pointer_cast<T>(component);
-        }
-    }
-    return nullptr;
-}
+// Note: createComponent template is implemented in manager.hpp
 
 auto ComponentManager::startComponent(const std::string& name) -> bool {
     return impl_->startComponent(name);

@@ -516,6 +516,21 @@ auto Target::toJson() const -> json {
         }
     }
 
+    // Add astronomical observation data
+    {
+        std::shared_lock lock(astroMutex_);
+        j["astroConfig"] = astroConfig_.toJson();
+        j["observability"] = observability_.toJson();
+        j["currentAltAz"] = currentAltAz_.toJson();
+        j["meridianInfo"] = meridianInfo_.toJson();
+        j["currentExposurePlanIndex"] = currentExposurePlanIndex_;
+        j["exposureProgress"] = astroConfig_.overallProgress();
+        j["remainingExposureTime"] = astroConfig_.totalRemainingExposureTime();
+    }
+
+    j["paused"] = paused_.load();
+    j["aborted"] = aborted_.load();
+
     return j;
 }
 
@@ -570,6 +585,261 @@ auto Target::fromJson(const json& data) -> void {
             }
         }
     }
+
+    // Load astronomical configuration
+    {
+        std::unique_lock lock(astroMutex_);
+        if (data.contains("astroConfig")) {
+            astroConfig_ = TargetConfig::fromJson(data["astroConfig"]);
+        }
+        if (data.contains("observability")) {
+            observability_ = ObservabilityWindow::fromJson(data["observability"]);
+        }
+        if (data.contains("currentAltAz")) {
+            currentAltAz_ = HorizontalCoordinates::fromJson(data["currentAltAz"]);
+        }
+        if (data.contains("meridianInfo")) {
+            meridianInfo_ = MeridianFlipInfo::fromJson(data["meridianInfo"]);
+        }
+        currentExposurePlanIndex_ = data.value("currentExposurePlanIndex", 0);
+    }
 }
+
+// ============================================================================
+// Astronomical Observation Methods Implementation
+// ============================================================================
+
+void Target::setAstroConfig(const TargetConfig& config) {
+    std::unique_lock lock(astroMutex_);
+    astroConfig_ = config;
+    spdlog::info("Astronomical config set for target {}: {} ({})", name_,
+                 config.catalogName, config.commonName);
+}
+
+const TargetConfig& Target::getAstroConfig() const {
+    std::shared_lock lock(astroMutex_);
+    return astroConfig_;
+}
+
+TargetConfig& Target::getAstroConfigMutable() {
+    std::unique_lock lock(astroMutex_);
+    return astroConfig_;
+}
+
+void Target::setCoordinates(const Coordinates& coords) {
+    std::unique_lock lock(astroMutex_);
+    astroConfig_.coordinates = coords;
+    spdlog::info("Coordinates set for target {}: RA={:.4f}° Dec={:.4f}°",
+                 name_, coords.ra, coords.dec);
+}
+
+const Coordinates& Target::getCoordinates() const {
+    std::shared_lock lock(astroMutex_);
+    return astroConfig_.coordinates;
+}
+
+void Target::addExposurePlan(const ExposurePlan& plan) {
+    std::unique_lock lock(astroMutex_);
+    // Check if filter already exists
+    auto it = std::find_if(
+        astroConfig_.exposurePlans.begin(), astroConfig_.exposurePlans.end(),
+        [&plan](const ExposurePlan& p) {
+            return p.filterName == plan.filterName;
+        });
+
+    if (it != astroConfig_.exposurePlans.end()) {
+        *it = plan;  // Update existing plan
+        spdlog::info("Updated exposure plan for filter {} in target {}",
+                     plan.filterName, name_);
+    } else {
+        astroConfig_.exposurePlans.push_back(plan);
+        spdlog::info("Added exposure plan for filter {} in target {}: {}x{}s",
+                     plan.filterName, name_, plan.count, plan.exposureTime);
+    }
+}
+
+void Target::removeExposurePlan(const std::string& filterName) {
+    std::unique_lock lock(astroMutex_);
+    auto it = std::remove_if(
+        astroConfig_.exposurePlans.begin(), astroConfig_.exposurePlans.end(),
+        [&filterName](const ExposurePlan& p) {
+            return p.filterName == filterName;
+        });
+
+    if (it != astroConfig_.exposurePlans.end()) {
+        astroConfig_.exposurePlans.erase(it, astroConfig_.exposurePlans.end());
+        spdlog::info("Removed exposure plan for filter {} from target {}",
+                     filterName, name_);
+    }
+}
+
+const std::vector<ExposurePlan>& Target::getExposurePlans() const {
+    std::shared_lock lock(astroMutex_);
+    return astroConfig_.exposurePlans;
+}
+
+ExposurePlan* Target::getCurrentExposurePlan() {
+    std::unique_lock lock(astroMutex_);
+    if (currentExposurePlanIndex_ >= astroConfig_.exposurePlans.size()) {
+        return nullptr;
+    }
+    return &astroConfig_.exposurePlans[currentExposurePlanIndex_];
+}
+
+bool Target::advanceExposurePlan() {
+    std::unique_lock lock(astroMutex_);
+    // First check if current plan is complete
+    if (currentExposurePlanIndex_ < astroConfig_.exposurePlans.size()) {
+        auto& currentPlan = astroConfig_.exposurePlans[currentExposurePlanIndex_];
+        if (!currentPlan.isComplete()) {
+            return false;  // Current plan not yet complete
+        }
+    }
+
+    // Advance to next plan
+    currentExposurePlanIndex_++;
+    if (currentExposurePlanIndex_ >= astroConfig_.exposurePlans.size()) {
+        spdlog::info("All exposure plans complete for target {}", name_);
+        return false;
+    }
+
+    spdlog::info("Advanced to exposure plan {} ({}) for target {}",
+                 currentExposurePlanIndex_,
+                 astroConfig_.exposurePlans[currentExposurePlanIndex_].filterName,
+                 name_);
+    return true;
+}
+
+void Target::recordCompletedExposure() {
+    std::unique_lock lock(astroMutex_);
+    if (currentExposurePlanIndex_ < astroConfig_.exposurePlans.size()) {
+        auto& plan = astroConfig_.exposurePlans[currentExposurePlanIndex_];
+        plan.completedCount++;
+        spdlog::info("Recorded exposure {}/{} for filter {} in target {}",
+                     plan.completedCount, plan.count, plan.filterName, name_);
+    }
+}
+
+void Target::setObservabilityWindow(const ObservabilityWindow& window) {
+    std::unique_lock lock(astroMutex_);
+    observability_ = window;
+    spdlog::info("Observability window set for target {}: maxAlt={:.1f}°",
+                 name_, window.maxAltitude);
+}
+
+const ObservabilityWindow& Target::getObservabilityWindow() const {
+    std::shared_lock lock(astroMutex_);
+    return observability_;
+}
+
+void Target::updateHorizontalCoordinates(const HorizontalCoordinates& coords) {
+    std::unique_lock lock(astroMutex_);
+    currentAltAz_ = coords;
+}
+
+const HorizontalCoordinates& Target::getHorizontalCoordinates() const {
+    std::shared_lock lock(astroMutex_);
+    return currentAltAz_;
+}
+
+void Target::updateMeridianFlipInfo(const MeridianFlipInfo& info) {
+    std::unique_lock lock(astroMutex_);
+    meridianInfo_ = info;
+    if (info.flipRequired && !info.flipCompleted) {
+        spdlog::info("Meridian flip required for target {} in {}s",
+                     name_, info.secondsToFlip());
+    }
+}
+
+const MeridianFlipInfo& Target::getMeridianFlipInfo() const {
+    std::shared_lock lock(astroMutex_);
+    return meridianInfo_;
+}
+
+bool Target::isObservable() const {
+    std::shared_lock lock(astroMutex_);
+
+    // Check observability window
+    if (!observability_.isObservableNow()) {
+        return false;
+    }
+
+    // Check altitude constraints
+    if (!astroConfig_.altConstraints.isValid(currentAltAz_.altitude)) {
+        return false;
+    }
+
+    // Check time constraints if enabled
+    if (astroConfig_.useTimeConstraints) {
+        auto now = std::chrono::system_clock::now();
+        if (now < astroConfig_.startTime || now > astroConfig_.endTime) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool Target::needsMeridianFlip() const {
+    std::shared_lock lock(astroMutex_);
+
+    if (!astroConfig_.autoMeridianFlip) {
+        return false;
+    }
+
+    return meridianInfo_.flipRequired && !meridianInfo_.flipCompleted;
+}
+
+void Target::markMeridianFlipCompleted() {
+    std::unique_lock lock(astroMutex_);
+    meridianInfo_.flipCompleted = true;
+    spdlog::info("Meridian flip completed for target {}", name_);
+}
+
+int Target::getPriority() const {
+    std::shared_lock lock(astroMutex_);
+    return astroConfig_.priority;
+}
+
+void Target::setPriority(int priority) {
+    std::unique_lock lock(astroMutex_);
+    astroConfig_.priority = std::clamp(priority, 1, 10);
+    spdlog::info("Priority set to {} for target {}", astroConfig_.priority, name_);
+}
+
+double Target::getRemainingExposureTime() const {
+    std::shared_lock lock(astroMutex_);
+    return astroConfig_.totalRemainingExposureTime();
+}
+
+double Target::getExposureProgress() const {
+    std::shared_lock lock(astroMutex_);
+    return astroConfig_.overallProgress();
+}
+
+bool Target::areExposurePlansComplete() const {
+    std::shared_lock lock(astroMutex_);
+    return astroConfig_.isComplete();
+}
+
+void Target::pause() {
+    paused_.store(true);
+    spdlog::info("Target {} paused", name_);
+}
+
+void Target::resume() {
+    paused_.store(false);
+    spdlog::info("Target {} resumed", name_);
+}
+
+bool Target::isPaused() const { return paused_.load(); }
+
+void Target::abort() {
+    aborted_.store(true);
+    setStatus(TargetStatus::Failed);
+    spdlog::info("Target {} aborted", name_);
+}
+
+bool Target::isAborted() const { return aborted_.load(); }
 
 }  // namespace lithium::task

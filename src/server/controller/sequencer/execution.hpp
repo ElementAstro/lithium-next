@@ -89,7 +89,7 @@ public:
      * @brief Register all sequence execution routes
      * @param app The crow application instance
      */
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         // Execute all targets in sequence
         CROW_ROUTE(app, "/api/sequence/execute")
             .methods("POST"_method)([](const crow::request& req) {
@@ -437,5 +437,7 @@ public:
         mExposureSequence = sequence;
     }
 };
+
+inline std::weak_ptr<lithium::task::ExposureSequence> SequenceExecutionController::mExposureSequence;
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SEQUENCE_EXECUTION_HPP

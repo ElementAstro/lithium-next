@@ -1,4 +1,5 @@
 #include "preference.hpp"
+#include "reader.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -8,8 +9,10 @@
 
 #include <spdlog/spdlog.h>
 
+namespace lithium::target {
+
+// Helper method - caller must hold lock
 auto AdvancedRecommendationEngine::getUserId(const std::string& user) -> int {
-    std::lock_guard lock(mtx_);
     auto userIterator = userIndex_.find(user);
     if (userIterator == userIndex_.end()) {
         int newIndex = static_cast<int>(userIndex_.size());
@@ -20,8 +23,8 @@ auto AdvancedRecommendationEngine::getUserId(const std::string& user) -> int {
     return userIterator->second;
 }
 
+// Helper method - caller must hold lock
 auto AdvancedRecommendationEngine::getItemId(const std::string& item) -> int {
-    std::lock_guard lock(mtx_);
     auto itemIterator = itemIndex_.find(item);
     if (itemIterator == itemIndex_.end()) {
         int newIndex = static_cast<int>(itemIndex_.size());
@@ -32,9 +35,9 @@ auto AdvancedRecommendationEngine::getItemId(const std::string& item) -> int {
     return itemIterator->second;
 }
 
+// Helper method - caller must hold lock
 auto AdvancedRecommendationEngine::getFeatureId(const std::string& feature)
     -> int {
-    std::lock_guard lock(mtx_);
     auto featureIterator = featureIndex_.find(feature);
     if (featureIterator == featureIndex_.end()) {
         int newIndex = static_cast<int>(featureIndex_.size());
@@ -116,6 +119,9 @@ void AdvancedRecommendationEngine::addRating(const std::string& user,
     if (rating < 0.0 || rating > 5.0) {
         throw DataException("Rating must be between 0 and 5");
     }
+    if (user.empty() || item.empty()) {
+        throw DataException("User and item identifiers cannot be empty");
+    }
     std::lock_guard lock(mtx_);
     int userId = getUserId(user);
     int itemId = getItemId(item);
@@ -125,6 +131,9 @@ void AdvancedRecommendationEngine::addRating(const std::string& user,
 
 void AdvancedRecommendationEngine::addImplicitFeedback(
     const std::string& user, const std::string& item) {
+    if (user.empty() || item.empty()) {
+        throw DataException("User and item identifiers cannot be empty");
+    }
     std::lock_guard lock(mtx_);
     int userId = getUserId(user);
     int itemId = getItemId(item);
@@ -153,6 +162,7 @@ void AdvancedRecommendationEngine::addRatings(
 
 void AdvancedRecommendationEngine::processBatch(
     const std::vector<std::tuple<std::string, std::string, double>>& batch) {
+    // Note: Caller must NOT hold lock - this method acquires it
     std::lock_guard lock(mtx_);
 
     for (const auto& [user, item, rating] : batch) {
@@ -499,3 +509,105 @@ void AdvancedRecommendationEngine::loadModel(const std::string& filename) {
     file.close();
     spdlog::info("Model loaded successfully from {}", filename);
 }
+
+bool AdvancedRecommendationEngine::exportToCSV(const std::string& filename) {
+    std::lock_guard lock(mtx_);
+    try {
+        std::ofstream output(filename);
+        if (!output.is_open()) {
+            spdlog::error("Failed to open file for export: {}", filename);
+            return false;
+        }
+
+        std::vector<std::string> fields = {"user", "item", "rating", "timestamp"};
+        DictWriter writer(output, fields);
+
+        for (const auto& [userId, itemId, rating, timestamp] : ratings_) {
+            // Find user and item names
+            std::string userName;
+            std::string itemName;
+
+            for (const auto& [name, id] : userIndex_) {
+                if (id == userId) {
+                    userName = name;
+                    break;
+                }
+            }
+
+            for (const auto& [name, id] : itemIndex_) {
+                if (id == itemId) {
+                    itemName = name;
+                    break;
+                }
+            }
+
+            auto duration = timestamp.time_since_epoch();
+            auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+
+            std::unordered_map<std::string, std::string> row;
+            row["user"] = userName;
+            row["item"] = itemName;
+            row["rating"] = std::to_string(rating);
+            row["timestamp"] = std::to_string(seconds);
+            writer.writeRow(row);
+        }
+
+        spdlog::info("Successfully exported {} ratings to {}", ratings_.size(), filename);
+        return true;
+    } catch (const std::exception& e) {
+        spdlog::error("Error exporting to CSV {}: {}", filename, e.what());
+        return false;
+    }
+}
+
+bool AdvancedRecommendationEngine::importFromCSV(const std::string& filename) {
+    try {
+        std::ifstream input(filename);
+        if (!input.is_open()) {
+            spdlog::error("Failed to open file for import: {}", filename);
+            return false;
+        }
+
+        std::vector<std::string> fields = {"user", "item", "rating"};
+        DictReader reader(input, fields);
+
+        std::unordered_map<std::string, std::string> row;
+        size_t count = 0;
+        std::vector<std::tuple<std::string, std::string, double>> batch;
+        batch.reserve(BATCH_SIZE);
+
+        while (reader.next(row)) {
+            try {
+                std::string user = row["user"];
+                std::string item = row["item"];
+                double rating = std::stod(row["rating"]);
+
+                if (rating >= 0.0 && rating <= 5.0 && !user.empty() && !item.empty()) {
+                    batch.emplace_back(user, item, rating);
+                    count++;
+
+                    if (batch.size() >= BATCH_SIZE) {
+                        processBatch(batch);
+                        batch.clear();
+                        batch.reserve(BATCH_SIZE);
+                    }
+                }
+            } catch (const std::exception& e) {
+                spdlog::warn("Skipping invalid row: {}", e.what());
+            }
+        }
+
+        // Process remaining batch
+        if (!batch.empty()) {
+            processBatch(batch);
+        }
+
+        spdlog::info("Successfully imported {} ratings from {}", count, filename);
+        return true;
+    } catch (const std::exception& e) {
+        spdlog::error("Error importing from CSV {}: {}", filename, e.what());
+        return false;
+    }
+}
+
+}  // namespace lithium::target

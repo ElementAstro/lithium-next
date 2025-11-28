@@ -71,10 +71,14 @@ public:
     // 帧设置
     auto setResolution(int posX, int posY, int width,
                        int height) -> bool override;
+    [[nodiscard]] auto getResolution()
+        -> std::optional<AtomCameraFrame::Resolution> override;
     auto setBinning(int horizontal, int vertical) -> bool override;
     auto setFrameType(FrameType type) -> bool override;
     auto setUploadMode(UploadMode mode) -> bool override;
     [[nodiscard]] auto getFrameInfo() const -> AtomCameraFrame override;
+
+    [[nodiscard]] auto isColor() const -> bool override;
 
     // INDI特有接口
     auto watchAdditionalProperty() -> bool;

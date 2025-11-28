@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "astro_types.hpp"
 #include "atom/async/safetype.hpp"
 #include "task.hpp"
 
@@ -275,6 +276,185 @@ public:
      */
     void abortGroup(const std::string& groupName);
 
+    // ========================================================================
+    // Astronomical Observation Methods
+    // ========================================================================
+
+    /**
+     * @brief Sets the astronomical configuration for this target.
+     * @param config The target configuration.
+     */
+    void setAstroConfig(const TargetConfig& config);
+
+    /**
+     * @brief Gets the astronomical configuration.
+     * @return The current target configuration.
+     */
+    [[nodiscard]] const TargetConfig& getAstroConfig() const;
+
+    /**
+     * @brief Gets a mutable reference to the astronomical configuration.
+     * @return Mutable reference to configuration.
+     */
+    TargetConfig& getAstroConfigMutable();
+
+    /**
+     * @brief Sets the celestial coordinates for this target.
+     * @param coords The coordinates to set.
+     */
+    void setCoordinates(const Coordinates& coords);
+
+    /**
+     * @brief Gets the celestial coordinates.
+     * @return The target coordinates.
+     */
+    [[nodiscard]] const Coordinates& getCoordinates() const;
+
+    /**
+     * @brief Adds an exposure plan to this target.
+     * @param plan The exposure plan to add.
+     */
+    void addExposurePlan(const ExposurePlan& plan);
+
+    /**
+     * @brief Removes an exposure plan by filter name.
+     * @param filterName The filter name to remove.
+     */
+    void removeExposurePlan(const std::string& filterName);
+
+    /**
+     * @brief Gets all exposure plans.
+     * @return Vector of exposure plans.
+     */
+    [[nodiscard]] const std::vector<ExposurePlan>& getExposurePlans() const;
+
+    /**
+     * @brief Gets the current active exposure plan.
+     * @return Pointer to current plan, or nullptr if none active.
+     */
+    [[nodiscard]] ExposurePlan* getCurrentExposurePlan();
+
+    /**
+     * @brief Advances to the next exposure plan.
+     * @return True if advanced, false if no more plans.
+     */
+    bool advanceExposurePlan();
+
+    /**
+     * @brief Records a completed exposure for the current plan.
+     */
+    void recordCompletedExposure();
+
+    /**
+     * @brief Sets the observability window for this target.
+     * @param window The observability window.
+     */
+    void setObservabilityWindow(const ObservabilityWindow& window);
+
+    /**
+     * @brief Gets the observability window.
+     * @return The current observability window.
+     */
+    [[nodiscard]] const ObservabilityWindow& getObservabilityWindow() const;
+
+    /**
+     * @brief Updates the current horizontal coordinates (alt/az).
+     * @param coords The current alt/az coordinates.
+     */
+    void updateHorizontalCoordinates(const HorizontalCoordinates& coords);
+
+    /**
+     * @brief Gets the current horizontal coordinates.
+     * @return Current alt/az coordinates.
+     */
+    [[nodiscard]] const HorizontalCoordinates& getHorizontalCoordinates() const;
+
+    /**
+     * @brief Updates meridian flip information.
+     * @param info The meridian flip info.
+     */
+    void updateMeridianFlipInfo(const MeridianFlipInfo& info);
+
+    /**
+     * @brief Gets meridian flip information.
+     * @return Current meridian flip info.
+     */
+    [[nodiscard]] const MeridianFlipInfo& getMeridianFlipInfo() const;
+
+    /**
+     * @brief Checks if the target is currently observable.
+     * @return True if observable based on constraints.
+     */
+    [[nodiscard]] bool isObservable() const;
+
+    /**
+     * @brief Checks if the target needs a meridian flip.
+     * @return True if meridian flip is needed.
+     */
+    [[nodiscard]] bool needsMeridianFlip() const;
+
+    /**
+     * @brief Marks meridian flip as completed.
+     */
+    void markMeridianFlipCompleted();
+
+    /**
+     * @brief Gets the target priority.
+     * @return Priority value (1-10).
+     */
+    [[nodiscard]] int getPriority() const;
+
+    /**
+     * @brief Sets the target priority.
+     * @param priority Priority value (1-10).
+     */
+    void setPriority(int priority);
+
+    /**
+     * @brief Gets total remaining exposure time across all plans.
+     * @return Remaining time in seconds.
+     */
+    [[nodiscard]] double getRemainingExposureTime() const;
+
+    /**
+     * @brief Gets overall exposure plan progress.
+     * @return Progress percentage (0-100).
+     */
+    [[nodiscard]] double getExposureProgress() const;
+
+    /**
+     * @brief Checks if all exposure plans are complete.
+     * @return True if all plans completed.
+     */
+    [[nodiscard]] bool areExposurePlansComplete() const;
+
+    /**
+     * @brief Pauses target execution.
+     */
+    void pause();
+
+    /**
+     * @brief Resumes target execution.
+     */
+    void resume();
+
+    /**
+     * @brief Checks if target is paused.
+     * @return True if paused.
+     */
+    [[nodiscard]] bool isPaused() const;
+
+    /**
+     * @brief Aborts target execution.
+     */
+    void abort();
+
+    /**
+     * @brief Checks if target has been aborted.
+     * @return True if aborted.
+     */
+    [[nodiscard]] bool isAborted() const;
+
 private:
     std::string name_;  ///< The name of the target.
     std::string uuid_;  ///< The unique identifier of the target.
@@ -324,6 +504,22 @@ private:
     std::unordered_map<std::string, std::vector<std::string>>
         taskDependencies_;                ///< Task dependencies
     mutable std::shared_mutex depMutex_;  ///< Mutex for dependency access
+
+    // ========================================================================
+    // Astronomical Observation Data
+    // ========================================================================
+
+    TargetConfig astroConfig_;            ///< Astronomical configuration
+    ObservabilityWindow observability_;   ///< Current observability window
+    HorizontalCoordinates currentAltAz_;  ///< Current altitude/azimuth
+    MeridianFlipInfo meridianInfo_;       ///< Meridian flip information
+    mutable std::shared_mutex astroMutex_;  ///< Mutex for astro data access
+
+    size_t currentExposurePlanIndex_{0};  ///< Index of current exposure plan
+
+    // Execution state
+    std::atomic<bool> paused_{false};     ///< Whether target is paused
+    std::atomic<bool> aborted_{false};    ///< Whether target is aborted
 
     /**
      * @brief Notifies that the target has started.

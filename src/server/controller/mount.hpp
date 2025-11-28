@@ -37,7 +37,7 @@ private:
     }
 
 public:
-    void registerRoutes(crow::SimpleApp &app) override {
+    void registerRoutes(lithium::server::ServerApp &app) override {
         CROW_ROUTE(app, "/api/v1/mounts")
             .methods("GET"_method)(&MountController::listMountsRoute, this);
 

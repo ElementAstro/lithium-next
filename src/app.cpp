@@ -228,8 +228,8 @@ int main(int argc, char *argv[]) {
 
     crow::SimpleApp app;
 
-    // TODO: Add compression support
-    // app.use_compression(crow::compression::algorithm::GZIP);
+    // Enable GZIP compression
+    app.use_compression(crow::compression::algorithm::GZIP);
 
     std::vector<std::shared_ptr<Controller>> controllers;
     controllers.push_back(atom::memory::makeShared<ConfigController>());

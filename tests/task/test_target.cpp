@@ -2,7 +2,7 @@
 #include "task/target.hpp"
 #include "task/task.hpp"
 
-using namespace lithium::sequencer;
+using namespace lithium::task;
 using json = nlohmann::json;
 
 class TargetTest : public ::testing::Test {

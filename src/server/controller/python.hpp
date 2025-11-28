@@ -34,6 +34,42 @@ private:
     static std::weak_ptr<lithium::PythonWrapper> mPythonWrapper;
 
     /**
+     * @brief Convert Crow JSON to Python object
+     */
+    static py::object jsonToPy(const crow::json::rvalue& val) {
+        switch (val.t()) {
+            case crow::json::type::String:
+                return py::str(std::string(val.s()));
+            case crow::json::type::Number:
+                // Check if it's an integer or double
+                if (std::floor(val.d()) == val.d()) {
+                    return py::int_(static_cast<int64_t>(val.d()));
+                }
+                return py::float_(val.d());
+            case crow::json::type::True:
+                return py::bool_(true);
+            case crow::json::type::False:
+                return py::bool_(false);
+            case crow::json::type::List: {
+                py::list l;
+                for (const auto& item : val) {
+                    l.append(jsonToPy(item));
+                }
+                return l;
+            }
+            case crow::json::type::Object: {
+                py::dict d;
+                for (const auto& key : val.keys()) {
+                    d[key.c_str()] = jsonToPy(val[key]);
+                }
+                return d;
+            }
+            default:
+                return py::none();
+        }
+    }
+
+    /**
      * @brief Generic handler for Python operations
      * 
      * @param req HTTP request object
@@ -89,7 +125,7 @@ private:
     }
 
 public:
-    void registerRoutes(crow::SimpleApp& app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         GET_OR_CREATE_WEAK_PTR(mPythonWrapper, lithium::PythonWrapper, Constants::PYTHON_WRAPPER);
 
         // Basic Script Management
