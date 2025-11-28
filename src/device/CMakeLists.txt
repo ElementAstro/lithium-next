@@ -63,9 +63,11 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/atom/atom)
 # Add service layer subdirectory
 add_subdirectory(service)
 
+# Recursively discover and add device implementation subdirectories
+# Note: service is excluded as it was already added above
 lithium_message(INFO "Discovering device implementations...")
 lithium_add_subdirectories_recursive(
     ${CMAKE_CURRENT_SOURCE_DIR}
     MESSAGE_PREFIX "  ├─ Device impl"
-    EXCLUDE_DIRS "service"
+    EXCLUDE_DIRS service
 )

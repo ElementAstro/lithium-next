@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd \"D:\\Project\\lithium-next\" echo \"=== MODIFIED FILES ===\" git diff --name-only --diff-filter=M src libs)"
+      "Bash(cd \"D:\\Project\\lithium-next\" echo \"=== MODIFIED FILES ===\" git diff --name-only --diff-filter=M src libs)",
+      "Bash(__NEW_LINE__ echo \"=== GIT STATUS ===\")",
+      "mcp__ide__getDiagnostics",
+      "Bash(cmake --build:*)",
+      "Bash(cmake:*)"
     ],
     "deny": [],
     "ask": []

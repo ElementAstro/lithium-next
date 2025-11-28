@@ -6,12 +6,26 @@
 
 find_path(Readline_INCLUDE_DIR
     NAMES readline/readline.h
-    PATHS /usr/include /usr/local/include
+    PATHS
+        /usr/include
+        /usr/local/include
+        /opt/local/include
+        ${MINGW_PREFIX}/include
+        $ENV{MINGW_PREFIX}/include
+        D:/msys64/mingw64/include
+        C:/msys64/mingw64/include
 )
 
 find_library(Readline_LIBRARY
     NAMES readline
-    PATHS /usr/lib /usr/local/lib
+    PATHS
+        /usr/lib
+        /usr/local/lib
+        /opt/local/lib
+        ${MINGW_PREFIX}/lib
+        $ENV{MINGW_PREFIX}/lib
+        D:/msys64/mingw64/lib
+        C:/msys64/mingw64/lib
 )
 
 include(FindPackageHandleStandardArgs)

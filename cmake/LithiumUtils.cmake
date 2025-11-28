@@ -12,22 +12,43 @@ include(CMakePackageConfigHelpers)
 include(${CMAKE_CURRENT_LIST_DIR}/LithiumColors.cmake)
 
 # Function to recursively add subdirectories with CMakeLists.txt
-# Usage: lithium_add_subdirectories_recursive(DIRECTORY [CONDITION_FUNC])
+# Usage: lithium_add_subdirectories_recursive(START_DIR [OPTIONS])
+# Options:
+#   PATTERN_FILE - Only add directories containing this file in addition to CMakeLists.txt
+#   MESSAGE_PREFIX - Custom prefix for log messages
+#   EXCLUDE_DIRS - List of directory names to exclude
 function(lithium_add_subdirectories_recursive START_DIR)
     set(options "")
     set(oneValueArgs PATTERN_FILE MESSAGE_PREFIX)
-    set(multiValueArgs "")
+    set(multiValueArgs EXCLUDE_DIRS)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    
+
     if(NOT ARG_MESSAGE_PREFIX)
         set(ARG_MESSAGE_PREFIX "Adding subdirectory")
     endif()
-    
+
     file(GLOB entries "${START_DIR}/*")
     foreach(entry ${entries})
         if(IS_DIRECTORY ${entry})
+            get_filename_component(dir_name ${entry} NAME)
+
+            # Check if directory is in exclude list
+            set(is_excluded FALSE)
+            if(ARG_EXCLUDE_DIRS)
+                foreach(exclude_dir ${ARG_EXCLUDE_DIRS})
+                    if("${dir_name}" STREQUAL "${exclude_dir}")
+                        set(is_excluded TRUE)
+                        break()
+                    endif()
+                endforeach()
+            endif()
+
+            if(is_excluded)
+                continue()
+            endif()
+
             set(should_add FALSE)
-            
+
             # Check if CMakeLists.txt exists
             if(EXISTS "${entry}/CMakeLists.txt")
                 # If pattern file is specified, check if it exists too
@@ -39,9 +60,8 @@ function(lithium_add_subdirectories_recursive START_DIR)
                     set(should_add TRUE)
                 endif()
             endif()
-            
+
             if(should_add)
-                get_filename_component(dir_name ${entry} NAME)
                 lithium_message(STATUS "${ARG_MESSAGE_PREFIX}: ${BoldCyan}${dir_name}${ColorReset}")
                 add_subdirectory(${entry})
             endif()
@@ -245,10 +265,56 @@ endfunction()
 function(lithium_validate_sources)
     set(multiValueArgs SOURCES)
     cmake_parse_arguments(ARG "" "" "${multiValueArgs}" ${ARGN})
-    
+
     foreach(source ${ARG_SOURCES})
         if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
             lithium_message(WARNING "Source file not found: ${source}")
         endif()
     endforeach()
+endfunction()
+
+# Function to add a test with Google Test
+# Usage: lithium_add_test(
+#   NAME <test_name>
+#   SOURCES <source_files>
+#   [LIBS <libraries_to_link>]
+#   [INCLUDES <include_directories>]
+# )
+function(lithium_add_test)
+    set(options "")
+    set(oneValueArgs NAME)
+    set(multiValueArgs SOURCES LIBS INCLUDES)
+    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    # Validate required arguments
+    if(NOT ARG_NAME)
+        message(FATAL_ERROR "lithium_add_test: NAME is required")
+    endif()
+
+    if(NOT ARG_SOURCES)
+        message(FATAL_ERROR "lithium_add_test: SOURCES is required for ${ARG_NAME}")
+    endif()
+
+    # Create the test executable
+    add_executable(${ARG_NAME} ${ARG_SOURCES})
+
+    # Link libraries
+    target_link_libraries(${ARG_NAME} PRIVATE
+        GTest::gtest
+        GTest::gtest_main
+        ${ARG_LIBS}
+    )
+
+    # Add include directories
+    if(ARG_INCLUDES)
+        target_include_directories(${ARG_NAME} PRIVATE ${ARG_INCLUDES})
+    endif()
+
+    # Register with CTest
+    add_test(NAME ${ARG_NAME} COMMAND ${ARG_NAME})
+
+    # Set IDE folder
+    set_target_properties(${ARG_NAME} PROPERTIES FOLDER "Tests")
+
+    lithium_message(STATUS "  ├─ Test: ${BoldGreen}${ARG_NAME}${ColorReset}")
 endfunction()

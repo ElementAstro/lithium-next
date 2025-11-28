@@ -23,11 +23,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/atom/atom)
 add_subdirectory(common)
 
 # Recursively discover and add client library subdirectories
+# Note: common is excluded as it was already added above
 lithium_message(INFO "Discovering client implementations...")
 lithium_add_subdirectories_recursive(
     ${CMAKE_CURRENT_SOURCE_DIR}
     MESSAGE_PREFIX "  ├─ Client lib"
-    EXCLUDE_DIRS "common"
+    EXCLUDE_DIRS common
 )
 
 lithium_message(SUCCESS "Client libraries configured")

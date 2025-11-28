@@ -31,7 +31,56 @@
 *.out
 *.app
 
+# C/C++ build system artifacts
 .cache/
 build/
-test/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+Testing/
+*.dir/
+*.ninja
+*.ninja_deps
+*.ninja_log
+compile_commands.json
+install_manifest.txt
+
+# Coverage data
+*.gcda
+*.gcno
+*.gcov
+coverage*.info
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
 .venv/
+.env
+.env.*
+
+# Rust artifacts
+target/
+
+# Package manager caches
+pip-wheel-metadata/
+pip-log.txt
+
+# Logs and diagnostics
+*.log
+log/
+
+# IDE / OS clutter
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# Test scratch space
+test/
+llmdoc/
