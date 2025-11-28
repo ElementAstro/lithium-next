@@ -9,6 +9,7 @@
 
 #include <crow/json.h>
 #include "controller.hpp"
+#include "../utils/response.hpp"
 
 #include <functional>
 #include <memory>
@@ -19,6 +20,10 @@
 #include "atom/type/json.hpp"
 #include "constant/constant.hpp"
 #include "target/engine.hpp"
+
+namespace lithium::server::controller {
+
+using ResponseBuilder = utils::ResponseBuilder;
 
 class SearchController : public Controller {
 private:
@@ -516,5 +521,7 @@ public:
 };
 
 inline std::weak_ptr<lithium::target::SearchEngine> SearchController::mSearchEngine;
+
+}  // namespace lithium::server::controller
 
 #endif  // LITHIUM_ASYNC_SEARCH_ENGINE_CONTROLLER_HPP

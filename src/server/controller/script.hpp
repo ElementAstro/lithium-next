@@ -9,6 +9,7 @@
 
 #include <crow/json.h>
 #include "controller.hpp"
+#include "../utils/response.hpp"
 
 #include <filesystem>
 #include <functional>
@@ -23,6 +24,10 @@
 #include "constant/constant.hpp"
 #include "script/check.hpp"
 #include "script/sheller.hpp"
+
+namespace lithium::server::controller {
+
+using ResponseBuilder = utils::ResponseBuilder;
 
 class ScriptController : public Controller {
 private:
@@ -802,5 +807,7 @@ public:
 
 inline std::weak_ptr<lithium::ScriptManager> ScriptController::mScriptManager;
 inline std::weak_ptr<lithium::ScriptAnalyzer> ScriptController::mScriptAnalyzer;
+
+}  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SCRIPT_HPP

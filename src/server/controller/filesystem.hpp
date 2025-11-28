@@ -12,6 +12,8 @@
 
 namespace lithium::server::controller {
 
+using ResponseBuilder = utils::ResponseBuilder;
+
 /**
  * @brief File System Operations Controller
  * 
@@ -69,27 +71,24 @@ public:
 
 private:
     crow::response listDirectory(const crow::request& req) {
-        using namespace utils;
-        
         auto path_param = req.url_params.get("path");
         if (!path_param) {
-            return ResponseBuilder::missingField("path");
+            return ResponseBuilder::badRequest("Missing required field: path");
         }
 
         std::string path = path_param;
-        bool recursive = req.url_params.get("recursive") && 
+        bool recursive = req.url_params.get("recursive") &&
                         std::string(req.url_params.get("recursive")) == "true";
 
         try {
             namespace fs = std::filesystem;
-            
+
             if (!fs::exists(path)) {
-                return ResponseBuilder::notFound("path", path);
+                return ResponseBuilder::notFound(path);
             }
 
             if (!fs::is_directory(path)) {
-                return ResponseBuilder::error("invalid_path", 
-                    "The specified path is not a directory.", 400);
+                return ResponseBuilder::badRequest("The specified path is not a directory");
             }
 
             nlohmann::json items = nlohmann::json::array();
@@ -124,20 +123,18 @@ private:
     }
 
     crow::response getInfo(const crow::request& req) {
-        using namespace utils;
-        
         auto path_param = req.url_params.get("path");
         if (!path_param) {
-            return ResponseBuilder::missingField("path");
+            return ResponseBuilder::badRequest("Missing required field: path");
         }
 
         std::string path = path_param;
 
         try {
             namespace fs = std::filesystem;
-            
+
             if (!fs::exists(path)) {
-                return ResponseBuilder::notFound("path", path);
+                return ResponseBuilder::notFound(path);
             }
 
             nlohmann::json data = {
@@ -157,31 +154,27 @@ private:
     }
 
     crow::response readFile(const crow::request& req) {
-        using namespace utils;
-        
         auto path_param = req.url_params.get("path");
         if (!path_param) {
-            return ResponseBuilder::missingField("path");
+            return ResponseBuilder::badRequest("Missing required field: path");
         }
 
         std::string path = path_param;
 
         try {
             namespace fs = std::filesystem;
-            
+
             if (!fs::exists(path)) {
-                return ResponseBuilder::notFound("file", path);
+                return ResponseBuilder::notFound(path);
             }
 
             if (!fs::is_regular_file(path)) {
-                return ResponseBuilder::error("invalid_path",
-                    "The specified path is not a file.", 400);
+                return ResponseBuilder::badRequest("The specified path is not a file");
             }
 
             std::ifstream file(path);
             if (!file.is_open()) {
-                return ResponseBuilder::error("file_read_error",
-                    "Failed to open file for reading.", 500);
+                return ResponseBuilder::internalError("Failed to open file for reading");
             }
 
             std::string content((std::istreambuf_iterator<char>(file)),
@@ -200,16 +193,14 @@ private:
     }
 
     crow::response writeFile(const crow::request& req) {
-        using namespace utils;
-        
         try {
             auto body = nlohmann::json::parse(req.body);
-            
+
             if (!body.contains("path")) {
-                return ResponseBuilder::missingField("path");
+                return ResponseBuilder::badRequest("Missing required field: path");
             }
             if (!body.contains("content")) {
-                return ResponseBuilder::missingField("content");
+                return ResponseBuilder::badRequest("Missing required field: content");
             }
 
             std::string path = body["path"];
@@ -220,8 +211,7 @@ private:
             namespace fs = std::filesystem;
 
             if (fs::exists(path) && !overwrite) {
-                return ResponseBuilder::error("file_exists",
-                    "File already exists. Set overwrite to true to replace it.", 409);
+                return ResponseBuilder::conflict("File already exists. Set overwrite to true to replace it");
             }
 
             if (createDirs) {
@@ -233,43 +223,43 @@ private:
 
             std::ofstream file(path);
             if (!file.is_open()) {
-                return ResponseBuilder::error("file_write_error",
-                    "Failed to open file for writing.", 500);
+                return ResponseBuilder::internalError("Failed to open file for writing");
             }
 
             file << content;
             file.close();
 
-            return ResponseBuilder::successWithMessage("File written successfully.");
+            nlohmann::json data = {
+                {"path", path},
+                {"message", "File written successfully"}
+            };
+            return ResponseBuilder::success(data);
         } catch (const nlohmann::json::exception& e) {
-            return ResponseBuilder::invalidJson(e.what());
+            return ResponseBuilder::badRequest(std::string("Invalid JSON: ") + e.what());
         } catch (const std::exception& e) {
             return ResponseBuilder::internalError(e.what());
         }
     }
 
     crow::response deleteItem(const crow::request& req) {
-        using namespace utils;
-        
         auto path_param = req.url_params.get("path");
         if (!path_param) {
-            return ResponseBuilder::missingField("path");
+            return ResponseBuilder::badRequest("Missing required field: path");
         }
 
         std::string path = path_param;
-        bool recursive = req.url_params.get("recursive") && 
+        bool recursive = req.url_params.get("recursive") &&
                         std::string(req.url_params.get("recursive")) == "true";
 
         try {
             namespace fs = std::filesystem;
-            
+
             if (!fs::exists(path)) {
-                return ResponseBuilder::notFound("path", path);
+                return ResponseBuilder::notFound(path);
             }
 
             if (fs::is_directory(path) && !recursive) {
-                return ResponseBuilder::error("directory_not_empty",
-                    "Directory is not empty. Set recursive to true to delete it.", 400);
+                return ResponseBuilder::badRequest("Directory is not empty. Set recursive to true to delete it");
             }
 
             if (recursive) {
@@ -278,23 +268,25 @@ private:
                 fs::remove(path);
             }
 
-            return ResponseBuilder::successWithMessage("Item deleted successfully.");
+            nlohmann::json data = {
+                {"path", path},
+                {"message", "Item deleted successfully"}
+            };
+            return ResponseBuilder::success(data);
         } catch (const std::exception& e) {
             return ResponseBuilder::internalError(e.what());
         }
     }
 
     crow::response moveItem(const crow::request& req) {
-        using namespace utils;
-        
         try {
             auto body = nlohmann::json::parse(req.body);
-            
+
             if (!body.contains("source")) {
-                return ResponseBuilder::missingField("source");
+                return ResponseBuilder::badRequest("Missing required field: source");
             }
             if (!body.contains("destination")) {
-                return ResponseBuilder::missingField("destination");
+                return ResponseBuilder::badRequest("Missing required field: destination");
             }
 
             std::string source = body["source"];
@@ -304,35 +296,37 @@ private:
             namespace fs = std::filesystem;
 
             if (!fs::exists(source)) {
-                return ResponseBuilder::notFound("source", source);
+                return ResponseBuilder::notFound(source);
             }
 
             if (fs::exists(destination) && !overwrite) {
-                return ResponseBuilder::error("destination_exists",
-                    "Destination already exists. Set overwrite to true to replace it.", 409);
+                return ResponseBuilder::conflict("Destination already exists. Set overwrite to true to replace it");
             }
 
             fs::rename(source, destination);
 
-            return ResponseBuilder::successWithMessage("Item moved successfully.");
+            nlohmann::json data = {
+                {"source", source},
+                {"destination", destination},
+                {"message", "Item moved successfully"}
+            };
+            return ResponseBuilder::success(data);
         } catch (const nlohmann::json::exception& e) {
-            return ResponseBuilder::invalidJson(e.what());
+            return ResponseBuilder::badRequest(std::string("Invalid JSON: ") + e.what());
         } catch (const std::exception& e) {
             return ResponseBuilder::internalError(e.what());
         }
     }
 
     crow::response copyItem(const crow::request& req) {
-        using namespace utils;
-        
         try {
             auto body = nlohmann::json::parse(req.body);
-            
+
             if (!body.contains("source")) {
-                return ResponseBuilder::missingField("source");
+                return ResponseBuilder::badRequest("Missing required field: source");
             }
             if (!body.contains("destination")) {
-                return ResponseBuilder::missingField("destination");
+                return ResponseBuilder::badRequest("Missing required field: destination");
             }
 
             std::string source = body["source"];
@@ -342,16 +336,15 @@ private:
             namespace fs = std::filesystem;
 
             if (!fs::exists(source)) {
-                return ResponseBuilder::notFound("source", source);
+                return ResponseBuilder::notFound(source);
             }
 
             if (fs::exists(destination) && !overwrite) {
-                return ResponseBuilder::error("destination_exists",
-                    "Destination already exists. Set overwrite to true to replace it.", 409);
+                return ResponseBuilder::conflict("Destination already exists. Set overwrite to true to replace it");
             }
 
-            auto options = overwrite ? 
-                fs::copy_options::overwrite_existing : 
+            auto options = overwrite ?
+                fs::copy_options::overwrite_existing :
                 fs::copy_options::none;
 
             if (fs::is_directory(source)) {
@@ -360,22 +353,25 @@ private:
 
             fs::copy(source, destination, options);
 
-            return ResponseBuilder::successWithMessage("Item copied successfully.");
+            nlohmann::json data = {
+                {"source", source},
+                {"destination", destination},
+                {"message", "Item copied successfully"}
+            };
+            return ResponseBuilder::success(data);
         } catch (const nlohmann::json::exception& e) {
-            return ResponseBuilder::invalidJson(e.what());
+            return ResponseBuilder::badRequest(std::string("Invalid JSON: ") + e.what());
         } catch (const std::exception& e) {
             return ResponseBuilder::internalError(e.what());
         }
     }
 
     crow::response makeDirectory(const crow::request& req) {
-        using namespace utils;
-        
         try {
             auto body = nlohmann::json::parse(req.body);
-            
+
             if (!body.contains("path")) {
-                return ResponseBuilder::missingField("path");
+                return ResponseBuilder::badRequest("Missing required field: path");
             }
 
             std::string path = body["path"];
@@ -384,8 +380,7 @@ private:
             namespace fs = std::filesystem;
 
             if (fs::exists(path)) {
-                return ResponseBuilder::error("path_exists",
-                    "The specified path already exists.", 409);
+                return ResponseBuilder::conflict("The specified path already exists");
             }
 
             if (recursive) {
@@ -394,37 +389,39 @@ private:
                 fs::create_directory(path);
             }
 
-            return ResponseBuilder::successWithMessage("Directory created successfully.");
+            nlohmann::json data = {
+                {"path", path},
+                {"message", "Directory created successfully"}
+            };
+            return ResponseBuilder::success(data);
         } catch (const nlohmann::json::exception& e) {
-            return ResponseBuilder::invalidJson(e.what());
+            return ResponseBuilder::badRequest(std::string("Invalid JSON: ") + e.what());
         } catch (const std::exception& e) {
             return ResponseBuilder::internalError(e.what());
         }
     }
 
     crow::response searchFiles(const crow::request& req) {
-        using namespace utils;
-        
         auto path_param = req.url_params.get("path");
         auto pattern_param = req.url_params.get("pattern");
-        
+
         if (!path_param) {
-            return ResponseBuilder::missingField("path");
+            return ResponseBuilder::badRequest("Missing required field: path");
         }
         if (!pattern_param) {
-            return ResponseBuilder::missingField("pattern");
+            return ResponseBuilder::badRequest("Missing required field: pattern");
         }
 
         std::string path = path_param;
         std::string pattern = pattern_param;
-        bool recursive = req.url_params.get("recursive") && 
+        bool recursive = req.url_params.get("recursive") &&
                         std::string(req.url_params.get("recursive")) == "true";
 
         try {
             namespace fs = std::filesystem;
-            
+
             if (!fs::exists(path)) {
-                return ResponseBuilder::notFound("path", path);
+                return ResponseBuilder::notFound(path);
             }
 
             nlohmann::json results = nlohmann::json::array();

@@ -9,17 +9,22 @@
 
 #include "atom/error/exception.hpp"
 #include "controller.hpp"
+#include "../utils/response.hpp"
 #include <functional>
 #include <memory>
 #include <string>
 #include "atom/function/global_ptr.hpp"
-#include <spdlog/spdlog.h>
+#include "atom/log/spdlog_logger.hpp"
 #include "constant/constant.hpp"
 #include "script/python_caller.hpp"
 
+namespace lithium::server::controller {
+
+using ResponseBuilder = utils::ResponseBuilder;
+
 /**
  * @brief Controller for managing Python script operations via HTTP API
- * 
+ *
  * This controller provides comprehensive Python script management including:
  * - Script loading/unloading/reloading
  * - Function calling and variable management
@@ -849,5 +854,7 @@ public:
 };
 
 inline std::weak_ptr<lithium::PythonWrapper> PythonController::mPythonWrapper;
+
+}  // namespace lithium::server::controller
 
 #endif  // LITHIUM_ASYNC_PYTHON_CONTROLLER_HPP
