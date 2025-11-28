@@ -4,3 +4,9 @@
 [submodule "libs/thirdparty"]
 	path = libs/thirdparty
 	url = https://github.com/ElementAstro/LithiumLibrary
+[submodule "libs/cpptrace"]
+	path = libs/cpptrace
+	url = https://github.com/jeremy-rifkin/cpptrace
+[submodule "libs/spdlog"]
+	path = libs/spdlog
+	url = https://github.com/gabime/spdlog

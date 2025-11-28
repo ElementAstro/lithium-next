@@ -14,11 +14,13 @@
 #define LITHIUM_TASK_WORKFLOW_TASKS_HPP
 
 #include "../common/task_base.hpp"
-#include "../../astro_types.hpp"
+#include "tools/astronomy/types.hpp"
 
 namespace lithium::task::workflow {
 
-using namespace lithium::task;
+// Import astronomy types
+using tools::astronomy::Coordinates;
+using tools::astronomy::ExposurePlan;
 
 // ============================================================================
 // Target Acquisition Task

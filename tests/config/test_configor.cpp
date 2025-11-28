@@ -1,10 +1,14 @@
 #include "atom/type/json.hpp"
-#include "config/configor.hpp"
+#include "config/config.hpp"
 
 #include <filesystem>
 #include <fstream>
+#include <thread>
 #include <gtest/gtest.h>
 
+namespace fs = std::filesystem;
+using json = nlohmann::json;
+using lithium::config::ConfigManager;
 
 namespace lithium {
 namespace test {

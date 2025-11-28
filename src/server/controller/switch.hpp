@@ -4,7 +4,7 @@
 #include <crow/json.h>
 #include "controller.hpp"
 #include "server/command/gpio.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "server/models/api.hpp"
 
 class SwitchController : public Controller {

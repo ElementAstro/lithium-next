@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 namespace lithium::server::middleware {
 
@@ -60,7 +60,7 @@ struct ApiKeyAuth {
                 }
             })");
             res.end();
-            LOG_F(WARNING, "Request to {} rejected: Missing API key", req.url);
+            LOG_WARN( "Request to {} rejected: Missing API key", req.url);
             return;
         }
 
@@ -75,14 +75,14 @@ struct ApiKeyAuth {
                 }
             })");
             res.end();
-            LOG_F(WARNING, "Request to {} rejected: Invalid API key", req.url);
+            LOG_WARN( "Request to {} rejected: Invalid API key", req.url);
             return;
         }
 
         // Authentication successful
         ctx.authenticated = true;
         ctx.api_key = api_key_header;
-        LOG_F(INFO, "Request to {} authenticated successfully", req.url);
+        LOG_INFO( "Request to {} authenticated successfully", req.url);
     }
 
     void after_handle(crow::request& /*req*/, crow::response& /*res*/, context& /*ctx*/) {
@@ -123,14 +123,14 @@ struct RequestLogger : crow::ILocalMiddleware {
 
     void before_handle(crow::request& req, crow::response& /*res*/, context& ctx) {
         ctx.start_time = std::chrono::steady_clock::now();
-        LOG_F(INFO, "Incoming request: {} {}", req.method_str(), req.url);
+        LOG_INFO( "Incoming request: {} {}", req.method_str(), req.url);
     }
 
     void after_handle(crow::request& req, crow::response& res, context& ctx) {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - ctx.start_time
         );
-        LOG_F(INFO, "Request completed: {} {} - Status: {} - Duration: {}ms",
+        LOG_INFO( "Request completed: {} {} - Status: {} - Duration: {}ms",
               req.method_str(), req.url, res.code, duration.count());
     }
 };

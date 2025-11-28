@@ -4,7 +4,7 @@
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: Lithium-Config
-# Description: Configuration management module
+# Description: Configuration management module with split architecture
 # Author: Max Qian
 # License: GPL3
 # ============================================================================
@@ -16,21 +16,32 @@ lithium_component_begin(lithium_config 1.0.0)
 # ============================================================================
 
 set(PROJECT_SOURCES
-    configor.cpp
-    config_cache.cpp
-    config_validator.cpp
-    config_serializer.cpp
-    config_watcher.cpp
+    # Core module
+    core/manager.cpp
+    # Components module
+    components/cache.cpp
+    components/validator.cpp
+    components/serializer.cpp
+    components/watcher.cpp
 )
 
 set(PROJECT_HEADERS
-    configor.hpp
-    config_cache.hpp
-    config_validator.hpp
-    config_serializer.hpp
-    config_watcher.hpp
-    configor_macro.hpp
-    json5.hpp
+    # Main entry point
+    config.hpp
+    # Core module
+    core/exception.hpp
+    core/manager.hpp
+    core/types.hpp
+    # Components module
+    components/cache.hpp
+    components/validator.hpp
+    components/serializer.hpp
+    components/watcher.hpp
+    components/components.hpp
+    # Utils module
+    utils/json5.hpp
+    utils/macro.hpp
+    utils/utils.hpp
 )
 
 # ============================================================================

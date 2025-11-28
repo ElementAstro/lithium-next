@@ -17,11 +17,22 @@
 #include <unordered_map>
 #include <vector>
 
-#include "astro_types.hpp"
+#include "tools/astronomy/types.hpp"
 #include "atom/async/safetype.hpp"
 #include "task.hpp"
 
 namespace lithium::task {
+
+// Import astronomy types into task namespace for convenience
+using tools::astronomy::Coordinates;
+using tools::astronomy::HorizontalCoordinates;
+using tools::astronomy::ObserverLocation;
+using tools::astronomy::AltitudeConstraints;
+using tools::astronomy::ObservabilityWindow;
+using tools::astronomy::ExposurePlan;
+using tools::astronomy::TargetConfig;
+using tools::astronomy::MeridianState;
+using tools::astronomy::MeridianFlipInfo;
 
 /**
  * @enum TargetStatus

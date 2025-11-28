@@ -1,9 +1,9 @@
 #include "gpio.hpp"
 
-#include "config/configor.hpp"
+#include "config/config.hpp"
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "constant/constant.hpp"
 #include "server/models/api.hpp"
 
@@ -21,7 +21,7 @@ static const std::vector<std::pair<int, std::string>> kGpioPins = {
 };
 
 auto listSwitches() -> json {
-    LOG_F(INFO, "listSwitches: Listing all switches");
+    LOG_INFO( "listSwitches: Listing all switches");
     json response;
     
     try {
@@ -51,7 +51,7 @@ auto listSwitches() -> json {
         response["data"] = data;
         
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "listSwitches: Exception: %s", e.what());
+        LOG_ERROR( "listSwitches: Exception: %s", e.what());
         return lithium::models::api::makeError("internal_error", e.what());
     }
     
@@ -59,7 +59,7 @@ auto listSwitches() -> json {
 }
 
 auto setSwitch(int id, bool state) -> json {
-    LOG_F(INFO, "setSwitch: Setting switch %d to %s", id, state ? "ON" : "OFF");
+    LOG_INFO( "setSwitch: Setting switch %d to %s", id, state ? "ON" : "OFF");
     
     auto it = std::find_if(kGpioPins.begin(), kGpioPins.end(),
                            [id](const auto& pair) { return pair.first == id; });
@@ -94,13 +94,13 @@ auto setSwitch(int id, bool state) -> json {
         return response;
         
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "setSwitch: Exception: %s", e.what());
+        LOG_ERROR( "setSwitch: Exception: %s", e.what());
         return lithium::models::api::makeError("internal_error", e.what());
     }
 }
 
 auto toggleSwitch(int id) -> json {
-    LOG_F(INFO, "toggleSwitch: Toggling switch %d", id);
+    LOG_INFO( "toggleSwitch: Toggling switch %d", id);
     
     try {
         LITHIUM_GET_REQUIRED_PTR(configManager, lithium::ConfigManager, Constants::CONFIG_MANAGER);
@@ -116,7 +116,7 @@ auto toggleSwitch(int id) -> json {
         return setSwitch(id, !currentState);
         
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "toggleSwitch: Exception: %s", e.what());
+        LOG_ERROR( "toggleSwitch: Exception: %s", e.what());
         return lithium::models::api::makeError("internal_error", e.what());
     }
 }

@@ -3,7 +3,7 @@
 
 #include "controller.hpp"
 #include "../utils/response.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 
 #include <filesystem>
@@ -118,7 +118,7 @@ private:
 
             return ResponseBuilder::success(data);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to list directory: {}", e.what());
+            LOG_ERROR( "Failed to list directory: {}", e.what());
             return ResponseBuilder::internalError(e.what());
         }
     }

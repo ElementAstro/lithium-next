@@ -1,536 +1,117 @@
 #include "camera.hpp"
 
-#include "config/configor.hpp"
+#include <spdlog/spdlog.h>
 
-#include "atom/async/message_bus.hpp"
-#include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
+#include "command.hpp"
+#include "device/service/camera_service.hpp"
 
-#include "device/template/camera.hpp"
+namespace lithium::app {
 
-#include "constant/constant.hpp"
-#include "server/models/camera.hpp"
+using nlohmann::json;
 
-namespace lithium::middleware {
-
-using json = nlohmann::json;
-
-// Tracks the last requested cooling setpoint so that status can report it.
-static std::optional<double> g_lastCoolingSetpoint;
-
-// List all available cameras
-auto listCameras() -> json {
-    LOG_F(INFO, "listCameras: Listing all available cameras");
-    json response;
-    response["status"] = "success";
-    
-    try {
-        std::shared_ptr<ConfigManager> configManager;
-        GET_OR_CREATE_PTR(configManager, ConfigManager,
-                          Constants::CONFIG_MANAGER)
-
-        // Get camera configuration
-        auto cameraList = json::array();
-        
-        // For now, we'll support the main camera
-        // TODO: Add support for multiple cameras from config
-        std::shared_ptr<AtomCamera> camera;
-        try {
-            GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-            cameraList.push_back(
-                lithium::models::camera::makeCameraSummary(
-                    "cam-001", camera->getName(), camera->isConnected()));
-        } catch (...) {
-            LOG_F(WARNING, "listCameras: Main camera not available");
-        }
-        
-        response["data"] = cameraList;
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "listCameras: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "listCameras: Completed");
-    return response;
+// Global service instance
+static lithium::device::CameraService& getCameraService() {
+    static lithium::device::CameraService instance;
+    return instance;
 }
 
-// Get camera status
-auto getCameraStatus(const std::string& deviceId) -> json {
-    LOG_F(INFO, "getCameraStatus: Getting status for camera: %s", deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
+void registerCamera(std::shared_ptr<CommandDispatcher> dispatcher) {
+    // Camera: start exposure
+    dispatcher->registerCommand<json>(
+        "camera.start_exposure",
+        [](const json& payload) {
+            auto& p = const_cast<json&>(payload);
 
-        if (!camera->isConnected()) {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "device_not_connected"},
-                {"message", "Camera is not connected"},
-            };
-            return response;
-        }
-        
-        json data = lithium::models::camera::makeCameraStatusData(
-            *camera, g_lastCoolingSetpoint);
+            std::string deviceId = p.value("deviceId", std::string("cam-001"));
 
-        response["status"] = "success";
-        response["data"] = data;
-        
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "getCameraStatus: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "getCameraStatus: Completed");
-    return response;
-}
-
-// Connect/Disconnect camera
-auto connectCamera(const std::string& deviceId, bool connected) -> json {
-    LOG_F(INFO, "connectCamera: %s camera: %s", 
-          connected ? "Connecting" : "Disconnecting", deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        bool success = connected ? camera->connect("", "") : camera->disconnect();
-        
-        if (success) {
-            response["status"] = "success";
-            response["message"] =
-                connected ? "Camera connection process initiated."
-                          : "Camera disconnection process initiated.";
-                
-            // Publish event
-            std::shared_ptr<atom::async::MessageBus> messageBusPtr;
-            GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
-                              Constants::MESSAGE_BUS)
-            messageBusPtr->publish("main",
-                                   "CameraConnection:{}"_fmt(connected ? "ON" : "OFF"));
-        } else {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "connection_failed"},
-                {"message", "Connection operation failed."},
-            };
-        }
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "connectCamera: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "connectCamera: Completed");
-    return response;
-}
-
-// Update camera settings
-auto updateCameraSettings(const std::string& deviceId, const json& settings) -> json {
-    LOG_F(INFO, "updateCameraSettings: Updating settings for camera: %s", deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        if (!camera->isConnected()) {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "device_not_connected"},
-                {"message", "Camera is not connected"}
-            };
-            return response;
-        }
-        
-        // Update cooler settings
-        if (settings.contains("coolerOn")) {
-            bool coolerOn = settings["coolerOn"];
-            if (coolerOn && settings.contains("setpoint")) {
-                double setpoint = settings["setpoint"];
-                camera->startCooling(setpoint);
-                g_lastCoolingSetpoint = setpoint;
-            } else if (!coolerOn) {
-                camera->stopCooling();
-                g_lastCoolingSetpoint.reset();
+            if (!p.contains("duration")) {
+                throw std::runtime_error(
+                    "camera.start_exposure: missing 'duration'");
             }
-        }
-        
-        // Update gain
-        if (settings.contains("gain")) {
-            int gain = settings["gain"];
-            camera->setGain(gain);
-        }
-        
-        // Update offset
-        if (settings.contains("offset")) {
-            int offset = settings["offset"];
-            camera->setOffset(offset);
-        }
-        
-        // Update binning
-        if (settings.contains("binning")) {
-            int binX = settings["binning"]["x"];
-            int binY = settings["binning"]["y"];
-            camera->setBinning(binX, binY);
-        }
-        
-        // Update ROI
-        if (settings.contains("roi")) {
-            int x = settings["roi"]["x"];
-            int y = settings["roi"]["y"];
-            int width = settings["roi"]["width"];
-            int height = settings["roi"]["height"];
-            camera->setResolution(x, y, width, height);
-        }
-        
-        response["status"] = "success";
-        response["message"] = "Camera settings update initiated.";
+            double duration = p["duration"].get<double>();
 
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "updateCameraSettings: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "updateCameraSettings: Completed");
-    return response;
+            if (!p.contains("frameType")) {
+                throw std::runtime_error(
+                    "camera.start_exposure: missing 'frameType'");
+            }
+            if (!p["frameType"].is_string()) {
+                throw std::runtime_error(
+                    "camera.start_exposure: 'frameType' must be a string");
+            }
+
+            std::string frameType = p["frameType"].get<std::string>();
+
+            if (frameType == "light" || frameType == "LIGHT") {
+                frameType = "Light";
+            } else if (frameType == "dark" || frameType == "DARK") {
+                frameType = "Dark";
+            } else if (frameType == "flat" || frameType == "FLAT") {
+                frameType = "Flat";
+            } else if (frameType == "bias" || frameType == "BIAS") {
+                frameType = "Bias";
+            }
+
+            if (frameType != "Light" && frameType != "Dark" &&
+                frameType != "Flat" && frameType != "Bias") {
+                throw std::runtime_error(
+                    "camera.start_exposure: 'frameType' must be one of: Light, Dark, Flat, Bias");
+            }
+
+            std::string filename = p.value("filename", std::string(""));
+
+            // Apply optional settings (binning/gain/offset) via shared middleware
+            // implementation to keep HTTP and WebSocket behaviour consistent.
+            json settings = json::object();
+            if (p.contains("binning")) {
+                settings["binning"] = p["binning"];
+            }
+            if (p.contains("gain")) {
+                settings["gain"] = p["gain"];
+            }
+            if (p.contains("offset")) {
+                settings["offset"] = p["offset"];
+            }
+
+            if (!settings.empty()) {
+                auto settingsResult =
+                    getCameraService().updateSettings(deviceId, settings);
+                if (settingsResult.contains("status") &&
+                    settingsResult["status"] == "error") {
+                    p = settingsResult;
+                    return;
+                }
+            }
+
+            auto result = getCameraService().startExposure(
+                deviceId, duration, frameType, filename);
+            p = result;
+        });
+    spdlog::info("Registered command handler for 'camera.start_exposure'");
+
+    // Camera: abort exposure
+    dispatcher->registerCommand<json>(
+        "camera.abort_exposure",
+        [](const json& payload) {
+            auto& p = const_cast<json&>(payload);
+
+            std::string deviceId = p.value("deviceId", std::string("cam-001"));
+            auto result = getCameraService().abortExposure(deviceId);
+            p = result;
+        });
+    spdlog::info("Registered command handler for 'camera.abort_exposure'");
+
+    // Camera: get status
+    dispatcher->registerCommand<json>(
+        "camera.status",
+        [](const json& payload) {
+            auto& p = const_cast<json&>(payload);
+
+            std::string deviceId = p.value("deviceId", std::string("cam-001"));
+            auto result = getCameraService().getStatus(deviceId);
+            p = result;
+        });
+    spdlog::info("Registered command handler for 'camera.status'");
 }
 
-// Start exposure
-auto startExposure(const std::string& deviceId, double duration, 
-                   const std::string& frameType, const std::string& filename) -> json {
-    LOG_F(INFO, "startExposure: Starting %f second exposure on camera: %s", 
-          duration, deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        if (!camera->isConnected()) {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "device_not_connected"},
-                {"message", "Camera is not connected"}
-            };
-            return response;
-        }
-        
-        if (camera->isExposing()) {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "device_busy"},
-                {"message", "Camera is already exposing"},
-            };
-            return response;
-        }
-
-        // NOTE: frameType (Light/Dark/Flat/Bias) is currently advisory only.
-        // Low-level driver exposure behaviour does not depend on it here.
-
-        // Start exposure
-        bool success = camera->startExposure(duration);
-        
-        if (success) {
-            // Generate exposure ID
-            std::string exposureId = "exp_" + std::to_string(
-                std::chrono::system_clock::now().time_since_epoch().count());
-            
-            response["status"] = "success";
-            response["data"] = {
-                {"exposureId", exposureId}
-            };
-            response["message"] = "Exposure started.";
-            
-            // Publish event
-            std::shared_ptr<atom::async::MessageBus> messageBusPtr;
-            GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
-                              Constants::MESSAGE_BUS)
-            messageBusPtr->publish("main", "ExposureStarted:{}"_fmt(exposureId));
-        } else {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "exposure_failed"},
-                {"message", "Failed to start exposure."},
-            };
-        }
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "startExposure: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "startExposure: Completed");
-    return response;
-}
-
-// Abort exposure
-auto abortExposure(const std::string& deviceId) -> json {
-    LOG_F(INFO, "abortExposure: Aborting exposure on camera: %s", deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        bool success = camera->abortExposure();
-        
-        if (success) {
-            response["status"] = "success";
-            response["message"] = "Exposure abort command sent.";
-            
-            // Publish event
-            std::shared_ptr<atom::async::MessageBus> messageBusPtr;
-            GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
-                              Constants::MESSAGE_BUS)
-            messageBusPtr->publish("main", "ExposureAborted");
-        } else {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "exposure_abort_failed"},
-                {"message", "Failed to abort exposure."},
-            };
-        }
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "abortExposure: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "abortExposure: Completed");
-    return response;
-}
-
-// Get camera capabilities
-auto getCameraCapabilities(const std::string& deviceId) -> json {
-    LOG_F(INFO, "getCameraCapabilities: Getting capabilities for camera: %s", 
-          deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        if (!camera->isConnected()) {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "device_not_connected"},
-                {"message", "Camera is not connected"}
-            };
-            return response;
-        }
-        
-        json data =
-            lithium::models::camera::makeCameraCapabilitiesData(*camera);
-        
-        response["status"] = "success";
-        response["data"] = data;
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "getCameraCapabilities: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "getCameraCapabilities: Completed");
-    return response;
-}
-
-// Get available gains
-auto getCameraGains(const std::string& deviceId) -> json {
-    LOG_F(INFO, "getCameraGains: Getting available gains for camera: %s", 
-          deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        std::vector<int> gains;
-        gains.reserve(13);
-        for (int i = 0; i <= 600; i += 50) {
-            gains.push_back(i);
-        }
-
-        json data =
-            lithium::models::camera::makeGainsData(*camera, gains);
-        
-        response["status"] = "success";
-        response["data"] = data;
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "getCameraGains: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "getCameraGains: Completed");
-    return response;
-}
-
-// Get available offsets
-auto getCameraOffsets(const std::string& deviceId) -> json {
-    LOG_F(INFO, "getCameraOffsets: Getting available offsets for camera: %s", 
-          deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        std::vector<int> offsets;
-        offsets.reserve(11);
-        for (int i = 0; i <= 100; i += 10) {
-            offsets.push_back(i);
-        }
-
-        json data =
-            lithium::models::camera::makeOffsetsData(*camera, offsets);
-        
-        response["status"] = "success";
-        response["data"] = data;
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "getCameraOffsets: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "getCameraOffsets: Completed");
-    return response;
-}
-
-// Set cooler power (manual mode)
-auto setCoolerPower(const std::string& deviceId, double power, 
-                    const std::string& mode) -> json {
-    LOG_F(INFO, "setCoolerPower: Setting cooler power to %f for camera: %s", 
-          power, deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        if (!camera->hasCooler()) {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "feature_not_supported"},
-                {"message", "Camera does not have a cooler"},
-            };
-            return response;
-        }
-        
-        // Manual cooler power control is not supported by the current AtomCamera interface
-        // which only supports setpoint-based cooling (startCooling).
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "feature_not_supported"},
-            {"message", "Manual cooler power control is not supported. Use setpoint cooling instead."},
-        };
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "setCoolerPower: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "setCoolerPower: Completed");
-    return response;
-}
-
-// Warm up camera
-auto warmUpCamera(const std::string& deviceId) -> json {
-    LOG_F(INFO, "warmUpCamera: Initiating warm-up for camera: %s", deviceId.c_str());
-    json response;
-    
-    try {
-        std::shared_ptr<AtomCamera> camera;
-        GET_OR_CREATE_PTR(camera, AtomCamera, Constants::MAIN_CAMERA)
-        
-        if (!camera->hasCooler()) {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "feature_not_supported"},
-                {"message", "Camera does not have a cooler"}
-            };
-            return response;
-        }
-        
-        // Stop cooling
-        bool success = camera->stopCooling();
-        
-        if (success) {
-            g_lastCoolingSetpoint.reset();
-            response["status"] = "success";
-            response["message"] = "Camera warm-up sequence initiated.";
-            response["data"] = {
-                {"targetTemperature", 20.0},
-                {"estimatedTime", 600},  // 10 minutes estimated
-            };
-
-            // Publish event
-            std::shared_ptr<atom::async::MessageBus> messageBusPtr;
-            GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
-                              Constants::MESSAGE_BUS)
-            messageBusPtr->publish("main", "CameraWarmupStarted");
-        } else {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "warmup_failed"},
-                {"message", "Failed to initiate warm-up."},
-            };
-        }
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "warmUpCamera: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
-    }
-    
-    LOG_F(INFO, "warmUpCamera: Completed");
-    return response;
-}
-
-}  // namespace lithium::middleware
+}  // namespace lithium::app

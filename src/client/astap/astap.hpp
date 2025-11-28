@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include "device/template/solver.hpp"
-#include "tools/constant.hpp"
+#include "tools/astronomy/constants.hpp"
 
 /**
  * @brief Implementation of a plate solver using ASTAP software
@@ -105,7 +105,7 @@ protected:
      * @return Angle in radians
      */
     auto toRadians(double degrees) -> double override {
-        return degrees * K_DEGREES_TO_RADIANS;
+        return degrees * lithium::tools::astronomy::DEG_TO_RAD;
     }
 
     /**
@@ -114,7 +114,7 @@ protected:
      * @return Angle in degrees
      */
     auto toDegrees(double radians) -> double override {
-        return radians * K_RADIANS_TO_DEGREES;
+        return radians * lithium::tools::astronomy::RAD_TO_DEG;
     }
 
     /**
@@ -123,7 +123,7 @@ protected:
      * @return Angle in degrees
      */
     auto arcsecToDegree(double arcsec) -> double override {
-        return arcsec / lithium::tools::K_ARCSEC_PER_DEGREE;
+        return arcsec / lithium::tools::astronomy::ARCSEC_PER_DEGREE;
     }
 
     /**

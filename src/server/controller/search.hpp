@@ -15,7 +15,7 @@
 #include <string>
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "constant/constant.hpp"
 #include "target/engine.hpp"
@@ -40,7 +40,7 @@ private:
                 res["code"] = 500;
                 res["error"] =
                     "Internal Server Error: SearchEngine instance is null.";
-                LOG_F(ERROR,
+                LOG_ERROR(
                       "SearchEngine instance is null. Unable to proceed with "
                       "command: {}",
                       command);
@@ -61,7 +61,7 @@ private:
             res["code"] = 400;
             res["error"] =
                 std::string("Bad Request: Invalid argument - ") + e.what();
-            LOG_F(ERROR,
+            LOG_ERROR(
                   "Invalid argument while executing command: {}. Exception: {}",
                   command, e.what());
         } catch (const std::runtime_error& e) {
@@ -70,7 +70,7 @@ private:
             res["error"] =
                 std::string("Internal Server Error: Runtime error - ") +
                 e.what();
-            LOG_F(ERROR,
+            LOG_ERROR(
                   "Runtime error while executing command: {}. Exception: {}",
                   command, e.what());
         } catch (const std::exception& e) {
@@ -79,8 +79,7 @@ private:
             res["error"] =
                 std::string("Internal Server Error: Exception occurred - ") +
                 e.what();
-            LOG_F(
-                ERROR,
+            LOG_ERROR(
                 "Exception occurred while executing command: {}. Exception: {}",
                 command, e.what());
         }

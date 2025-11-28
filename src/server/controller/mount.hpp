@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "server/command/mount.hpp"
 

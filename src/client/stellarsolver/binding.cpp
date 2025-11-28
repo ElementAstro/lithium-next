@@ -3,14 +3,14 @@
 #include "statistic.hpp"
 #include "stellarsolver.hpp"
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 using namespace lithium::client;
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(ssbindings, m) {
-    LOG_F(INFO, "Initializing ssbindings module");
+    LOG_INFO( "Initializing ssbindings module");
 
     py::class_<FitsImageStatistic>(m, "FitsImageStatistic")
         .def(py::init<>())
@@ -60,5 +60,5 @@ PYBIND11_MODULE(ssbindings, m) {
         .def("pixel_to_wcs", &SS::pixelToWCS)
         .def("wcs_to_pixel", &SS::wcsToPixel)
 
-            LOG_F(INFO, "ssbindings module initialized successfully");
+            LOG_INFO( "ssbindings module initialized successfully");
 }

@@ -226,19 +226,95 @@ std::vector<DeviceInfo> INDIClient::getDevices() const {
 
     auto devices = connector_->getDevices();
     for (const auto& dev : devices) {
-        DeviceInfo info;
-        auto it = dev.find("device");
-        if (it != dev.end()) {
-            info.name = it->second;
-        }
-        it = dev.find("connected");
-        if (it != dev.end()) {
-            info.connected = (it->second == "true");
-        }
-        result.push_back(info);
+        result.push_back(convertToDeviceInfo(dev));
     }
 
     return result;
+}
+
+DeviceInfo INDIClient::convertToDeviceInfo(
+    const std::unordered_map<std::string, std::string>& devMap) const {
+    DeviceInfo info;
+    info.backend = "INDI";
+    
+    auto it = devMap.find("device");
+    if (it != devMap.end()) {
+        info.name = it->second;
+        info.id = it->second;  // Use device name as ID for INDI
+        info.displayName = it->second;
+    }
+    
+    it = devMap.find("connected");
+    if (it != devMap.end()) {
+        info.connected = (it->second == "true" || it->second == "On");
+    }
+    
+    it = devMap.find("driver");
+    if (it != devMap.end()) {
+        info.driver = it->second;
+    }
+    
+    it = devMap.find("version");
+    if (it != devMap.end()) {
+        info.driverVersion = it->second;
+    }
+    
+    it = devMap.find("interface");
+    if (it != devMap.end()) {
+        info.interfaceString = it->second;
+        info.interfaces = parseInterfaceFlags(it->second);
+    }
+    
+    info.lastUpdate = std::chrono::system_clock::now();
+    if (info.connected) {
+        info.health = DeviceHealth::Good;
+        info.initialized = true;
+    }
+    
+    return info;
+}
+
+DeviceInterface INDIClient::parseInterfaceFlags(const std::string& interfaceStr) {
+    DeviceInterface flags = DeviceInterface::None;
+    
+    // Parse INDI interface bitmask or string
+    try {
+        uint32_t mask = std::stoul(interfaceStr);
+        // INDI interface flags mapping
+        if (mask & 1) flags = flags | DeviceInterface::General;
+        if (mask & 2) flags = flags | DeviceInterface::Telescope;
+        if (mask & 4) flags = flags | DeviceInterface::CCD;
+        if (mask & 8) flags = flags | DeviceInterface::Guider;
+        if (mask & 16) flags = flags | DeviceInterface::Focuser;
+        if (mask & 32) flags = flags | DeviceInterface::FilterWheel;
+        if (mask & 64) flags = flags | DeviceInterface::Dome;
+        if (mask & 128) flags = flags | DeviceInterface::GPS;
+        if (mask & 256) flags = flags | DeviceInterface::Weather;
+        if (mask & 512) flags = flags | DeviceInterface::AO;
+        if (mask & 1024) flags = flags | DeviceInterface::Dustcap;
+        if (mask & 2048) flags = flags | DeviceInterface::Lightbox;
+        if (mask & 4096) flags = flags | DeviceInterface::Detector;
+        if (mask & 8192) flags = flags | DeviceInterface::Rotator;
+        if (mask & 16384) flags = flags | DeviceInterface::Spectrograph;
+        if (mask & 32768) flags = flags | DeviceInterface::Correlator;
+        if (mask & 65536) flags = flags | DeviceInterface::AuxiliaryDevice;
+        if (mask & 131072) flags = flags | DeviceInterface::Output;
+        if (mask & 262144) flags = flags | DeviceInterface::Input;
+    } catch (...) {
+        // If not a number, try to parse as string
+        if (interfaceStr.find("Telescope") != std::string::npos)
+            flags = flags | DeviceInterface::Telescope;
+        if (interfaceStr.find("CCD") != std::string::npos)
+            flags = flags | DeviceInterface::CCD;
+        if (interfaceStr.find("Focuser") != std::string::npos)
+            flags = flags | DeviceInterface::Focuser;
+        if (interfaceStr.find("FilterWheel") != std::string::npos)
+            flags = flags | DeviceInterface::FilterWheel;
+        if (interfaceStr.find("Dome") != std::string::npos)
+            flags = flags | DeviceInterface::Dome;
+    }
+    
+    return flags;
 }
 
 std::optional<DeviceInfo> INDIClient::getDevice(const std::string& name) const {
@@ -249,6 +325,43 @@ std::optional<DeviceInfo> INDIClient::getDevice(const std::string& name) const {
         }
     }
     return std::nullopt;
+}
+
+bool INDIClient::connectDevice(const std::string& deviceName) {
+    if (!connector_) {
+        setError(20, "Not connected to INDI server");
+        return false;
+    }
+    
+    // Set CONNECTION switch to On
+    bool result = connector_->setProp(deviceName, "CONNECTION", "CONNECT", "On");
+    if (result) {
+        ServerEvent event;
+        event.type = ServerEventType::DeviceConnected;
+        event.source = deviceName;
+        event.message = "Device connected";
+        event.timestamp = std::chrono::system_clock::now();
+        emitServerEvent(event);
+    }
+    return result;
+}
+
+bool INDIClient::disconnectDevice(const std::string& deviceName) {
+    if (!connector_) {
+        return true;
+    }
+    
+    // Set CONNECTION switch to Off
+    bool result = connector_->setProp(deviceName, "CONNECTION", "DISCONNECT", "On");
+    if (result) {
+        ServerEvent event;
+        event.type = ServerEventType::DeviceDisconnected;
+        event.source = deviceName;
+        event.message = "Device disconnected";
+        event.timestamp = std::chrono::system_clock::now();
+        emitServerEvent(event);
+    }
+    return result;
 }
 
 bool INDIClient::setProperty(const std::string& device,
@@ -337,6 +450,45 @@ std::string INDIClient::getIndiHubMode() const {
 int INDIClient::loadDriversFromXML(const std::string& /*path*/) {
     // TODO: Implement XML driver loading
     return 0;
+}
+
+void INDIClient::watchDevice(const std::string& deviceName) {
+    spdlog::debug("Watching device: {}", deviceName);
+    // In a full implementation, this would register for property updates
+    // For now, just log the request
+}
+
+std::unordered_map<std::string, PropertyValue> INDIClient::getDeviceProperties(
+    const std::string& deviceName) const {
+    std::unordered_map<std::string, PropertyValue> result;
+    
+    auto deviceOpt = getDevice(deviceName);
+    if (deviceOpt) {
+        return deviceOpt->properties;
+    }
+    
+    return result;
+}
+
+bool INDIClient::setNumberProperty(const std::string& device,
+                                   const std::string& property,
+                                   const std::string& element,
+                                   double value) {
+    return setProperty(device, property, element, std::to_string(value));
+}
+
+bool INDIClient::setSwitchProperty(const std::string& device,
+                                   const std::string& property,
+                                   const std::string& element,
+                                   bool value) {
+    return setProperty(device, property, element, value ? "On" : "Off");
+}
+
+bool INDIClient::setTextProperty(const std::string& device,
+                                 const std::string& property,
+                                 const std::string& element,
+                                 const std::string& value) {
+    return setProperty(device, property, element, value);
 }
 
 // Register with client registry

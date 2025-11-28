@@ -4,7 +4,7 @@
 #include <crow.h>
 #include <string>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 const std::string ADMIN_IP = "192.168.1.100";
 
@@ -16,7 +16,7 @@ struct AdminAreaGuard {
         if (req.remote_ip_address != ADMIN_IP) {
             res.code = 403;  // 禁止访问
             res.end();
-            LOG_F(WARNING, "Access denied for IP: {}", req.remote_ip_address);
+            LOG_WARN( "Access denied for IP: {}", req.remote_ip_address);
         }
     }
 
@@ -30,11 +30,11 @@ struct RequestLogger : crow::ILocalMiddleware {
     struct context {};
 
     void before_handle(crow::request &req, crow::response &res, context &ctx) {
-        LOG_F(INFO, "Request received: {}", req.url);
+        LOG_INFO( "Request received: {}", req.url);
     }
 
     void after_handle(crow::request &req, crow::response &res, context &ctx) {
-        LOG_F(INFO, "Response sent for: {}", req.url);
+        LOG_INFO( "Response sent for: {}", req.url);
     }
 };
 

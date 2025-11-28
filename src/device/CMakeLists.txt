@@ -60,8 +60,12 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Note: This includes atom library paths for device implementations
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/atom/atom)
 
+# Add service layer subdirectory
+add_subdirectory(service)
+
 lithium_message(INFO "Discovering device implementations...")
 lithium_add_subdirectories_recursive(
     ${CMAKE_CURRENT_SOURCE_DIR}
     MESSAGE_PREFIX "  ├─ Device impl"
+    EXCLUDE_DIRS "service"
 )

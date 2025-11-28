@@ -12,46 +12,45 @@
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/system/command.hpp"
 
-#include "tools/croods.hpp"
-#include "tools/solverutils.hpp"
+#include "tools/solver/wcs.hpp"
 
 static auto astrometrySolver =
     std::make_shared<AstrometrySolver>("solver.astrometry");
 
 AstrometrySolver::AstrometrySolver(std::string name)
     : AtomSolver(std::move(name)) {
-    DLOG_F(INFO, "Initializing Astrometry Solver...");
+    DLOG_INFO( "Initializing Astrometry Solver...");
 }
 
 AstrometrySolver::~AstrometrySolver() {
-    DLOG_F(INFO, "Destroying Astrometry Solver...");
+    DLOG_INFO( "Destroying Astrometry Solver...");
 }
 
 auto AstrometrySolver::connect(std::string_view solverPath) -> bool {
     if (solverPath.empty()) {
-        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
+        LOG_ERROR( "Failed to execute {}: Invalid Parameters",
               ATOM_FUNC_NAME);
         return false;
     }
-    DLOG_F(INFO, "Connecting to Astap Solver...");
+    DLOG_INFO( "Connecting to Astap Solver...");
     if (!atom::io::isFileNameValid(solverPath.data()) ||
         !atom::io::isFileExists(solverPath.data())) {
-        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
+        LOG_ERROR( "Failed to execute {}: Invalid Parameters",
               ATOM_FUNC_NAME);
         return false;
     }
     solverPath_ = solverPath;
-    DLOG_F(INFO, "Connected to Astap Solver");
+    DLOG_INFO( "Connected to Astap Solver");
     return true;
 }
 
 auto AstrometrySolver::disconnect() -> bool {
-    DLOG_F(INFO, "Disconnecting from Astap Solver...");
+    DLOG_INFO( "Disconnecting from Astap Solver...");
     solverPath_.clear();
-    DLOG_F(INFO, "Disconnected from Astap Solver");
+    DLOG_INFO( "Disconnected from Astap Solver");
     return true;
 }
 
@@ -67,14 +66,14 @@ auto AstrometrySolver::solveImage(
     std::optional<std::string_view> target_dec, std::optional<double> radius,
     std::optional<int> downsample, std::optional<int> depth, bool overWrite,
     bool noPlot, int timeout, int debug, const SolveOptions &options) -> bool {
-    DLOG_F(INFO, "Solving Image {}...", image);
+    DLOG_INFO( "Solving Image {}...", image);
     if (!isConnected()) {
-        LOG_F(ERROR, "Failed to execute {}: Not Connected", __func__);
+        LOG_ERROR( "Failed to execute {}: Not Connected", __func__);
         return false;
     }
     if (!atom::io::isFileNameValid(image.data()) ||
         !atom::io::isFileExists(image.data())) {
-        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", __func__);
+        LOG_ERROR( "Failed to execute {}: Invalid Parameters", __func__);
         return false;
     }
     try {
@@ -85,7 +84,7 @@ auto AstrometrySolver::solveImage(
 
         solveResult_ = readSolveResult(output);
     } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to execute {}: {}", __func__, e.what());
+        LOG_ERROR( "Failed to execute {}: {}", __func__, e.what());
         return false;
     }
     return true;
@@ -93,7 +92,7 @@ auto AstrometrySolver::solveImage(
 
 auto AstrometrySolver::getSolveResult(std::string_view /*image*/)
     -> SolveResult {
-    DLOG_F(INFO, "Getting Solve Result...");
+    DLOG_INFO( "Getting Solve Result...");
     return solveResult_;
 }
 
@@ -370,7 +369,7 @@ SolveResults AstrometrySolver::plateSolve(const std::string &filename,
         << " --nsigma 8 --no-plots --no-remove-lines --uniformize 0 "
            "--timestamp";
 
-    LOG_F(INFO, "Executing command: {}", cmd.str());
+    LOG_INFO( "Executing command: {}", cmd.str());
     std::string output = atom::system::executeCommand(cmd.str());
 
     return result;
@@ -386,11 +385,11 @@ auto AstrometrySolver::readSolveResult(const std::string &filename,
     std::string baseFilename = filename.substr(0, filename.length() - 5);
 
     std::string cmd = "wcsinfo " + baseFilename + ".wcs";
-    LOG_F(INFO, "Executing command: {}", cmd);
+    LOG_INFO( "Executing command: {}", cmd);
 
     std::string output = atom::system::executeCommand(cmd);
     if (output.empty()) {
-        LOG_F(ERROR, "Tools:Plate Solve Failure");
+        LOG_ERROR( "Tools:Plate Solve Failure");
         result.RA_Degree = -1;
         result.DEC_Degree = -1;
         plateSolveInProgress = false;
@@ -413,9 +412,9 @@ auto AstrometrySolver::readSolveResult(const std::string &filename,
     double decDegree = std::stod(decStr);
     double rotationDegree = std::stod(rotStr);
 
-    lithium::tools::WCSParams wcs = lithium::tools::extractWCSParams(output);
-    std::vector<lithium::tools::SphericalCoordinates> corners =
-        getFOVCorners(wcs, imageWidth, imageHeight);
+    lithium::tools::solver::WCSParams wcs = lithium::tools::solver::extractWCSParams(output);
+    std::vector<lithium::tools::conversion::SphericalCoordinates> corners =
+        lithium::tools::solver::getFOVCorners(wcs, imageWidth, imageHeight);
 
     result.RA_0 = corners[0].rightAscension;
     result.DEC_0 = corners[0].declination;
@@ -429,8 +428,8 @@ auto AstrometrySolver::readSolveResult(const std::string &filename,
     result.RA_Degree = raDegree;
     result.DEC_Degree = decDegree;
 
-    LOG_F(INFO, "Plate Solve Success");
-    LOG_F(INFO, "RA: {} DEC: {}", raDegree, decDegree);
+    LOG_INFO( "Plate Solve Success");
+    LOG_INFO( "RA: {} DEC: {}", raDegree, decDegree);
 
     plateSolveInProgress = false;
     return result;
@@ -447,7 +446,7 @@ PlateSolveResult AstrometrySolver::solve(
     try {
         output = atom::system::executeCommand(command);
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Solve failed: {}", e.what());
+        LOG_ERROR( "Solve failed: {}", e.what());
         return PlateSolveResult{.success = false};
     }
 
@@ -536,8 +535,8 @@ PlateSolveResult AstrometrySolver::parseSolveOutput(const std::string& output) {
 }
 
 ATOM_MODULE(astrometry, [](Component &component) {
-    LOG_F(INFO, "Registering astrometry module...");
-    LOG_F(INFO, "AstrometryComponent Constructed");
+    LOG_INFO( "Registering astrometry module...");
+    LOG_INFO( "AstrometryComponent Constructed");
 
     component.def("connect", &AstrometrySolver::connect, "main",
                   "Connect to astrometry solver");
@@ -558,5 +557,5 @@ ATOM_MODULE(astrometry, [](Component &component) {
     component.defType<AstrometrySolver>("astrometry", "device.solver",
                                         "Astap solver");
 
-    LOG_F(INFO, "Registered astrometry module.");
+    LOG_INFO( "Registered astrometry module.");
 });

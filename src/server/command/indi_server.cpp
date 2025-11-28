@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "config/configor.hpp"
+#include "config/config.hpp"
 #include "device/basic.hpp"
 
 #include "atom/async/message_bus.hpp"
@@ -13,7 +13,7 @@
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/io/file_permission.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/sysinfo/disk.hpp"
 #include "atom/system/command.hpp"
 #include "atom/system/env.hpp"
@@ -37,17 +37,17 @@
 namespace lithium::middleware {
 namespace internal {
 auto clearCheckDeviceExists(const std::string& driverName) -> bool {
-    LOG_F(INFO, "Middleware::indiDriverConfirm: Checking device exists");
+    LOG_INFO( "Middleware::indiDriverConfirm: Checking device exists");
     return true;
 }
 
 void printSystemDeviceList(device::SystemDeviceList s) {
-    LOG_F(INFO,
+    LOG_INFO(
           "Middleware::printSystemDeviceList: Printing system device list");
     std::string dpName;
     for (auto& systemDevice : s.systemDevices) {
         dpName = systemDevice.deviceIndiName;
-        LOG_F(INFO,
+        LOG_INFO(
               "Middleware::printSystemDeviceList: Device {} is connected: {}",
               dpName, systemDevice.isConnect);
     }
@@ -105,9 +105,9 @@ void saveSystemDeviceList(const device::SystemDeviceList& deviceList) {
 
 void clearSystemDeviceListItem(device::SystemDeviceList& s, int index) {
     // clear one device
-    LOG_F(INFO, "Middleware::clearSystemDeviceListItem: Clearing device");
+    LOG_INFO( "Middleware::clearSystemDeviceListItem: Clearing device");
     if (s.systemDevices.empty()) {
-        LOG_F(INFO,
+        LOG_INFO(
               "Middleware::clearSystemDeviceListItem: System device list is "
               "empty");
     } else {
@@ -119,7 +119,7 @@ void clearSystemDeviceListItem(device::SystemDeviceList& s, int index) {
         currentDevice.isConnect = false;
         currentDevice.driver = nullptr;
         currentDevice.description = "";
-        LOG_F(INFO, "Middleware::clearSystemDeviceListItem: Device is cleared");
+        LOG_INFO( "Middleware::clearSystemDeviceListItem: Device is cleared");
     }
 }
 
@@ -151,12 +151,12 @@ void selectIndiDevice(int systemNumber, int grounpNumber) {
             it->second;
     }
 
-    LOG_F(INFO, "Middleware::SelectIndiDevice: Selecting device");
-    LOG_F(INFO, "Middleware::SelectIndiDevice: System number: {}",
+    LOG_INFO( "Middleware::SelectIndiDevice: Selecting device");
+    LOG_INFO( "Middleware::SelectIndiDevice: System number: {}",
           systemNumber);
 
     for (auto& device : driversListPtr->devGroups[grounpNumber].devices) {
-        LOG_F(INFO, "Middleware::SelectIndiDevice: Device: {}",
+        LOG_INFO( "Middleware::SelectIndiDevice: Device: {}",
               device.driverName);
 
         std::shared_ptr<atom::async::MessageBus> messageBusPtr;
@@ -167,7 +167,7 @@ void selectIndiDevice(int systemNumber, int grounpNumber) {
 }
 
 void DeviceSelect(int systemNumber, int grounpNumber) {
-    LOG_F(INFO, "Middleware::DeviceSelect: Selecting device");
+    LOG_INFO( "Middleware::DeviceSelect: Selecting device");
     std::shared_ptr<device::SystemDeviceList> systemDeviceListPtr;
     GET_OR_CREATE_PTR(systemDeviceListPtr, device::SystemDeviceList,
                       Constants::SYSTEM_DEVICE_LIST)
@@ -208,7 +208,7 @@ void focusingLooping() {
         }
 
         configManager->setValue("/lithium/device/camera/status", "Exposuring");
-        LOG_F(INFO, "Middleware::focusingLooping: Focusing looping");
+        LOG_INFO( "Middleware::focusingLooping: Focusing looping");
 
         auto [x, y] = dpMainCamera->getFrame().value();
         std::array<int, 2> cameraResolution{x, y};
@@ -228,7 +228,7 @@ void focusingLooping() {
             dpMainCamera->setFrame(cameraX, cameraY, boxSideLength,
                                    boxSideLength);
         } else {
-            LOG_F(INFO,
+            LOG_INFO(
                   "Middleware::focusingLooping: Too close to the edge, please "
                   "reselect the area.");
             if (cameraX + ROI[0] > x) {
@@ -253,7 +253,7 @@ void focuserMove(bool isInward, int steps) {
         auto currentPosition = getFocuserPosition();
         int targetPosition;
         targetPosition = currentPosition + (isInward ? steps : -steps);
-        LOG_F(INFO, "Focuser Move: {} -> {}", currentPosition, targetPosition);
+        LOG_INFO( "Focuser Move: {} -> {}", currentPosition, targetPosition);
 
         dpFocuser->setFocuserMoveDirection(isInward);
         dpFocuser->moveFocuserSteps(steps);
@@ -262,13 +262,13 @@ void focuserMove(bool isInward, int steps) {
             [&targetPosition]() {
                 auto currentPosition = getFocuserPosition();
                 if (currentPosition == targetPosition) {
-                    LOG_F(INFO, "Focuser Move Complete!");
+                    LOG_INFO( "Focuser Move Complete!");
                     std::shared_ptr<atom::async::MessageBus> messageBusPtr;
                     GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
                                       Constants::MESSAGE_BUS)
                     messageBusPtr->publish("main", "FocuserMoveDone");
                 } else {
-                    LOG_F(INFO, "Focuser Moving: {} -> {}", currentPosition,
+                    LOG_INFO( "Focuser Moving: {} -> {}", currentPosition,
                           targetPosition);
                 }
             },
@@ -333,7 +333,7 @@ device::SystemDeviceList readSystemDeviceList() {
     std::ifstream infile(filename, std::ios::binary);
 
     if (!infile.is_open()) {
-        LOG_F(INFO, "Middleware::readSystemDeviceList: File not found: {}",
+        LOG_INFO( "Middleware::readSystemDeviceList: File not found: {}",
               filename);
         return deviceList;
     }
@@ -405,7 +405,7 @@ void startIndiDriver(const std::string& driverName) {
     s.append("> /tmp/myFIFO");
     system(s.c_str());
     // qDebug() << "startIndiDriver" << driver_name;
-    LOG_F(INFO, "Start INDI Driver | DriverName: {}", driverName);
+    LOG_INFO( "Start INDI Driver | DriverName: {}", driverName);
 }
 
 void stopIndiDriver(const std::string& driverName) {
@@ -416,7 +416,7 @@ void stopIndiDriver(const std::string& driverName) {
     s.append("\"");
     s.append("> /tmp/myFIFO");
     system(s.c_str());
-    LOG_F(INFO, "Stop INDI Driver | DriverName: {}", driverName);
+    LOG_INFO( "Stop INDI Driver | DriverName: {}", driverName);
 }
 
 void stopIndiDriverAll(const device::DriversList& driver_list) {
@@ -428,7 +428,7 @@ void stopIndiDriverAll(const device::DriversList& driver_list) {
     bool status = configManager->getValue("/lithium/server/indi/status")
                       ->get<bool>();  // get the indi server status
     if (!status) {
-        LOG_F(ERROR, "stopIndiDriverAll | ERROR | INDI DRIVER NOT running");
+        LOG_ERROR( "stopIndiDriverAll | ERROR | INDI DRIVER NOT running");
         return;
     }
 
@@ -440,17 +440,17 @@ void stopIndiDriverAll(const device::DriversList& driver_list) {
 }
 
 std::string printDevices() {
-    LOG_F(INFO, "Middleware::printDevices: Printing devices");
+    LOG_INFO( "Middleware::printDevices: Printing devices");
     std::string dev;
     std::shared_ptr<device::SystemDeviceList> systemDeviceListPtr;
     GET_OR_CREATE_PTR(systemDeviceListPtr, device::SystemDeviceList,
                       Constants::SYSTEM_DEVICE_LIST)
     const auto& deviceList = systemDeviceListPtr->systemDevices;
     if (deviceList.empty()) {
-        LOG_F(INFO, "Middleware::printDevices: No device exist");
+        LOG_INFO( "Middleware::printDevices: No device exist");
     } else {
         for (size_t i = 0; i < deviceList.size(); ++i) {
-            LOG_F(INFO, "Middleware::printDevices: Device: {}",
+            LOG_INFO( "Middleware::printDevices: Device: {}",
                   deviceList[i].deviceIndiName);
             if (i > 0) {
                 dev.append("|");  // 添加分隔符
@@ -461,7 +461,7 @@ std::string printDevices() {
         }
     }
 
-    LOG_F(INFO, "Middleware::printDevices: Devices printed");
+    LOG_INFO( "Middleware::printDevices: Devices printed");
     return dev;
 }
 
@@ -473,14 +473,14 @@ bool getIndexFromSystemDeviceList(const device::SystemDeviceList& s,
 
     if (it != s.systemDevices.end()) {
         index = std::distance(s.systemDevices.begin(), it);
-        LOG_F(INFO,
+        LOG_INFO(
               "getIndexFromSystemDeviceList | found device in system list. "
               "device name: {} index: {}",
               devname, index);
         return true;
     } else {
         index = 0;
-        LOG_F(INFO,
+        LOG_INFO(
               "getIndexFromSystemDeviceList | not found device in system list, "
               "devname: {}",
               devname);
@@ -572,7 +572,7 @@ auto getAllFile() -> std::string {
 }  // namespace internal
 
 auto indiDriverConfirm(const std::string& driverName) -> bool {
-    LOG_F(INFO, "Middleware::indiDriverConfirm: Checking driver: {}",
+    LOG_INFO( "Middleware::indiDriverConfirm: Checking driver: {}",
           driverName);
 
     auto isExist = internal::clearCheckDeviceExists(driverName);
@@ -591,14 +591,14 @@ auto indiDriverConfirm(const std::string& driverName) -> bool {
         currentDevice.driver = nullptr;
         currentDevice.description = "";
     }
-    LOG_F(INFO, "Middleware::indiDriverConfirm: Driver {} is exist: {}",
+    LOG_INFO( "Middleware::indiDriverConfirm: Driver {} is exist: {}",
           driverName, isExist);
     return isExist;
 }
 
 void indiDeviceConfirm(const std::string& deviceName,
                        const std::string& driverName) {
-    LOG_F(INFO,
+    LOG_INFO(
           "Middleware::indiDeviceConfirm: Checking device: {} with driver: {}",
           deviceName, driverName);
 
@@ -617,7 +617,7 @@ void indiDeviceConfirm(const std::string& deviceName,
     currentDevice.deviceIndiGroup = driversListPtr->selectedGroup;
     currentDevice.deviceIndiName = deviceName;
 
-    LOG_F(INFO,
+    LOG_INFO(
           "Middleware::indiDeviceConfirm: Device {} with driver {} is "
           "confirmed",
           deviceName, driverName);
@@ -629,19 +629,19 @@ void indiDeviceConfirm(const std::string& deviceName,
 
 void printDevGroups2(const device::DriversList& driversList, int ListNum,
                      const std::string& group) {
-    LOG_F(INFO, "Middleware::printDevGroups: printDevGroups2:");
+    LOG_INFO( "Middleware::printDevGroups: printDevGroups2:");
 
     for (int index = 0; index < driversList.devGroups.size(); ++index) {
         const auto& devGroup = driversList.devGroups[index];
-        LOG_F(INFO, "Middleware::printDevGroups: Group: {}",
+        LOG_INFO( "Middleware::printDevGroups: Group: {}",
               devGroup.groupName);
 
         if (devGroup.groupName == group) {
-            LOG_F(INFO, "Middleware::printDevGroups: Group: {}",
+            LOG_INFO( "Middleware::printDevGroups: Group: {}",
                   devGroup.groupName);
             /*
             for (const auto& device : devGroup.devices) {
-                LOG_F(INFO, "Middleware::printDevGroups: Device: {}",
+                LOG_INFO( "Middleware::printDevGroups: Device: {}",
             device.driverName); std::shared_ptr<atom::async::MessageBus>
             messageBusPtr; GET_OR_CREATE_PTR(messageBusPtr,
             atom::async::MessageBus, Constants::MESSAGE_BUS)
@@ -659,11 +659,11 @@ void indiCapture(int expTime) {
         GetPtr<bool>(Constants::IS_FOCUSING_LOOPING).value();
     *glIsFocusingLooping = false;
     double expTimeSec = static_cast<double>(expTime) / 1000;
-    LOG_F(INFO, "INDI_Capture | exptime: {}", expTimeSec);
+    LOG_INFO( "INDI_Capture | exptime: {}", expTimeSec);
 
     auto dpMainCameraOpt = GetPtr<AtomCamera>(Constants::MAIN_CAMERA);
     if (!dpMainCameraOpt.has_value()) {
-        LOG_F(ERROR, "INDI_Capture | dpMainCamera is NULL");
+        LOG_ERROR( "INDI_Capture | dpMainCamera is NULL");
         return;
     }
 
@@ -671,7 +671,7 @@ void indiCapture(int expTime) {
     auto configManagerPtr =
         GetPtr<ConfigManager>(Constants::CONFIG_MANAGER).value();
     configManagerPtr->setValue("/lithium/device/camera/status", "Exposuring");
-    LOG_F(INFO, "INDI_Capture | Camera status: Exposuring");
+    LOG_INFO( "INDI_Capture | Camera status: Exposuring");
 
     dpMainCamera->getGain();
     dpMainCamera->getOffset();
@@ -682,19 +682,19 @@ void indiCapture(int expTime) {
     messageBusPtr->publish("main", "MainCameraSize:{}:{}"_fmt(x, y));
 
     dpMainCamera->startExposure(expTimeSec);
-    LOG_F(INFO, "INDI_Capture | Camera status: Exposuring");
+    LOG_INFO( "INDI_Capture | Camera status: Exposuring");
 }
 
 void indiAbortCapture() {
     auto dpMainCameraOpt = GetPtr<AtomCamera>(Constants::MAIN_CAMERA);
     if (!dpMainCameraOpt.has_value()) {
-        LOG_F(ERROR, "INDI_AbortCapture | dpMainCamera is NULL");
+        LOG_ERROR( "INDI_AbortCapture | dpMainCamera is NULL");
         return;
     }
 
     auto dpMainCamera = dpMainCameraOpt.value();
     dpMainCamera->abortExposure();
-    LOG_F(INFO, "INDI_AbortCapture | Camera status: Aborted");
+    LOG_INFO( "INDI_AbortCapture | Camera status: Aborted");
 }
 
 auto setFocusSpeed(int speed) -> int {
@@ -702,11 +702,11 @@ auto setFocusSpeed(int speed) -> int {
     if (dpFocuser) {
         dpFocuser->setFocuserSpeed(speed);
         auto [value, min, max] = dpFocuser->getFocuserSpeed().value();
-        LOG_F(INFO, "INDI_FocusSpeed | Focuser Speed: {}, {}, {}", value, min,
+        LOG_INFO( "INDI_FocusSpeed | Focuser Speed: {}, {}, {}", value, min,
               max);
         return value;
     }
-    LOG_F(ERROR, "INDI_FocusSpeed | dpFocuser is NULL");
+    LOG_ERROR( "INDI_FocusSpeed | dpFocuser is NULL");
     return -1;
 }
 
@@ -728,7 +728,7 @@ auto focusMoveAndCalHFR(bool isInward, int steps) -> double {
                     ->get<bool>()) {
                 FWHM = configManager->getValue("/lithium/device/focuser/fwhm")
                            ->get<double>();  // 假设 this->FWHM 保存了计算结果
-                LOG_F(INFO, "FWHM Calculation Complete!");
+                LOG_INFO( "FWHM Calculation Complete!");
             }
         },
         1000, 30, 0);
@@ -746,7 +746,7 @@ void autofocus() {
         configManager
             ->getValue("/lithium/device/focuser/auto_focus_step_increase")
             .value_or(100);
-    LOG_F(INFO, "AutoFocus | Step Increase: {}", stepIncrement);
+    LOG_INFO( "AutoFocus | Step Increase: {}", stepIncrement);
 
     bool isInward = true;
     focusMoveAndCalHFR(!isInward, stepIncrement * 5);
@@ -762,7 +762,7 @@ void autofocus() {
                       Constants::MESSAGE_BUS)
 
     auto stopAutoFocus = [&]() {
-        LOG_F(INFO, "AutoFocus | Stop Auto Focus");
+        LOG_INFO( "AutoFocus | Stop Auto Focus");
         messageBusPtr->publish("main", "AutoFocusOver:true");
     };
 
@@ -773,12 +773,12 @@ void autofocus() {
             return;
         }
         double hfr = focusMoveAndCalHFR(isInward, stepIncrement);
-        LOG_F(INFO, "AutoFocus | Pass1: HFR-{}({}) Calculation Complete!", i,
+        LOG_INFO( "AutoFocus | Pass1: HFR-{}({}) Calculation Complete!", i,
               hfr);
         if (hfr == -1) {
             lostStarNum++;
             if (lostStarNum >= 3) {
-                LOG_F(INFO, "AutoFocus | Too many number of lost star points.");
+                LOG_INFO( "AutoFocus | Too many number of lost star points.");
                 
                 // Return to starting point (or slight offset as per original intent)
                 int targetPos = initialPosition - stepIncrement * 5;
@@ -788,7 +788,7 @@ void autofocus() {
                     focusMoveAndCalHFR(diff > 0, std::abs(diff));
                 }
                 
-                LOG_F(INFO, "AutoFocus | Returned to the starting point.");
+                LOG_INFO( "AutoFocus | Returned to the starting point.");
                 stopAutoFocus();
                 return;
             }
@@ -800,7 +800,7 @@ void autofocus() {
     auto fitAndCheck = [&](double& a, double& b, double& c) -> bool {
         int result = internal::fitQuadraticCurve(focusMeasures, a, b, c);
         if (result != 0 || a >= 0) {
-            LOG_F(INFO, "AutoFocus | Fit failed or parabola opens upward");
+            LOG_INFO( "AutoFocus | Fit failed or parabola opens upward");
             return false;
         }
         return true;
@@ -823,13 +823,13 @@ void autofocus() {
     int countGreaterThan = focusMeasures.size() - countLessThan;
 
     if (countLessThan > countGreaterThan) {
-        LOG_F(INFO, "AutoFocus | More points are less than minPointX.");
+        LOG_INFO( "AutoFocus | More points are less than minPointX.");
         if (a > 0) {
             focusMoveAndCalHFR(!isInward,
                                stepIncrement * (onePassSteps - 1) * 2);
         }
     } else if (countGreaterThan > countLessThan) {
-        LOG_F(INFO, "AutoFocus | More points are greater than minPointX.");
+        LOG_INFO( "AutoFocus | More points are greater than minPointX.");
         if (a < 0) {
             focusMoveAndCalHFR(!isInward,
                                stepIncrement * (onePassSteps - 1) * 2);
@@ -843,7 +843,7 @@ void autofocus() {
             return;
         }
         double hfr = focusMoveAndCalHFR(isInward, stepIncrement);
-        LOG_F(INFO, "AutoFocus | Pass2: HFR-{}({}) Calculation Complete!", i,
+        LOG_INFO( "AutoFocus | Pass2: HFR-{}({}) Calculation Complete!", i,
               hfr);
         currentPosition = internal::getFocuserPosition();
         focusMeasures.emplace_back(currentPosition, hfr);
@@ -855,7 +855,7 @@ void autofocus() {
     }
 
     int pass3Steps = std::abs(countLessThan - countGreaterThan);
-    LOG_F(INFO, "AutoFocus | Pass3Steps: {}", pass3Steps);
+    LOG_INFO( "AutoFocus | Pass3Steps: {}", pass3Steps);
 
     for (int i = 1; i <= pass3Steps; i++) {
         if (configManager->getValue("/lithium/device/focuser/auto_focus")
@@ -864,7 +864,7 @@ void autofocus() {
             return;
         }
         double HFR = focusMoveAndCalHFR(isInward, stepIncrement);
-        LOG_F(INFO, "AutoFocus | Pass3: HFR-{}({}) Calculation Complete!", i,
+        LOG_INFO( "AutoFocus | Pass3: HFR-{}({}) Calculation Complete!", i,
               HFR);
         currentPosition = internal::getFocuserPosition();
         focusMeasures.emplace_back(currentPosition, HFR);
@@ -874,11 +874,11 @@ void autofocus() {
     int currentPos = internal::getFocuserPosition();
     int diff = minPointX - currentPos;
     if (diff != 0) {
-        LOG_F(INFO, "AutoFocus | Moving to best focus point: {}", minPointX);
+        LOG_INFO( "AutoFocus | Moving to best focus point: {}", minPointX);
         focusMoveAndCalHFR(diff > 0, std::abs(diff));
     }
 
-    LOG_F(INFO, "Auto focus complete. Best step: {}", minPointX);
+    LOG_INFO( "Auto focus complete. Best step: {}", minPointX);
     messageBusPtr->publish("main", "AutoFocusOver:true");
 }
 
@@ -903,7 +903,7 @@ void deviceConnect() {
         *systemDeviceListPtr = internal::readSystemDeviceList();
         for (int i = 0; i < 32; i++) {
             if (!systemDeviceListPtr->systemDevices[i].deviceIndiName.empty()) {
-                LOG_F(INFO, "DeviceConnect | {}: {}",
+                LOG_INFO( "DeviceConnect | {}: {}",
                       systemDeviceListPtr->systemDevices[i].deviceIndiName,
                       systemDeviceListPtr->systemDevices[i].description);
 
@@ -920,7 +920,7 @@ void deviceConnect() {
 
     if (internal::getTotalDeviceFromSystemDeviceList(*systemDeviceListPtr) ==
         0) {
-        LOG_F(ERROR, "DeviceConnect | No device found");
+        LOG_ERROR( "DeviceConnect | No device found");
         messageBusPtr->publish(
             "main", "ConnectFailed:no device in system device list.");
         return;
@@ -942,7 +942,7 @@ void deviceConnect() {
     internal::stopIndiDriverAll(*driversListPtr);
     int k = 3;
     while (k--) {
-        LOG_F(INFO, "DeviceConnect | Wait stopIndiDriverAll...");
+        LOG_INFO( "DeviceConnect | Wait stopIndiDriverAll...");
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
@@ -951,7 +951,7 @@ void deviceConnect() {
         if (!driverName.empty()) {
             if (std::find(nameCheck.begin(), nameCheck.end(), driverName) !=
                 nameCheck.end()) {
-                LOG_F(INFO,
+                LOG_INFO(
                       "DeviceConnect | found one duplicate driver, do not "
                       "start it again: {}",
                       driverName);
@@ -959,7 +959,7 @@ void deviceConnect() {
             } else {
                 internal::startIndiDriver(driverName);
                 for (int k = 0; k < 3; ++k) {
-                    LOG_F(INFO, "DeviceConnect | Wait startIndiDriver...");
+                    LOG_INFO( "DeviceConnect | Wait startIndiDriver...");
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                 }
                 nameCheck.push_back(driverName);
@@ -996,25 +996,25 @@ void deviceConnect() {
         if (connectedDevice >= totalDevice)
             break;
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
-        LOG_F(INFO, "DeviceConnect | Wait for device connection...");
+        LOG_INFO( "DeviceConnect | Wait for device connection...");
     }
     if (timer.elapsed() > timeoutMs) {
-        LOG_F(ERROR, "DeviceConnect | Device connection timeout");
+        LOG_ERROR( "DeviceConnect | Device connection timeout");
         messageBusPtr->publish(
             "main",
             "ConnectFailed:Device connected less than system device list.");
     } else {
-        LOG_F(INFO, "DeviceConnect | Device connection success");
+        LOG_INFO( "DeviceConnect | Device connection success");
     }
 
     internal::printDevices();
 
     if (systemDeviceListPtr->systemDevices.empty()) {
-        LOG_F(ERROR, "DeviceConnect | No device found");
+        LOG_ERROR( "DeviceConnect | No device found");
         messageBusPtr->publish("main", "ConnectFailed:No device found.");
         return;
     }
-    LOG_F(INFO, "DeviceConnect | Device connection complete");
+    LOG_INFO( "DeviceConnect | Device connection complete");
 
     int connectedDevice = std::count_if(
         systemDeviceListPtr->systemDevices.begin(),
@@ -1023,8 +1023,8 @@ void deviceConnect() {
 
     for (const auto& device : systemDeviceListPtr->systemDevices) {
         if (device.driver != nullptr) {
-            LOG_F(INFO, "DeviceConnect | Device: {}", device.deviceIndiName);
-            LOG_F(INFO, "DeviceConnect | Device: {} is connected",
+            LOG_INFO( "DeviceConnect | Device: {}", device.deviceIndiName);
+            LOG_INFO( "DeviceConnect | Device: {} is connected",
                   device.deviceIndiName);
 
             device.isConnect = true;
@@ -1056,12 +1056,12 @@ void deviceConnect() {
     }
 
     if (timer.elapsed() > timeoutMs) {
-        LOG_F(ERROR, "DeviceConnect | ERROR: Connect time exceed (ms): {}",
+        LOG_ERROR( "DeviceConnect | ERROR: Connect time exceed (ms): {}",
               timeoutMs);
         messageBusPtr->publish("main",
                                "ConnectFailed:Device connected timeout.");
     } else {
-        LOG_F(INFO, "DeviceConnect | Device connected success");
+        LOG_INFO( "DeviceConnect | Device connected success");
     }
     if (systemDeviceListPtr->systemDevices.size() > 0 &&
         systemDeviceListPtr->systemDevices[0].isConnect) {

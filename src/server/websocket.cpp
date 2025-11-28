@@ -5,7 +5,7 @@
 
 #include "atom/type/json.hpp"
 #include "atom/utils/to_string.hpp"
-#include "command/device_commands.hpp"
+#include "command/device.hpp"
 #include "middleware/auth.hpp"
 #include <spdlog/spdlog.h>
 
@@ -358,11 +358,11 @@ void WebSocketServer::setup_command_handlers() {
     spdlog::info("Registered command handler for 'subscribe'");
 
     // Device commands (camera, mount, focuser, filterwheel, etc.) are registered in command module
-    lithium::app::registerCameraCommands(command_dispatcher_);
-    lithium::app::registerMountCommands(command_dispatcher_);
-    lithium::app::registerFocuserCommands(command_dispatcher_);
-    lithium::app::registerFilterWheelCommands(command_dispatcher_);
-    lithium::app::registerDomeCommands(command_dispatcher_);
+    lithium::app::registerCamera(command_dispatcher_);
+    lithium::app::registerMount(command_dispatcher_);
+    lithium::app::registerFocuser(command_dispatcher_);
+    lithium::app::registerFilterWheel(command_dispatcher_);
+    lithium::app::registerDome(command_dispatcher_);
 }
 
 void WebSocketServer::subscribe_to_topic(const std::string& topic) {

@@ -21,7 +21,7 @@ Description: Component Manager Implementation
 #include <future>
 #include <numeric>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "../version.hpp"
 
 namespace lithium {
@@ -40,7 +40,7 @@ ComponentManagerImpl::ComponentManagerImpl()
 
     if (const char* customDir = std::getenv("LITHIUM_COMPONENTS_DIR")) {
         componentsDirectory_ = customDir;
-        LOG_F(INFO, "Using custom components directory from env: {}",
+        LOG_INFO( "Using custom components directory from env: {}",
               componentsDirectory_);
     } else {
         componentsDirectory_ = kDefaultComponentsDir;
@@ -51,16 +51,16 @@ ComponentManagerImpl::ComponentManagerImpl()
             componentsDirectory_, "package.json",
             std::vector<std::string>{".so", ".dll", ".dylib"});
     } else {
-        LOG_F(WARNING, "Components directory '{}' does not exist", componentsDirectory_);
+        LOG_WARN( "Components directory '{}' does not exist", componentsDirectory_);
     }
 
-    LOG_F(INFO, "ComponentManager initialized with memory pools (components dir: {})",
+    LOG_INFO( "ComponentManager initialized with memory pools (components dir: {})",
           componentsDirectory_);
 }
 
 ComponentManagerImpl::~ComponentManagerImpl() {
     destroy();
-    LOG_F(INFO, "ComponentManager destroyed");
+    LOG_INFO( "ComponentManager destroyed");
 }
 
 auto ComponentManagerImpl::initialize() -> bool {
@@ -74,26 +74,26 @@ auto ComponentManagerImpl::initialize() -> bool {
                     [this](const fs::path& path, const std::string& change) {
                         handleFileChange(path, change);
                     }));
-            LOG_F(INFO, "FileTracker initialized and watching for changes");
+            LOG_INFO( "FileTracker initialized and watching for changes");
         } else {
-            LOG_F(WARNING, "FileTracker not initialized - components directory may not exist");
+            LOG_WARN( "FileTracker not initialized - components directory may not exist");
         }
 
         if (!componentsDirectory_.empty()) {
             auto discovered = discoverComponents(componentsDirectory_);
             if (!discovered.empty()) {
-                LOG_F(INFO, "Discovered {} components in {}", discovered.size(),
+                LOG_INFO( "Discovered {} components in {}", discovered.size(),
                       componentsDirectory_);
                 batchLoad(discovered);
             } else {
-                LOG_F(INFO, "No components discovered in {}", componentsDirectory_);
+                LOG_INFO( "No components discovered in {}", componentsDirectory_);
             }
         }
         
-        LOG_F(INFO, "ComponentManager initialized successfully");
+        LOG_INFO( "ComponentManager initialized successfully");
         return true;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to initialize ComponentManager: {}", e.what());
+        LOG_ERROR( "Failed to initialize ComponentManager: {}", e.what());
         return false;
     }
 }
@@ -107,16 +107,16 @@ auto ComponentManagerImpl::destroy() -> bool {
         
         auto unloadResult = moduleLoader_->unloadAllModules();
         if (!unloadResult) {
-            LOG_F(ERROR, "Failed to unload all modules");
+            LOG_ERROR( "Failed to unload all modules");
             return false;
         }
         components_.clear();
         componentOptions_.clear();
         componentStates_.clear();
-        LOG_F(INFO, "ComponentManager destroyed successfully");
+        LOG_INFO( "ComponentManager destroyed successfully");
         return true;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to destroy ComponentManager: {}", e.what());
+        LOG_ERROR( "Failed to destroy ComponentManager: {}", e.what());
         return false;
     }
 }
@@ -128,7 +128,7 @@ auto ComponentManagerImpl::loadComponent(const json& params) -> bool {
         // 使用对象池分配Component实例
         auto instance = component_pool_->acquire();
         if (!instance) {
-            LOG_F(ERROR, "Failed to acquire component instance from pool");
+            LOG_ERROR( "Failed to acquire component instance from pool");
             return false;
         }
 
@@ -143,7 +143,7 @@ auto ComponentManagerImpl::loadComponent(const json& params) -> bool {
 
         // Check if component already loaded
         if (components_.contains(name)) {
-            LOG_F(WARNING, "Component {} already loaded", name);
+            LOG_WARN( "Component {} already loaded", name);
             return false;
         }
 
@@ -167,14 +167,14 @@ auto ComponentManagerImpl::loadComponent(const json& params) -> bool {
         updateComponentState(name, ComponentState::Created);
         
         notifyListeners(name, ComponentEvent::PostLoad);
-        LOG_F(INFO, "Component {} loaded successfully", name);
+        LOG_INFO( "Component {} loaded successfully", name);
         return true;
 
     } catch (const json::exception& e) {
-        LOG_F(ERROR, "JSON error while loading component: {}", e.what());
+        LOG_ERROR( "JSON error while loading component: {}", e.what());
         return false;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to load component: {}", e.what());
+        LOG_ERROR( "Failed to load component: {}", e.what());
         return false;
     }
 }
@@ -186,14 +186,14 @@ auto ComponentManagerImpl::unloadComponent(const json& params) -> bool {
         std::lock_guard lock(mutex_);
         auto it = components_.find(name);
         if (it == components_.end()) {
-            LOG_F(WARNING, "Component {} not found for unloading", name);
+            LOG_WARN( "Component {} not found for unloading", name);
             return false;
         }
 
         notifyListeners(name, ComponentEvent::PreUnload);
           // Unload from module loader
         if (!moduleLoader_->unloadModule(name)) {
-            LOG_F(WARNING, "Failed to unload module for component: {}", name);
+            LOG_WARN( "Failed to unload module for component: {}", name);
         }
         
         // Remove from containers
@@ -205,14 +205,14 @@ auto ComponentManagerImpl::unloadComponent(const json& params) -> bool {
         dependencyGraph_.removeNode(name);
         
         notifyListeners(name, ComponentEvent::PostUnload);
-        LOG_F(INFO, "Component {} unloaded successfully", name);
+        LOG_INFO( "Component {} unloaded successfully", name);
         return true;
         
     } catch (const json::exception& e) {
-        LOG_F(ERROR, "JSON error while unloading component: {}", e.what());
+        LOG_ERROR( "JSON error while unloading component: {}", e.what());
         return false;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to unload component: {}", e.what());
+        LOG_ERROR( "Failed to unload component: {}", e.what());
         return false;
     }
 }
@@ -221,7 +221,7 @@ auto ComponentManagerImpl::scanComponents(const std::string& path) -> std::vecto
     try {
         const std::string targetPath = path.empty() ? componentsDirectory_ : path;
         if (targetPath.empty()) {
-            LOG_F(WARNING, "No components directory configured; skip scanning");
+            LOG_WARN( "No components directory configured; skip scanning");
             return {};
         }
 
@@ -236,16 +236,16 @@ auto ComponentManagerImpl::scanComponents(const std::string& path) -> std::vecto
                     newFiles.push_back(filePath);
                 }
             }
-            LOG_F(INFO, "FileTracker detected {} new components", newFiles.size());
+            LOG_INFO( "FileTracker detected {} new components", newFiles.size());
             return newFiles;
         }
 
         auto discovered = discoverComponents(targetPath);
-        LOG_F(INFO, "Discovered {} components via direct scan ({})", discovered.size(),
+        LOG_INFO( "Discovered {} components via direct scan ({})", discovered.size(),
               targetPath);
         return discovered;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to scan components: {}", e.what());
+        LOG_ERROR( "Failed to scan components: {}", e.what());
         return {};
     }
 }
@@ -276,7 +276,7 @@ auto ComponentManagerImpl::getComponentInfo(const std::string& component_name)
         }
         return info;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to get component info: {}", e.what());
+        LOG_ERROR( "Failed to get component info: {}", e.what());
         return std::nullopt;
     }
 }
@@ -291,7 +291,7 @@ auto ComponentManagerImpl::getComponentList() -> std::vector<std::string> {
         }
         return result;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to get component list: {}", e.what());
+        LOG_ERROR( "Failed to get component list: {}", e.what());
         return {};
     }
 }
@@ -306,7 +306,7 @@ auto ComponentManagerImpl::getComponentDoc(const std::string& component_name) ->
         }
         return "";
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to get component documentation: {}", e.what());
+        LOG_ERROR( "Failed to get component documentation: {}", e.what());
         return "";
     }
 }
@@ -331,7 +331,7 @@ void ComponentManagerImpl::updateDependencyGraph(
             dependencyGraph_.addDependency(component_name, dependencies[i], depVer);
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to update dependency graph: {}", e.what());
+        LOG_ERROR( "Failed to update dependency graph: {}", e.what());
     }
 }
 
@@ -339,17 +339,17 @@ void ComponentManagerImpl::printDependencyTree() {
     try {
         // Print dependency information using available methods
         auto components = getComponentList();
-        LOG_F(INFO, "Dependency Tree:");
+        LOG_INFO( "Dependency Tree:");
         for (const auto& component : components) {
             auto dependencies = dependencyGraph_.getDependencies(component);
-            LOG_F(INFO, "  {} -> [{}]", component, 
+            LOG_INFO( "  {} -> [{}]", component, 
                   std::accumulate(dependencies.begin(), dependencies.end(), std::string{},
                       [](const std::string& a, const std::string& b) {
                           return a.empty() ? b : a + ", " + b;
                       }));
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to print dependency tree: {}", e.what());
+        LOG_ERROR( "Failed to print dependency tree: {}", e.what());
     }
 }
 
@@ -461,7 +461,7 @@ void ComponentManagerImpl::handleError(const std::string& name, const std::strin
     updateComponentState(name, ComponentState::Error);
     notifyListeners(name, ComponentEvent::Error,
                     {{"operation", operation}, {"error", e.what()}});
-    LOG_F(ERROR, "{} for {}: {}", operation, name, e.what());
+    LOG_ERROR( "{} for {}: {}", operation, name, e.what());
 }
 
 void ComponentManagerImpl::notifyListeners(const std::string& component, ComponentEvent event,
@@ -472,20 +472,20 @@ void ComponentManagerImpl::notifyListeners(const std::string& component, Compone
             try {
                 callback(component, event, data);
             } catch (const std::exception& e) {
-                LOG_F(ERROR, "Event listener error: {}", e.what());
+                LOG_ERROR( "Event listener error: {}", e.what());
             }
         }
     }
 }
 
 void ComponentManagerImpl::handleFileChange(const fs::path& path, const std::string& change) {
-    LOG_F(INFO, "Component file {} was {}", path.string(), change);
+    LOG_INFO( "Component file {} was {}", path.string(), change);
 
     if (change == "modified") {
         // Handle file modification
         std::string name = path.stem().string();
         if (hasComponent(name)) {
-            LOG_F(INFO, "Reloading component {} due to file change", name);
+            LOG_INFO( "Reloading component {} due to file change", name);
             json params;
             params["name"] = name;
             unloadComponent(params);
@@ -498,7 +498,7 @@ void ComponentManagerImpl::handleFileChange(const fs::path& path, const std::str
     } else if (change == "removed" || change == "deleted") {
         std::string name = path.stem().string();
         if (hasComponent(name)) {
-            LOG_F(INFO, "Unloading component {} due to file removal", name);
+            LOG_INFO( "Unloading component {} due to file removal", name);
             json params;
             params["name"] = name;
             unloadComponent(params);
@@ -515,7 +515,7 @@ void ComponentManagerImpl::updateComponentState(const std::string& name,
 bool ComponentManagerImpl::validateComponentOperation(const std::string& name) {
     std::lock_guard lock(mutex_);
     if (!components_.contains(name)) {
-        LOG_F(ERROR, "Component {} not found", name);
+        LOG_ERROR( "Component {} not found", name);
         return false;
     }
     // 可添加更多验证逻辑
@@ -524,7 +524,7 @@ bool ComponentManagerImpl::validateComponentOperation(const std::string& name) {
 
 bool ComponentManagerImpl::loadComponentByName(const std::string& name) {
     if (componentsDirectory_.empty()) {
-        LOG_F(ERROR, "Components directory is not configured; cannot load {}", name);
+        LOG_ERROR( "Components directory is not configured; cannot load {}", name);
         return false;
     }
 
@@ -551,7 +551,7 @@ bool ComponentManagerImpl::loadComponentByName(const std::string& name) {
     }
     
     if (!fs::exists(componentPath)) {
-        LOG_F(ERROR, "Component file not found: {}", name);
+        LOG_ERROR( "Component file not found: {}", name);
         return false;
     }
 
@@ -592,7 +592,7 @@ std::vector<std::string> ComponentManagerImpl::discoverComponents(
             discovered.push_back(path.stem().string());
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to discover components in {}: {}", directory, e.what());
+        LOG_ERROR( "Failed to discover components in {}: {}", directory, e.what());
     }
 
     return discovered;

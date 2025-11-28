@@ -1,35 +1,14 @@
-#ifndef LITHIUM_SERVER_MIDDLEWARE_FOCUSER_HPP
-#define LITHIUM_SERVER_MIDDLEWARE_FOCUSER_HPP
+#ifndef LITHIUM_SERVER_COMMAND_FOCUSER_HPP
+#define LITHIUM_SERVER_COMMAND_FOCUSER_HPP
 
-#include <string>
+#include <memory>
 
-#include "atom/type/json.hpp"
+namespace lithium::app {
 
-namespace lithium::middleware {
+class CommandDispatcher;
 
-using json = nlohmann::json;
+void registerFocuser(std::shared_ptr<CommandDispatcher> dispatcher);
 
-auto listFocusers() -> json;
+}  // namespace lithium::app
 
-auto getFocuserStatus(const std::string &deviceId) -> json;
-
-auto connectFocuser(const std::string &deviceId, bool connected) -> json;
-
-auto moveFocuser(const std::string &deviceId, const json &moveRequest) -> json;
-
-auto updateFocuserSettings(const std::string &deviceId,
-                           const json &settings) -> json;
-
-auto haltFocuser(const std::string &deviceId) -> json;
-
-auto getFocuserCapabilities(const std::string &deviceId) -> json;
-
-auto startAutofocus(const std::string &deviceId,
-                    const json &autofocusRequest) -> json;
-
-auto getAutofocusStatus(const std::string &deviceId,
-                        const std::string &autofocusId) -> json;
-
-}  // namespace lithium::middleware
-
-#endif  // LITHIUM_SERVER_MIDDLEWARE_FOCUSER_HPP
+#endif  // LITHIUM_SERVER_COMMAND_FOCUSER_HPP

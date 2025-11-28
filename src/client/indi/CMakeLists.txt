@@ -24,6 +24,8 @@ set(SOURCE_FILES
     collection.cpp
     iconnector.cpp
     indihub_agent.cpp
+    server_manager.cpp
+    fifo_channel.cpp
 )
 
 set(HEADER_FILES
@@ -37,6 +39,8 @@ set(HEADER_FILES
     iconnector.hpp
     indihub_agent.hpp
     indi_client.hpp
+    server_manager.hpp
+    fifo_channel.hpp
 )
 
 # ============================================================================

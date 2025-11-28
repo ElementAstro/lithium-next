@@ -8,7 +8,7 @@
 #include <thread>
 #include <asio/io_context.hpp>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/async/message_bus.hpp"
 #include "atom/type/json.hpp"
 #include "middleware/auth.hpp"
@@ -76,7 +76,7 @@ public:
           exposure_sequence_(std::make_shared<lithium::task::ExposureSequence>()),
           task_manager_(std::make_shared<TaskManager>(event_loop_)) {
         
-        LOG_F(INFO, "Initializing Lithium Server v1.0.0");
+        LOG_INFO( "Initializing Lithium Server v1.0.0");
         initializeMiddleware();
         initializeControllers();
         initializeWebSocket();
@@ -86,16 +86,16 @@ public:
      * @brief Start the server
      */
     void start() {
-        LOG_F(INFO, "Starting server on port {}", config_.port);
+        LOG_INFO( "Starting server on port {}", config_.port);
         
         // EventLoop already starts worker threads in its constructor,
         // so we don't call run() here to avoid blocking.
 
         // Start MessageBus io_context in background thread
         message_bus_thread_ = std::thread([this]() {
-            LOG_F(INFO, "MessageBus io_context running");
+            LOG_INFO( "MessageBus io_context running");
             message_bus_io_.run();
-            LOG_F(INFO, "MessageBus io_context stopped");
+            LOG_INFO( "MessageBus io_context stopped");
         });
 
         // Start WebSocket server if initialized
@@ -113,7 +113,7 @@ public:
      * @brief Stop the server gracefully
      */
     void stop() {
-        LOG_F(INFO, "Stopping server...");
+        LOG_INFO( "Stopping server...");
         
         if (websocket_server_) {
             websocket_server_->stop();
@@ -128,7 +128,7 @@ public:
         event_loop_->stop();
         app_.stop();
         
-        LOG_F(INFO, "Server stopped");
+        LOG_INFO( "Server stopped");
     }
 
     /**
@@ -150,7 +150,7 @@ public:
      */
     void addApiKey(const std::string& key) {
         middleware::ApiKeyAuth::addApiKey(key);
-        LOG_F(INFO, "API key added");
+        LOG_INFO( "API key added");
     }
 
     /**
@@ -158,7 +158,7 @@ public:
      */
     void revokeApiKey(const std::string& key) {
         middleware::ApiKeyAuth::revokeApiKey(key);
-        LOG_F(INFO, "API key revoked");
+        LOG_INFO( "API key revoked");
     }
 
 private:
@@ -176,7 +176,7 @@ private:
      * @brief Initialize middleware components
      */
     void initializeMiddleware() {
-        LOG_F(INFO, "Initializing middleware...");
+        LOG_INFO( "Initializing middleware...");
         
         // Add default API keys from config
         for (const auto& key : config_.api_keys) {
@@ -186,14 +186,14 @@ private:
         // CORS is handled by middleware in individual routes
         // Authentication is handled by ApiKeyAuth middleware
         
-        LOG_F(INFO, "Middleware initialized");
+        LOG_INFO( "Middleware initialized");
     }
 
     /**
      * @brief Initialize all controllers and register their routes
      */
     void initializeControllers() {
-        LOG_F(INFO, "Initializing controllers...");
+        LOG_INFO( "Initializing controllers...");
 
         // Inject shared ExposureSequence instance into sequencer controllers
         SequenceExecutionController::setExposureSequence(exposure_sequence_);
@@ -258,14 +258,14 @@ private:
             controller->registerRoutes(app_);
         }
 
-        LOG_F(INFO, "Controllers initialized: {} controllers registered", controllers_.size());
+        LOG_INFO( "Controllers initialized: {} controllers registered", controllers_.size());
     }
 
     /**
      * @brief Initialize WebSocket server
      */
     void initializeWebSocket() {
-        LOG_F(INFO, "Initializing WebSocket server...");
+        LOG_INFO( "Initializing WebSocket server...");
         
         // Create message bus for inter-component communication
         auto message_bus = atom::async::MessageBus::createShared(message_bus_io_);
@@ -293,7 +293,7 @@ private:
         websocket_server_ = std::make_shared<WebSocketServer>(
             app_, message_bus, command_dispatcher, ws_config);
 
-        LOG_F(INFO, "WebSocket server initialized at /api/v1/ws");
+        LOG_INFO( "WebSocket server initialized at /api/v1/ws");
 
         // Connect TaskManager status updates to WebSocket events
         if (task_manager_ && websocket_server_) {

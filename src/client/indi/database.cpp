@@ -3,22 +3,22 @@
 #include <algorithm>
 #include <fstream>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 Database::Database(const std::string& filename) : filepath_(filename) {
-    LOG_F(INFO, "Initializing Database with file: {}", filename);
+    LOG_INFO( "Initializing Database with file: {}", filename);
     auto dir = filepath_.parent_path();
     if (!std::filesystem::exists(dir)) {
         std::filesystem::create_directories(dir);
-        LOG_F(INFO, "Created directory {}", dir.string());
+        LOG_INFO( "Created directory {}", dir.string());
     }
 
     if (std::filesystem::exists(filepath_)) {
-        LOG_F(INFO, "Loading existing database from file: {}",
+        LOG_INFO( "Loading existing database from file: {}",
               filepath_.string());
         load();
     } else {
-        LOG_F(INFO, "Creating new database file: {}", filepath_.string());
+        LOG_INFO( "Creating new database file: {}", filepath_.string());
         db_ = {{"version", CURRENT_VERSION},
                {"profiles", json::array()},
                {"custom_drivers", json::array()},
@@ -32,10 +32,10 @@ void Database::load() {
     try {
         std::ifstream file(filepath_);
         db_ = json::parse(file);
-        LOG_F(INFO, "Database loaded successfully from file: {}",
+        LOG_INFO( "Database loaded successfully from file: {}",
               filepath_.string());
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to load database: {}", e.what());
+        LOG_ERROR( "Failed to load database: {}", e.what());
         throw;
     }
 }
@@ -44,10 +44,10 @@ void Database::save() const {
     try {
         std::ofstream file(filepath_);
         file << db_.dump(2);
-        LOG_F(INFO, "Database saved successfully to file: {}",
+        LOG_INFO( "Database saved successfully to file: {}",
               filepath_.string());
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to save database: {}", e.what());
+        LOG_ERROR( "Failed to save database: {}", e.what());
         throw;
     }
 }
@@ -55,10 +55,10 @@ void Database::save() const {
 void Database::update() {
     std::string version = db_["version"];
     if (version < CURRENT_VERSION) {
-        LOG_F(INFO, "Updating database from version {} to {}", version,
+        LOG_INFO( "Updating database from version {} to {}", version,
               CURRENT_VERSION);
         if (version < "0.1.6") {
-            LOG_F(INFO, "Updating profiles to add autoconnect field");
+            LOG_INFO( "Updating profiles to add autoconnect field");
             for (auto& profile : db_["profiles"]) {
                 if (!profile.contains("autoconnect")) {
                     profile["autoconnect"] = false;
@@ -72,7 +72,7 @@ void Database::update() {
 
 void Database::create() {
     if (db_["profiles"].empty()) {
-        LOG_F(INFO, "Creating default simulator profile");
+        LOG_INFO( "Creating default simulator profile");
         json simulator = {{"name", "Simulators"},
                           {"port", 7624},
                           {"autostart", false},
@@ -86,19 +86,19 @@ void Database::create() {
 }
 
 std::optional<std::string> Database::getAutoProfile() const {
-    LOG_F(INFO, "Fetching auto-start profile");
+    LOG_INFO( "Fetching auto-start profile");
     for (const auto& profile : db_["profiles"]) {
         if (profile["autostart"].get<bool>()) {
-            LOG_F(INFO, "Auto-start profile found: {}", profile["name"].dump());
+            LOG_INFO( "Auto-start profile found: {}", profile["name"].dump());
             return profile["name"];
         }
     }
-    LOG_F(INFO, "No auto-start profile found");
+    LOG_INFO( "No auto-start profile found");
     return std::nullopt;
 }
 
 std::vector<json> Database::getProfiles() const {
-    LOG_F(INFO, "Fetching all profiles");
+    LOG_INFO( "Fetching all profiles");
     std::vector<json> profiles;
     for (const auto& profile : db_["profiles"]) {
         profiles.push_back(profile);
@@ -107,7 +107,7 @@ std::vector<json> Database::getProfiles() const {
 }
 
 std::vector<json> Database::getCustomDrivers() const {
-    LOG_F(INFO, "Fetching all custom drivers");
+    LOG_INFO( "Fetching all custom drivers");
     std::vector<json> custom_drivers;
     for (const auto& driver : db_["custom_drivers"]) {
         custom_drivers.push_back(driver);
@@ -117,7 +117,7 @@ std::vector<json> Database::getCustomDrivers() const {
 
 std::vector<std::string> Database::getProfileDriversLabels(
     const std::string& name) const {
-    LOG_F(INFO, "Fetching drivers labels for profile: {}", name);
+    LOG_INFO( "Fetching drivers labels for profile: {}", name);
     std::vector<std::string> labels;
     for (const auto& profile : db_["profiles"]) {
         if (profile["name"] == name) {
@@ -132,7 +132,7 @@ std::vector<std::string> Database::getProfileDriversLabels(
 
 std::optional<std::string> Database::getProfileRemoteDrivers(
     const std::string& name) const {
-    LOG_F(INFO, "Fetching remote drivers for profile: {}", name);
+    LOG_INFO( "Fetching remote drivers for profile: {}", name);
     for (const auto& remote : db_["remote_drivers"]) {
         if (remote["profile"] == name) {
             return remote["drivers"];
@@ -142,7 +142,7 @@ std::optional<std::string> Database::getProfileRemoteDrivers(
 }
 
 void Database::deleteProfile(const std::string& name) {
-    LOG_F(INFO, "Deleting profile: {}", name);
+    LOG_INFO( "Deleting profile: {}", name);
     auto& profiles = db_["profiles"];
     profiles.erase(std::remove_if(profiles.begin(), profiles.end(),
                                   [&name](const json& profile) {
@@ -153,7 +153,7 @@ void Database::deleteProfile(const std::string& name) {
 }
 
 int Database::addProfile(const std::string& name) {
-    LOG_F(INFO, "Adding new profile: {}", name);
+    LOG_INFO( "Adding new profile: {}", name);
     json new_profile = {{"name", name},
                         {"port", 7624},
                         {"autostart", false},
@@ -165,7 +165,7 @@ int Database::addProfile(const std::string& name) {
 }
 
 std::optional<json> Database::getProfile(const std::string& name) const {
-    LOG_F(INFO, "Fetching profile: {}", name);
+    LOG_INFO( "Fetching profile: {}", name);
     for (const auto& profile : db_["profiles"]) {
         if (profile["name"] == name) {
             return profile;
@@ -176,14 +176,14 @@ std::optional<json> Database::getProfile(const std::string& name) const {
 
 void Database::updateProfile(const std::string& name, int port, bool autostart,
                              bool autoconnect) {
-    LOG_F(INFO, "Updating profile: {}", name);
+    LOG_INFO( "Updating profile: {}", name);
     for (auto& profile : db_["profiles"]) {
         if (profile["name"] == name) {
             profile["port"] = port;
             profile["autostart"] = autostart;
             profile["autoconnect"] = autoconnect;
             if (autostart) {
-                LOG_F(INFO,
+                LOG_INFO(
                       "Setting autostart for profile: {} and disabling for "
                       "others",
                       name);
@@ -201,7 +201,7 @@ void Database::updateProfile(const std::string& name, int port, bool autostart,
 
 void Database::saveProfileDrivers(const std::string& name,
                                   const std::vector<json>& drivers) {
-    LOG_F(INFO, "Saving drivers for profile: {}", name);
+    LOG_INFO( "Saving drivers for profile: {}", name);
     for (auto& profile : db_["profiles"]) {
         if (profile["name"] == name) {
             profile["drivers"] = drivers;
@@ -219,7 +219,7 @@ void Database::saveProfileDrivers(const std::string& name,
 }
 
 void Database::saveProfileCustomDriver(const json& driver) {
-    LOG_F(INFO, "Saving custom driver: {}", driver.dump());
+    LOG_INFO( "Saving custom driver: {}", driver.dump());
     db_["custom_drivers"].push_back(driver);
     save();
 }

@@ -1,6 +1,6 @@
 #include "solver.hpp"
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "server/models/api.hpp"
 #include "client/astap/astap.hpp"
 
@@ -23,12 +23,12 @@ auto ensureSolverConnected() -> bool {
     if (!solverInstance->isConnected()) {
         auto candidates = solverInstance->scan();
         if (candidates.empty()) {
-            LOG_F(ERROR, "ASTAP solver not found on system");
+            LOG_ERROR( "ASTAP solver not found on system");
             return false;
         }
 
         if (!solverInstance->connect(candidates.front(), 5, 1)) {
-            LOG_F(ERROR, "Failed to connect to ASTAP at %s", candidates.front().c_str());
+            LOG_ERROR( "Failed to connect to ASTAP at %s", candidates.front().c_str());
             return false;
         }
     }
@@ -66,7 +66,7 @@ auto solveImage(const std::string& filePath,
                 double decHint, 
                 double scaleHint, 
                 double radiusHint) -> json {
-    LOG_F(INFO, "solveImage: Solving %s (RA: %f, Dec: %f, Radius: %f)", 
+    LOG_INFO( "solveImage: Solving %s (RA: %f, Dec: %f, Radius: %f)", 
           filePath.c_str(), raHint, decHint, radiusHint);
 
     std::scoped_lock lock(solverMutex);
@@ -99,7 +99,7 @@ auto solveImage(const std::string& filePath,
         auto result = solverInstance->solve(filePath, coords, fov, fov, 0, 0);
         return buildResponseFromResult(result);
     } catch (const std::exception& ex) {
-        LOG_F(ERROR, "solveImage: Exception while solving %s - %s", filePath.c_str(), ex.what());
+        LOG_ERROR( "solveImage: Exception while solving %s - %s", filePath.c_str(), ex.what());
         json response;
         response["status"] = "error";
         response["error"] = {

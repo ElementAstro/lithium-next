@@ -25,12 +25,38 @@ Description: INDI server client implementation
 namespace lithium::client {
 
 /**
- * @brief INDI-specific driver information
+ * @brief INDI-specific driver information (extends base DriverInfo)
  */
 struct INDIDriverInfo : public DriverInfo {
-    std::string family;
-    std::string manufacturer;
-    std::string exec;
+    std::string exec;           // Executable name (alias for binary)
+    std::string skel;           // Skeleton file (alias for skeleton)
+    bool custom{false};         // Is custom driver
+    
+    INDIDriverInfo() {
+        backend = "INDI";
+    }
+    
+    // Convert from INDIDeviceContainer
+    static INDIDriverInfo fromContainer(const INDIDeviceContainer& container) {
+        INDIDriverInfo info;
+        info.name = container.name;
+        info.label = container.label;
+        info.version = container.version;
+        info.binary = container.binary;
+        info.exec = container.binary;
+        info.skeleton = container.skeleton;
+        info.skel = container.skeleton;
+        info.manufacturer = container.family;
+        info.custom = container.custom;
+        info.backend = "INDI";
+        return info;
+    }
+    
+    // Convert to INDIDeviceContainer
+    auto toContainer() const -> std::shared_ptr<INDIDeviceContainer> {
+        return std::make_shared<INDIDeviceContainer>(
+            name, label, version, binary, manufacturer, skeleton, custom);
+    }
 };
 
 /**
@@ -93,6 +119,8 @@ public:
 
     std::vector<DeviceInfo> getDevices() const override;
     std::optional<DeviceInfo> getDevice(const std::string& name) const override;
+    bool connectDevice(const std::string& deviceName) override;
+    bool disconnectDevice(const std::string& deviceName) override;
 
     // ==================== Property Access ====================
 
@@ -163,7 +191,57 @@ public:
      */
     int loadDriversFromXML(const std::string& path = "/usr/share/indi");
 
+    /**
+     * @brief Get backend name
+     * @return "INDI"
+     */
+    [[nodiscard]] std::string getBackendName() const override { return "INDI"; }
+
+    /**
+     * @brief Watch device for property updates
+     * @param deviceName Device name to watch
+     */
+    void watchDevice(const std::string& deviceName);
+
+    /**
+     * @brief Get all properties for a device
+     * @param deviceName Device name
+     * @return Map of property name to PropertyValue
+     */
+    std::unordered_map<std::string, PropertyValue> getDeviceProperties(
+        const std::string& deviceName) const;
+
+    /**
+     * @brief Set number property
+     */
+    bool setNumberProperty(const std::string& device,
+                           const std::string& property,
+                           const std::string& element,
+                           double value);
+
+    /**
+     * @brief Set switch property
+     */
+    bool setSwitchProperty(const std::string& device,
+                           const std::string& property,
+                           const std::string& element,
+                           bool value);
+
+    /**
+     * @brief Set text property
+     */
+    bool setTextProperty(const std::string& device,
+                         const std::string& property,
+                         const std::string& element,
+                         const std::string& value);
+
 private:
+    // Helper to convert connector device map to DeviceInfo
+    DeviceInfo convertToDeviceInfo(
+        const std::unordered_map<std::string, std::string>& devMap) const;
+    
+    // Helper to parse INDI interface flags
+    static DeviceInterface parseInterfaceFlags(const std::string& interfaceStr);
     std::unique_ptr<Connector> connector_;
     std::unique_ptr<IndiHubAgent> indihubAgent_;
     std::vector<INDIDriverInfo> availableDrivers_;

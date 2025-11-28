@@ -16,9 +16,9 @@ Description: PHD2 guider client implementation
 #define LITHIUM_CLIENT_PHD2_CLIENT_HPP
 
 #include "../common/guider_client.hpp"
-#include "connection.h"
-#include "event_handler.h"
-#include "types.h"
+#include "connection.hpp"
+#include "event_handler.hpp"
+#include "types.hpp"
 
 #include <memory>
 #include <mutex>

@@ -1,168 +1,262 @@
-#include "guider.hpp"
+/*
+ * guider.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
 
-#include "atom/log/loguru.hpp"
-#include "server/models/api.hpp"
+#include "guider.hpp"
+#include "device/service/guider_service.hpp"
+
+#include "atom/log/spdlog_logger.hpp"
 
 namespace lithium::middleware {
 
 using json = nlohmann::json;
 
-static std::shared_ptr<internal::PHD2Controller> g_phd2Controller;
+// Global guider service instance
+static std::shared_ptr<lithium::device::GuiderService> g_guiderService;
 
-auto connectGuider() -> json {
-    LOG_F(INFO, "connectGuider: Connecting to PHD2");
-    json response;
-    
-    try {
-        if (!g_phd2Controller) {
-            g_phd2Controller = std::make_shared<internal::PHD2Controller>();
-        }
-        
-        if (g_phd2Controller->initialize()) {
-            response["status"] = "success";
-            response["message"] = "PHD2 connected and started.";
-        } else {
-            response["status"] = "error";
-            response["error"] = {
-                {"code", "connection_failed"},
-                {"message", "Failed to initialize PHD2."}
-            };
-        }
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "connectGuider: Exception: %s", e.what());
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "internal_error"},
-            {"message", e.what()},
-        };
+auto getGuiderService() -> std::shared_ptr<lithium::device::GuiderService> {
+    if (!g_guiderService) {
+        g_guiderService = std::make_shared<lithium::device::GuiderService>();
     }
-    
-    return response;
+    return g_guiderService;
+}
+
+// ==================== Connection ====================
+
+auto connectGuider(const std::string& host, int port, int timeout) -> json {
+    LOG_INFO( "connectGuider: host={} port={} timeout={}", host, port, timeout);
+    return getGuiderService()->connect(host, port, timeout);
 }
 
 auto disconnectGuider() -> json {
-    LOG_F(INFO, "disconnectGuider: Disconnecting from PHD2");
-    json response;
-    
-    if (g_phd2Controller) {
-        // Since PHD2Controller::initialize uses pkill, we don't have a clean 'stop' 
-        // in the class, but we can just reset our handle.
-        // Ideally we should send a quit command if supported.
-        g_phd2Controller.reset();
-    }
-    
-    response["status"] = "success";
-    response["message"] = "Guider disconnected.";
-    return response;
+    LOG_INFO( "disconnectGuider");
+    return getGuiderService()->disconnect();
 }
 
-auto startGuiding() -> json {
-    LOG_F(INFO, "startGuiding: Starting guiding");
-    json response;
-    
-    if (!g_phd2Controller) {
-        return lithium::models::api::makeError("device_not_connected", "Guider not connected");
-    }
-    
-    if (g_phd2Controller->startGuiding()) {
-        response["status"] = "success";
-        response["message"] = "Guiding started.";
-    } else {
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "command_failed"},
-            {"message", "Failed to start guiding."}
-        };
-    }
-    return response;
+auto getConnectionStatus() -> json {
+    return getGuiderService()->getConnectionStatus();
+}
+
+// ==================== Guiding Control ====================
+
+auto startGuiding(double settlePixels, double settleTime, double settleTimeout,
+                  bool recalibrate) -> json {
+    LOG_INFO( "startGuiding: settlePixels={} settleTime={} settleTimeout={} recalibrate={}",
+          settlePixels, settleTime, settleTimeout, recalibrate);
+    return getGuiderService()->startGuiding(settlePixels, settleTime, settleTimeout, recalibrate);
 }
 
 auto stopGuiding() -> json {
-    LOG_F(INFO, "stopGuiding: Stopping guiding");
-    json response;
-    
-    if (!g_phd2Controller) {
-        return lithium::models::api::makeError("device_not_connected", "Guider not connected");
-    }
-    
-    if (g_phd2Controller->stopLooping()) { // stopLooping stops guiding/looping
-        response["status"] = "success";
-        response["message"] = "Guiding stopped.";
-    } else {
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "command_failed"},
-            {"message", "Failed to stop guiding."}
-        };
-    }
-    return response;
+    LOG_INFO( "stopGuiding");
+    return getGuiderService()->stopGuiding();
 }
 
-auto ditherGuider(double pixels) -> json {
-    LOG_F(INFO, "ditherGuider: Dither %f pixels", pixels);
-    // TODO: Implement dither command code for PHD2
-    return lithium::models::api::makeError("feature_not_supported", "Dither not implemented yet");
+auto pauseGuiding(bool full) -> json {
+    LOG_INFO( "pauseGuiding: full={}", full);
+    return getGuiderService()->pause(full);
 }
+
+auto resumeGuiding() -> json {
+    LOG_INFO( "resumeGuiding");
+    return getGuiderService()->resume();
+}
+
+auto ditherGuider(double amount, bool raOnly, double settlePixels,
+                  double settleTime, double settleTimeout) -> json {
+    LOG_INFO( "ditherGuider: amount={} raOnly={}", amount, raOnly);
+    return getGuiderService()->dither(amount, raOnly, settlePixels, settleTime, settleTimeout);
+}
+
+auto loopGuider() -> json {
+    LOG_INFO( "loopGuider");
+    return getGuiderService()->loop();
+}
+
+auto stopCapture() -> json {
+    LOG_INFO( "stopCapture");
+    return getGuiderService()->stopCapture();
+}
+
+// ==================== Status ====================
 
 auto getGuiderStatus() -> json {
-    json response;
-    response["status"] = "success";
-    
-    if (!g_phd2Controller) {
-        response["data"] = {
-            {"connected", false},
-            {"state", "DISCONNECTED"}
-        };
-    } else {
-        // Basic status - we assume connected if controller exists
-        // TODO: Improve state tracking
-        response["data"] = {
-            {"connected", true},
-            {"state", "CONNECTED"} // Placeholder state
-        };
-    }
-    return response;
+    return getGuiderService()->getStatus();
 }
 
 auto getGuiderStats() -> json {
-    return lithium::models::api::makeError("feature_not_supported", "Stats not implemented yet");
+    return getGuiderService()->getStats();
 }
+
+auto getCurrentStar() -> json {
+    return getGuiderService()->getCurrentStar();
+}
+
+// ==================== Calibration ====================
+
+auto isCalibrated() -> json {
+    return getGuiderService()->isCalibrated();
+}
+
+auto clearCalibration(const std::string& which) -> json {
+    LOG_INFO( "clearCalibration: which={}", which);
+    return getGuiderService()->clearCalibration(which);
+}
+
+auto flipCalibration() -> json {
+    LOG_INFO( "flipCalibration");
+    return getGuiderService()->flipCalibration();
+}
+
+auto getCalibrationData() -> json {
+    return getGuiderService()->getCalibrationData();
+}
+
+// ==================== Star Selection ====================
+
+auto findStar(std::optional<int> roiX, std::optional<int> roiY,
+              std::optional<int> roiWidth, std::optional<int> roiHeight) -> json {
+    LOG_INFO( "findStar");
+    return getGuiderService()->findStar(roiX, roiY, roiWidth, roiHeight);
+}
+
+auto setLockPosition(double x, double y, bool exact) -> json {
+    LOG_INFO( "setLockPosition: x={} y={} exact={}", x, y, exact);
+    return getGuiderService()->setLockPosition(x, y, exact);
+}
+
+auto getLockPosition() -> json {
+    return getGuiderService()->getLockPosition();
+}
+
+// ==================== Camera Control ====================
+
+auto getExposure() -> json {
+    return getGuiderService()->getExposure();
+}
+
+auto setExposure(int exposureMs) -> json {
+    LOG_INFO( "setExposure: exposureMs={}", exposureMs);
+    return getGuiderService()->setExposure(exposureMs);
+}
+
+auto getExposureDurations() -> json {
+    return getGuiderService()->getExposureDurations();
+}
+
+auto getCameraFrameSize() -> json {
+    return getGuiderService()->getCameraFrameSize();
+}
+
+auto getCcdTemperature() -> json {
+    return getGuiderService()->getCcdTemperature();
+}
+
+auto getCoolerStatus() -> json {
+    return getGuiderService()->getCoolerStatus();
+}
+
+auto saveImage() -> json {
+    LOG_INFO( "saveImage");
+    return getGuiderService()->saveImage();
+}
+
+auto getStarImage(int size) -> json {
+    return getGuiderService()->getStarImage(size);
+}
+
+auto captureSingleFrame(std::optional<int> exposureMs) -> json {
+    LOG_INFO( "captureSingleFrame");
+    return getGuiderService()->captureSingleFrame(exposureMs);
+}
+
+// ==================== Guide Pulse ====================
+
+auto guidePulse(const std::string& direction, int durationMs, bool useAO) -> json {
+    LOG_INFO( "guidePulse: direction={} durationMs={} useAO={}", direction, durationMs, useAO);
+    return getGuiderService()->guidePulse(direction, durationMs, useAO);
+}
+
+// ==================== Algorithm Settings ====================
+
+auto getDecGuideMode() -> json {
+    return getGuiderService()->getDecGuideMode();
+}
+
+auto setDecGuideMode(const std::string& mode) -> json {
+    LOG_INFO( "setDecGuideMode: mode={}", mode);
+    return getGuiderService()->setDecGuideMode(mode);
+}
+
+auto getAlgoParam(const std::string& axis, const std::string& name) -> json {
+    return getGuiderService()->getAlgoParam(axis, name);
+}
+
+auto setAlgoParam(const std::string& axis, const std::string& name,
+                  double value) -> json {
+    LOG_INFO( "setAlgoParam: axis={} name={} value={}", axis, name, value);
+    return getGuiderService()->setAlgoParam(axis, name, value);
+}
+
+// ==================== Equipment ====================
+
+auto isEquipmentConnected() -> json {
+    return getGuiderService()->isEquipmentConnected();
+}
+
+auto connectEquipment() -> json {
+    LOG_INFO( "connectEquipment");
+    return getGuiderService()->connectEquipment();
+}
+
+auto disconnectEquipment() -> json {
+    LOG_INFO( "disconnectEquipment");
+    return getGuiderService()->disconnectEquipment();
+}
+
+auto getEquipmentInfo() -> json {
+    return getGuiderService()->getEquipmentInfo();
+}
+
+// ==================== Profile Management ====================
+
+auto getProfiles() -> json {
+    return getGuiderService()->getProfiles();
+}
+
+auto getCurrentProfile() -> json {
+    return getGuiderService()->getCurrentProfile();
+}
+
+auto setProfile(int profileId) -> json {
+    LOG_INFO( "setProfile: profileId={}", profileId);
+    return getGuiderService()->setProfile(profileId);
+}
+
+// ==================== Settings ====================
 
 auto setGuiderSettings(const json& settings) -> json {
-    LOG_F(INFO, "setGuiderSettings: Updating settings");
-    json response;
-    
-    if (!g_phd2Controller) {
-        return lithium::models::api::makeError("device_not_connected", "Guider not connected");
-    }
-    
-    try {
-        bool success = true;
-        if (settings.contains("exposureTime")) {
-             unsigned int exp = settings["exposureTime"];
-             if (!g_phd2Controller->setExposureTime(exp)) success = false;
-        }
-        
-        if (settings.contains("focalLength")) {
-             int fl = settings["focalLength"];
-             if (!g_phd2Controller->setFocalLength(fl)) success = false;
-        }
-        
-        if (success) {
-            response["status"] = "success";
-            response["message"] = "Settings updated.";
-        } else {
-             response["status"] = "error";
-             response["error"] = {
-                 {"code", "command_failed"},
-                 {"message", "Some settings failed to update."}
-             };
-        }
-    } catch (const std::exception& e) {
-        return lithium::models::api::makeError("invalid_json", e.what());
-    }
-    
-    return response;
+    LOG_INFO( "setGuiderSettings");
+    return getGuiderService()->updateSettings(settings);
 }
 
-} // namespace lithium::middleware
+// ==================== Lock Shift ====================
+
+auto isLockShiftEnabled() -> json {
+    return getGuiderService()->isLockShiftEnabled();
+}
+
+auto setLockShiftEnabled(bool enable) -> json {
+    LOG_INFO( "setLockShiftEnabled: enable={}", enable);
+    return getGuiderService()->setLockShiftEnabled(enable);
+}
+
+// ==================== Shutdown ====================
+
+auto shutdownGuider() -> json {
+    LOG_INFO( "shutdownGuider");
+    return getGuiderService()->shutdown();
+}
+
+}  // namespace lithium::middleware

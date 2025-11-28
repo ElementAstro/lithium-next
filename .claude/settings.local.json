@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(.md \")"
+      "Bash(cd \"D:\\Project\\lithium-next\" echo \"=== MODIFIED FILES ===\" git diff --name-only --diff-filter=M src libs)"
     ],
     "deny": [],
     "ask": []

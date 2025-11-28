@@ -12,7 +12,7 @@
 #include <functional>
 #include <string>
 #include <ctime>
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 
 // Import specific camera task types
@@ -86,34 +86,34 @@ private:
         crow::json::wvalue res;
         res["command"] = command;
 
-        LOG_F(INFO, "Received task management command: {}", command);
-        LOG_F(INFO, "Request body: {}", req.body);
+        LOG_INFO( "Received task management command: {}", command);
+        LOG_INFO( "Request body: {}", req.body);
 
         try {
             auto result = func();
             res["status"] = "success";
             res["code"] = 200;
             res["data"] = std::move(result);
-            LOG_F(INFO, "Command '{}' executed successfully", command);
+            LOG_INFO( "Command '{}' executed successfully", command);
 
         } catch (const std::invalid_argument& e) {
             res["status"] = "error";
             res["code"] = 400;
             res["error"] = std::string("Bad Request: Invalid argument - ") + e.what();
-            LOG_F(ERROR, "Invalid argument for command {}: {}", command, e.what());
+            LOG_ERROR( "Invalid argument for command {}: {}", command, e.what());
         } catch (const std::runtime_error& e) {
             res["status"] = "error";
             res["code"] = 500;
             res["error"] = std::string("Internal Server Error: Runtime error - ") + e.what();
-            LOG_F(ERROR, "Runtime error for command {}: {}", command, e.what());
+            LOG_ERROR( "Runtime error for command {}: {}", command, e.what());
         } catch (const std::exception& e) {
             res["status"] = "error";
             res["code"] = 500;
             res["error"] = std::string("Internal Server Error: Exception occurred - ") + e.what();
-            LOG_F(ERROR, "Exception for command {}: {}", command, e.what());
+            LOG_ERROR( "Exception for command {}: {}", command, e.what());
         }
 
-        LOG_F(INFO, "Response for command '{}': {}", command, res.dump());
+        LOG_INFO( "Response for command '{}': {}", command, res.dump());
         return crow::response(200, res);
     }
 

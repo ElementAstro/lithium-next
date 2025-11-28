@@ -3,7 +3,7 @@
 
 #include "../task.hpp"
 #include "server/command/solver.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 namespace lithium::task {
 
@@ -29,7 +29,7 @@ private:
             double scale = params.value("scale", 0.0);
             double radius = params.value("radius", 180.0);
             
-            LOG_F(INFO, "SolverTask: Starting solve for %s", filePath.c_str());
+            LOG_INFO( "SolverTask: Starting solve for %s", filePath.c_str());
             
             auto result = lithium::middleware::solveImage(filePath, ra, dec, scale, radius);
             
@@ -43,10 +43,10 @@ private:
                 throw std::runtime_error(errorMsg);
             }
             
-            LOG_F(INFO, "SolverTask: Solved successfully.");
+            LOG_INFO( "SolverTask: Solved successfully.");
             
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "SolverTask exception: %s", e.what());
+            LOG_ERROR( "SolverTask exception: %s", e.what());
             throw; // Re-throw to let Task handle the failure state
         }
     }

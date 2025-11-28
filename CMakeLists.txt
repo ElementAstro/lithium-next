@@ -98,6 +98,12 @@ lithium_find_package(Curses REQUIRED)
 message(STATUS "")
 
 # ============================================================================
+# Logging System Configuration (spdlog + cpptrace)
+# ============================================================================
+
+include(cmake/FindSpdlog.cmake)
+
+# ============================================================================
 # Compiler Options
 # ============================================================================
 
@@ -140,7 +146,8 @@ target_link_libraries(lithium-next PRIVATE
     lithium_task
     lithium_tools
     atom
-    loguru
+    spdlog::spdlog
+    $<$<BOOL:${CPPTRACE_FOUND}>:cpptrace::cpptrace>
     ${Readline_LIBRARIES}
     ${CURSES_LIBRARIES}
 )

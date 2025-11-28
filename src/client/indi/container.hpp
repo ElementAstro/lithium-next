@@ -23,6 +23,11 @@ public:
     bool custom;           ///< Indicates whether the device is custom.
 
     /**
+     * @brief Default constructor
+     */
+    INDIDeviceContainer() : custom(false) {}
+
+    /**
      * @brief Constructs an INDIDeviceContainer with the given parameters.
      * @param name The name of the device.
      * @param label The label of the device.

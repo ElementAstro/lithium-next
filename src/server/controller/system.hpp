@@ -3,7 +3,7 @@
 
 #include "controller.hpp"
 #include "../utils/response.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 
 #include <chrono>
@@ -144,7 +144,7 @@ private:
 
             return ResponseBuilder::success(data);
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to get system status: {}", e.what());
+            LOG_ERROR( "Failed to get system status: {}", e.what());
             return utils::ResponseBuilder::internalError(e.what());
         }
     }

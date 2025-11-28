@@ -18,7 +18,7 @@
 
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "constant/constant.hpp"
 #include "script/check.hpp"
@@ -43,7 +43,7 @@ private:
                 res["code"] = 500;
                 res["error"] =
                     "Internal Server Error: ScriptManager instance is null.";
-                LOG_F(ERROR,
+                LOG_ERROR(
                       "ScriptManager instance is null. Unable to proceed with "
                       "command: {}",
                       command);
@@ -64,7 +64,7 @@ private:
             res["code"] = 400;
             res["error"] =
                 std::string("Bad Request: Invalid argument - ") + e.what();
-            LOG_F(ERROR,
+            LOG_ERROR(
                   "Invalid argument while executing command: {}. Exception: {}",
                   command, e.what());
         } catch (const std::runtime_error& e) {
@@ -73,7 +73,7 @@ private:
             res["error"] =
                 std::string("Internal Server Error: Runtime error - ") +
                 e.what();
-            LOG_F(ERROR,
+            LOG_ERROR(
                   "Runtime error while executing command: {}. Exception: {}",
                   command, e.what());
         } catch (const std::exception& e) {
@@ -82,8 +82,7 @@ private:
             res["error"] =
                 std::string("Internal Server Error: Exception occurred - ") +
                 e.what();
-            LOG_F(
-                ERROR,
+            LOG_ERROR(
                 "Exception occurred while executing command: {}. Exception: {}",
                 command, e.what());
         }
@@ -108,7 +107,7 @@ private:
                 res["code"] = 500;
                 res["error"] =
                     "Internal Server Error: ScriptAnalyzer instance is null.";
-                LOG_F(ERROR,
+                LOG_ERROR(
                       "ScriptAnalyzer instance is null. Unable to proceed with "
                       "command: {}",
                       command);
@@ -129,7 +128,7 @@ private:
             res["code"] = 400;
             res["error"] =
                 std::string("Bad Request: Invalid argument - ") + e.what();
-            LOG_F(ERROR,
+            LOG_ERROR(
                   "Invalid argument while executing command: {}. Exception: {}",
                   command, e.what());
         } catch (const std::runtime_error& e) {
@@ -138,7 +137,7 @@ private:
             res["error"] =
                 std::string("Internal Server Error: Runtime error - ") +
                 e.what();
-            LOG_F(ERROR,
+            LOG_ERROR(
                   "Runtime error while executing command: {}. Exception: {}",
                   command, e.what());
         } catch (const std::exception& e) {
@@ -147,8 +146,7 @@ private:
             res["error"] =
                 std::string("Internal Server Error: Exception occurred - ") +
                 e.what();
-            LOG_F(
-                ERROR,
+            LOG_ERROR(
                 "Exception occurred while executing command: {}. Exception: {}",
                 command, e.what());
         }

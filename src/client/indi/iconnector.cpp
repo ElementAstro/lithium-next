@@ -1,14 +1,14 @@
 /*
- * manager.cpp
+ * iconnector.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
 /*************************************************
 
-Date: 2023-3-29
+Date: 2024-11-28
 
-Description: INDI Device Manager
+Description: INDI Server Connector - Enhanced implementation
 
 **************************************************/
 
@@ -17,17 +17,13 @@ Description: INDI Device Manager
 
 #include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/system/command.hpp"
 #include "atom/system/software.hpp"
 
-namespace {
-constexpr int MAX_BUFFER_SIZE = 4096;
-constexpr int MAX_RETRY_COUNT = 3;
+#include <sstream>
 
-std::mutex server_mutex;
-std::mutex driver_mutex;
-}  // namespace
+using namespace lithium::client::indi;
 
 INDIConnector::INDIConnector(const std::string &hst, int prt,
                              const std::string &cfg, const std::string &dta,
@@ -37,7 +33,7 @@ INDIConnector::INDIConnector(const std::string &hst, int prt,
       config_path_(cfg),
       data_path_(dta),
       fifo_path_(fif) {
-    LOG_F(INFO, "Initializing INDI Connector - Host: {}, Port: {}", host_,
+    LOG_INFO( "Initializing INDI Connector - Host: {}, Port: {}", host_,
           port_);
 
     if (port_ <= 0 || port_ > 65535) {
@@ -45,143 +41,352 @@ INDIConnector::INDIConnector(const std::string &hst, int prt,
     }
 
     validatePaths();
+    initializeComponents();
+}
+
+INDIConnector::INDIConnector(const INDIServerConfig& config)
+    : host_(config.host),
+      port_(config.port),
+      config_path_(config.configDir),
+      data_path_(config.dataDir),
+      fifo_path_(config.fifoPath) {
+    LOG_INFO( "Initializing INDI Connector with config - Host: {}, Port: {}", 
+          host_, port_);
+
+    validatePaths();
+    
+    // Create server manager with provided config
+    serverManager_ = std::make_unique<INDIServerManager>(config);
+    
+    // Create FIFO channel
+    FifoChannelConfig fifoConfig;
+    fifoConfig.fifoPath = config.fifoPath;
+    fifoChannel_ = std::make_unique<FifoChannel>(fifoConfig);
+}
+
+INDIConnector::~INDIConnector() {
+    if (isRunning()) {
+        stopServer();
+    }
 }
 
 void INDIConnector::validatePaths() {
-    if (!atom::io::isFolderExists(config_path_)) {
-        LOG_F(WARNING, "Config directory does not exist: {}", config_path_);
+    if (!config_path_.empty() && !atom::io::isFolderExists(config_path_)) {
+        LOG_WARN( "Config directory does not exist: {}", config_path_);
         if (!atom::io::createDirectory(config_path_)) {
-            THROW_RUNTIME_ERROR("Failed to create config directory");
+            LOG_ERROR( "Failed to create config directory");
         }
     }
 
-    if (!atom::io::isFolderExists(data_path_)) {
-        LOG_F(WARNING, "Data directory does not exist: {}", data_path_);
-        if (!atom::io::createDirectory(data_path_)) {
-            THROW_RUNTIME_ERROR("Failed to create data directory");
-        }
+    if (!data_path_.empty() && !atom::io::isFolderExists(data_path_)) {
+        LOG_WARN( "Data directory does not exist: {}", data_path_);
     }
 }
+
+void INDIConnector::initializeComponents() {
+    // Create server configuration
+    INDIServerConfig serverConfig;
+    serverConfig.host = host_;
+    serverConfig.port = port_;
+    serverConfig.fifoPath = fifo_path_;
+    serverConfig.configDir = config_path_;
+    serverConfig.dataDir = data_path_;
+    serverConfig.startMode = ServerStartMode::Verbose;
+    serverConfig.enableFifo = true;
+    serverConfig.enableLogging = true;
+    
+    // Create server manager
+    serverManager_ = std::make_unique<INDIServerManager>(serverConfig);
+    
+    // Create FIFO channel
+    FifoChannelConfig fifoConfig;
+    fifoConfig.fifoPath = fifo_path_;
+    fifoConfig.retryCount = 3;
+    fifoConfig.retryDelayMs = 100;
+    fifoConfig.queueCommands = true;
+    fifoChannel_ = std::make_unique<FifoChannel>(fifoConfig);
+}
+
+// ==================== Server Lifecycle ====================
 
 auto INDIConnector::startServer() -> bool {
-    std::lock_guard lock(server_mutex);
+    LOG_INFO( "Starting INDI server on port {}", port_);
 
-    LOG_F(INFO, "Starting INDI server on port {}", port_);
-
-    if (isRunning()) {
-        LOG_F(INFO, "INDI server already running - stopping first");
-        if (!stopServer()) {
-            LOG_F(ERROR, "Failed to stop existing server");
-            return false;
-        }
+    if (!serverManager_) {
+        LOG_ERROR( "Server manager not initialized");
+        return false;
     }
 
-    // Clean up old FIFO
-    if (atom::io::isFileExists(fifo_path_)) {
-        if (!atom::io::removeFile(fifo_path_)) {
-            LOG_F(ERROR, "Failed to remove existing FIFO pipe");
-            return false;
-        }
-    }
-
-    std::stringstream cmd;
-    cmd << "indiserver -p " << port_ << " -m 100 -v -f " << fifo_path_
-        << " > /tmp/indiserver.log 2>&1";
-
-    server_process_ = std::make_unique<AsyncSystemCommand>(cmd.str());
-    server_process_->run();
-
-    // 等待服务器启动
-    for (int i = 0; i < 10; i++) {
-        if (isRunning()) {
-            LOG_F(INFO, "INDI server started successfully");
-            return true;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    LOG_F(ERROR, "Failed to start INDI server");
-    return false;
-}
-
-auto INDIConnector::stopServer() -> bool {
-    std::lock_guard lock(server_mutex);
-
-    if (!isRunning()) {
-        DLOG_F(INFO, "INDI server is not running");
+    if (serverManager_->isRunning()) {
+        LOG_INFO( "INDI server already running");
         return true;
     }
 
-    LOG_F(INFO, "Stopping INDI server");
-
-    if (server_process_) {
-        server_process_->terminate();
-        server_process_.reset();
+    bool result = serverManager_->start();
+    
+    if (result) {
+        LOG_INFO( "INDI server started successfully");
+        // Update FIFO path in case it changed
+        if (fifoChannel_) {
+            fifoChannel_->setFifoPath(serverManager_->getFifoPath());
+        }
+    } else {
+        LOG_ERROR( "Failed to start INDI server: {}", 
+              serverManager_->getLastError());
     }
 
-    // 确保所有驱动进程也被终止
-    for (auto &[_, process] : driver_processes_) {
-        process->terminate();
-    }
-    driver_processes_.clear();
-    running_drivers_.clear();
+    return result;
+}
 
-    return !isRunning();
+auto INDIConnector::stopServer() -> bool {
+    LOG_INFO( "Stopping INDI server");
+
+    if (!serverManager_) {
+        return true;
+    }
+
+    // Stop all drivers first
+    {
+        std::lock_guard lock(driverMutex_);
+        for (const auto& [label, driver] : running_drivers_) {
+            if (fifoChannel_) {
+                fifoChannel_->stopDriver(driver->binary);
+            }
+        }
+        running_drivers_.clear();
+    }
+
+    // Close FIFO channel
+    if (fifoChannel_) {
+        fifoChannel_->close();
+    }
+
+    // Stop server
+    bool result = serverManager_->stop();
+    
+    if (result) {
+        LOG_INFO( "INDI server stopped successfully");
+    } else {
+        LOG_ERROR( "Failed to stop INDI server gracefully, forcing");
+        result = serverManager_->stop(true);
+    }
+
+    return result;
+}
+
+auto INDIConnector::restartServer() -> bool {
+    LOG_INFO( "Restarting INDI server");
+    
+    if (!serverManager_) {
+        return false;
+    }
+    
+    return serverManager_->restart();
 }
 
 auto INDIConnector::isRunning() -> bool {
-    return server_process_ && server_process_->isRunning();
+    return serverManager_ && serverManager_->isRunning();
 }
 
 auto INDIConnector::isInstalled() -> bool {
-    try {
-        return atom::system::checkSoftwareInstalled("hydrogenserver");
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error checking installation: {}", e.what());
+    return INDIServerManager::isInstalled("indiserver");
+}
+
+auto INDIConnector::getServerState() const -> ServerState {
+    if (!serverManager_) {
+        return ServerState::Stopped;
+    }
+    return serverManager_->getState();
+}
+
+auto INDIConnector::getServerUptime() const -> std::optional<std::chrono::seconds> {
+    if (!serverManager_) {
+        return std::nullopt;
+    }
+    return serverManager_->getUptime();
+}
+
+auto INDIConnector::getLastError() const -> std::string {
+    if (!serverManager_) {
+        return "Server manager not initialized";
+    }
+    return serverManager_->getLastError();
+}
+
+// ==================== Configuration ====================
+
+auto INDIConnector::setServerConfig(const INDIServerConfig& config) -> bool {
+    if (!serverManager_) {
         return false;
+    }
+    
+    bool result = serverManager_->setConfig(config);
+    if (result) {
+        // Update local state
+        host_ = config.host;
+        port_ = config.port;
+        fifo_path_ = config.fifoPath;
+        config_path_ = config.configDir;
+        data_path_ = config.dataDir;
+        
+        // Update FIFO channel
+        if (fifoChannel_) {
+            fifoChannel_->setFifoPath(config.fifoPath);
+        }
+    }
+    return result;
+}
+
+auto INDIConnector::getServerConfig() const -> const INDIServerConfig& {
+    static INDIServerConfig emptyConfig;
+    if (!serverManager_) {
+        return emptyConfig;
+    }
+    return serverManager_->getConfig();
+}
+
+void INDIConnector::setFifoConfig(const FifoChannelConfig& config) {
+    if (fifoChannel_) {
+        fifoChannel_->setConfig(config);
     }
 }
 
+// ==================== Driver Management ====================
+
 auto INDIConnector::startDriver(
     const std::shared_ptr<INDIDeviceContainer> &driver) -> bool {
-    std::lock_guard lock(driver_mutex);
-
     if (!driver) {
-        LOG_F(ERROR, "Invalid driver pointer");
+        LOG_ERROR( "Invalid driver pointer");
         return false;
     }
 
-    LOG_F(INFO, "Starting INDI driver: {}", driver->label);
-
-    std::stringstream cmd;
-    cmd << "echo \"start " << driver->label;
-    if (!driver->skeleton.empty()) {
-        cmd << " -s \\\"" << driver->skeleton << "\\\"";
+    if (!isRunning()) {
+        LOG_ERROR( "Cannot start driver: server not running");
+        return false;
     }
-    cmd << "\" > " << fifo_path_;
 
-    auto process = std::make_unique<AsyncSystemCommand>(cmd.str());
-    process->run();
-    driver_processes_[driver->label] = std::move(process);
-    running_drivers_.emplace(driver->label, driver);
+    LOG_INFO( "Starting INDI driver: {} ({})", driver->label, driver->binary);
 
-    return true;
+    if (!fifoChannel_) {
+        LOG_ERROR( "FIFO channel not initialized");
+        return false;
+    }
+
+    // Send start command via FIFO
+    FifoResult result = fifoChannel_->startDriver(driver->binary, driver->skeleton);
+    
+    if (result.success) {
+        std::lock_guard lock(driverMutex_);
+        running_drivers_.emplace(driver->label, driver);
+        notifyDriverEvent(driver->label, true);
+        LOG_INFO( "Driver {} started successfully", driver->label);
+        return true;
+    }
+
+    LOG_ERROR( "Failed to start driver {}: {}", driver->label, result.errorMessage);
+    return false;
 }
 
 auto INDIConnector::stopDriver(
     const std::shared_ptr<INDIDeviceContainer> &driver) -> bool {
-    std::lock_guard lock(driver_mutex);
+    if (!driver) {
+        LOG_ERROR( "Invalid driver pointer");
+        return false;
+    }
 
-    auto it = driver_processes_.find(driver->label);
-    if (it != driver_processes_.end()) {
-        it->second->terminate();
-        driver_processes_.erase(it);
+    LOG_INFO( "Stopping INDI driver: {}", driver->label);
+
+    if (!fifoChannel_) {
+        LOG_ERROR( "FIFO channel not initialized");
+        return false;
+    }
+
+    // Send stop command via FIFO
+    FifoResult result = fifoChannel_->stopDriver(driver->binary);
+    
+    {
+        std::lock_guard lock(driverMutex_);
         running_drivers_.erase(driver->label);
+    }
+    
+    if (result.success) {
+        notifyDriverEvent(driver->label, false);
+        LOG_INFO( "Driver {} stopped successfully", driver->label);
         return true;
     }
 
-    return false;
+    LOG_WARN( "Stop command sent but may have failed: {}", result.errorMessage);
+    return true;  // Driver removed from tracking regardless
 }
+
+auto INDIConnector::restartDriver(
+    const std::shared_ptr<INDIDeviceContainer> &driver) -> bool {
+    if (!driver) {
+        return false;
+    }
+
+    LOG_INFO( "Restarting INDI driver: {}", driver->label);
+
+    if (!fifoChannel_) {
+        return false;
+    }
+
+    FifoResult result = fifoChannel_->restartDriver(driver->binary, driver->skeleton);
+    return result.success;
+}
+
+auto INDIConnector::startDriverByName(const std::string& binary, 
+                                      const std::string& skeleton) -> bool {
+    if (!isRunning()) {
+        LOG_ERROR( "Cannot start driver: server not running");
+        return false;
+    }
+
+    if (!fifoChannel_) {
+        return false;
+    }
+
+    LOG_INFO( "Starting driver by name: {}", binary);
+    FifoResult result = fifoChannel_->startDriver(binary, skeleton);
+    
+    if (result.success) {
+        // Create a container for tracking
+        auto container = std::make_shared<INDIDeviceContainer>();
+        container->binary = binary;
+        container->label = binary;
+        container->skeleton = skeleton;
+        
+        std::lock_guard lock(driverMutex_);
+        running_drivers_.emplace(binary, container);
+        notifyDriverEvent(binary, true);
+    }
+    
+    return result.success;
+}
+
+auto INDIConnector::stopDriverByName(const std::string& binary) -> bool {
+    if (!fifoChannel_) {
+        return false;
+    }
+
+    LOG_INFO( "Stopping driver by name: {}", binary);
+    FifoResult result = fifoChannel_->stopDriver(binary);
+    
+    {
+        std::lock_guard lock(driverMutex_);
+        running_drivers_.erase(binary);
+    }
+    
+    notifyDriverEvent(binary, false);
+    return result.success;
+}
+
+auto INDIConnector::isDriverRunning(const std::string& driverLabel) const -> bool {
+    std::lock_guard lock(driverMutex_);
+    return running_drivers_.find(driverLabel) != running_drivers_.end();
+}
+
+// ==================== Property Access ====================
 
 auto INDIConnector::setProp(const std::string &dev, const std::string &prop,
                             const std::string &element,
@@ -190,28 +395,24 @@ auto INDIConnector::setProp(const std::string &dev, const std::string &prop,
     sss << "indi_setprop " << dev << "." << prop << "." << element << "="
         << value;
     std::string cmd = sss.str();
-    DLOG_F(INFO, "Cmd: {}", cmd);
+    DLOG_INFO( "Cmd: {}", cmd);
     try {
         if (atom::system::executeCommand(cmd, false) != "") {
-            LOG_F(ERROR, "Failed to execute command: {}", cmd);
+            LOG_ERROR( "Failed to execute command: {}", cmd);
             return false;
         }
     } catch (const atom::error::RuntimeError &e) {
-        LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
+        LOG_ERROR( "Failed to execute command: {} with {}", cmd, e.what());
         return false;
     }
-    DLOG_F(INFO, "Set property: {}.{} to {}", dev, prop, value);
+    DLOG_INFO( "Set property: {}.{} to {}", dev, prop, value);
     return true;
 }
 
 auto INDIConnector::getProp(const std::string &dev, const std::string &prop,
                             const std::string &element) -> std::string {
     std::stringstream sss;
-#if ENABLE_INDI
     sss << "indi_getprop " << dev << "." << prop << "." << element;
-#else
-    sss << "indi_getprop " << dev << "." << prop << "." << element;
-#endif
     std::string cmd = sss.str();
     try {
         std::string output = atom::system::executeCommand(cmd, false);
@@ -221,7 +422,7 @@ auto INDIConnector::getProp(const std::string &dev, const std::string &prop,
                                  output.length() - equalsPos - 2);
         }
     } catch (const atom::error::RuntimeError &e) {
-        LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
+        LOG_ERROR( "Failed to execute command: {} with {}", cmd, e.what());
     }
     return "";
 }
@@ -231,6 +432,8 @@ auto INDIConnector::getState(const std::string &dev,
     return getProp(dev, prop, "_STATE");
 }
 
+// ==================== Device/Driver Queries ====================
+
 #if ENABLE_FASTHASH
 emhash8::HashMap<std::string, std::shared_ptr<INDIDeviceContainer>>
 INDIConnector::getRunningDrivers()
@@ -239,6 +442,7 @@ auto INDIConnector::getRunningDrivers()
     -> std::unordered_map<std::string, std::shared_ptr<INDIDeviceContainer>>
 #endif
 {
+    std::lock_guard lock(driverMutex_);
     return running_drivers_;
 }
 
@@ -257,26 +461,85 @@ auto INDIConnector::getDevices()
 #endif
     std::string cmd = "indi_getprop *.CONNECTION.CONNECT";
 
-    auto result = atom::system::executeCommand(cmd, false);
-    std::vector<std::string> lines = {"", ""};
-    for (char token : result) {
-        if (token == '\n') {
-            std::unordered_map<std::string, std::string> device;
-            std::stringstream sss(lines[0]);
-            std::string item;
-            while (getline(sss, item, '.')) {
-                device["device"] = item;
+    try {
+        auto result = atom::system::executeCommand(cmd, false);
+        std::vector<std::string> lines = {"", ""};
+        for (char token : result) {
+            if (token == '\n') {
+                std::unordered_map<std::string, std::string> device;
+                std::stringstream sss(lines[0]);
+                std::string item;
+                while (getline(sss, item, '.')) {
+                    device["device"] = item;
+                }
+                device["connected"] = (lines[1] == "On") ? "true" : "false";
+                devices.push_back(device);
+                lines = {"", ""};
+            } else if (token == '=') {
+                lines[1] = lines[1].substr(0, lines[1].length() - 1);
+            } else if (token == ' ') {
+                continue;
+            } else {
+                lines[(lines[0] == "") ? 0 : 1] += token;
             }
-            device["connected"] = (lines[1] == "On") ? "true" : "false";
-            devices.push_back(device);
-            lines = {"", ""};
-        } else if (token == '=') {
-            lines[1] = lines[1].substr(0, lines[1].length() - 1);
-        } else if (token == ' ') {
-            continue;
-        } else {
-            lines[(lines[0] == "") ? 0 : 1] += token;
         }
+    } catch (const std::exception& e) {
+        LOG_ERROR( "Failed to get devices: {}", e.what());
     }
     return devices;
+}
+
+auto INDIConnector::getRunningDriverCount() const -> size_t {
+    std::lock_guard lock(driverMutex_);
+    return running_drivers_.size();
+}
+
+// ==================== Events ====================
+
+void INDIConnector::setServerEventCallback(ServerEventCallback callback) {
+    if (serverManager_) {
+        serverManager_->setEventCallback(std::move(callback));
+    }
+}
+
+void INDIConnector::setDriverEventCallback(DriverEventCallback callback) {
+    driverEventCallback_ = std::move(callback);
+}
+
+void INDIConnector::notifyDriverEvent(const std::string& driver, bool started) {
+    if (driverEventCallback_) {
+        driverEventCallback_(driver, started);
+    }
+}
+
+// ==================== FIFO Channel Access ====================
+
+auto INDIConnector::getFifoChannel() -> FifoChannel* {
+    return fifoChannel_.get();
+}
+
+auto INDIConnector::sendFifoCommand(const std::string& command) -> bool {
+    if (!fifoChannel_) {
+        LOG_ERROR( "FIFO channel not initialized");
+        return false;
+    }
+    
+    FifoResult result = fifoChannel_->sendRaw(command);
+    return result.success;
+}
+
+// ==================== Statistics ====================
+
+auto INDIConnector::getTotalFifoCommands() const -> uint64_t {
+    if (!fifoChannel_) {
+        return 0;
+    }
+    return fifoChannel_->getTotalCommandsSent();
+}
+
+auto INDIConnector::getTotalFifoErrors() const -> uint64_t {
+    if (!fifoChannel_) {
+        return 0;
+    }
+    return fifoChannel_->getTotalErrors();
 }

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <numeric>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 constexpr int MAX_IMAGE_SIZE = 2000;
 

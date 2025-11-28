@@ -37,7 +37,7 @@ A comprehensive framework for managing, executing, and sequencing astronomical i
 | ExposureSequence | `sequencer.hpp/cpp` | Orchestrates targets with observability scheduling |
 | TaskFactory | `custom/factory.hpp/cpp` | Dynamic task creation |
 | TaskGenerator | `generator.hpp/cpp` | Macro processing and script generation |
-| AstroTypes | `astro_types.hpp` | Astronomical data structures (coordinates, observability, exposure plans) |
+| AstroTypes | `tools/astronomy/types.hpp` | Astronomical data structures (coordinates, observability, exposure plans) |
 
 ## Astronomical Features
 
@@ -47,18 +47,19 @@ Each Target now includes comprehensive astronomical data:
 
 ```cpp
 #include "task/target.hpp"
-#include "task/astro_types.hpp"
+
+using namespace lithium::tools::astronomy;
 
 // Configure astronomical target
-lithium::task::TargetConfig config;
+TargetConfig config;
 config.catalogName = "M31";
 config.commonName = "Andromeda Galaxy";
-config.coordinates = lithium::task::Coordinates::fromHMS(0.7123, 41.2689);
+config.coordinates = Coordinates::fromHMS(0.7123, 41.2689);
 config.priority = 8;
 
 // Add exposure plans
-lithium::task::ExposurePlan lFilter{"L", 300.0, 20};  // 20x 5min Luminance
-lithium::task::ExposurePlan rFilter{"R", 180.0, 10};  // 10x 3min Red
+ExposurePlan lFilter{"L", 300.0, 20};  // 20x 5min Luminance
+ExposurePlan rFilter{"R", 180.0, 10};  // 10x 3min Red
 config.exposurePlans = {lFilter, rFilter};
 
 target->setAstroConfig(config);
@@ -67,8 +68,10 @@ target->setAstroConfig(config);
 ### Observability-Based Scheduling
 
 ```cpp
+using namespace lithium::tools::astronomy;
+
 // Set observer location
-lithium::task::ObserverLocation location{39.9, 116.4, 50.0};
+ObserverLocation location{39.9, 116.4, 50.0};
 sequence.setObserverLocation(location);
 
 // Sort targets by observability
@@ -238,7 +241,7 @@ src/task/
 ├── target.hpp/cpp         # Target with astronomical data
 ├── sequencer.hpp/cpp      # ExposureSequence with observability scheduling
 ├── generator.hpp/cpp      # TaskGenerator
-├── astro_types.hpp        # Astronomical data structures
+├── (astro_types moved to tools/astronomy/)
 ├── imagepath.hpp/cpp      # Image filename parsing
 ├── registration.hpp/cpp   # Task registration (50+ tasks)
 ├── integration_utils.hpp/cpp  # Integration helpers
@@ -285,5 +288,6 @@ cmake --build . --target lithium_task
 - atom (type utilities)
 - lithium_config
 - lithium_database
+- lithium_tools (astronomy types)
 - loguru
 - yaml-cpp

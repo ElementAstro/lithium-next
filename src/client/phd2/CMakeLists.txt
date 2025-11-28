@@ -18,18 +18,19 @@ project(lithium_client_phd2)
 
 set(SOURCE_FILES
     client.cpp
+    connection.cpp
     phd2_client.cpp
     profile.cpp
 )
 
 set(HEADER_FILES
-    client.h
-    connection.h
-    event_handler.h
-    exceptions.h
+    client.hpp
+    connection.hpp
+    event_handler.hpp
+    exceptions.hpp
     phd2_client.hpp
     profile.hpp
-    types.h
+    types.hpp
 )
 
 # ============================================================================

@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 constexpr size_t ELF_IDENT_SIZE = 16;
 constexpr size_t NUM_REGISTERS = 27;
@@ -27,10 +27,10 @@ namespace lithium::addon {
 class CoreDumpAnalyzer::Impl {
 public:
     auto readFile(const std::string& filename) -> bool {
-        LOG_F(INFO, "Reading file: {}", filename);
+        LOG_INFO( "Reading file: {}", filename);
         std::ifstream file(filename, std::ios::binary);
         if (!file) {
-            LOG_F(ERROR, "Unable to open file: {}", filename);
+            LOG_ERROR( "Unable to open file: {}", filename);
             return false;
         }
 
@@ -43,23 +43,23 @@ public:
                   static_cast<std::streamsize>(fileSize));
 
         if (!file) {
-            LOG_F(ERROR, "Error reading file: {}", filename);
+            LOG_ERROR( "Error reading file: {}", filename);
             return false;
         }
 
         if (fileSize < sizeof(ElfHeader)) {
-            LOG_F(ERROR, "File too small to be a valid ELF format: {}",
+            LOG_ERROR( "File too small to be a valid ELF format: {}",
                   filename);
             return false;
         }
 
         std::memcpy(&header_, data_.data(), sizeof(ElfHeader));
-        LOG_F(INFO, "Successfully read file: {}", filename);
+        LOG_INFO( "Successfully read file: {}", filename);
         return true;
     }
 
     [[nodiscard]] auto getElfHeaderInfo() const -> std::string {
-        LOG_F(INFO, "Getting ELF header info");
+        LOG_INFO( "Getting ELF header info");
         std::ostringstream oss;
         oss << "ELF Header:\n";
         oss << "  Type: " << header_.eType << "\n";
@@ -85,7 +85,7 @@ public:
     }
 
     [[nodiscard]] auto getProgramHeadersInfo() const -> std::string {
-        LOG_F(INFO, "Getting program headers info");
+        LOG_INFO( "Getting program headers info");
         std::ostringstream oss;
         oss << "Program Headers:\n";
         for (const auto& programHeader : programHeaders_) {
@@ -104,7 +104,7 @@ public:
     }
 
     [[nodiscard]] auto getSectionHeadersInfo() const -> std::string {
-        LOG_F(INFO, "Getting section headers info");
+        LOG_INFO( "Getting section headers info");
         std::ostringstream oss;
         oss << "Section Headers:\n";
         for (const auto& sectionHeader : sectionHeaders_) {
@@ -123,7 +123,7 @@ public:
     }
 
     [[nodiscard]] auto getNoteSectionInfo() const -> std::string {
-        LOG_F(INFO, "Getting note section info");
+        LOG_INFO( "Getting note section info");
         std::ostringstream oss;
         oss << "Note Sections:\n";
         for (const auto& section : sectionHeaders_) {
@@ -158,7 +158,7 @@ public:
     }
 
     [[nodiscard]] auto getThreadInfo(size_t offset) const -> std::string {
-        LOG_F(INFO, "Getting thread info at offset: {}", offset);
+        LOG_INFO( "Getting thread info at offset: {}", offset);
         std::ostringstream oss;
         ThreadInfo thread{};
         std::memcpy(&thread.tid, data_.data() + offset, sizeof(uint64_t));
@@ -180,7 +180,7 @@ public:
     }
 
     [[nodiscard]] auto getFileInfo(size_t offset) const -> std::string {
-        LOG_F(INFO, "Getting file info at offset: {}", offset);
+        LOG_INFO( "Getting file info at offset: {}", offset);
         std::ostringstream oss;
         uint64_t count =
             *reinterpret_cast<const uint64_t*>(data_.data() + offset);
@@ -205,7 +205,7 @@ public:
     }
 
     [[nodiscard]] auto getMemoryMapsInfo() const -> std::string {
-        LOG_F(INFO, "Getting memory maps info");
+        LOG_INFO( "Getting memory maps info");
         std::ostringstream oss;
         oss << "Memory Maps:\n";
         for (const auto& programHeader : programHeaders_) {
@@ -221,7 +221,7 @@ public:
     }
 
     [[nodiscard]] auto getSignalHandlersInfo() const -> std::string {
-        LOG_F(INFO, "Getting signal handlers info");
+        LOG_INFO( "Getting signal handlers info");
         std::ostringstream oss;
         oss << "Signal Handlers:\n";
         for (const auto& section : sectionHeaders_) {
@@ -239,7 +239,7 @@ public:
     }
 
     [[nodiscard]] auto getHeapUsageInfo() const -> std::string {
-        LOG_F(INFO, "Getting heap usage info");
+        LOG_INFO( "Getting heap usage info");
         std::ostringstream oss;
         oss << "Heap Usage:\n";
         auto heapSection =
@@ -261,9 +261,9 @@ public:
     }
 
     void analyze() {
-        LOG_F(INFO, "Analyzing core dump");
+        LOG_INFO( "Analyzing core dump");
         if (data_.empty()) {
-            LOG_F(WARNING, "No data to analyze");
+            LOG_WARN( "No data to analyze");
             return;
         }
 
@@ -271,13 +271,13 @@ public:
                         "\x7F"
                         "ELF",
                         4) != 0) {
-            LOG_F(ERROR, "Not a valid ELF file");
+            LOG_ERROR( "Not a valid ELF file");
             return;
         }
 
-        LOG_F(INFO, "File size: {} bytes", data_.size());
-        LOG_F(INFO, "ELF header size: {} bytes", sizeof(ElfHeader));
-        LOG_F(INFO, "Analysis complete");
+        LOG_INFO( "File size: {} bytes", data_.size());
+        LOG_INFO( "ELF header size: {} bytes", sizeof(ElfHeader));
+        LOG_INFO( "Analysis complete");
     }
 
     struct AnalysisOptions {
@@ -483,21 +483,21 @@ private:
 };
 
 CoreDumpAnalyzer::CoreDumpAnalyzer() : pImpl_(std::make_unique<Impl>()) {
-    LOG_F(INFO, "CoreDumpAnalyzer created");
+    LOG_INFO( "CoreDumpAnalyzer created");
 }
 
 CoreDumpAnalyzer::~CoreDumpAnalyzer() {
-    LOG_F(INFO, "CoreDumpAnalyzer destroyed");
+    LOG_INFO( "CoreDumpAnalyzer destroyed");
 }
 
 auto CoreDumpAnalyzer::readFile(const std::string& filename) -> bool {
-    LOG_F(INFO, "CoreDumpAnalyzer::readFile called with filename: {}",
+    LOG_INFO( "CoreDumpAnalyzer::readFile called with filename: {}",
           filename);
     return pImpl_->readFile(filename);
 }
 
 void CoreDumpAnalyzer::analyze() {
-    LOG_F(INFO, "CoreDumpAnalyzer::analyze called");
+    LOG_INFO( "CoreDumpAnalyzer::analyze called");
     pImpl_->analyze();
 }
 

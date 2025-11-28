@@ -13,7 +13,7 @@
 #include "script/python_caller.hpp"
 #include "script/sheller.hpp"
 
-#include "config/configor.hpp"
+#include "config/config.hpp"
 #include "constant/constant.hpp"
 #include "server/command.hpp"
 #include "server/controller/controller.hpp"
@@ -21,7 +21,7 @@
 
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/system/env.hpp"
 #include "atom/utils/argsview.hpp"
@@ -50,31 +50,25 @@ void registerControllers(
 }
 
 /**
- * @brief setup log file
+ * @brief Initialize logging system with spdlog
  * @note This is called in main function
  */
-void setupLogFile() {
-    std::filesystem::path logsFolder = std::filesystem::current_path() / "logs";
-    if (!std::filesystem::exists(logsFolder)) {
-        std::filesystem::create_directory(logsFolder);
-    }
-    auto now = std::chrono::system_clock::now();
-    auto nowTimeT = std::chrono::system_clock::to_time_t(now);
-    std::tm *localTime = std::localtime(&nowTimeT);
-    char filename[100];
-    std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", localTime);
-    std::filesystem::path logFilePath = logsFolder / filename;
-    loguru::add_file(logFilePath.string().c_str(), loguru::Append,
-                     loguru::Verbosity_MAX);
+void setupLogging() {
+    lithium::log::LogConfig config;
+    config.log_dir = "logs";
+    config.log_filename = "lithium";
+    config.max_file_size = 10 * 1024 * 1024;  // 10 MB
+    config.max_files = 5;
+    config.console_level = lithium::log::Level::Info;
+    config.file_level = lithium::log::Level::Trace;
+    config.async_mode = true;
+    config.main_thread_name = "main";
 
-    loguru::set_fatal_handler([](const loguru::Message &message) {
-        atom::system::saveCrashLog(std::string(message.prefix) +
-                                   message.message);
-    });
+    lithium::log::init(config);
 }
 
 void injectPtr() {
-    LOG_F(INFO, "Injecting global pointers...");
+    LOG_INFO("Injecting global pointers...");
 
     auto ioContext = atom::memory::makeShared<asio::io_context>();
     AddPtr<atom::async::MessageBus>(
@@ -120,7 +114,7 @@ void injectPtr() {
         atom::memory::makeShared<lithium::ScriptAnalyzer>(
             scriptDir.empty() ? "./config/script/analysis.json"s : scriptDir));
 
-    LOG_F(INFO, "Global pointers injected.");
+    LOG_INFO("Global pointers injected.");
 }
 
 int main(int argc, char *argv[]) {
@@ -137,9 +131,8 @@ int main(int argc, char *argv[]) {
     textdomain("lithium");
 #endif
 
-    // Set log file
-    setupLogFile();
-    loguru::init(argc, argv);
+    // Initialize logging system
+    setupLogging();
 
     injectPtr();
 
@@ -185,43 +178,40 @@ int main(int argc, char *argv[]) {
 
         if (cmdHost && !cmdHost->empty()) {
             configManager.value()->set("/lithium/server/host", cmdHost.value());
-            DLOG_F(INFO, "Set server host to {}", cmdHost.value());
+            DLOG_INFO("Set server host to {}", cmdHost.value());
         }
         if (cmdPort != 8000) {
-            DLOG_F(INFO, "Command line server port : {}", cmdPort.value());
+            DLOG_INFO("Command line server port : {}", cmdPort.value());
 
             auto port = configManager.value()->get("/lithium/server/port");
             if (port && port.value() != cmdPort) {
                 configManager.value()->set("/lithium/server/port",
                                            cmdPort.value());
-                DLOG_F(INFO, "Set server port to {}", cmdPort.value());
+                DLOG_INFO("Set server port to {}", cmdPort.value());
             }
         }
         if (cmdConfigPath && !cmdConfigPath->empty()) {
             configManager.value()->set("/lithium/config/path", *cmdConfigPath);
-            DLOG_F(INFO, "Set config path to {}", *cmdConfigPath);
+            DLOG_INFO("Set config path to {}", *cmdConfigPath);
         }
         if (cmdModulePath && !cmdModulePath->empty()) {
             configManager.value()->set("/lithium/module/path", *cmdModulePath);
-            DLOG_F(INFO, "Set module path to {}", *cmdModulePath);
+            DLOG_INFO("Set module path to {}", *cmdModulePath);
         }
         if (cmdWebPanel) {
             configManager.value()->set("/lithium/web-panel/enabled",
                                        *cmdWebPanel);
-            DLOG_F(INFO, "Set web panel to {}", *cmdWebPanel);
+            DLOG_INFO("Set web panel to {}", *cmdWebPanel);
         }
         if (cmdDebug) {
             configManager.value()->set("/lithium/debug/enabled", *cmdDebug);
-            DLOG_F(INFO, "Set debug mode to {}", *cmdDebug);
+            DLOG_INFO("Set debug mode to {}", *cmdDebug);
         }
-        if (program.get<std::string>("log-file")) {
-            loguru::add_file(
-                program.get<std::string>("log-file").value().c_str(),
-                loguru::Append, loguru::Verbosity_MAX);
-        }
+        // Note: Custom log file path is handled by LogConfig in setupLogging()
+        // The --log-file argument is deprecated with spdlog migration
 
     } catch (const std::bad_any_cast &e) {
-        LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
+        LOG_ERROR("Invalid args format! Error: {}", e.what());
         atom::system::saveCrashLog(e.what());
         return 1;
     }
@@ -252,12 +242,12 @@ int main(int argc, char *argv[]) {
         auto configManager =
             GetPtr<lithium::ConfigManager>(Constants::CONFIG_MANAGER);
         if (!configManager) {
-            LOG_F(ERROR, "Failed to get ConfigManager instance");
+            LOG_ERROR("Failed to get ConfigManager instance");
             return;
         }
         int port =
             configManager.value()->get("/lithium/server/port").value_or(8080);
-        LOG_F(INFO, "Server is running on {}", port);
+        LOG_INFO("Server is running on {}", port);
         app.port(port).multithreaded().run();
     });
 
@@ -270,7 +260,7 @@ int main(int argc, char *argv[]) {
 
     std::thread *debugTerminalThread = nullptr;
     if (program.get<bool>("debug").value_or(false)) {
-        LOG_F(INFO, "Debug mode enabled, starting debug terminal...");
+        LOG_INFO("Debug mode enabled, starting debug terminal...");
         debugTerminalThread = new std::thread([]() {
             lithium::debug::ConsoleTerminal terminal;
             terminal.run();
@@ -282,6 +272,9 @@ int main(int argc, char *argv[]) {
         debugTerminalThread->join();
         delete debugTerminalThread;
     }
+
+    // Shutdown logging system (flush async queue)
+    lithium::log::shutdown();
 
     return 0;
 }

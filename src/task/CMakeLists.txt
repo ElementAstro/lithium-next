@@ -42,7 +42,6 @@ set(PROJECT_HEADERS
     registration.hpp
     integration_utils.hpp
     api_adapter.hpp
-    astro_types.hpp
     ${CUSTOM_SRC}
 )
 
@@ -54,6 +53,7 @@ set(PROJECT_LIBRARIES
     atom
     lithium_config
     lithium_database
+    lithium_tools
     loguru
     yaml-cpp
     ${CMAKE_THREAD_LIBS_INIT}

@@ -1,7 +1,7 @@
 #include "config_task.hpp"
 #include <spdlog/spdlog.h>
 #include "atom/function/global_ptr.hpp"
-#include "config/configor.hpp"
+#include "config/config.hpp"
 #include "constant/constant.hpp"
 #include "factory.hpp"
 #include "matchit/matchit.h"

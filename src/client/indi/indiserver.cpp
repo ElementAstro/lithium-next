@@ -1,6 +1,6 @@
 #include "indiserver.hpp"
 
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/system/software.hpp"
 
 INDIManager::INDIManager(std::unique_ptr<Connector> conn,
@@ -55,7 +55,7 @@ INDIManager::getRunningDrivers() {
 bool INDIManager::startIndiHub(const std::string& profile,
                                const std::string& mode) {
     if (!isRunning()) {
-        LOG_F(WARNING, "Cannot start IndiHub: INDI server is not running");
+        LOG_WARN( "Cannot start IndiHub: INDI server is not running");
         return false;
     }
 
@@ -63,7 +63,7 @@ bool INDIManager::startIndiHub(const std::string& profile,
         indihub_agent->start(profile, mode);
         return true;
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to start IndiHub: {}", e.what());
+        LOG_ERROR( "Failed to start IndiHub: {}", e.what());
         return false;
     }
 }

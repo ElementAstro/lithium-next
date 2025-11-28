@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "atom/error/exception.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 constexpr double MIN_LONG_RATIO = 1.5;
 constexpr int MAX_SAMPLES = 500000;

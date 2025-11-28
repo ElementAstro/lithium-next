@@ -37,4 +37,72 @@ bool ServerClient::configureServer(const ServerConfig& config) {
     return true;
 }
 
+bool ServerClient::setProperties(const std::string& device,
+                                 const std::unordered_map<std::string, std::string>& properties) {
+    bool allSuccess = true;
+    for (const auto& [prop, value] : properties) {
+        // Parse property.element format
+        auto dotPos = prop.find('.');
+        std::string propName = prop;
+        std::string elemName = "";
+        if (dotPos != std::string::npos) {
+            propName = prop.substr(0, dotPos);
+            elemName = prop.substr(dotPos + 1);
+        }
+        if (!setProperty(device, propName, elemName, value)) {
+            allSuccess = false;
+        }
+    }
+    return allSuccess;
+}
+
+std::unordered_map<std::string, PropertyValue> ServerClient::getProperties(
+    const std::string& device) const {
+    auto deviceOpt = getDevice(device);
+    if (deviceOpt) {
+        return deviceOpt->properties;
+    }
+    return {};
+}
+
+void ServerClient::registerServerEventCallback(ServerEventCallback callback) {
+    std::lock_guard<std::mutex> lock(serverEventMutex_);
+    serverEventCallback_ = std::move(callback);
+}
+
+void ServerClient::unregisterServerEventCallback() {
+    std::lock_guard<std::mutex> lock(serverEventMutex_);
+    serverEventCallback_ = nullptr;
+}
+
+nlohmann::json ServerClient::getServerStatus() const {
+    nlohmann::json status;
+    status["name"] = getName();
+    status["backend"] = getBackendName();
+    status["running"] = isServerRunning();
+    status["connected"] = isConnected();
+    status["config"] = serverConfig_.toJson();
+    
+    auto devices = getDevices();
+    status["deviceCount"] = devices.size();
+    
+    nlohmann::json deviceList = nlohmann::json::array();
+    for (const auto& dev : devices) {
+        deviceList.push_back(dev.toJson());
+    }
+    status["devices"] = deviceList;
+    
+    auto drivers = getRunningDrivers();
+    status["runningDriverCount"] = drivers.size();
+    
+    return status;
+}
+
+void ServerClient::emitServerEvent(const ServerEvent& event) {
+    std::lock_guard<std::mutex> lock(serverEventMutex_);
+    if (serverEventCallback_) {
+        serverEventCallback_(event);
+    }
+}
+
 }  // namespace lithium::client

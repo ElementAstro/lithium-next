@@ -1,11 +1,11 @@
 #ifndef LITHIUM_SERVER_MIDDLEWARE_LOCATION_HPP
 #define LITHIUM_SERVER_MIDDLEWARE_LOCATION_HPP
 
-#include "config/configor.hpp"
+#include "config/config.hpp"
 
 #include "atom/async/message_bus.hpp"
 #include "atom/function/global_ptr.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/print.hpp"
 
@@ -14,8 +14,7 @@
 
 namespace lithium::middleware {
 inline void saveCurrentLocation(double latitude, double longitude) {
-    LOG_F(
-        INFO,
+    LOG_INFO(
         "saveCurrentLocation: Entering function with latitude={}, longitude={}",
         latitude, longitude);
 
@@ -27,20 +26,20 @@ inline void saveCurrentLocation(double latitude, double longitude) {
     try {
         configManager->set("/quarcs/location/latitude", latitude);
         configManager->set("/quarcs/location/longitude", longitude);
-        LOG_F(INFO,
+        LOG_INFO(
               "saveCurrentLocation: Successfully saved location: latitude={}, "
               "longitude={}",
               latitude, longitude);
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "saveCurrentLocation: Failed to save location: {}",
+        LOG_ERROR( "saveCurrentLocation: Failed to save location: {}",
               e.what());
     }
 
-    LOG_F(INFO, "saveCurrentLocation: Exiting function");
+    LOG_INFO( "saveCurrentLocation: Exiting function");
 }
 
 inline void getCurrentLocation() {
-    LOG_F(INFO, "getCurrentLocation: Entering function");
+    LOG_INFO( "getCurrentLocation: Entering function");
 
     LITHIUM_GET_REQUIRED_PTR(messageBus, atom::async::MessageBus,
                              Constants::MESSAGE_BUS);
@@ -54,21 +53,21 @@ inline void getCurrentLocation() {
         if (latitudeJ && longitudeJ) {
             auto latitude = latitudeJ.value().get<double>();
             auto longitude = longitudeJ.value().get<double>();
-            LOG_F(INFO,
+            LOG_INFO(
                   "getCurrentLocation: Current location: latitude={}, "
                   "longitude={}",
                   latitude, longitude);
             messageBus->publish(
                 "quarcs", "SetCurrentLocation:{}:{}"_fmt(latitude, longitude));
         } else {
-            LOG_F(WARNING, "getCurrentLocation: Location data not found");
+            LOG_WARN( "getCurrentLocation: Location data not found");
         }
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "getCurrentLocation: Failed to get current location: {}",
+        LOG_ERROR( "getCurrentLocation: Failed to get current location: {}",
               e.what());
     }
 
-    LOG_F(INFO, "getCurrentLocation: Exiting function");
+    LOG_INFO( "getCurrentLocation: Exiting function");
 }
 }  // namespace lithium::middleware
 

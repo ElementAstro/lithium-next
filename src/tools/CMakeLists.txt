@@ -16,11 +16,45 @@ lithium_component_begin(lithium_tools 1.0.0)
 # ============================================================================
 
 set(PROJECT_SOURCES
-    calculate.cpp
-    convert.cpp
-    croods.cpp
-    libastro.cpp
-    solverutils.cpp
+    # Calculation submodule
+    calculation/julian.cpp
+
+    # Solver submodule
+    solver/wcs.cpp
+)
+
+# ============================================================================
+# Header Files
+# ============================================================================
+
+set(PROJECT_HEADERS
+    # Main aggregated header
+    tools.hpp
+
+    # Astronomy types submodule
+    astronomy/constants.hpp
+    astronomy/constraints.hpp
+    astronomy/coordinates.hpp
+    astronomy/exposure.hpp
+    astronomy/meridian.hpp
+    astronomy/target_config.hpp
+    astronomy/types.hpp
+
+    # Calculation submodule
+    calculation/julian.hpp
+    calculation/sidereal.hpp
+    calculation/transform.hpp
+    calculation/precession.hpp
+    calculation/calculate.hpp
+
+    # Conversion submodule
+    conversion/angle.hpp
+    conversion/coordinate.hpp
+    conversion/format.hpp
+    conversion/convert.hpp
+
+    # Solver submodule
+    solver/wcs.hpp
 )
 
 # ============================================================================
@@ -40,7 +74,7 @@ set(PROJECT_LIBRARIES
 
 lithium_add_library(
     NAME ${PROJECT_NAME}
-    SOURCES ${PROJECT_SOURCES}
+    SOURCES ${PROJECT_SOURCES} ${PROJECT_HEADERS}
     LIBRARIES ${PROJECT_LIBRARIES}
     VERSION ${PROJECT_VERSION}
     TYPE STATIC

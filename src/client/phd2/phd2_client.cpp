@@ -13,7 +13,7 @@ Description: PHD2 guider client implementation
 *************************************************/
 
 #include "phd2_client.hpp"
-#include "exceptions.h"
+#include "exceptions.hpp"
 
 #include <spdlog/spdlog.h>
 #include <chrono>

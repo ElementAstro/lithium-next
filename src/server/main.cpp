@@ -8,7 +8,7 @@
  */
 
 #include "main_server.hpp"
-#include "atom/log/loguru.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 #include <csignal>
 #include <memory>
@@ -20,7 +20,7 @@ std::unique_ptr<lithium::server::MainServer> g_server;
  * @brief Signal handler for graceful shutdown
  */
 void signalHandler(int signal) {
-    LOG_F(WARNING, "Received signal {}, initiating graceful shutdown...", signal);
+    LOG_WARN( "Received signal {}, initiating graceful shutdown...", signal);
     if (g_server) {
         g_server->stop();
     }
@@ -31,10 +31,10 @@ int main(int argc, char* argv[]) {
     loguru::init(argc, argv);
     loguru::add_file("lithium-server.log", loguru::Append, loguru::Verbosity_MAX);
     
-    LOG_F(INFO, "==============================================");
-    LOG_F(INFO, "  Lithium Astronomical Equipment Control API  ");
-    LOG_F(INFO, "  Version: 1.0.0                             ");
-    LOG_F(INFO, "==============================================");
+    LOG_INFO( "==============================================");
+    LOG_INFO( "  Lithium Astronomical Equipment Control API  ");
+    LOG_INFO( "  Version: 1.0.0                             ");
+    LOG_INFO( "==============================================");
 
     try {
         // Configure server
@@ -66,10 +66,10 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        LOG_F(INFO, "Server configuration:");
-        LOG_F(INFO, "  Port: {}", config.port);
-        LOG_F(INFO, "  Threads: {}", config.thread_count);
-        LOG_F(INFO, "  CORS: {}", config.enable_cors ? "enabled" : "disabled");
+        LOG_INFO( "Server configuration:");
+        LOG_INFO( "  Port: {}", config.port);
+        LOG_INFO( "  Threads: {}", config.thread_count);
+        LOG_INFO( "  CORS: {}", config.enable_cors ? "enabled" : "disabled");
 
         // Create server instance
         g_server = std::make_unique<lithium::server::MainServer>(config);
@@ -78,22 +78,22 @@ int main(int argc, char* argv[]) {
         std::signal(SIGINT, signalHandler);
         std::signal(SIGTERM, signalHandler);
 
-        LOG_F(INFO, "Server starting...");
-        LOG_F(INFO, "REST API available at http://localhost:{}/api/v1", config.port);
-        LOG_F(INFO, "WebSocket available at ws://localhost:{}/api/v1/ws", config.port);
-        LOG_F(INFO, "API Documentation: http://localhost:{}/api/v1/docs", config.port);
-        LOG_F(INFO, "");
-        LOG_F(INFO, "Press Ctrl+C to stop the server");
-        LOG_F(INFO, "");
+        LOG_INFO( "Server starting...");
+        LOG_INFO( "REST API available at http://localhost:{}/api/v1", config.port);
+        LOG_INFO( "WebSocket available at ws://localhost:{}/api/v1/ws", config.port);
+        LOG_INFO( "API Documentation: http://localhost:{}/api/v1/docs", config.port);
+        LOG_INFO( "");
+        LOG_INFO( "Press Ctrl+C to stop the server");
+        LOG_INFO( "");
 
         // Start server (blocking call)
         g_server->start();
 
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Fatal error: {}", e.what());
+        LOG_ERROR( "Fatal error: {}", e.what());
         return 1;
     }
 
-    LOG_F(INFO, "Server shutdown complete");
+    LOG_INFO( "Server shutdown complete");
     return 0;
 }
