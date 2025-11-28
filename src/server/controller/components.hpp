@@ -4,6 +4,7 @@
 #define LITHIUM_SERVER_CONTROLLER_MODULE_CONTROLLER_HPP
 
 #include "controller.hpp"
+#include "../utils/response.hpp"
 
 #include <functional>
 #include <memory>
@@ -13,6 +14,10 @@
 #include "atom/log/spdlog_logger.hpp"
 #include "components/loader.hpp"
 #include "constant/constant.hpp"
+
+namespace lithium::server::controller {
+using ResponseBuilder = utils::ResponseBuilder;
+}
 
 class ModuleController : public Controller {
 private:
@@ -24,46 +29,39 @@ private:
         const crow::request& req, const crow::json::rvalue& body,
         const std::string& command,
         std::function<bool(std::shared_ptr<lithium::ModuleLoader>)> func) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Handling module action: {}", command);
-        crow::json::wvalue res;
-        res["command"] = command;
 
         try {
             auto moduleLoader = mModuleLoader.lock();
             if (!moduleLoader) {
                 LOG_ERROR( "ModuleLoader is not available.");
-                res["status"] = "error";
-                res["message"] = "ModuleLoader is not available.";
+                return ResponseBuilder::internalError("ModuleLoader is not available.");
+            }
+
+            // Fix: Unwrap ModuleResult<bool> returned by ModuleLoader
+            // methods
+            bool success = func(moduleLoader);
+            if (success) {
+                LOG_INFO( "Module action '{}' succeeded.", command);
+                nlohmann::json responseData = {};
+                LOG_INFO( "Finished handling module action: {}", command);
+                return ResponseBuilder::success(responseData);
             } else {
-                // Fix: Unwrap ModuleResult<bool> returned by ModuleLoader
-                // methods
-                bool success = func(moduleLoader);
-                if (success) {
-                    LOG_INFO( "Module action '{}' succeeded.", command);
-                    res["status"] = "success";
-                    res["message"] = "Operation completed successfully.";
-                } else {
-                    LOG_WARN( "Module action '{}' failed.", command);
-                    res["status"] = "failure";
-                    res["message"] = "Operation failed.";
-                }
+                LOG_WARN( "Module action '{}' failed.", command);
+                LOG_INFO( "Finished handling module action: {}", command);
+                return ResponseBuilder::badRequest("Operation failed.");
             }
         } catch (const std::invalid_argument& e) {
             LOG_ERROR( "Invalid argument exception: {}", e.what());
-            res["status"] = "error";
-            res["message"] = e.what();
+            return ResponseBuilder::badRequest(e.what());
         } catch (const std::runtime_error& e) {
             LOG_ERROR( "Runtime error exception: {}", e.what());
-            res["status"] = "error";
-            res["message"] = e.what();
+            return ResponseBuilder::internalError(e.what());
         } catch (const std::exception& e) {
             LOG_ERROR( "Exception: {}", e.what());
-            res["status"] = "error";
-            res["message"] = e.what();
+            return ResponseBuilder::internalError(e.what());
         }
-
-        LOG_INFO( "Finished handling module action: {}", command);
-        return crow::response(200, res);
     }
 
 public:
@@ -141,15 +139,20 @@ public:
 
     // Endpoint to load a module
     void loadModule(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to load module.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for loadModule.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string path = body["path"].s();
         std::string name = body["name"].s();
+        if (path.empty() || name.empty()) {
+            res = ResponseBuilder::missingField(path.empty() ? "path" : "name");
+            return;
+        }
         LOG_INFO( "Loading module: Name='{}', Path='{}'", name, path);
 
         res = handleModuleAction(
@@ -162,14 +165,19 @@ public:
 
     // Endpoint to unload a module
     void unloadModule(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to unload module.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for unloadModule.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Unloading module: Name='{}'", name);
 
         res = handleModuleAction(
@@ -182,11 +190,12 @@ public:
 
     // Endpoint to unload all modules
     void unloadAllModules(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to unload all modules.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for unloadAllModules.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
 
@@ -200,14 +209,19 @@ public:
 
     // Endpoint to check if a module exists
     void hasModule(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to check if module exists.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for hasModule.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Checking existence of module: Name='{}'", name);
 
         res = handleModuleAction(
@@ -218,25 +232,26 @@ public:
 
     // Endpoint to get module information
     void getModule(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to get module information.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for getModule.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Getting information for module: Name='{}'", name);
 
         // For getModule, we need special handling to return module details
         auto moduleLoader = mModuleLoader.lock();
         if (!moduleLoader) {
             LOG_ERROR( "ModuleLoader is not available.");
-            crow::json::wvalue resJson;
-            resJson["command"] = "getModule";
-            resJson["status"] = "error";
-            resJson["message"] = "ModuleLoader is not available.";
-            res = crow::response(500, resJson);
+            res = ResponseBuilder::internalError("ModuleLoader is not available.");
             return;
         }
 
@@ -245,34 +260,33 @@ public:
             LOG_INFO( "Module found: Name='{}', Enabled={}, Status={}", name,
                   module->enabled.load(),
                   static_cast<int>(module->currentStatus));
-            crow::json::wvalue jsonModule;
-            jsonModule["command"] = "getModule";
-            jsonModule["status"] = "success";
-            jsonModule["name"] = name;
-            jsonModule["enabled"] = module->enabled.load();
-            jsonModule["moduleStatus"] =
-                static_cast<int>(module->currentStatus);
-            res = crow::response(200, jsonModule);
+            nlohmann::json moduleData = {
+                {"name", name},
+                {"enabled", module->enabled.load()},
+                {"status", static_cast<int>(module->currentStatus)}
+            };
+            res = ResponseBuilder::success(moduleData);
         } else {
             LOG_WARN( "Module not found: Name='{}'", name);
-            crow::json::wvalue resJson;
-            resJson["command"] = "getModule";
-            resJson["status"] = "failure";
-            resJson["message"] = "Module not found.";
-            res = crow::response(404, resJson);
+            res = ResponseBuilder::notFound("Module " + name);
         }
     }
 
     // Endpoint to enable a module
     void enableModule(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to enable module.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for enableModule.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Enabling module: Name='{}'", name);
 
         res = handleModuleAction(
@@ -285,14 +299,19 @@ public:
 
     // Endpoint to disable a module
     void disableModule(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to disable module.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for disableModule.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Disabling module: Name='{}'", name);
 
         res = handleModuleAction(
@@ -305,69 +324,72 @@ public:
 
     // Endpoint to check if a module is enabled
     void isModuleEnabled(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to check if module is enabled.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for isModuleEnabled.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Checking if module is enabled: Name='{}'", name);
 
         // Special handling for isModuleEnabled to return the enabled status
         auto moduleLoader = mModuleLoader.lock();
         if (!moduleLoader) {
             LOG_ERROR( "ModuleLoader is not available.");
-            crow::json::wvalue resJson;
-            resJson["command"] = "isModuleEnabled";
-            resJson["status"] = "error";
-            resJson["message"] = "ModuleLoader is not available.";
-            res = crow::response(500, resJson);
+            res = ResponseBuilder::internalError("ModuleLoader is not available.");
             return;
         }
 
         bool enabled = moduleLoader->isModuleEnabled(name);
         LOG_INFO( "Module '{}' enabled status: {}", name, enabled);
-        crow::json::wvalue resJson;
-        resJson["command"] = "isModuleEnabled";
-        resJson["status"] = "success";
-        resJson["moduleEnabled"] = enabled;
-        res = crow::response(200, resJson);
+        nlohmann::json responseData = {
+            {"enabled", enabled}
+        };
+        res = ResponseBuilder::success(responseData);
     }
 
     // Endpoint to list all modules
     void getAllModules(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to list all modules.");
         auto moduleLoader = mModuleLoader.lock();
         if (!moduleLoader) {
             LOG_ERROR( "ModuleLoader is not available for listing modules.");
-            crow::json::wvalue resJson;
-            resJson["status"] = "error";
-            resJson["message"] = "ModuleLoader is not available.";
-            res = crow::response(500, resJson);
+            res = ResponseBuilder::internalError("ModuleLoader is not available.");
             return;
         }
 
         auto modules = moduleLoader->getAllExistedModules();
         LOG_INFO( "Listing all modules. Count: {}", modules.size());
-        crow::json::wvalue resJson;
-        resJson["status"] = "success";
-        resJson["modules"] = modules;
-        res = crow::response(200, resJson);
+        nlohmann::json responseData = {
+            {"modules", modules}
+        };
+        res = ResponseBuilder::success(responseData);
     }
 
     // Endpoint to check if a module has a specific function
     void hasFunction(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to check if module has a function.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for hasFunction.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
         std::string functionName = body["functionName"].s();
+        if (name.empty() || functionName.empty()) {
+            res = ResponseBuilder::missingField(name.empty() ? "name" : "functionName");
+            return;
+        }
         LOG_INFO( "Checking if module '{}' has function '{}'", name,
               functionName);
 
@@ -376,34 +398,34 @@ public:
         auto moduleLoader = mModuleLoader.lock();
         if (!moduleLoader) {
             LOG_ERROR( "ModuleLoader is not available.");
-            crow::json::wvalue resJson;
-            resJson["command"] = "hasFunction";
-            resJson["status"] = "error";
-            resJson["message"] = "ModuleLoader is not available.";
-            res = crow::response(500, resJson);
+            res = ResponseBuilder::internalError("ModuleLoader is not available.");
             return;
         }
 
         bool hasFunc = moduleLoader->hasFunction(name, functionName);
         LOG_INFO( "Module '{}' has function '{}': {}", name, functionName,
               hasFunc);
-        crow::json::wvalue resJson;
-        resJson["command"] = "hasFunction";
-        resJson["status"] = "success";
-        resJson["hasFunction"] = hasFunc;
-        res = crow::response(200, resJson);
+        nlohmann::json responseData = {
+            {"has_function", hasFunc}
+        };
+        res = ResponseBuilder::success(responseData);
     }
 
     // Endpoint to reload a module
     void reloadModule(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to reload module.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for reloadModule.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Reloading module: Name='{}'", name);
 
         res = handleModuleAction(
@@ -416,35 +438,35 @@ public:
 
     // Endpoint to get module status
     void getModuleStatus(const crow::request& req, crow::response& res) {
+        using lithium::server::controller::ResponseBuilder;
         LOG_INFO( "Received request to get module status.");
         auto body = crow::json::load(req.body);
         if (!body) {
             LOG_ERROR( "Invalid JSON body for getModuleStatus.");
-            res = crow::response(400, "Invalid JSON");
+            res = ResponseBuilder::invalidJson("Invalid JSON body");
             return;
         }
         std::string name = body["name"].s();
+        if (name.empty()) {
+            res = ResponseBuilder::missingField("name");
+            return;
+        }
         LOG_INFO( "Getting status for module: Name='{}'", name);
 
         // Special handling for getModuleStatus to return the status
         auto moduleLoader = mModuleLoader.lock();
         if (!moduleLoader) {
             LOG_ERROR( "ModuleLoader is not available.");
-            crow::json::wvalue resJson;
-            resJson["command"] = "getModuleStatus";
-            resJson["status"] = "error";
-            resJson["message"] = "ModuleLoader is not available.";
-            res = crow::response(500, resJson);
+            res = ResponseBuilder::internalError("ModuleLoader is not available.");
             return;
         }
 
         auto status = moduleLoader->getModuleStatus(name);
         LOG_INFO( "Module '{}' status: {}", name, static_cast<int>(status));
-        crow::json::wvalue resJson;
-        resJson["command"] = "getModuleStatus";
-        resJson["status"] = "success";
-        resJson["moduleStatus"] = static_cast<int>(status);
-        res = crow::response(200, resJson);
+        nlohmann::json responseData = {
+            {"status", static_cast<int>(status)}
+        };
+        res = ResponseBuilder::success(responseData);
     }
 };
 

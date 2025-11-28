@@ -8,6 +8,7 @@
 #include "server/command/solver.hpp"
 
 namespace lithium::server::controller {
+using ResponseBuilder = utils::ResponseBuilder;
 
 /**
  * @brief Sky Atlas and Astronomical Utilities Controller
@@ -48,8 +49,6 @@ public:
 
 private:
     crow::response resolveObjectName(const crow::request& req) {
-        using namespace utils;
-        
         auto name_param = req.url_params.get("name");
         if (!name_param) {
             return ResponseBuilder::missingField("name");
@@ -68,8 +67,6 @@ private:
     }
 
     crow::response searchObjects(const crow::request& req) {
-        using namespace utils;
-        
         // Parse query parameters
         int limit = 50;
         if (auto limit_param = req.url_params.get("limit")) {
@@ -100,8 +97,6 @@ private:
     }
 
     crow::response advancedSearch(const crow::request& req) {
-        using namespace utils;
-        
         try {
             auto filters = nlohmann::json::parse(req.body);
 
@@ -121,11 +116,9 @@ private:
     }
 
     crow::response plateSolve(const crow::request& req) {
-        using namespace utils;
-        
         try {
             auto body = nlohmann::json::parse(req.body);
-            
+
             if (!body.contains("filePath")) {
                 return ResponseBuilder::missingField("filePath");
             }
@@ -137,7 +130,7 @@ private:
             double radius = body.value("radius", 180.0);
 
             auto result = lithium::middleware::solveImage(filePath, ra, dec, scale, radius);
-            
+
             // Assuming solveImage returns standard JSON structure
             if (result["status"] == "success") {
                 return ResponseBuilder::success(result["data"]);
@@ -146,7 +139,7 @@ private:
                 if (result.contains("error")) {
                      msg = result["error"].value("message", msg);
                 }
-                return ResponseBuilder::error("solver_error", msg, 500);
+                return ResponseBuilder::internalError(msg);
             }
 
         } catch (const nlohmann::json::exception& e) {
