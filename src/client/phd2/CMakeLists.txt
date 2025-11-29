@@ -18,18 +18,22 @@ project(lithium_client_phd2)
 
 set(SOURCE_FILES
     client.cpp
+    commands.cpp
     connection.cpp
     phd2_client.cpp
     profile.cpp
+    state.cpp
 )
 
 set(HEADER_FILES
     client.hpp
+    commands.hpp
     connection.hpp
     event_handler.hpp
     exceptions.hpp
     phd2_client.hpp
     profile.hpp
+    state.hpp
     types.hpp
 )
 

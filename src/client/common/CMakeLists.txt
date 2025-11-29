@@ -13,6 +13,9 @@ set(SOURCE_FILES
     solver_client.cpp
     guider_client.cpp
     server_client.cpp
+    process_runner.cpp
+    result_parser.cpp
+    tcp_connection.cpp
 )
 
 # Header files
@@ -21,6 +24,9 @@ set(HEADER_FILES
     solver_client.hpp
     guider_client.hpp
     server_client.hpp
+    process_runner.hpp
+    result_parser.hpp
+    tcp_connection.hpp
 )
 
 # Dependencies

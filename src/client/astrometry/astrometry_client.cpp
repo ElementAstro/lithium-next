@@ -13,6 +13,7 @@ Description: Astrometry.net plate solver client implementation
 *************************************************/
 
 #include "astrometry_client.hpp"
+#include "options.hpp"
 
 #include "atom/io/io.hpp"
 #include "atom/system/command.hpp"
@@ -213,10 +214,15 @@ PlateSolveResult AstrometryClient::solve(
     }
 
     if (success) {
-        // Read WCS from output file
+        // Read WCS from output file using new parser
         std::string wcsFile = getOutputPath(imageFilePath);
         if (atom::io::isFileExists(wcsFile)) {
-            lastResult_ = readWCS(wcsFile);
+            auto wcsResult = AstrometryOutputParser::parseWcsFile(wcsFile);
+            if (wcsResult) {
+                lastResult_ = wcsToResult(*wcsResult);
+            } else {
+                lastResult_.errorMessage = "Failed to parse WCS file";
+            }
         }
     }
 
@@ -248,12 +254,14 @@ void AstrometryClient::abort() {
     logger_->info("Aborting Astrometry.net solve");
     abortRequested_.store(true);
 
-    if (currentProcessId_.load() > 0) {
-        try {
-            atom::system::killProcessByName("solve-field", 15);
-        } catch (const std::exception& ex) {
-            logger_->warn("Failed to kill solve-field: {}", ex.what());
-        }
+    // Use ProcessRunner to abort
+    processRunner_.abort();
+
+    // Also try to kill by name as fallback
+    try {
+        atom::system::killProcessByName("solve-field", 15);
+    } catch (const std::exception& ex) {
+        logger_->warn("Failed to kill solve-field: {}", ex.what());
     }
 
     SolverClient::abort();
@@ -576,122 +584,66 @@ bool AstrometryClient::executeSolve(
     const std::string& imageFilePath,
     const std::optional<Coordinates>& initialCoordinates, double fovW,
     double fovH) {
-    std::string command =
-        buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
-    logger_->debug("Executing: {}", command);
+    // Build command using new options builder
+    astrometry::OptionsBuilder builder(solverPath_);
+    builder.setImageFile(imageFilePath).applyOptions(astrometryOptions_);
 
-    try {
-        auto result = atom::system::executeCommand(command, false);
+    // Apply position hint if provided
+    if (initialCoordinates && initialCoordinates->isValid()) {
+        double radius = options_.searchRadius.value_or(
+            astrometryOptions_.radius.value_or(10.0));
+        builder.setPositionHint(initialCoordinates->ra, initialCoordinates->dec,
+                                radius);
+    }
 
-        // Check for success indicators
-        if (result.find("Field center") != std::string::npos ||
-            result.find("solved") != std::string::npos) {
-            return true;
-        }
+    // Apply scale hints from FOV if provided
+    if (fovW > 0 && fovH > 0) {
+        // Convert FOV to arcsec/pixel (approximate)
+        double avgFov = (fovW + fovH) / 2.0;
+        double scaleLow = avgFov * 0.8 * 3600.0 / 1000.0;  // Rough estimate
+        double scaleHigh = avgFov * 1.2 * 3600.0 / 1000.0;
+        builder.setScaleRange(scaleLow, scaleHigh);
+    }
 
-        // Check for failure
-        if (result.find("Did not solve") != std::string::npos ||
-            result.find("failed") != std::string::npos) {
-            lastResult_.errorMessage =
-                "Astrometry.net could not solve the image";
-            return false;
-        }
+    // Apply timeout
+    if (options_.timeout > 0) {
+        builder.setTimeout(options_.timeout);
+    }
 
-        // Check if WCS file was created
-        std::string wcsFile = getOutputPath(imageFilePath);
-        return atom::io::isFileExists(wcsFile);
+    auto config = builder.build();
+    logger_->debug("Executing: {}", ProcessRunner::buildCommandLine(config));
 
-    } catch (const std::exception& ex) {
-        logger_->error("Execute error: {}", ex.what());
-        lastResult_.errorMessage = ex.what();
+    // Execute using ProcessRunner
+    auto result = processRunner_.execute(config);
+
+    if (!result) {
+        lastResult_.errorMessage = "Failed to execute solve-field";
         return false;
     }
+
+    // Check for success indicators
+    if (AstrometryOutputParser::isSuccessful(result->stdOut)) {
+        return true;
+    }
+
+    // Check for error
+    if (auto error = AstrometryOutputParser::extractError(result->stdOut)) {
+        lastResult_.errorMessage = *error;
+        return false;
+    }
+
+    // Check if WCS file was created
+    std::string wcsFile = getOutputPath(imageFilePath);
+    return atom::io::isFileExists(wcsFile);
 }
 
-PlateSolveResult AstrometryClient::parseSolveOutput(const std::string& output) {
+PlateSolveResult AstrometryClient::wcsToResult(const WCSData& wcs) {
     PlateSolveResult result;
-
-    // Parse field center from output
-    std::regex centerRegex(
-        R"(Field center:\s*\(RA,Dec\)\s*=\s*\(([^,]+),\s*([^)]+)\))");
-    std::smatch match;
-
-    if (std::regex_search(output, match, centerRegex)) {
-        try {
-            // Parse RA (may be in HMS or degrees)
-            std::string raStr = match[1].str();
-            std::string decStr = match[2].str();
-
-            // Simple degree parsing (full parsing would handle HMS)
-            result.coordinates.ra = std::stod(raStr);
-            result.coordinates.dec = std::stod(decStr);
-            result.success = true;
-        } catch (...) {
-            result.errorMessage = "Failed to parse coordinates";
-        }
-    }
-
-    // Parse pixel scale
-    std::regex scaleRegex(R"(pixel scale\s*([0-9.]+)\s*arcsec/pix)");
-    if (std::regex_search(output, match, scaleRegex)) {
-        result.pixelScale = std::stod(match[1].str());
-    }
-
-    // Parse rotation
-    std::regex rotRegex(
-        R"(Field rotation angle:\s*up is\s*([0-9.-]+)\s*degrees)");
-    if (std::regex_search(output, match, rotRegex)) {
-        result.positionAngle = std::stod(match[1].str());
-    }
-
-    return result;
-}
-
-PlateSolveResult AstrometryClient::readWCS(const std::string& filename) {
-    logger_->debug("Reading WCS from: {}", filename);
-
-    PlateSolveResult result;
-
-    // Try to read the .wcs file (FITS format)
-    // For simplicity, we'll try to parse the text output first
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        result.errorMessage = "Cannot open WCS file";
-        return result;
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string content = buffer.str();
-
-    // Parse FITS header keywords
-    std::regex crval1Regex(R"(CRVAL1\s*=\s*([0-9.eE+-]+))");
-    std::regex crval2Regex(R"(CRVAL2\s*=\s*([0-9.eE+-]+))");
-    std::regex cdelt1Regex(R"(CDELT1\s*=\s*([0-9.eE+-]+))");
-    std::regex cdelt2Regex(R"(CDELT2\s*=\s*([0-9.eE+-]+))");
-    std::regex crota2Regex(R"(CROTA2\s*=\s*([0-9.eE+-]+))");
-
-    std::smatch match;
-
-    if (std::regex_search(content, match, crval1Regex)) {
-        result.coordinates.ra = std::stod(match[1].str());
-    }
-    if (std::regex_search(content, match, crval2Regex)) {
-        result.coordinates.dec = std::stod(match[1].str());
-    }
-    if (std::regex_search(content, match, cdelt2Regex)) {
-        result.pixelScale = std::abs(std::stod(match[1].str())) * 3600.0;
-    }
-    if (std::regex_search(content, match, crota2Regex)) {
-        result.positionAngle = std::stod(match[1].str());
-    }
-
-    if (result.coordinates.ra != 0 || result.coordinates.dec != 0) {
-        result.success = true;
-    } else {
-        result.errorMessage = "No valid WCS data found";
-    }
-
+    result.success = wcs.isValid();
+    result.coordinates.ra = wcs.getRaDeg();
+    result.coordinates.dec = wcs.getDecDeg();
+    result.pixelScale = wcs.getPixelScaleArcsec();
+    result.positionAngle = wcs.getRotationDeg();
     return result;
 }
 

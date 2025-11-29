@@ -13,6 +13,7 @@ Description: ASTAP plate solver client implementation
 *************************************************/
 
 #include "astap_client.hpp"
+#include "options.hpp"
 
 #include "atom/io/io.hpp"
 #include "atom/system/command.hpp"
@@ -239,10 +240,20 @@ PlateSolveResult AstapClient::solve(
         }
 
         if (atom::io::isFileExists(iniFile)) {
-            lastResult_ = parseIniFile(iniFile);
+            auto wcsResult = AstapOutputParser::parseIniFile(iniFile);
+            if (wcsResult) {
+                lastResult_ = wcsToResult(*wcsResult);
+            } else {
+                lastResult_.errorMessage = "Failed to parse INI file";
+            }
         } else {
             // Fall back to reading WCS from FITS
-            lastResult_ = readWCS(imageFilePath);
+            auto wcsResult = FitsHeaderParser::parseWCSFromFile(imageFilePath);
+            if (wcsResult) {
+                lastResult_ = wcsToResult(*wcsResult);
+            } else {
+                lastResult_.errorMessage = "Failed to parse WCS from FITS";
+            }
         }
     }
 
@@ -274,13 +285,14 @@ void AstapClient::abort() {
     logger_->info("Aborting ASTAP solve");
     abortRequested_.store(true);
 
-    // Kill the ASTAP process
-    if (currentProcessId_.load() > 0) {
-        try {
-            atom::system::killProcessByName("astap", 15);
-        } catch (const std::exception& ex) {
-            logger_->warn("Failed to kill ASTAP process: {}", ex.what());
-        }
+    // Use ProcessRunner to abort
+    processRunner_.abort();
+
+    // Also try to kill by name as fallback
+    try {
+        atom::system::killProcessByName("astap", 15);
+    } catch (const std::exception& ex) {
+        logger_->warn("Failed to kill ASTAP process: {}", ex.what());
     }
 
     SolverClient::abort();
@@ -399,136 +411,61 @@ bool AstapClient::executeSolve(
     const std::string& imageFilePath,
     const std::optional<Coordinates>& initialCoordinates, double fovW,
     double fovH) {
-    std::string command =
-        buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
-    logger_->debug("Executing: {}", command);
+    // Build command using new options builder
+    astap::OptionsBuilder builder(solverPath_);
+    builder.setImageFile(imageFilePath).applyOptions(astapOptions_);
 
-    try {
-        auto result = atom::system::executeCommand(command, false);
+    // Apply FOV if provided
+    double fov =
+        (fovW > 0 && fovH > 0) ? (fovW + fovH) / 2.0 : std::max(fovW, fovH);
+    if (fov > 0) {
+        builder.setFov(fov);
+    }
 
-        // Check for success indicators
-        if (result.find("Solution found") != std::string::npos ||
-            result.find("Solved") != std::string::npos) {
-            return true;
-        }
+    // Apply position hint if provided
+    if (initialCoordinates && initialCoordinates->isValid()) {
+        builder.setPositionHint(initialCoordinates->ra,
+                                initialCoordinates->dec);
+    }
 
-        // Check for failure indicators
-        if (result.find("No solution") != std::string::npos ||
-            result.find("Failed") != std::string::npos) {
-            lastResult_.errorMessage = "ASTAP could not solve the image";
-            return false;
-        }
+    // Apply downsample from base options if set
+    if (options_.downsample && *options_.downsample > 0) {
+        builder.setDownsample(*options_.downsample);
+    }
 
-        // Check if INI file was created (indicates success)
-        std::string iniFile = imageFilePath;
-        auto dotPos = iniFile.rfind('.');
-        if (dotPos != std::string::npos) {
-            iniFile = iniFile.substr(0, dotPos) + ".ini";
-        }
+    auto config = builder.build();
+    logger_->debug("Executing: {}", ProcessRunner::buildCommandLine(config));
 
-        return atom::io::isFileExists(iniFile);
+    // Execute using ProcessRunner
+    auto result = processRunner_.execute(config);
 
-    } catch (const std::exception& ex) {
-        logger_->error("Execute error: {}", ex.what());
-        lastResult_.errorMessage = ex.what();
+    if (!result) {
+        lastResult_.errorMessage = "Failed to execute ASTAP";
         return false;
     }
+
+    // Check for success indicators
+    if (AstapOutputParser::isSuccessful(result->stdOut)) {
+        return true;
+    }
+
+    // Check if INI file was created (indicates success)
+    std::string iniFile = imageFilePath;
+    auto dotPos = iniFile.rfind('.');
+    if (dotPos != std::string::npos) {
+        iniFile = iniFile.substr(0, dotPos) + ".ini";
+    }
+
+    return atom::io::isFileExists(iniFile);
 }
 
-PlateSolveResult AstapClient::readWCS(const std::string& filename) {
-    logger_->debug("Reading WCS from FITS: {}", filename);
-
+PlateSolveResult AstapClient::wcsToResult(const WCSData& wcs) {
     PlateSolveResult result;
-    fitsfile* fptr = nullptr;
-    int status = 0;
-
-    if (fits_open_file(&fptr, filename.c_str(), READONLY, &status)) {
-        result.errorMessage = "Failed to open FITS file";
-        return result;
-    }
-
-    double ra = 0, dec = 0, cdelt1 = 0, cdelt2 = 0, crota2 = 0;
-    char comment[FLEN_COMMENT];
-
-    fits_read_key(fptr, TDOUBLE, "CRVAL1", &ra, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CRVAL2", &dec, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CDELT1", &cdelt1, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CDELT2", &cdelt2, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CROTA2", &crota2, comment, &status);
-
-    fits_close_file(fptr, &status);
-
-    if (status != 0) {
-        result.errorMessage = "Failed to read WCS keywords";
-        return result;
-    }
-
-    result.success = true;
-    result.coordinates.ra = ra;
-    result.coordinates.dec = dec;
-    result.pixelScale = std::abs(cdelt2) * 3600.0;
-    result.positionAngle = crota2;
-
-    return result;
-}
-
-PlateSolveResult AstapClient::parseIniFile(const std::string& filename) {
-    logger_->debug("Parsing INI file: {}", filename);
-
-    PlateSolveResult result;
-    std::ifstream file(filename);
-
-    if (!file.is_open()) {
-        result.errorMessage = "Cannot open INI file";
-        return result;
-    }
-
-    std::string line;
-    std::unordered_map<std::string, std::string> values;
-
-    while (std::getline(file, line)) {
-        auto eqPos = line.find('=');
-        if (eqPos != std::string::npos) {
-            std::string key = line.substr(0, eqPos);
-            std::string value = line.substr(eqPos + 1);
-
-            // Trim whitespace
-            key.erase(0, key.find_first_not_of(" \t"));
-            key.erase(key.find_last_not_of(" \t") + 1);
-            value.erase(0, value.find_first_not_of(" \t"));
-            value.erase(value.find_last_not_of(" \t\r\n") + 1);
-
-            values[key] = value;
-        }
-    }
-
-    // Check for solution
-    auto it = values.find("PLTSOLVD");
-    if (it == values.end() || it->second != "T") {
-        result.errorMessage = "No solution found in INI file";
-        return result;
-    }
-
-    result.success = true;
-
-    // Parse coordinates
-    if (values.count("CRVAL1")) {
-        result.coordinates.ra = std::stod(values["CRVAL1"]);
-    }
-    if (values.count("CRVAL2")) {
-        result.coordinates.dec = std::stod(values["CRVAL2"]);
-    }
-
-    // Parse pixel scale
-    if (values.count("CDELT2")) {
-        result.pixelScale = std::abs(std::stod(values["CDELT2"])) * 3600.0;
-    }
-
-    // Parse rotation
-    if (values.count("CROTA2")) {
-        result.positionAngle = std::stod(values["CROTA2"]);
-    }
-
+    result.success = wcs.isValid();
+    result.coordinates.ra = wcs.getRaDeg();
+    result.coordinates.dec = wcs.getDecDeg();
+    result.pixelScale = wcs.getPixelScaleArcsec();
+    result.positionAngle = wcs.getRotationDeg();
     return result;
 }
 

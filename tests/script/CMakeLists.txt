@@ -17,16 +17,51 @@ find_package(GTest REQUIRED)
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
-# Test sources
+# ============================================================================
+# Add Subdirectories (Modular Test Architecture)
+# ============================================================================
+
+# IPC tests
+add_subdirectory(ipc)
+
+# Isolated execution tests
+add_subdirectory(isolated)
+
+# Shell script tests
+add_subdirectory(shell)
+
+# Virtual environment tests
+add_subdirectory(venv)
+
+# NumPy/Pandas integration tests
+add_subdirectory(numpy)
+
+# Tool registry tests
+add_subdirectory(tools)
+
+# ============================================================================
+# Core Test Sources
+# ============================================================================
+
 set(SCRIPT_TEST_SOURCES
     test_sheller.cpp
     test_sheller_enhanced.cpp
     test_check.cpp
     test_check_enhanced.cpp
+    test_tool_registry.cpp
+    test_interpreter_pool.cpp
 )
 
 # Create test executable
-add_executable(lithium_script_tests ${SCRIPT_TEST_SOURCES})
+add_executable(lithium_script_tests
+    ${SCRIPT_TEST_SOURCES}
+    $<TARGET_OBJECTS:lithium_script_ipc_tests>
+    $<TARGET_OBJECTS:lithium_script_isolated_tests>
+    $<TARGET_OBJECTS:lithium_script_shell_tests>
+    $<TARGET_OBJECTS:lithium_script_venv_tests>
+    $<TARGET_OBJECTS:lithium_script_numpy_tests>
+    $<TARGET_OBJECTS:lithium_script_tools_tests>
+)
 
 target_include_directories(lithium_script_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src

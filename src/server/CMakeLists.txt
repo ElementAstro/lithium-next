@@ -33,6 +33,8 @@ set(PROJECT_SOURCES
     command/config_ws.cpp
     command/indi_server.cpp
     command/gpio.cpp
+    command/script.cpp
+    controller/database.cpp
 )
 
 # ============================================================================
@@ -42,7 +44,9 @@ set(PROJECT_SOURCES
 set(PROJECT_LIBRARIES
     atom
     lithium_config
+    lithium_database
     lithium_logging
+    lithium_script
     spdlog::spdlog
     yaml-cpp
     ${CMAKE_THREAD_LIBS_INIT}

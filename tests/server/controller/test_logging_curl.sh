@@ -25,19 +25,19 @@ test_endpoint() {
     local data=$3
     local expected_status=$4
     local description=$5
-    
+
     echo -e "\n${YELLOW}Testing: $description${NC}"
     echo "  $method $endpoint"
-    
+
     if [ -z "$data" ]; then
         response=$(curl -s -w "\n%{http_code}" -X "$method" "$API_URL$endpoint" -H "Content-Type: application/json")
     else
         response=$(curl -s -w "\n%{http_code}" -X "$method" "$API_URL$endpoint" -H "Content-Type: application/json" -d "$data")
     fi
-    
+
     status_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
-    
+
     if [ "$status_code" -eq "$expected_status" ]; then
         echo -e "  ${GREEN}✓ PASS${NC} (Status: $status_code)"
         ((pass_count++))

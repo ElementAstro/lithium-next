@@ -4,28 +4,44 @@
 
 ## 目录结构
 
-```
+```text
 tests/components/
+├── debug/                   # 调试工具测试
+│   ├── CMakeLists.txt
+│   ├── test_dump.cpp        # CoreDumpAnalyzer 测试
+│   ├── test_dynamic.cpp     # DynamicLibraryParser 测试
+│   └── test_elf.cpp         # ElfParser 测试 (Linux only)
 ├── dependency/              # 依赖图测试
 │   ├── CMakeLists.txt
 │   └── test_dependency_graph.cpp
+├── integration/             # 集成测试
+│   ├── CMakeLists.txt
+│   └── test_component_integration.cpp
 ├── loader/                  # 模块加载器测试
 │   ├── CMakeLists.txt
-│   └── test_module_loader.cpp
+│   ├── test_module_loader.cpp
+│   └── test_module/         # 测试模块
 ├── manager/                 # 组件管理器测试
 │   ├── CMakeLists.txt
-│   └── test_component_manager.cpp
+│   ├── test_component_manager.cpp
+│   ├── test_component_types.cpp      # ComponentEvent/State/Options 测试
+│   └── test_component_exceptions.cpp # FailToLoadComponent 异常测试
+├── module/                  # 模块信息结构测试
+│   ├── CMakeLists.txt
+│   └── test_module_info.cpp # FunctionInfo/ModuleInfo 测试
+├── system/                  # 系统依赖管理测试
+│   ├── CMakeLists.txt
+│   ├── test_dependency_manager.cpp
+│   ├── test_dependency_types.cpp     # VersionInfo/DependencyInfo 测试
+│   ├── test_dependency_exception.cpp # DependencyException/Error 测试
+│   ├── test_platform_detector.cpp
+│   └── test_package_manager_registry.cpp
 ├── tracker/                 # 文件追踪器测试
 │   ├── CMakeLists.txt
 │   └── test_file_tracker.cpp
 ├── version/                 # 版本管理测试
 │   ├── CMakeLists.txt
 │   └── test_version.cpp
-├── system/                  # 系统依赖管理测试
-│   ├── CMakeLists.txt
-│   ├── test_dependency_manager.cpp
-│   ├── test_platform_detector.cpp
-│   └── test_package_manager_registry.cpp
 ├── CMakeLists.txt          # 顶层测试配置
 └── README.md               # 本文件
 ```

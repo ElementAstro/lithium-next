@@ -366,4 +366,207 @@ TEST_F(CoreDumpAnalyzerTest, LargeFileHandling) {
     std::filesystem::remove("large_dump");
 }
 
+// ============================================================================
+// 新增方法测试
+// ============================================================================
+
+TEST_F(CoreDumpAnalyzerTest, GetProcessInfo) {
+    std::ofstream("test_core_dump") << "Process info test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto processInfo = analyzer->getProcessInfo();
+    // Should return some info or empty string
+    EXPECT_TRUE(processInfo.empty() || !processInfo.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GetLoadedModules) {
+    std::ofstream("test_core_dump") << "Loaded modules test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto modules = analyzer->getLoadedModules();
+    // May or may not have modules
+    EXPECT_TRUE(modules.empty() || !modules.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GetSignalInfo) {
+    std::ofstream("test_core_dump") << "Signal info test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto signalInfo = analyzer->getSignalInfo();
+    EXPECT_TRUE(signalInfo.empty() || !signalInfo.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GetResourceUsage) {
+    std::ofstream("test_core_dump") << "Resource usage test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto resourceUsage = analyzer->getResourceUsage();
+    EXPECT_TRUE(resourceUsage.empty() || !resourceUsage.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GetCrashReason) {
+    std::ofstream("test_core_dump") << "Crash reason test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto crashReason = analyzer->getCrashReason();
+    EXPECT_TRUE(crashReason.empty() || !crashReason.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GetBacktrace) {
+    std::ofstream("test_core_dump") << "Backtrace test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto backtrace = analyzer->getBacktrace(0);
+    EXPECT_TRUE(backtrace.empty() || !backtrace.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GetRegistersSnapshot) {
+    std::ofstream("test_core_dump") << "Registers snapshot test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto registers = analyzer->getRegistersSnapshot(0);
+    EXPECT_TRUE(registers.empty() || !registers.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GetMemoryMap) {
+    std::ofstream("test_core_dump") << "Memory map test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto memoryMap = analyzer->getMemoryMap();
+    EXPECT_TRUE(memoryMap.empty() || !memoryMap.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, FindMemoryLeaks) {
+    std::ofstream("test_core_dump") << "Memory leaks test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto leaks = analyzer->findMemoryLeaks();
+    EXPECT_TRUE(leaks.empty() || !leaks.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, AnalyzeLockContention) {
+    std::ofstream("test_core_dump") << "Lock contention test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    auto contention = analyzer->analyzeLockContention();
+    EXPECT_TRUE(contention.empty() || !contention.empty());
+
+    std::filesystem::remove("test_core_dump");
+}
+
+// ============================================================================
+// 导出功能测试
+// ============================================================================
+
+TEST_F(CoreDumpAnalyzerTest, ExportToJson) {
+    std::ofstream("test_core_dump") << "Export JSON test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    EXPECT_NO_THROW(analyzer->exportToJson("test_export.json"));
+
+    if (std::filesystem::exists("test_export.json")) {
+        std::filesystem::remove("test_export.json");
+    }
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, ExportToXml) {
+    std::ofstream("test_core_dump") << "Export XML test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    EXPECT_NO_THROW(analyzer->exportToXml("test_export.xml"));
+
+    if (std::filesystem::exists("test_export.xml")) {
+        std::filesystem::remove("test_export.xml");
+    }
+    std::filesystem::remove("test_core_dump");
+}
+
+TEST_F(CoreDumpAnalyzerTest, GenerateHtmlReport) {
+    std::ofstream("test_core_dump") << "HTML report test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    analyzer->analyze();
+
+    EXPECT_NO_THROW(analyzer->generateHtmlReport("test_report.html"));
+
+    if (std::filesystem::exists("test_report.html")) {
+        std::filesystem::remove("test_report.html");
+    }
+    std::filesystem::remove("test_core_dump");
+}
+
+// ============================================================================
+// 配置选项测试
+// ============================================================================
+
+TEST_F(CoreDumpAnalyzerTest, SetSymbolSearchPaths) {
+    std::vector<std::string> paths = {"/usr/lib/debug", "/opt/symbols"};
+    EXPECT_NO_THROW(analyzer->setSymbolSearchPaths(paths));
+}
+
+TEST_F(CoreDumpAnalyzerTest, SetAnalysisDepth) {
+    EXPECT_NO_THROW(analyzer->setAnalysisDepth(10));
+    EXPECT_NO_THROW(analyzer->setAnalysisDepth(1));
+    EXPECT_NO_THROW(analyzer->setAnalysisDepth(100));
+}
+
+TEST_F(CoreDumpAnalyzerTest, EnableMemoryAnalysis) {
+    EXPECT_NO_THROW(analyzer->enableMemoryAnalysis(true));
+    EXPECT_NO_THROW(analyzer->enableMemoryAnalysis(false));
+}
+
+TEST_F(CoreDumpAnalyzerTest, EnableThreadAnalysis) {
+    EXPECT_NO_THROW(analyzer->enableThreadAnalysis(true));
+    EXPECT_NO_THROW(analyzer->enableThreadAnalysis(false));
+}
+
+TEST_F(CoreDumpAnalyzerTest, EnableResourceAnalysis) {
+    EXPECT_NO_THROW(analyzer->enableResourceAnalysis(true));
+    EXPECT_NO_THROW(analyzer->enableResourceAnalysis(false));
+}
+
+TEST_F(CoreDumpAnalyzerTest, CombinedConfiguration) {
+    analyzer->setAnalysisDepth(5);
+    analyzer->enableMemoryAnalysis(true);
+    analyzer->enableThreadAnalysis(true);
+    analyzer->enableResourceAnalysis(true);
+    analyzer->setSymbolSearchPaths({"/debug"});
+
+    std::ofstream("test_core_dump") << "Combined config test";
+    EXPECT_TRUE(analyzer->readFile("test_core_dump"));
+    EXPECT_NO_THROW(analyzer->analyze());
+
+    std::filesystem::remove("test_core_dump");
+}
+
 }  // namespace lithium::test

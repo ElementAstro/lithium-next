@@ -8,6 +8,7 @@
 #include "atom/utils/to_string.hpp"
 #include "command/device.hpp"
 #include "command/guider.hpp"
+#include "command/script.hpp"
 #include "command/solver.hpp"
 #include "middleware/auth.hpp"
 
@@ -375,6 +376,7 @@ void WebSocketServer::setup_command_handlers() {
     lithium::app::registerDome(command_dispatcher_);
     lithium::app::registerGuider(command_dispatcher_);
     lithium::app::registerSolver(command_dispatcher_);
+    lithium::app::registerScript(command_dispatcher_);
 }
 
 void WebSocketServer::subscribe_to_topic(const std::string& topic) {

@@ -13,11 +13,13 @@ from pathlib import Path
 from typing import Dict, List, Any
 from loguru import logger
 
+from ..common.base_adapter import BasePybindAdapter, ToolInfo, pybind_method
 from .manager import NginxManager
 from .core import OperatingSystem
+from . import __version__
 
 
-class NginxPyBindAdapter:
+class NginxPyBindAdapter(BasePybindAdapter):
     """
     PyBind11 adapter class for C++ integration.
 
@@ -25,6 +27,24 @@ class NginxPyBindAdapter:
     for pybind11 compatibility and includes graceful degradation for unsupported
     platforms (Windows).
     """
+
+    SUPPORTED_PLATFORMS = ["linux"]
+
+    @classmethod
+    def get_tool_info(cls) -> ToolInfo:
+        """
+        Get comprehensive metadata about the Nginx Manager tool.
+
+        Returns:
+            ToolInfo containing tool configuration and capabilities
+        """
+        return ToolInfo(
+            name="nginx_manager",
+            version=__version__,
+            description="Nginx web server management utilities",
+            platforms=["linux"],
+            categories=["webserver", "network", "linux"],
+        )
 
     @staticmethod
     def is_platform_supported() -> bool:
@@ -53,6 +73,11 @@ class NginxPyBindAdapter:
         }
 
     @staticmethod
+    @pybind_method(
+        description="Check if Nginx is installed",
+        category="status",
+        tags=["check", "installation"],
+    )
     def is_installed() -> Dict[str, bool]:
         """
         Check if Nginx is installed.
@@ -68,6 +93,9 @@ class NginxPyBindAdapter:
             return {"installed": False, "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Install Nginx", category="installation", tags=["install", "setup"]
+    )
     def install() -> Dict[str, Any]:
         """
         Install Nginx.
@@ -88,6 +116,9 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Start Nginx server", category="service", tags=["start", "service"]
+    )
     def start() -> Dict[str, Any]:
         """
         Start Nginx server.
@@ -105,6 +136,9 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Stop Nginx server", category="service", tags=["stop", "service"]
+    )
     def stop() -> Dict[str, Any]:
         """
         Stop Nginx server.
@@ -122,6 +156,11 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Reload Nginx configuration",
+        category="configuration",
+        tags=["reload", "config"],
+    )
     def reload() -> Dict[str, Any]:
         """
         Reload Nginx configuration.
@@ -139,6 +178,11 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Restart Nginx server",
+        category="service",
+        tags=["restart", "service"],
+    )
     def restart() -> Dict[str, Any]:
         """
         Restart Nginx server.
@@ -156,6 +200,11 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Check Nginx configuration syntax",
+        category="configuration",
+        tags=["check", "config", "validate"],
+    )
     def check_config() -> Dict[str, Any]:
         """
         Check Nginx configuration syntax.
@@ -173,6 +222,11 @@ class NginxPyBindAdapter:
             return {"valid": False, "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Check if Nginx is running",
+        category="status",
+        tags=["status", "check"],
+    )
     def get_status() -> Dict[str, Any]:
         """
         Check if Nginx is running.
@@ -190,6 +244,9 @@ class NginxPyBindAdapter:
             return {"running": False, "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Get Nginx version", category="status", tags=["version", "info"]
+    )
     def get_version() -> Dict[str, Any]:
         """
         Get Nginx version.
@@ -207,6 +264,11 @@ class NginxPyBindAdapter:
             return {"version": "", "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Backup Nginx configuration",
+        category="configuration",
+        tags=["backup", "config"],
+    )
     def backup_config(custom_name: str = "") -> Dict[str, Any]:
         """
         Backup Nginx configuration.
@@ -229,6 +291,11 @@ class NginxPyBindAdapter:
             return {"path": "", "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Restore Nginx configuration from backup",
+        category="configuration",
+        tags=["restore", "config"],
+    )
     def restore_config(backup_file: str = "") -> Dict[str, Any]:
         """
         Restore Nginx configuration from backup.
@@ -249,6 +316,11 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="List all available configuration backups",
+        category="configuration",
+        tags=["list", "backup"],
+    )
     def list_backups() -> Dict[str, Any]:
         """
         List all available configuration backups.
@@ -267,6 +339,11 @@ class NginxPyBindAdapter:
             return {"backups": [], "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Create a virtual host configuration",
+        category="virtual_hosts",
+        tags=["create", "vhost", "config"],
+    )
     def create_virtual_host(
         server_name: str, port: int = 80, root_dir: str = "", template: str = "basic"
     ) -> Dict[str, Any]:
@@ -297,6 +374,11 @@ class NginxPyBindAdapter:
             return {"path": "", "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Enable a virtual host",
+        category="virtual_hosts",
+        tags=["enable", "vhost"],
+    )
     def enable_virtual_host(server_name: str) -> Dict[str, Any]:
         """
         Enable a virtual host.
@@ -317,6 +399,11 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Disable a virtual host",
+        category="virtual_hosts",
+        tags=["disable", "vhost"],
+    )
     def disable_virtual_host(server_name: str) -> Dict[str, Any]:
         """
         Disable a virtual host.
@@ -337,6 +424,11 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="List all virtual hosts and their status",
+        category="virtual_hosts",
+        tags=["list", "vhost"],
+    )
     def list_virtual_hosts() -> Dict[str, Any]:
         """
         List all virtual hosts and their status.
@@ -354,6 +446,11 @@ class NginxPyBindAdapter:
             return {"virtual_hosts": {}, "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Analyze Nginx access logs",
+        category="logging",
+        tags=["analyze", "logs", "monitoring"],
+    )
     def analyze_logs(
         domain: str = "", lines: int = 100, filter_pattern: str = ""
     ) -> Dict[str, Any]:
@@ -382,6 +479,11 @@ class NginxPyBindAdapter:
             return {"entries": [], "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Generate SSL certificates for a domain",
+        category="ssl",
+        tags=["ssl", "certificate", "security"],
+    )
     def generate_ssl_cert(
         domain: str, email: str = "", use_letsencrypt: bool = True
     ) -> Dict[str, Any]:
@@ -414,6 +516,11 @@ class NginxPyBindAdapter:
             return {"cert_path": "", "key_path": "", "success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Configure SSL for a virtual host",
+        category="ssl",
+        tags=["ssl", "config", "security"],
+    )
     def configure_ssl(domain: str, cert_path: str, key_path: str) -> Dict[str, Any]:
         """
         Configure SSL for a virtual host.
@@ -438,6 +545,11 @@ class NginxPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Perform a comprehensive health check",
+        category="status",
+        tags=["health", "check", "monitoring"],
+    )
     def health_check() -> Dict[str, Any]:
         """
         Perform a comprehensive health check.

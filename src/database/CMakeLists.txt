@@ -4,7 +4,7 @@
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: Lithium-Database
-# Description: Database ORM and management module
+# Description: Modular database ORM and management module
 # Author: Max Qian
 # License: GPL3
 # ============================================================================
@@ -22,7 +22,34 @@ lithium_find_package(SQLite3 REQUIRED)
 # ============================================================================
 
 set(PROJECT_SOURCES
-    orm.cpp
+    # Core module
+    core/database.cpp
+    core/transaction.cpp
+    core/statement.cpp
+    # Query module
+    query/query_builder.cpp
+    # Cache module
+    cache/cache_manager.cpp
+)
+
+set(PROJECT_HEADERS
+    # Facade
+    database.hpp
+    # Core module
+    core/types.hpp
+    core/database.hpp
+    core/transaction.hpp
+    core/statement.hpp
+    # ORM module (header-only)
+    orm/column_base.hpp
+    orm/column_value.hpp
+    orm/column.hpp
+    orm/table.hpp
+    # Query module
+    query/query_builder.hpp
+    # Cache module
+    cache/cache_entry.hpp
+    cache/cache_manager.hpp
 )
 
 # ============================================================================
@@ -41,10 +68,11 @@ set(PROJECT_LIBRARIES
 lithium_add_library(
     NAME ${PROJECT_NAME}
     SOURCES ${PROJECT_SOURCES}
+    HEADERS ${PROJECT_HEADERS}
     LIBRARIES ${PROJECT_LIBRARIES}
     VERSION ${PROJECT_VERSION}
     TYPE STATIC
-    DESCRIPTION "Database ORM and management"
+    DESCRIPTION "Modular database ORM and management"
 )
 
 # Apply standard compiler flags

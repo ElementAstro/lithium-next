@@ -20,6 +20,8 @@ from dataclasses import asdict
 
 from loguru import logger
 
+from ..common.base_adapter import BasePybindAdapter, ToolInfo, pybind_method
+
 
 def _check_platform_support() -> bool:
     """Check if the current platform supports pacman."""
@@ -27,7 +29,7 @@ def _check_platform_support() -> bool:
     return system in ["linux", "windows"]
 
 
-class PacmanPyBindAdapter:
+class PacmanPyBindAdapter(BasePybindAdapter):
     """
     Simplified adapter class for C++ pybind11 integration.
 
@@ -38,7 +40,27 @@ class PacmanPyBindAdapter:
     with success/failure indicators.
     """
 
+    SUPPORTED_PLATFORMS = ["linux"]
+
     _instance: Optional["_PacmanManagerInstance"] = None
+
+    @classmethod
+    def get_tool_info(cls) -> ToolInfo:
+        """
+        Get comprehensive metadata about the Pacman manager tool.
+
+        Returns:
+            ToolInfo containing name, version, description, and capabilities
+        """
+        from . import __version__
+
+        return ToolInfo(
+            name="pacman_manager",
+            version=__version__,
+            description="Pacman package manager wrapper for Arch Linux systems",
+            platforms=["linux"],
+            categories=["package", "system", "linux"],
+        )
 
     @classmethod
     def _get_manager(cls):
@@ -56,6 +78,11 @@ class PacmanPyBindAdapter:
         return cls._instance
 
     @staticmethod
+    @pybind_method(
+        description="Check if pacman is supported on this platform",
+        category="system",
+        tags=["platform", "check"],
+    )
     def is_supported() -> Dict[str, Any]:
         """
         Check if pacman is supported on this platform.
@@ -76,6 +103,11 @@ class PacmanPyBindAdapter:
         }
 
     @staticmethod
+    @pybind_method(
+        description="Install a package using pacman",
+        category="package",
+        tags=["install", "package", "sync"],
+    )
     def install_package(package: str, no_confirm: bool = True) -> Dict[str, Any]:
         """
         Install a package using pacman.
@@ -150,6 +182,11 @@ class PacmanPyBindAdapter:
             return {"success": False, "error": str(e), "package": package}
 
     @staticmethod
+    @pybind_method(
+        description="Remove a package using pacman",
+        category="package",
+        tags=["remove", "package", "sync"],
+    )
     def remove_package(
         package: str, remove_deps: bool = False, no_confirm: bool = True
     ) -> Dict[str, Any]:
@@ -232,6 +269,11 @@ class PacmanPyBindAdapter:
             return {"success": False, "error": str(e), "package": package}
 
     @staticmethod
+    @pybind_method(
+        description="Search for packages matching a query",
+        category="package",
+        tags=["search", "package", "sync"],
+    )
     def search_package(query: str) -> List[Dict[str, Any]]:
         """
         Search for packages matching a query.
@@ -300,6 +342,11 @@ class PacmanPyBindAdapter:
             return []
 
     @staticmethod
+    @pybind_method(
+        description="List all installed packages",
+        category="package",
+        tags=["list", "package", "sync"],
+    )
     def list_installed_packages(refresh: bool = False) -> List[Dict[str, Any]]:
         """
         List all installed packages.
@@ -372,6 +419,11 @@ class PacmanPyBindAdapter:
             return []
 
     @staticmethod
+    @pybind_method(
+        description="Update the package database",
+        category="system",
+        tags=["update", "database", "sync"],
+    )
     def update_database() -> Dict[str, Any]:
         """
         Update the package database.
@@ -434,6 +486,11 @@ class PacmanPyBindAdapter:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Upgrade all system packages",
+        category="system",
+        tags=["upgrade", "system", "sync"],
+    )
     def upgrade_system(no_confirm: bool = True) -> Dict[str, Any]:
         """
         Upgrade all system packages.

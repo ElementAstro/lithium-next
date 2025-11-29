@@ -26,6 +26,7 @@ set(SOURCE_FILES
     indihub_agent.cpp
     server_manager.cpp
     fifo_channel.cpp
+    property_utils.cpp
 )
 
 set(HEADER_FILES
@@ -41,6 +42,7 @@ set(HEADER_FILES
     indi_client.hpp
     server_manager.hpp
     fifo_channel.hpp
+    property_utils.hpp
 )
 
 # ============================================================================

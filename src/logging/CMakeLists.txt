@@ -55,7 +55,7 @@ install(FILES ${LOGGING_HEADERS}
     DESTINATION include/lithium/logging
 )
 
-install(FILES 
+install(FILES
     sinks/ring_buffer_sink.hpp
     sinks/sink_factory.hpp
     DESTINATION include/lithium/logging/sinks

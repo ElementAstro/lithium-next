@@ -19,11 +19,13 @@ project(lithium_client_astrometry)
 set(SOURCE_FILES
     astrometry.cpp
     astrometry_client.cpp
+    options.cpp
 )
 
 set(HEADER_FILES
     astrometry.hpp
     astrometry_client.hpp
+    options.hpp
 )
 
 # ============================================================================

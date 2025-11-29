@@ -10,11 +10,13 @@ import platform
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from loguru import logger
+from ..common.base_adapter import BasePybindAdapter, ToolInfo, pybind_method
 from .manager import DotNetManager
 from .models import HashAlgorithm
+from . import __version__
 
 
-class DotNetPyBindAdapter:
+class DotNetPyBindAdapter(BasePybindAdapter):
     """
     Adapter class to expose DotNetManager functionality to C++ via pybind11.
 
@@ -24,6 +26,24 @@ class DotNetPyBindAdapter:
     - Comprehensive exception handling with error context
     - Both sync and async operation support
     """
+
+    SUPPORTED_PLATFORMS = ["windows"]
+
+    @classmethod
+    def get_tool_info(cls) -> ToolInfo:
+        """
+        Get comprehensive metadata about the .NET Manager tool.
+
+        Returns:
+            ToolInfo object containing name, version, description, and capabilities
+        """
+        return ToolInfo(
+            name="dotnet_manager",
+            version=__version__,
+            description=".NET SDK and runtime management utilities",
+            platforms=["windows"],
+            categories=["dotnet", "sdk", "development"],
+        )
 
     @staticmethod
     def _is_windows() -> bool:
@@ -42,6 +62,11 @@ class DotNetPyBindAdapter:
         }
 
     @staticmethod
+    @pybind_method(
+        description="Check if a specific .NET Framework version is installed",
+        category="detection",
+        tags=["check", "dotnet", "sync"],
+    )
     def check_dotnet_installed(version_key: str) -> Dict[str, Any]:
         """
         Check if a specific .NET Framework version is installed.
@@ -84,6 +109,11 @@ class DotNetPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="List all installed .NET Framework versions",
+        category="detection",
+        tags=["list", "dotnet", "sync"],
+    )
     def list_installed_dotnets() -> Dict[str, Any]:
         """
         List all installed .NET Framework versions.
@@ -137,6 +167,11 @@ class DotNetPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="Download a file with optional multi-threading and checksum verification",
+        category="download",
+        tags=["download", "file", "sync"],
+    )
     def download_file(
         url: str, output_path: str, num_threads: int = 4, checksum: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -192,6 +227,11 @@ class DotNetPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="Verify a file's integrity by checking its checksum",
+        category="verification",
+        tags=["verify", "checksum", "sync"],
+    )
     def verify_checksum(
         file_path: str, expected_checksum: str, algorithm: str = "sha256"
     ) -> Dict[str, Any]:
@@ -264,6 +304,11 @@ class DotNetPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="Execute a software installer",
+        category="installation",
+        tags=["install", "software", "sync"],
+    )
     def install_software(installer_path: str, quiet: bool = False) -> Dict[str, Any]:
         """
         Execute a software installer.
@@ -307,6 +352,11 @@ class DotNetPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="Attempt to uninstall a specific .NET Framework version",
+        category="installation",
+        tags=["uninstall", "dotnet", "sync"],
+    )
     def uninstall_dotnet(version_key: str) -> Dict[str, Any]:
         """
         Attempt to uninstall a specific .NET Framework version.
@@ -351,6 +401,11 @@ class DotNetPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="Get detailed information about all installed .NET Framework versions",
+        category="detection",
+        tags=["info", "dotnet", "sync"],
+    )
     def get_installed_versions_info() -> Dict[str, Any]:
         """
         Get detailed information about all installed .NET Framework versions.

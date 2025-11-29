@@ -6,25 +6,20 @@ This module provides simplified interfaces for C++ bindings via pybind11.
 It handles platform compatibility and graceful degradation for non-Linux systems.
 """
 
-import sys
 import asyncio
 from typing import Dict, List, Any
 
 from loguru import logger
 from .hotspot_manager import HotspotManager
+from ..common.base_adapter import (
+    BasePybindAdapter,
+    ToolInfo,
+    pybind_method,
+    async_pybind_method,
+)
 
 
-def _is_platform_supported() -> bool:
-    """
-    Check if the platform is supported (Linux only).
-
-    Returns:
-        True if running on Linux, False otherwise
-    """
-    return sys.platform.startswith("linux")
-
-
-class HotspotPyBindAdapter:
+class HotspotPyBindAdapter(BasePybindAdapter):
     """
     Adapter class to expose Hotspot functionality to C++ via pybind11.
 
@@ -33,15 +28,55 @@ class HotspotPyBindAdapter:
     internally, returning structured error responses.
     """
 
-    @staticmethod
-    def _check_platform() -> Dict[str, Any]:
+    SUPPORTED_PLATFORMS = ["linux"]
+
+    @classmethod
+    def get_tool_info(cls) -> ToolInfo:
+        """
+        Get metadata about the hotspot tool.
+
+        This implements the abstract method from BasePybindAdapter.
+
+        Returns:
+            ToolInfo object containing tool information and configuration
+        """
+        return cls._get_tool_info_impl()
+
+    @classmethod
+    def _get_tool_info_impl(cls) -> ToolInfo:
+        """
+        Internal implementation of get_tool_info.
+
+        Returns:
+            ToolInfo object containing tool information and configuration
+        """
+        try:
+            from . import __version__
+        except ImportError:
+            __version__ = "1.0.0"
+
+        return ToolInfo(
+            name="hotspot",
+            version=__version__,
+            description="WiFi hotspot manager for Linux systems using NetworkManager",
+            platforms=["linux"],
+            categories=["network", "wifi", "linux"],
+            capabilities=[
+                "hotspot_creation",
+                "client_monitoring",
+                "configuration_persistence",
+            ],
+        )
+
+    @classmethod
+    def _check_platform(cls) -> Dict[str, Any]:
         """
         Check platform support and return structured response.
 
         Returns:
             Dict with success flag and platform check result, or error dict if unsupported
         """
-        if not _is_platform_supported():
+        if not cls.is_platform_supported():
             return {
                 "success": False,
                 "supported": False,
@@ -50,6 +85,11 @@ class HotspotPyBindAdapter:
         return {"success": True, "supported": True}
 
     @staticmethod
+    @pybind_method(
+        description="Start a WiFi hotspot with the specified configuration",
+        category="hotspot_control",
+        tags=["start", "sync", "network"],
+    )
     def start(
         name: str = "MyHotspot",
         password: str = None,
@@ -104,6 +144,11 @@ class HotspotPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="Stop the currently running hotspot",
+        category="hotspot_control",
+        tags=["stop", "sync", "network"],
+    )
     def stop() -> Dict[str, Any]:
         """
         Stop the currently running hotspot.
@@ -134,6 +179,11 @@ class HotspotPyBindAdapter:
             return {"success": False, "supported": True, "error": str(e)}
 
     @staticmethod
+    @pybind_method(
+        description="Get the current status of the hotspot",
+        category="hotspot_status",
+        tags=["status", "sync", "info"],
+    )
     def get_status() -> Dict[str, Any]:
         """
         Get the current status of the hotspot.
@@ -169,6 +219,11 @@ class HotspotPyBindAdapter:
             }
 
     @staticmethod
+    @pybind_method(
+        description="Get list of clients connected to the hotspot",
+        category="hotspot_status",
+        tags=["clients", "sync", "info"],
+    )
     def get_clients() -> Dict[str, Any]:
         """
         Get list of clients connected to the hotspot.
@@ -201,6 +256,11 @@ class HotspotPyBindAdapter:
             }
 
     @staticmethod
+    @async_pybind_method(
+        description="Start a WiFi hotspot asynchronously with the specified configuration",
+        category="hotspot_control",
+        tags=["start", "async", "network"],
+    )
     async def start_async(
         name: str = "MyHotspot",
         password: str = None,
@@ -260,6 +320,11 @@ class HotspotPyBindAdapter:
             }
 
     @staticmethod
+    @async_pybind_method(
+        description="Stop the currently running hotspot asynchronously",
+        category="hotspot_control",
+        tags=["stop", "async", "network"],
+    )
     async def stop_async() -> Dict[str, Any]:
         """
         Stop the currently running hotspot asynchronously.
@@ -292,6 +357,11 @@ class HotspotPyBindAdapter:
             return {"success": False, "supported": True, "error": str(e)}
 
     @staticmethod
+    @async_pybind_method(
+        description="Get the current status of the hotspot asynchronously",
+        category="hotspot_status",
+        tags=["status", "async", "info"],
+    )
     async def get_status_async() -> Dict[str, Any]:
         """
         Get the current status of the hotspot asynchronously.
@@ -329,6 +399,11 @@ class HotspotPyBindAdapter:
             }
 
     @staticmethod
+    @async_pybind_method(
+        description="Get list of clients connected to the hotspot asynchronously",
+        category="hotspot_status",
+        tags=["clients", "async", "info"],
+    )
     async def get_clients_async() -> Dict[str, Any]:
         """
         Get list of clients connected to the hotspot asynchronously.
@@ -361,19 +436,3 @@ class HotspotPyBindAdapter:
                 "clients": [],
                 "count": 0,
             }
-
-    @staticmethod
-    def get_tool_info() -> Dict[str, Any]:
-        """
-        Get metadata about the hotspot tool.
-
-        Returns:
-            Dict containing tool information and configuration
-        """
-        from . import get_tool_info as module_get_tool_info
-
-        try:
-            return {"success": True, "data": module_get_tool_info()}
-        except Exception as e:
-            logger.exception(f"Error in get_tool_info: {e}")
-            return {"success": False, "error": str(e), "data": {}}

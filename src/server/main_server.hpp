@@ -22,6 +22,7 @@
 #include "controller/components.hpp"
 #include "controller/config.hpp"
 #include "controller/controller.hpp"
+#include "controller/database.hpp"
 #include "controller/dome.hpp"
 #include "controller/filesystem.hpp"
 #include "controller/filterwheel.hpp"
@@ -303,6 +304,8 @@ private:
             std::make_unique<controller::ModuleController>());
         controllers_.push_back(
             std::make_unique<controller::ConfigController>());
+        controllers_.push_back(
+            std::make_unique<controller::DatabaseController>());
         controllers_.push_back(
             std::make_unique<controller::PythonController>());
         controllers_.push_back(

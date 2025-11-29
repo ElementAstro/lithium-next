@@ -8,6 +8,8 @@ find_package(GTest REQUIRED)
 
 set(TEST_SOURCES
     test_component_manager.cpp
+    test_component_types.cpp
+    test_component_exceptions.cpp
 )
 
 add_executable(${PROJECT_NAME} ${TEST_SOURCES})

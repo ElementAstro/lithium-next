@@ -1,7 +1,10 @@
 #ifndef LITHIUM_TASK_SCRIPT_WORKFLOW_TASK_HPP
 #define LITHIUM_TASK_SCRIPT_WORKFLOW_TASK_HPP
 
+#include <atomic>
+#include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <map>
 #include <memory>
 #include <set>
@@ -10,8 +13,38 @@
 #include <vector>
 
 #include "base.hpp"
+#include "pipeline.hpp"  // For PipelineExecutionMode
+
+// Forward declarations
+namespace lithium {
+class IsolatedPythonRunner;
+class PythonToolRegistry;
+}  // namespace lithium
 
 namespace lithium::task::script {
+
+/**
+ * @brief Workflow event types for callbacks
+ */
+enum class WorkflowEventType {
+    Started,
+    StepStarted,
+    StepCompleted,
+    StepFailed,
+    StepRetrying,
+    Paused,
+    Resumed,
+    Completed,
+    Failed,
+    Aborted
+};
+
+/**
+ * @brief Workflow event callback
+ */
+using WorkflowEventCallback =
+    std::function<void(WorkflowEventType event, std::string_view workflowName,
+                       std::string_view stepId, const json& data)>;
 
 /**
  * @enum WorkflowState
@@ -36,12 +69,52 @@ enum class WorkflowState {
 struct WorkflowStep {
     std::string taskId;      ///< Unique identifier for this step.
     std::string scriptName;  ///< Name or path of the script to execute.
-    ScriptType type;         ///< Type of the script (Shell, Python, or Auto).
-    std::vector<std::string> dependencies;  ///< List of taskIds that must
-                                            ///< complete before this step runs.
-    json parameters;  ///< Parameters to pass to the script.
-    bool optional{
-        false};  ///< If true, workflow continues even if this step fails.
+    ScriptType type{ScriptType::Auto};  ///< Type of the script.
+    PipelineExecutionMode executionMode{PipelineExecutionMode::Embedded};
+    std::vector<std::string> dependencies;  ///< Steps that must complete first
+    json parameters;                    ///< Parameters to pass to the script.
+    bool optional{false};               ///< Continue workflow on failure
+    int maxRetries{0};                  ///< Maximum retry attempts
+    std::chrono::seconds timeout{600};  ///< Step timeout (10 min default)
+
+    // Tool call mode
+    std::string toolName;      ///< Registered tool name
+    std::string functionName;  ///< Function to call
+
+    // Conditional execution
+    std::string condition;  ///< JSON expression for conditional execution
+    std::string onSuccess;  ///< Step to run on success (optional)
+    std::string onFailure;  ///< Step to run on failure (optional)
+};
+
+/**
+ * @struct WorkflowStepResult
+ * @brief Result of executing a workflow step
+ */
+struct WorkflowStepResult {
+    std::string taskId;
+    bool success{false};
+    json output;
+    std::string error;
+    std::chrono::milliseconds executionTime{0};
+    int retryCount{0};
+    WorkflowState finalState{WorkflowState::Created};
+};
+
+/**
+ * @struct WorkflowResult
+ * @brief Overall result of workflow execution
+ */
+struct WorkflowResult {
+    std::string workflowName;
+    bool success{false};
+    WorkflowState finalState{WorkflowState::Created};
+    std::map<std::string, WorkflowStepResult> stepResults;
+    json finalContext;
+    std::chrono::milliseconds totalExecutionTime{0};
+    size_t successfulSteps{0};
+    size_t failedSteps{0};
+    size_t skippedSteps{0};
 };
 
 /**
@@ -53,6 +126,14 @@ struct WorkflowStep {
  * other steps. Steps can be shell or Python scripts, and may be marked as
  * optional. The class supports pausing, resuming, and aborting workflows, and
  * provides thread-safe state management.
+ *
+ * Enhanced features:
+ * - Isolated Python execution for security
+ * - Tool registry integration for calling registered tools
+ * - Retry support with configurable attempts
+ * - Event callbacks for monitoring
+ * - Conditional step execution with success/failure handlers
+ * - Parallel step execution based on dependencies
  */
 class ScriptWorkflowTask : public Task {
 public:
@@ -60,7 +141,12 @@ public:
      * @brief Constructs a ScriptWorkflowTask with the given name.
      * @param name The name of the workflow task.
      */
-    ScriptWorkflowTask(const std::string& name);
+    explicit ScriptWorkflowTask(const std::string& name);
+
+    /**
+     * @brief Destructor
+     */
+    ~ScriptWorkflowTask() override;
 
     /**
      * @brief Executes the workflow task with the provided parameters.
@@ -80,55 +166,121 @@ public:
      * @brief Executes the specified workflow.
      * @param workflowName The name of the workflow to execute.
      * @param params Optional JSON parameters for execution.
+     * @return WorkflowResult containing execution details
      */
-    void executeWorkflow(const std::string& workflowName,
-                         const json& params = {});
+    WorkflowResult executeWorkflow(const std::string& workflowName,
+                                   const json& params = {});
+
+    /**
+     * @brief Executes a workflow asynchronously
+     */
+    std::future<WorkflowResult> executeWorkflowAsync(
+        const std::string& workflowName, const json& params = {});
 
     /**
      * @brief Pauses the execution of the specified workflow.
-     * @param workflowName The name of the workflow to pause.
      */
     void pauseWorkflow(const std::string& workflowName);
 
     /**
      * @brief Resumes the execution of a paused workflow.
-     * @param workflowName The name of the workflow to resume.
      */
     void resumeWorkflow(const std::string& workflowName);
 
     /**
      * @brief Aborts the execution of the specified workflow.
-     * @param workflowName The name of the workflow to abort.
      */
     void abortWorkflow(const std::string& workflowName);
 
     /**
      * @brief Gets the current state of the specified workflow.
-     * @param workflowName The name of the workflow.
-     * @return WorkflowState representing the workflow's current state.
      */
-    WorkflowState getWorkflowState(const std::string& workflowName) const;
+    [[nodiscard]] WorkflowState getWorkflowState(
+        const std::string& workflowName) const;
+
+    /**
+     * @brief Gets the result of a completed workflow
+     */
+    [[nodiscard]] std::optional<WorkflowResult> getWorkflowResult(
+        const std::string& workflowName) const;
+
+    /**
+     * @brief Sets the event callback for workflow monitoring
+     */
+    void setEventCallback(WorkflowEventCallback callback);
+
+    /**
+     * @brief Sets the tool registry for tool call mode
+     */
+    void setToolRegistry(std::shared_ptr<PythonToolRegistry> registry);
+
+    /**
+     * @brief Enables or disables isolated execution for Python scripts
+     */
+    void setIsolatedExecution(bool enabled);
+
+    /**
+     * @brief Sets the maximum concurrent steps
+     */
+    void setMaxConcurrentSteps(size_t maxSteps);
+
+    /**
+     * @brief Gets list of all registered workflow names
+     */
+    [[nodiscard]] std::vector<std::string> getWorkflowNames() const;
+
+    /**
+     * @brief Checks if a workflow exists
+     */
+    [[nodiscard]] bool hasWorkflow(const std::string& workflowName) const;
+
+    /**
+     * @brief Deletes a workflow definition
+     */
+    bool deleteWorkflow(const std::string& workflowName);
 
 protected:
     /**
      * @brief Executes all steps of the specified workflow, respecting
      * dependencies.
-     * @param workflowName The name of the workflow to execute.
      */
-    void executeWorkflowSteps(const std::string& workflowName);
+    WorkflowResult executeWorkflowSteps(const std::string& workflowName);
 
     /**
      * @brief Checks if all dependencies for a workflow step are satisfied.
-     * @param step The WorkflowStep to check.
-     * @return True if all dependencies are completed, false otherwise.
      */
-    bool checkStepDependencies(const WorkflowStep& step);
+    bool checkStepDependencies(const WorkflowStep& step,
+                               const std::string& workflowName);
 
     /**
-     * @brief Executes a single workflow step.
-     * @param step The WorkflowStep to execute.
+     * @brief Executes a single workflow step with retry support
      */
-    void executeWorkflowStep(const WorkflowStep& step);
+    WorkflowStepResult executeWorkflowStep(const WorkflowStep& step,
+                                           json& context);
+
+    /**
+     * @brief Executes a step in isolated mode
+     */
+    WorkflowStepResult executeStepIsolated(const WorkflowStep& step,
+                                           const json& context);
+
+    /**
+     * @brief Executes a step via tool registry
+     */
+    WorkflowStepResult executeStepToolCall(const WorkflowStep& step,
+                                           const json& context);
+
+    /**
+     * @brief Evaluates condition for conditional execution
+     */
+    bool evaluateCondition(const std::string& condition,
+                           const json& context) const;
+
+    /**
+     * @brief Emits a workflow event
+     */
+    void emitEvent(WorkflowEventType event, const std::string& workflowName,
+                   const std::string& stepId = "", const json& data = {});
 
 private:
     /**
@@ -136,22 +288,28 @@ private:
      */
     void setupWorkflowDefaults();
 
-    std::map<std::string, std::vector<WorkflowStep>>
-        workflows_;  ///< Map of workflow names to their steps.
-    std::map<std::string, WorkflowState>
-        workflowStates_;  ///< Map of workflow names to their current state.
-    std::map<std::string, std::set<std::string>>
-        completedSteps_;  ///< Map of workflow names to completed step IDs.
+    std::map<std::string, std::vector<WorkflowStep>> workflows_;
+    std::map<std::string, WorkflowState> workflowStates_;
+    std::map<std::string, std::set<std::string>> completedSteps_;
+    std::map<std::string, WorkflowResult> workflowResults_;
+    std::map<std::string, json> workflowContexts_;
 
-    mutable std::shared_mutex
-        workflowMutex_;  ///< Mutex for thread-safe workflow state access.
-    std::condition_variable_any
-        workflowCondition_;  ///< Condition variable for workflow state changes.
+    mutable std::shared_mutex workflowMutex_;
+    std::condition_variable_any workflowCondition_;
 
-    std::unique_ptr<BaseScriptTask>
-        shellTask_;  ///< Task instance for shell scripts.
-    std::unique_ptr<BaseScriptTask>
-        pythonTask_;  ///< Task instance for Python scripts.
+    std::unique_ptr<BaseScriptTask> shellTask_;
+    std::unique_ptr<BaseScriptTask> pythonTask_;
+
+    // Enhanced components
+    std::unique_ptr<IsolatedPythonRunner> isolatedRunner_;
+    std::shared_ptr<PythonToolRegistry> toolRegistry_;
+
+    // Configuration
+    bool useIsolation_{false};
+    size_t maxConcurrentSteps_{4};
+
+    // Callbacks
+    WorkflowEventCallback eventCallback_;
 };
 
 }  // namespace lithium::task::script

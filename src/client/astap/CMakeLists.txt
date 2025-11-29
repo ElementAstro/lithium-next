@@ -19,11 +19,13 @@ project(lithium_client_astap)
 set(SOURCE_FILES
     astap.cpp
     astap_client.cpp
+    options.cpp
 )
 
 set(HEADER_FILES
     astap.hpp
     astap_client.hpp
+    options.hpp
 )
 
 # ============================================================================

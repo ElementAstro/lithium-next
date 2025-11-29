@@ -19,13 +19,35 @@ lithium_find_package(Python COMPONENTS Interpreter Development)
 lithium_find_package(pybind11)
 
 # ============================================================================
-# Source Files
+# Add Subdirectories (Modular Architecture)
+# ============================================================================
+
+# Shell script execution module
+add_subdirectory(shell)
+
+# IPC protocol module
+add_subdirectory(ipc)
+
+# Virtual environment management module
+add_subdirectory(venv)
+
+# Python tool registry module
+add_subdirectory(tools)
+
+# NumPy/Pandas integration module
+add_subdirectory(numpy)
+
+# Isolated Python execution module
+add_subdirectory(isolated)
+
+# ============================================================================
+# Core Source Files (Top-level)
 # ============================================================================
 
 set(PROJECT_SOURCES
     check.cpp
+    interpreter_pool.cpp
     python_caller.cpp
-    sheller.cpp
 )
 
 # ============================================================================
@@ -33,6 +55,14 @@ set(PROJECT_SOURCES
 # ============================================================================
 
 set(PROJECT_LIBRARIES
+    # Submodule libraries
+    lithium_script_shell
+    lithium_script_ipc
+    lithium_script_venv
+    lithium_script_tools
+    lithium_script_numpy
+    lithium_script_isolated
+    # External dependencies
     atom
     lithium_config
     loguru

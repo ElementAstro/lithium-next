@@ -11,6 +11,8 @@ set(TEST_SOURCES
     test_dependency_manager.cpp
     test_platform_detector.cpp
     test_package_manager_registry.cpp
+    test_dependency_types.cpp
+    test_dependency_exception.cpp
 )
 
 # Create test executable
