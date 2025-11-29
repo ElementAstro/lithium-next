@@ -4,10 +4,10 @@
  */
 
 #include "imaging_tasks.hpp"
+#include <cmath>
+#include <thread>
 #include "../exposure/exposure_tasks.hpp"
 #include "../guiding/guiding_tasks.hpp"
-#include <thread>
-#include <cmath>
 
 namespace lithium::task::camera {
 
@@ -34,13 +34,13 @@ void DeepSkySequenceTask::executeImpl(const json& params) {
     double exposure = params["exposure"].get<double>();
 
     logProgress("Deep sky sequence: " + target);
-    
+
     json seqParams = params;
     seqParams["type"] = "light";
-    
+
     TakeManyExposureTask seq;
     seq.execute(seqParams);
-    
+
     logProgress("Deep sky sequence complete", 1.0);
 }
 
@@ -66,7 +66,8 @@ void PlanetaryImagingTask::executeImpl(const json& params) {
 // TimelapseTask
 void TimelapseTask::setupParameters() {
     addParamDefinition("exposure", "number", true, nullptr, "Exposure time");
-    addParamDefinition("interval", "number", true, nullptr, "Interval between frames");
+    addParamDefinition("interval", "number", true, nullptr,
+                       "Interval between frames");
     addParamDefinition("count", "integer", true, nullptr, "Frame count");
     addParamDefinition("gain", "integer", false, 100, "Gain");
 }
@@ -108,7 +109,8 @@ void MosaicTask::setupParameters() {
     addParamDefinition("cols", "integer", true, nullptr, "Mosaic columns");
     addParamDefinition("overlap", "number", false, 0.2, "Panel overlap");
     addParamDefinition("exposure", "number", true, nullptr, "Exposure time");
-    addParamDefinition("count_per_panel", "integer", false, 10, "Frames per panel");
+    addParamDefinition("count_per_panel", "integer", false, 10,
+                       "Frames per panel");
 }
 
 void MosaicTask::validateParams(const json& params) {
@@ -127,7 +129,9 @@ void MosaicTask::executeImpl(const json& params) {
 
     for (int i = 0; i < totalPanels; ++i) {
         double progress = static_cast<double>(i) / totalPanels;
-        logProgress("Panel " + std::to_string(i + 1) + "/" + std::to_string(totalPanels), progress);
+        logProgress("Panel " + std::to_string(i + 1) + "/" +
+                        std::to_string(totalPanels),
+                    progress);
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
@@ -135,7 +139,7 @@ void MosaicTask::executeImpl(const json& params) {
 }
 
 void MosaicTask::calculatePanelPositions(int rows, int cols, double overlap,
-                                          double fovWidth, double fovHeight) {
+                                         double fovWidth, double fovHeight) {
     // Panel position calculation placeholder
 }
 

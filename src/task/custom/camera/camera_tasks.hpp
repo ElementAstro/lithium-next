@@ -31,11 +31,11 @@
 #include "common/camera_task_base.hpp"
 
 // Camera-specific task modules
-#include "exposure/exposure_tasks.hpp"
-#include "settings/settings_tasks.hpp"
 #include "calibration/calibration_tasks.hpp"
-#include "imaging/imaging_tasks.hpp"
+#include "exposure/exposure_tasks.hpp"
 #include "guiding/guiding_tasks.hpp"
+#include "imaging/imaging_tasks.hpp"
+#include "settings/settings_tasks.hpp"
 
 namespace lithium::task {
 

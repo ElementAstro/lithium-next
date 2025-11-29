@@ -8,9 +8,9 @@
  */
 
 #include "guider_tasks.hpp"
-#include <thread>
 #include <cmath>
 #include <random>
+#include <thread>
 
 namespace lithium::task::guider {
 
@@ -19,11 +19,16 @@ namespace lithium::task::guider {
 // ============================================================================
 
 void StartGuidingTask::setupParameters() {
-    addParamDefinition("exposure", "number", false, 2.0, "Guide camera exposure");
-    addParamDefinition("calibrate", "boolean", false, true, "Calibrate before guiding");
-    addParamDefinition("settle_time", "number", false, 10.0, "Settle time in seconds");
-    addParamDefinition("settle_threshold", "number", false, 1.5, "Settle threshold in pixels");
-    addParamDefinition("guide_star", "object", false, nullptr, "Guide star coordinates");
+    addParamDefinition("exposure", "number", false, 2.0,
+                       "Guide camera exposure");
+    addParamDefinition("calibrate", "boolean", false, true,
+                       "Calibrate before guiding");
+    addParamDefinition("settle_time", "number", false, 10.0,
+                       "Settle time in seconds");
+    addParamDefinition("settle_threshold", "number", false, 1.5,
+                       "Settle threshold in pixels");
+    addParamDefinition("guide_star", "object", false, nullptr,
+                       "Guide star coordinates");
 }
 
 void StartGuidingTask::executeImpl(const json& params) {
@@ -47,7 +52,8 @@ void StartGuidingTask::executeImpl(const json& params) {
     }
 
     logProgress("Waiting for guiding to settle");
-    std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(settleTime)));
+    std::this_thread::sleep_for(
+        std::chrono::seconds(static_cast<int>(settleTime)));
 
     logProgress("Autoguiding started and settled", 1.0);
 }
@@ -55,7 +61,8 @@ void StartGuidingTask::executeImpl(const json& params) {
 bool StartGuidingTask::calibrateGuider(const json& params) {
     // Simulate calibration
     for (int i = 0; i < 4; ++i) {
-        if (!shouldContinue()) return false;
+        if (!shouldContinue())
+            return false;
         logProgress("Calibration step " + std::to_string(i + 1) + "/4");
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
@@ -73,12 +80,13 @@ bool StartGuidingTask::startGuiding(const json& params) {
 // ============================================================================
 
 void StopGuidingTask::setupParameters() {
-    addParamDefinition("wait_settle", "boolean", false, false, "Wait for mount to settle");
+    addParamDefinition("wait_settle", "boolean", false, false,
+                       "Wait for mount to settle");
 }
 
 void StopGuidingTask::executeImpl(const json& params) {
     logProgress("Stopping autoguiding");
-    
+
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     if (params.value("wait_settle", false)) {
@@ -108,7 +116,8 @@ void PauseGuidingTask::executeImpl(const json& params) {
 // ============================================================================
 
 void ResumeGuidingTask::setupParameters() {
-    addParamDefinition("settle_time", "number", false, 5.0, "Settle time after resume");
+    addParamDefinition("settle_time", "number", false, 5.0,
+                       "Settle time after resume");
 }
 
 void ResumeGuidingTask::executeImpl(const json& params) {
@@ -118,7 +127,8 @@ void ResumeGuidingTask::executeImpl(const json& params) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     logProgress("Waiting for guiding to settle");
-    std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(settleTime)));
+    std::this_thread::sleep_for(
+        std::chrono::seconds(static_cast<int>(settleTime)));
 
     logProgress("Autoguiding resumed and settled", 1.0);
 }
@@ -128,10 +138,13 @@ void ResumeGuidingTask::executeImpl(const json& params) {
 // ============================================================================
 
 void DitherTask::setupParameters() {
-    addParamDefinition("amount", "number", false, 5.0, "Dither amount in pixels");
+    addParamDefinition("amount", "number", false, 5.0,
+                       "Dither amount in pixels");
     addParamDefinition("ra_only", "boolean", false, false, "Dither in RA only");
-    addParamDefinition("settle_time", "number", false, 10.0, "Maximum settle time");
-    addParamDefinition("settle_threshold", "number", false, 1.5, "Settle threshold in pixels");
+    addParamDefinition("settle_time", "number", false, 10.0,
+                       "Maximum settle time");
+    addParamDefinition("settle_threshold", "number", false, 1.5,
+                       "Settle threshold in pixels");
 }
 
 void DitherTask::executeImpl(const json& params) {
@@ -161,10 +174,11 @@ bool DitherTask::waitForSettle(double timeout, double threshold) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(1.0, timeout);
-    
+
     double settleDelay = dis(gen);
-    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(settleDelay * 100)));
-    
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(static_cast<int>(settleDelay * 100)));
+
     return settleDelay < timeout;
 }
 
@@ -173,12 +187,16 @@ bool DitherTask::waitForSettle(double timeout, double threshold) {
 // ============================================================================
 
 void GuidedExposureSequenceTask::setupParameters() {
-    addParamDefinition("exposure", "number", true, nullptr, "Exposure time per frame");
+    addParamDefinition("exposure", "number", true, nullptr,
+                       "Exposure time per frame");
     addParamDefinition("count", "integer", true, nullptr, "Number of frames");
     addParamDefinition("dither", "boolean", false, true, "Enable dithering");
-    addParamDefinition("dither_every", "integer", false, 1, "Dither every N frames");
-    addParamDefinition("dither_amount", "number", false, 5.0, "Dither amount in pixels");
-    addParamDefinition("settle_time", "number", false, 10.0, "Settle time after dither");
+    addParamDefinition("dither_every", "integer", false, 1,
+                       "Dither every N frames");
+    addParamDefinition("dither_amount", "number", false, 5.0,
+                       "Dither amount in pixels");
+    addParamDefinition("settle_time", "number", false, 10.0,
+                       "Settle time after dither");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
 }
 
@@ -196,7 +214,8 @@ void GuidedExposureSequenceTask::executeImpl(const json& params) {
     int ditherEvery = params.value("dither_every", 1);
     double ditherAmount = params.value("dither_amount", 5.0);
 
-    logProgress("Starting guided exposure sequence: " + std::to_string(count) + " frames");
+    logProgress("Starting guided exposure sequence: " + std::to_string(count) +
+                " frames");
 
     // Ensure guiding is running
     if (!waitForGuiding(10.0)) {
@@ -210,22 +229,26 @@ void GuidedExposureSequenceTask::executeImpl(const json& params) {
         }
 
         double progress = static_cast<double>(i) / count;
-        logProgress("Frame " + std::to_string(i + 1) + "/" + std::to_string(count), progress);
+        logProgress(
+            "Frame " + std::to_string(i + 1) + "/" + std::to_string(count),
+            progress);
 
         // Simulate exposure
-        std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(exposure * 100)));
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(static_cast<int>(exposure * 100)));
 
         // Dither after frame if enabled
         if (dither && (i + 1) % ditherEvery == 0 && i < count - 1) {
             DitherTask ditherTask;
-            ditherTask.execute({
-                {"amount", ditherAmount},
-                {"settle_time", params.value("settle_time", 10.0)}
-            });
+            ditherTask.execute(
+                {{"amount", ditherAmount},
+                 {"settle_time", params.value("settle_time", 10.0)}});
         }
     }
 
-    logProgress("Guided exposure sequence complete: " + std::to_string(count) + " frames", 1.0);
+    logProgress("Guided exposure sequence complete: " + std::to_string(count) +
+                    " frames",
+                1.0);
 }
 
 bool GuidedExposureSequenceTask::waitForGuiding(double timeout) {
@@ -239,10 +262,14 @@ bool GuidedExposureSequenceTask::waitForGuiding(double timeout) {
 // ============================================================================
 
 void CalibrateGuiderTask::setupParameters() {
-    addParamDefinition("exposure", "number", false, 2.0, "Calibration exposure time");
-    addParamDefinition("step_size", "integer", false, 1000, "Calibration step size (ms)");
-    addParamDefinition("steps", "integer", false, 12, "Number of calibration steps");
-    addParamDefinition("clear_previous", "boolean", false, true, "Clear previous calibration");
+    addParamDefinition("exposure", "number", false, 2.0,
+                       "Calibration exposure time");
+    addParamDefinition("step_size", "integer", false, 1000,
+                       "Calibration step size (ms)");
+    addParamDefinition("steps", "integer", false, 12,
+                       "Number of calibration steps");
+    addParamDefinition("clear_previous", "boolean", false, true,
+                       "Clear previous calibration");
 }
 
 void CalibrateGuiderTask::executeImpl(const json& params) {

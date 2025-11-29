@@ -21,7 +21,8 @@ namespace lithium::client {
 ServerClient::ServerClient(std::string name)
     : ClientBase(std::move(name), ClientType::Server) {
     setCapabilities(ClientCapability::Connect | ClientCapability::Scan |
-                    ClientCapability::Configure | ClientCapability::StatusQuery |
+                    ClientCapability::Configure |
+                    ClientCapability::StatusQuery |
                     ClientCapability::EventCallback);
     spdlog::debug("ServerClient created: {}", getName());
 }
@@ -32,13 +33,14 @@ ServerClient::~ServerClient() {
 
 bool ServerClient::configureServer(const ServerConfig& config) {
     serverConfig_ = config;
-    spdlog::debug("Server {} configured: {}:{}", getName(),
-                  config.host, config.port);
+    spdlog::debug("Server {} configured: {}:{}", getName(), config.host,
+                  config.port);
     return true;
 }
 
-bool ServerClient::setProperties(const std::string& device,
-                                 const std::unordered_map<std::string, std::string>& properties) {
+bool ServerClient::setProperties(
+    const std::string& device,
+    const std::unordered_map<std::string, std::string>& properties) {
     bool allSuccess = true;
     for (const auto& [prop, value] : properties) {
         // Parse property.element format
@@ -82,19 +84,19 @@ nlohmann::json ServerClient::getServerStatus() const {
     status["running"] = isServerRunning();
     status["connected"] = isConnected();
     status["config"] = serverConfig_.toJson();
-    
+
     auto devices = getDevices();
     status["deviceCount"] = devices.size();
-    
+
     nlohmann::json deviceList = nlohmann::json::array();
     for (const auto& dev : devices) {
         deviceList.push_back(dev.toJson());
     }
     status["devices"] = deviceList;
-    
+
     auto drivers = getRunningDrivers();
     status["runningDriverCount"] = drivers.size();
-    
+
     return status;
 }
 

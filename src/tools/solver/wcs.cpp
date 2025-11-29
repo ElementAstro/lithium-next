@@ -18,7 +18,7 @@ WCSParams extractWCSParams(const std::string& wcsInfo) {
     WCSParams wcs;
 
     auto findAndExtract = [&wcsInfo](const std::string& key,
-                                      size_t offset) -> double {
+                                     size_t offset) -> double {
         size_t pos = wcsInfo.find(key);
         if (pos == std::string::npos) {
             throw std::runtime_error("WCS key not found: " + key);
@@ -82,13 +82,13 @@ bool raDecToPixel(double ra, double dec, const WCSParams& wcs, double& x,
 }
 
 std::vector<SphericalCoordinates> getFOVCorners(const WCSParams& wcs,
-                                                 int imageWidth,
-                                                 int imageHeight) {
+                                                int imageWidth,
+                                                int imageHeight) {
     std::vector<SphericalCoordinates> corners(4);
-    corners[0] = pixelToRaDec(0, 0, wcs);                      // Bottom-left
-    corners[1] = pixelToRaDec(imageWidth, 0, wcs);             // Bottom-right
-    corners[2] = pixelToRaDec(imageWidth, imageHeight, wcs);   // Top-right
-    corners[3] = pixelToRaDec(0, imageHeight, wcs);            // Top-left
+    corners[0] = pixelToRaDec(0, 0, wcs);                     // Bottom-left
+    corners[1] = pixelToRaDec(imageWidth, 0, wcs);            // Bottom-right
+    corners[2] = pixelToRaDec(imageWidth, imageHeight, wcs);  // Top-right
+    corners[3] = pixelToRaDec(0, imageHeight, wcs);           // Top-left
     return corners;
 }
 

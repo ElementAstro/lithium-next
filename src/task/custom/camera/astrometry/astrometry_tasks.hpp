@@ -15,9 +15,13 @@ namespace lithium::task::camera {
  */
 class PlateSolveExposureTask : public CameraTaskBase {
 public:
-    PlateSolveExposureTask() : CameraTaskBase("PlateSolveExposure") { setupParameters(); }
+    PlateSolveExposureTask() : CameraTaskBase("PlateSolveExposure") {
+        setupParameters();
+    }
     PlateSolveExposureTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "PlateSolveExposure"; }
     static std::string getTaskTypeName() { return "PlateSolveExposure"; }
@@ -37,7 +41,9 @@ class CenteringTask : public CameraTaskBase {
 public:
     CenteringTask() : CameraTaskBase("Centering") { setupParameters(); }
     CenteringTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Centering"; }
     static std::string getTaskTypeName() { return "Centering"; }

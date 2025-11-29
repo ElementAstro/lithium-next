@@ -32,8 +32,8 @@ auto INDIManager::stopDriver(const std::shared_ptr<INDIDeviceContainer>& driver)
 }
 
 auto INDIManager::setProp(const std::string& dev, const std::string& prop,
-                          const std::string& element,
-                          const std::string& value) -> bool {
+                          const std::string& element, const std::string& value)
+    -> bool {
     return connector->setProp(dev, prop, element, value);
 }
 
@@ -55,7 +55,7 @@ INDIManager::getRunningDrivers() {
 bool INDIManager::startIndiHub(const std::string& profile,
                                const std::string& mode) {
     if (!isRunning()) {
-        LOG_WARN( "Cannot start IndiHub: INDI server is not running");
+        LOG_WARN("Cannot start IndiHub: INDI server is not running");
         return false;
     }
 
@@ -63,7 +63,7 @@ bool INDIManager::startIndiHub(const std::string& profile,
         indihub_agent->start(profile, mode);
         return true;
     } catch (const std::exception& e) {
-        LOG_ERROR( "Failed to start IndiHub: {}", e.what());
+        LOG_ERROR("Failed to start IndiHub: {}", e.what());
         return false;
     }
 }

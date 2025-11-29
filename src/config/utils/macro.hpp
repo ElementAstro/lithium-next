@@ -18,9 +18,9 @@ Description: Configuration Helper Macros
 #include <string_view>
 #include <type_traits>
 
-#include "atom/log/spdlog_logger.hpp"
-#include "../core/manager.hpp"
 #include "../core/exception.hpp"
+#include "../core/manager.hpp"
+#include "atom/log/spdlog_logger.hpp"
 
 namespace lithium::config {
 
@@ -43,16 +43,16 @@ concept ConfigurationType =
  */
 template <ConfigurationType T>
 [[nodiscard]] inline auto GetConfigValue(
-    const std::shared_ptr<ConfigManager>& configManager,
-    std::string_view path) -> T {
+    const std::shared_ptr<ConfigManager>& configManager, std::string_view path)
+    -> T {
     if (!configManager) {
-        LOG_ERROR( "Config manager is null");
+        LOG_ERROR("Config manager is null");
         throw std::runtime_error("Config manager is null");
     }
 
     auto opt = configManager->get_as<T>(path);
     if (!opt.has_value()) {
-        LOG_ERROR( "Config value for {} not found or wrong type", path);
+        LOG_ERROR("Config value for {} not found or wrong type", path);
         throw std::runtime_error(std::string("Config value for ") +
                                  std::string(path) +
                                  " not found or wrong type");
@@ -73,65 +73,65 @@ using lithium::config::GetConfigValue;
 // Modern C++20 macros that are safer and more maintainable
 // ============================================================================
 
-#define GetIntConfig(path)                                                     \
-    lithium::config::GetConfigValue<int>(                                      \
-        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER)      \
-            .value(),                                                          \
+#define GetIntConfig(path)                                                \
+    lithium::config::GetConfigValue<int>(                                 \
+        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER) \
+            .value(),                                                     \
         path)
 
-#define GetFloatConfig(path)                                                   \
-    lithium::config::GetConfigValue<float>(                                    \
-        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER)      \
-            .value(),                                                          \
+#define GetFloatConfig(path)                                              \
+    lithium::config::GetConfigValue<float>(                               \
+        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER) \
+            .value(),                                                     \
         path)
 
-#define GetBoolConfig(path)                                                    \
-    lithium::config::GetConfigValue<bool>(                                     \
-        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER)      \
-            .value(),                                                          \
+#define GetBoolConfig(path)                                               \
+    lithium::config::GetConfigValue<bool>(                                \
+        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER) \
+            .value(),                                                     \
         path)
 
-#define GetDoubleConfig(path)                                                  \
-    lithium::config::GetConfigValue<double>(                                   \
-        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER)      \
-            .value(),                                                          \
+#define GetDoubleConfig(path)                                             \
+    lithium::config::GetConfigValue<double>(                              \
+        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER) \
+            .value(),                                                     \
         path)
 
-#define GetStringConfig(path)                                                  \
-    lithium::config::GetConfigValue<std::string>(                              \
-        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER)      \
-            .value(),                                                          \
+#define GetStringConfig(path)                                             \
+    lithium::config::GetConfigValue<std::string>(                         \
+        GetPtr<lithium::config::ConfigManager>(Constants::CONFIG_MANAGER) \
+            .value(),                                                     \
         path)
 
 // ============================================================================
 // Enhanced macro for getting config values with better error handling
 // ============================================================================
 
-#define GET_CONFIG_VALUE(configManager, path, type, outputVar)                 \
-    type outputVar;                                                            \
-    do {                                                                       \
-        try {                                                                  \
-            auto opt = (configManager)->get_as<type>(path);                    \
-            if (!opt.has_value()) {                                            \
-                LOG_ERROR( "Config value for {} not found or wrong type",    \
-                      path);                                                   \
-                THROW_BAD_CONFIG_EXCEPTION("Config value for " +               \
-                                           std::string(path) + " not found");  \
-            }                                                                  \
-            outputVar = opt.value();                                           \
-        } catch (const std::bad_optional_access& e) {                          \
-            LOG_ERROR( "Bad access to config value for {}: {}", path,        \
-                  e.what());                                                   \
-            THROW_BAD_CONFIG_EXCEPTION(e.what());                              \
-        } catch (const json::exception& e) {                                   \
-            LOG_ERROR( "Invalid config value for {}: {}", path, e.what());   \
-            THROW_INVALID_CONFIG_EXCEPTION(e.what());                          \
-        } catch (const std::exception& e) {                                    \
-            LOG_ERROR(                                                       \
-                  "Unknown exception when getting config value for {}: {}",    \
-                  path, e.what());                                             \
-            throw;                                                             \
-        }                                                                      \
+#define GET_CONFIG_VALUE(configManager, path, type, outputVar)                \
+    type outputVar;                                                           \
+    do {                                                                      \
+        try {                                                                 \
+            auto opt = (configManager)->get_as<type>(path);                   \
+            if (!opt.has_value()) {                                           \
+                LOG_ERROR("Config value for {} not found or wrong type",      \
+                          path);                                              \
+                THROW_BAD_CONFIG_EXCEPTION("Config value for " +              \
+                                           std::string(path) + " not found"); \
+            }                                                                 \
+            outputVar = opt.value();                                          \
+        } catch (const std::bad_optional_access& e) {                         \
+            LOG_ERROR("Bad access to config value for {}: {}", path,          \
+                      e.what());                                              \
+            THROW_BAD_CONFIG_EXCEPTION(e.what());                             \
+        } catch (const json::exception& e) {                                  \
+            LOG_ERROR("Invalid config value for {}: {}", path, e.what());     \
+            THROW_INVALID_CONFIG_EXCEPTION(e.what());                         \
+        } catch (const std::exception& e) {                                   \
+            LOG_ERROR(                                                        \
+                "Unknown exception when getting config value for {}: {}",     \
+                path, e.what());                                              \
+            throw;                                                            \
+        }                                                                     \
     } while (0)
 
 // ============================================================================
@@ -142,13 +142,13 @@ using lithium::config::GetConfigValue;
     do {                                                                       \
         try {                                                                  \
             if (!(configManager)->set_value(path, value)) {                    \
-                LOG_ERROR( "Failed to set config value for {}", path);       \
+                LOG_ERROR("Failed to set config value for {}", path);          \
                 THROW_BAD_CONFIG_EXCEPTION("Failed to set config value for " + \
                                            std::string(path));                 \
             }                                                                  \
         } catch (const std::exception& e) {                                    \
-            LOG_ERROR( "Exception when setting config value for {}: {}",     \
-                  path, e.what());                                             \
+            LOG_ERROR("Exception when setting config value for {}: {}", path,  \
+                      e.what());                                               \
             throw;                                                             \
         }                                                                      \
     } while (0)

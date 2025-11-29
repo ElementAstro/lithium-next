@@ -122,11 +122,13 @@ bool ClientRegistry::registerClient(const ClientDescriptor& descriptor) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (descriptors_.find(descriptor.name) != descriptors_.end()) {
-        spdlog::warn("Client {} already registered, overwriting", descriptor.name);
+        spdlog::warn("Client {} already registered, overwriting",
+                     descriptor.name);
     }
 
     descriptors_[descriptor.name] = descriptor;
-    spdlog::info("Registered client: {} ({})", descriptor.name, descriptor.description);
+    spdlog::info("Registered client: {} ({})", descriptor.name,
+                 descriptor.description);
     return true;
 }
 
@@ -144,7 +146,8 @@ bool ClientRegistry::unregisterClient(const std::string& name) {
     return true;
 }
 
-std::shared_ptr<ClientBase> ClientRegistry::createClient(const std::string& name) {
+std::shared_ptr<ClientBase> ClientRegistry::createClient(
+    const std::string& name) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto it = descriptors_.find(name);
@@ -179,7 +182,8 @@ std::vector<std::string> ClientRegistry::getRegisteredClients() const {
     return names;
 }
 
-std::vector<std::string> ClientRegistry::getClientsByType(ClientType type) const {
+std::vector<std::string> ClientRegistry::getClientsByType(
+    ClientType type) const {
     std::lock_guard<std::mutex> lock(mutex_);
 
     std::vector<std::string> names;

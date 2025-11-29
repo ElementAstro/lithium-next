@@ -8,6 +8,7 @@
 #define LITHIUM_SERVER_CONTROLLER_SEQUENCE_MANAGEMENT_HPP
 
 #include "../controller.hpp"
+#include "server/utils/response.hpp"
 
 #include <functional>
 #include <memory>
@@ -15,13 +16,16 @@
 #include "atom/log/spdlog_logger.hpp"
 #include "task/sequencer.hpp"
 
+namespace lithium::server::controller {
+
+using ResponseBuilder = utils::ResponseBuilder;
+
 /**
  * @brief Controller for sequence management operations (CRUD, persistence)
  */
 class SequenceManagementController : public Controller {
 private:
-    static std::weak_ptr<lithium::task::ExposureSequence>
-        mExposureSequence;
+    static std::weak_ptr<lithium::task::ExposureSequence> mExposureSequence;
 
     /**
      * @brief Utility function to handle sequence management actions with error
@@ -30,59 +34,38 @@ private:
     static auto handleSequenceAction(
         const crow::request& req, const crow::json::rvalue& body,
         const std::string& command,
-        std::function<crow::json::wvalue(
-            std::shared_ptr<lithium::task::ExposureSequence>)>
+        std::function<
+            nlohmann::json(std::shared_ptr<lithium::task::ExposureSequence>)>
             func) {
-        crow::json::wvalue res;
-        res["command"] = command;
-
-        LOG_INFO( "Received sequence management command: {}", command);
-        LOG_INFO( "Request body: {}", req.body);
+        LOG_INFO("Received sequence management command: {}", command);
+        LOG_INFO("Request body: {}", req.body);
 
         try {
             auto exposureSequence = mExposureSequence.lock();
             if (!exposureSequence) {
-                res["status"] = "error";
-                res["code"] = 500;
-                res["error"] =
-                    "Internal Server Error: ExposureSequence instance is null.";
-                LOG_ERROR(
-                      "ExposureSequence instance is null for command: {}",
-                      command);
-                return crow::response(500, res);
+                LOG_ERROR("ExposureSequence instance is null for command: {}",
+                          command);
+                return ResponseBuilder::internalError(
+                    "ExposureSequence instance is null");
             }
 
             auto result = func(exposureSequence);
-            res["status"] = "success";
-            res["code"] = 200;
-            res["data"] = std::move(result);
-            LOG_INFO( "Command '{}' executed successfully", command);
+            LOG_INFO("Command '{}' executed successfully", command);
+            return ResponseBuilder::success(result, command);
 
         } catch (const std::invalid_argument& e) {
-            res["status"] = "error";
-            res["code"] = 400;
-            res["error"] =
-                std::string("Bad Request: Invalid argument - ") + e.what();
-            LOG_ERROR( "Invalid argument for command {}: {}", command,
-                  e.what());
+            LOG_ERROR("Invalid argument for command {}: {}", command, e.what());
+            return ResponseBuilder::badRequest(
+                std::string("Invalid argument - ") + e.what());
         } catch (const std::runtime_error& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Runtime error - ") +
-                e.what();
-            LOG_ERROR( "Runtime error for command {}: {}", command, e.what());
+            LOG_ERROR("Runtime error for command {}: {}", command, e.what());
+            return ResponseBuilder::internalError(
+                std::string("Runtime error - ") + e.what());
         } catch (const std::exception& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Exception occurred - ") +
-                e.what();
-            LOG_ERROR( "Exception for command {}: {}", command, e.what());
+            LOG_ERROR("Exception for command {}: {}", command, e.what());
+            return ResponseBuilder::internalError(
+                std::string("Exception occurred - ") + e.what());
         }
-
-        LOG_INFO( "Response for command '{}': {}", command, res.dump());
-        return crow::response(200, res);
     }
 
 public:
@@ -97,8 +80,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleSequenceAction(
                     req, body, "saveSequence",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("filename")) {
                             throw std::invalid_argument(
@@ -121,8 +104,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleSequenceAction(
                     req, body, "loadSequence",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("filename")) {
                             throw std::invalid_argument(
@@ -146,8 +129,8 @@ public:
                     crow::json::load(req.body.empty() ? "{}" : req.body);
                 return handleSequenceAction(
                     req, body, "saveToDatabase",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->saveToDatabase();
                         result["message"] =
@@ -163,8 +146,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleSequenceAction(
                     req, body, "loadFromDatabase",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("uuid")) {
                             throw std::invalid_argument(
@@ -188,14 +171,14 @@ public:
                 auto body = crow::json::load("{}");
                 return handleSequenceAction(
                     req, body, "listSequences",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto sequences = exposureSequence->listSequences();
 
-                        std::vector<crow::json::wvalue> sequenceList;
+                        std::vector<nlohmann::json> sequenceList;
                         for (const auto& seq : sequences) {
-                            crow::json::wvalue seqJson;
+                            nlohmann::json seqJson;
                             seqJson["uuid"] = seq.uuid;
                             seqJson["name"] = seq.name;
                             seqJson["createdAt"] = seq.createdAt;
@@ -216,8 +199,8 @@ public:
                     crow::json::load(req.body.empty() ? "{}" : req.body);
                 return handleSequenceAction(
                     req, body, "deleteSequence",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("uuid")) {
                             throw std::invalid_argument(
@@ -240,8 +223,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleSequenceAction(
                     req, body, "getSequenceInfo",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto targetNames = exposureSequence->getTargetNames();
                         auto progress = exposureSequence->getProgress();
@@ -263,12 +246,8 @@ public:
                             avgExecutionTime.count();
                         result["memoryUsage"] = memoryUsage;
                         result["failedTargets"] = failedTargets;
-
-                        // Convert nlohmann::json to crow::json::wvalue
-                        result["executionStats"] =
-                            crow::json::load(executionStats.dump());
-                        result["resourceUsage"] =
-                            crow::json::load(resourceUsage.dump());
+                        result["executionStats"] = executionStats;
+                        result["resourceUsage"] = resourceUsage;
 
                         return result;
                     });
@@ -279,18 +258,15 @@ public:
             .methods("GET"_method)([](const crow::request& req) {
                 auto name = req.url_params.get("name");
                 if (!name) {
-                    crow::json::wvalue error_res;
-                    error_res["status"] = "error";
-                    error_res["code"] = 400;
-                    error_res["error"] = "Missing required parameter: name";
-                    return crow::response(400, error_res);
+                    return ResponseBuilder::badRequest(
+                        "Missing required parameter: name");
                 }
 
                 auto body = crow::json::load("{}");
                 return handleSequenceAction(
                     req, body, "getTargetStatus",
-                    [name](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [name](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto status = exposureSequence->getTargetStatus(name);
                         result["targetName"] = name;
@@ -306,8 +282,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleSequenceAction(
                     req, body, "setTargetParams",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("targetName") || !body.has("params")) {
                             throw std::invalid_argument(
@@ -335,24 +311,21 @@ public:
             .methods("GET"_method)([](const crow::request& req) {
                 auto name = req.url_params.get("name");
                 if (!name) {
-                    crow::json::wvalue error_res;
-                    error_res["status"] = "error";
-                    error_res["code"] = 400;
-                    error_res["error"] = "Missing required parameter: name";
-                    return crow::response(400, error_res);
+                    return ResponseBuilder::badRequest(
+                        "Missing required parameter: name");
                 }
 
                 auto body = crow::json::load("{}");
                 return handleSequenceAction(
                     req, body, "getTargetParams",
-                    [name](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [name](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto params = exposureSequence->getTargetParams(name);
                         result["targetName"] = name;
 
                         if (params.has_value()) {
-                            result["params"] = crow::json::load(params->dump());
+                            result["params"] = *params;
                         } else {
                             result["params"] = nullptr;
                         }
@@ -367,8 +340,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleSequenceAction(
                     req, body, "setTargetTaskParams",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("targetName") || !body.has("taskUUID") ||
                             !body.has("params")) {
@@ -401,20 +374,16 @@ public:
                 auto taskUUID = req.url_params.get("taskUUID");
 
                 if (!targetName || !taskUUID) {
-                    crow::json::wvalue error_res;
-                    error_res["status"] = "error";
-                    error_res["code"] = 400;
-                    error_res["error"] =
-                        "Missing required parameters: targetName, taskUUID";
-                    return crow::response(400, error_res);
+                    return ResponseBuilder::badRequest(
+                        "Missing required parameters: targetName, taskUUID");
                 }
 
                 auto body = crow::json::load("{}");
                 return handleSequenceAction(
                     req, body, "getTargetTaskParams",
                     [targetName,
-                     taskUUID](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                     taskUUID](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto params = exposureSequence->getTargetTaskParams(
                             targetName, taskUUID);
@@ -422,7 +391,7 @@ public:
                         result["taskUUID"] = taskUUID;
 
                         if (params.has_value()) {
-                            result["params"] = crow::json::load(params->dump());
+                            result["params"] = *params;
                         } else {
                             result["params"] = nullptr;
                         }
@@ -441,5 +410,7 @@ public:
         mExposureSequence = sequence;
     }
 };
+
+}  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SEQUENCE_MANAGEMENT_HPP

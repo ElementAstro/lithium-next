@@ -42,7 +42,7 @@ class MesonBuilder(BuildHelperBase):
             meson_options,
             env_vars,
             verbose,
-            parallel
+            parallel,
         )
         self.build_type = build_type
 
@@ -55,10 +55,7 @@ class MesonBuilder(BuildHelperBase):
         """Get the Meson version string."""
         try:
             result = subprocess.run(
-                ["meson", "--version"],
-                capture_output=True,
-                text=True,
-                check=True
+                ["meson", "--version"], capture_output=True, text=True, check=True
             )
             version = result.stdout.strip()
             logger.debug(f"Detected Meson: {version}")
@@ -98,8 +95,7 @@ class MesonBuilder(BuildHelperBase):
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Meson configuration failed: {result.error}")
-            raise ConfigurationError(
-                f"Meson configuration failed: {result.error}")
+            raise ConfigurationError(f"Meson configuration failed: {result.error}")
 
         return result
 
@@ -107,7 +103,8 @@ class MesonBuilder(BuildHelperBase):
         """Build the project using Meson."""
         self.status = BuildStatus.BUILDING
         logger.info(
-            f"Building {'target ' + target if target else 'project'} using Meson")
+            f"Building {'target ' + target if target else 'project'} using Meson"
+        )
 
         # Construct Meson compile command
         build_cmd = [
@@ -115,7 +112,7 @@ class MesonBuilder(BuildHelperBase):
             "compile",
             "-C",
             str(self.build_dir),
-            f"-j{self.parallel}"
+            f"-j{self.parallel}",
         ]
 
         # Add target if specified
@@ -132,7 +129,8 @@ class MesonBuilder(BuildHelperBase):
         if result.success:
             self.status = BuildStatus.COMPLETED
             logger.success(
-                f"Build of {'target ' + target if target else 'project'} successful")
+                f"Build of {'target ' + target if target else 'project'} successful"
+            )
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Build failed: {result.error}")
@@ -146,18 +144,15 @@ class MesonBuilder(BuildHelperBase):
         logger.info(f"Installing project to {self.install_prefix}")
 
         # Run Meson install
-        result = self.run_command(
-            "meson", "install", "-C", str(self.build_dir))
+        result = self.run_command("meson", "install", "-C", str(self.build_dir))
 
         if result.success:
             self.status = BuildStatus.COMPLETED
-            logger.success(
-                f"Project installed successfully to {self.install_prefix}")
+            logger.success(f"Project installed successfully to {self.install_prefix}")
         else:
             self.status = BuildStatus.FAILED
             logger.error(f"Installation failed: {result.error}")
-            raise InstallationError(
-                f"Meson installation failed: {result.error}")
+            raise InstallationError(f"Meson installation failed: {result.error}")
 
         return result
 
@@ -167,13 +162,7 @@ class MesonBuilder(BuildHelperBase):
         logger.info("Running tests with Meson")
 
         # Construct Meson test command
-        test_cmd = [
-            "meson",
-            "test",
-            "-C",
-            str(self.build_dir),
-            "--print-errorlogs"
-        ]
+        test_cmd = ["meson", "test", "-C", str(self.build_dir), "--print-errorlogs"]
 
         if self.verbose:
             test_cmd.append("-v")
@@ -201,7 +190,8 @@ class MesonBuilder(BuildHelperBase):
             result = self.build(doc_target)
             if result.success:
                 logger.success(
-                    f"Documentation generated successfully with target '{doc_target}'")
+                    f"Documentation generated successfully with target '{doc_target}'"
+                )
             return result
         except BuildError as e:
             logger.error(f"Documentation generation failed: {str(e)}")

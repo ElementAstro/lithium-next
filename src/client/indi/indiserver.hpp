@@ -25,8 +25,7 @@ public:
      */
     explicit INDIManager(std::unique_ptr<Connector> connector,
                          const std::string& web_addr,
-                         const std::string& hostname,
-                         int port);
+                         const std::string& hostname, int port);
 
     /**
      * @brief Destructor for INDIManager.
@@ -139,7 +138,7 @@ public:
 private:
     std::unique_ptr<Connector> connector;  ///< The connector used to manage the
                                            ///< INDI server and drivers.
-    std::unique_ptr<IndiHubAgent> indihub_agent; ///< IndiHub agent instance
+    std::unique_ptr<IndiHubAgent> indihub_agent;  ///< IndiHub agent instance
 };
 
 #endif  // LITHIUM_INDISERVER_HPP

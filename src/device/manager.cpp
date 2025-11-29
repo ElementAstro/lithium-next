@@ -48,8 +48,7 @@ public:
             try {
                 eventCallback(event, deviceType, deviceName, data);
             } catch (const std::exception& e) {
-                LOG_ERROR( "DeviceManager: Event callback error: %s",
-                      e.what());
+                LOG_ERROR("DeviceManager: Event callback error: %s", e.what());
             }
         }
     }
@@ -70,11 +69,11 @@ void DeviceManager::addDevice(const std::string& type,
     std::unique_lock lock(pimpl->mtx);
     pimpl->devices[type].push_back(device);
     device->setName(device->getName());
-    LOG_INFO( "Added device {} of type {}", device->getName(), type);
+    LOG_INFO("Added device {} of type {}", device->getName(), type);
 
     if (pimpl->primaryDevices.find(type) == pimpl->primaryDevices.end()) {
         pimpl->primaryDevices[type] = device;
-        LOG_INFO( "Primary device for {} set to {}", type, device->getName());
+        LOG_INFO("Primary device for {} set to {}", type, device->getName());
     }
 }
 
@@ -86,23 +85,22 @@ void DeviceManager::removeDevice(const std::string& type,
         auto& vec = it->second;
         vec.erase(std::remove(vec.begin(), vec.end(), device), vec.end());
         if (device->destroy()) {
-            LOG_ERROR( "Failed to destroy device {}", device->getName());
+            LOG_ERROR("Failed to destroy device {}", device->getName());
         }
-        LOG_INFO( "Removed device {} of type {}", device->getName(), type);
+        LOG_INFO("Removed device {} of type {}", device->getName(), type);
         if (pimpl->primaryDevices[type] == device) {
             if (!vec.empty()) {
                 pimpl->primaryDevices[type] = vec.front();
-                LOG_INFO( "Primary device for {} set to {}", type,
-                      vec.front()->getName());
+                LOG_INFO("Primary device for {} set to {}", type,
+                         vec.front()->getName());
             } else {
                 pimpl->primaryDevices.erase(type);
-                LOG_INFO( "No primary device for {} as the list is empty",
-                      type);
+                LOG_INFO("No primary device for {} as the list is empty", type);
             }
         }
     } else {
-        LOG_WARN( "Attempted to remove device {} of non-existent type {}",
-              device->getName(), type);
+        LOG_WARN("Attempted to remove device {} of non-existent type {}",
+                 device->getName(), type);
     }
 }
 
@@ -114,8 +112,8 @@ void DeviceManager::setPrimaryDevice(const std::string& type,
         if (std::find(it->second.begin(), it->second.end(), device) !=
             it->second.end()) {
             pimpl->primaryDevices[type] = device;
-            LOG_INFO( "Primary device for {} set to {}", type,
-                  device->getName());
+            LOG_INFO("Primary device for {} set to {}", type,
+                     device->getName());
         } else {
             THROW_DEVICE_NOT_FOUND("Device not found");
         }
@@ -131,7 +129,7 @@ std::shared_ptr<AtomDriver> DeviceManager::getPrimaryDevice(
     if (it != pimpl->primaryDevices.end()) {
         return it->second;
     }
-    LOG_WARN( "No primary device found for type {}", type);
+    LOG_WARN("No primary device found for type {}", type);
     return nullptr;
 }
 
@@ -141,11 +139,11 @@ void DeviceManager::connectAllDevices() {
         for (auto& device : vec) {
             try {
                 device->connect("7624");
-                LOG_INFO( "Connected device {} of type {}", device->getName(),
-                      type);
+                LOG_INFO("Connected device {} of type {}", device->getName(),
+                         type);
             } catch (const DeviceNotFoundException& e) {
-                LOG_ERROR( "Failed to connect device {}: {}",
-                      device->getName(), e.what());
+                LOG_ERROR("Failed to connect device {}: {}", device->getName(),
+                          e.what());
             }
         }
     }
@@ -157,11 +155,11 @@ void DeviceManager::disconnectAllDevices() {
         for (auto& device : vec) {
             try {
                 device->disconnect();
-                LOG_INFO( "Disconnected device {} of type {}",
-                      device->getName(), type);
+                LOG_INFO("Disconnected device {} of type {}", device->getName(),
+                         type);
             } catch (const DeviceNotFoundException& e) {
-                LOG_ERROR( "Failed to disconnect device {}: {}",
-                      device->getName(), e.what());
+                LOG_ERROR("Failed to disconnect device {}: {}",
+                          device->getName(), e.what());
             }
         }
     }
@@ -180,7 +178,7 @@ std::vector<std::shared_ptr<AtomDriver>> DeviceManager::findDevicesByType(
     if (it != pimpl->devices.end()) {
         return it->second;
     }
-    LOG_WARN( "No devices found for type {}", type);
+    LOG_WARN("No devices found for type {}", type);
     return {};
 }
 
@@ -191,11 +189,11 @@ void DeviceManager::connectDevicesByType(const std::string& type) {
         for (auto& device : it->second) {
             try {
                 device->connect("7624");
-                LOG_INFO( "Connected device {} of type {}", device->getName(),
-                      type);
+                LOG_INFO("Connected device {} of type {}", device->getName(),
+                         type);
             } catch (const DeviceNotFoundException& e) {
-                LOG_ERROR( "Failed to connect device {}: {}",
-                      device->getName(), e.what());
+                LOG_ERROR("Failed to connect device {}: {}", device->getName(),
+                          e.what());
             }
         }
     } else {
@@ -210,11 +208,11 @@ void DeviceManager::disconnectDevicesByType(const std::string& type) {
         for (auto& device : it->second) {
             try {
                 device->disconnect();
-                LOG_INFO( "Disconnected device {} of type {}",
-                      device->getName(), type);
+                LOG_INFO("Disconnected device {} of type {}", device->getName(),
+                         type);
             } catch (const DeviceNotFoundException& e) {
-                LOG_ERROR( "Failed to disconnect device {}: {}",
-                      device->getName(), e.what());
+                LOG_ERROR("Failed to disconnect device {}: {}",
+                          device->getName(), e.what());
             }
         }
     } else {
@@ -232,7 +230,7 @@ std::shared_ptr<AtomDriver> DeviceManager::getDeviceByName(
     std::shared_lock lock(pimpl->mtx);
     auto device = pimpl->findDeviceByName(name);
     if (!device) {
-        LOG_WARN( "No device found with name {}", name);
+        LOG_WARN("No device found with name {}", name);
     }
     return device;
 }
@@ -245,9 +243,9 @@ void DeviceManager::connectDeviceByName(const std::string& name) {
     }
     try {
         device->connect("7624");
-        LOG_INFO( "Connected device {}", name);
+        LOG_INFO("Connected device {}", name);
     } catch (const DeviceNotFoundException& e) {
-        LOG_ERROR( "Failed to connect device {}: {}", name, e.what());
+        LOG_ERROR("Failed to connect device {}: {}", name, e.what());
         throw;
     }
 }
@@ -260,9 +258,9 @@ void DeviceManager::disconnectDeviceByName(const std::string& name) {
     }
     try {
         device->disconnect();
-        LOG_INFO( "Disconnected device {}", name);
+        LOG_INFO("Disconnected device {}", name);
     } catch (const DeviceNotFoundException& e) {
-        LOG_ERROR( "Failed to disconnect device {}: {}", name, e.what());
+        LOG_ERROR("Failed to disconnect device {}: {}", name, e.what());
         throw;
     }
 }
@@ -277,17 +275,17 @@ void DeviceManager::removeDeviceByName(const std::string& name) {
         if (it != deviceList.end()) {
             auto device = *it;
             deviceList.erase(it);
-            LOG_INFO( "Removed device {} of type {}", name, type);
+            LOG_INFO("Removed device {} of type {}", name, type);
 
             if (pimpl->primaryDevices[type] == device) {
                 if (!deviceList.empty()) {
                     pimpl->primaryDevices[type] = deviceList.front();
-                    LOG_INFO( "Primary device for {} set to {}", type,
-                          deviceList.front()->getName());
+                    LOG_INFO("Primary device for {} set to {}", type,
+                             deviceList.front()->getName());
                 } else {
                     pimpl->primaryDevices.erase(type);
-                    LOG_INFO( "No primary device for {} as the list is empty",
-                          type);
+                    LOG_INFO("No primary device for {} as the list is empty",
+                             type);
                 }
             }
             return;
@@ -304,10 +302,10 @@ bool DeviceManager::initializeDevice(const std::string& name) {
     }
 
     if (!device->initialize()) {
-        LOG_ERROR( "Failed to initialize device {}", name);
+        LOG_ERROR("Failed to initialize device {}", name);
         return false;
     }
-    LOG_INFO( "Initialized device {}", name);
+    LOG_INFO("Initialized device {}", name);
     return true;
 }
 
@@ -319,10 +317,10 @@ bool DeviceManager::destroyDevice(const std::string& name) {
     }
 
     if (!device->destroy()) {
-        LOG_ERROR( "Failed to destroy device {}", name);
+        LOG_ERROR("Failed to destroy device {}", name);
         return false;
     }
-    LOG_INFO( "Destroyed device {}", name);
+    LOG_INFO("Destroyed device {}", name);
     return true;
 }
 
@@ -374,12 +372,12 @@ void DeviceManager::addDeviceWithMetadata(const std::string& type,
     state.lastActivity = std::chrono::system_clock::now();
     pimpl->deviceStates[device->getName()] = state;
 
-    LOG_INFO( "Added device {} of type {} with metadata", device->getName(),
-          type);
+    LOG_INFO("Added device {} of type {} with metadata", device->getName(),
+             type);
 
     if (pimpl->primaryDevices.find(type) == pimpl->primaryDevices.end()) {
         pimpl->primaryDevices[type] = device;
-        LOG_INFO( "Primary device for {} set to {}", type, device->getName());
+        LOG_INFO("Primary device for {} set to {}", type, device->getName());
     }
 
     pimpl->emitEvent(DeviceEventType::DEVICE_ADDED, type, device->getName(),
@@ -400,7 +398,7 @@ void DeviceManager::updateDeviceMetadata(const std::string& name,
                                          const DeviceMetadata& metadata) {
     std::unique_lock lock(pimpl->mtx);
     pimpl->deviceMetadata[name] = metadata;
-    LOG_INFO( "Updated metadata for device {}", name);
+    LOG_INFO("Updated metadata for device {}", name);
 }
 
 std::optional<DeviceState> DeviceManager::getDeviceState(
@@ -464,13 +462,13 @@ std::shared_ptr<AtomDriver> DeviceManager::getDeviceById(
 void DeviceManager::registerEventCallback(DeviceEventCallback callback) {
     std::unique_lock lock(pimpl->mtx);
     pimpl->eventCallback = std::move(callback);
-    LOG_INFO( "DeviceManager: Event callback registered");
+    LOG_INFO("DeviceManager: Event callback registered");
 }
 
 void DeviceManager::unregisterEventCallback() {
     std::unique_lock lock(pimpl->mtx);
     pimpl->eventCallback = nullptr;
-    LOG_INFO( "DeviceManager: Event callback unregistered");
+    LOG_INFO("DeviceManager: Event callback unregistered");
 }
 
 json DeviceManager::exportConfiguration() const {
@@ -506,7 +504,7 @@ json DeviceManager::exportConfiguration() const {
 
 void DeviceManager::importConfiguration(const json& config) {
     if (!config.contains("devices") || !config["devices"].is_array()) {
-        LOG_WARN( "DeviceManager: Invalid configuration format");
+        LOG_WARN("DeviceManager: Invalid configuration format");
         return;
     }
 
@@ -522,7 +520,7 @@ void DeviceManager::importConfiguration(const json& config) {
         pimpl->deviceMetadata[name] = metadata;
     }
 
-    LOG_INFO( "DeviceManager: Configuration imported");
+    LOG_INFO("DeviceManager: Configuration imported");
 }
 
 json DeviceManager::getStatus() const {
@@ -567,7 +565,7 @@ json DeviceManager::getStatus() const {
 
 std::vector<DeviceMetadata> DeviceManager::discoverDevices(
     const std::string& backend) {
-    LOG_INFO( "DeviceManager: Discovering devices via %s", backend.c_str());
+    LOG_INFO("DeviceManager: Discovering devices via %s", backend.c_str());
 
     std::vector<DeviceMetadata> discovered;
 
@@ -578,7 +576,7 @@ std::vector<DeviceMetadata> DeviceManager::discoverDevices(
 }
 
 void DeviceManager::refreshDevices() {
-    LOG_INFO( "DeviceManager: Refreshing device list");
+    LOG_INFO("DeviceManager: Refreshing device list");
 
     std::shared_lock lock(pimpl->mtx);
     for (const auto& [type, deviceList] : pimpl->devices) {

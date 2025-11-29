@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include "device.hpp"
 #include <optional>
 #include <string_view>
+#include "device.hpp"
 
 enum class ShutterStatus { OPEN, CLOSED, OPENING, CLOSING, ERROR, NONE };
 enum class DomeState { IDLE, MOVING, PARKED, PARKING, UNPARKING, ERROR, NONE };
@@ -18,7 +18,8 @@ public:
     explicit AtomDome(std::string name) : AtomDriver(name) {}
 
     virtual auto getAzimuth() -> std::optional<double> = 0;
-    virtual auto getAltitude() -> std::optional<double> = 0; // Some domes have altitude control
+    virtual auto getAltitude()
+        -> std::optional<double> = 0;  // Some domes have altitude control
     virtual auto setAzimuth(double azimuth) -> bool = 0;
     virtual auto setAltitude(double altitude) -> bool = 0;
 
@@ -30,7 +31,7 @@ public:
     virtual auto park() -> bool = 0;
     virtual auto unpark() -> bool = 0;
     virtual auto findHome() -> bool = 0;
-    
+
     virtual auto getDomeState() -> std::optional<DomeState> = 0;
 
     virtual auto canSlave() -> bool = 0;

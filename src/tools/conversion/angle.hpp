@@ -140,7 +140,7 @@ template <std::floating_point T>
  * @return Constrained value.
  */
 [[nodiscard]] inline double rangeTo(double value, double maxVal,
-                                     double minVal) noexcept {
+                                    double minVal) noexcept {
     double range = maxVal - minVal;
     while (value >= maxVal) {
         value -= range;
@@ -163,7 +163,7 @@ template <std::floating_point T>
  * @return Decimal degrees.
  */
 [[nodiscard]] inline double dmsToDegree(int degrees, int minutes,
-                                         double seconds) noexcept {
+                                        double seconds) noexcept {
     double sign = (degrees < 0) ? -1.0 : 1.0;
     return sign * (std::abs(degrees) + minutes / 60.0 + seconds / 3600.0);
 }
@@ -176,7 +176,7 @@ template <std::floating_point T>
  * @return Decimal hours.
  */
 [[nodiscard]] inline double hmsToHours(int hours, int minutes,
-                                        double seconds) noexcept {
+                                       double seconds) noexcept {
     return hours + minutes / 60.0 + seconds / 3600.0;
 }
 

@@ -34,13 +34,13 @@ namespace lithium::client {
  */
 enum class ClientCapability : uint32_t {
     None = 0,
-    Connect = 1 << 0,        // Can connect/disconnect
-    Scan = 1 << 1,           // Can scan for available instances
-    Configure = 1 << 2,      // Supports configuration
-    AsyncOperation = 1 << 3, // Supports async operations
-    StatusQuery = 1 << 4,    // Can query status
-    EventCallback = 1 << 5,  // Supports event callbacks
-    BatchProcess = 1 << 6,   // Supports batch processing
+    Connect = 1 << 0,         // Can connect/disconnect
+    Scan = 1 << 1,            // Can scan for available instances
+    Configure = 1 << 2,       // Supports configuration
+    AsyncOperation = 1 << 3,  // Supports async operations
+    StatusQuery = 1 << 4,     // Can query status
+    EventCallback = 1 << 5,   // Supports event callbacks
+    BatchProcess = 1 << 6,    // Supports batch processing
 };
 
 inline ClientCapability operator|(ClientCapability a, ClientCapability b) {
@@ -75,10 +75,10 @@ enum class ClientState {
  */
 enum class ClientType {
     Unknown,
-    Solver,      // Plate solvers (ASTAP, Astrometry, StellarSolver)
-    Guider,      // Guiding software (PHD2)
-    Server,      // Device servers (INDI)
-    Connector,   // Connection managers
+    Solver,     // Plate solvers (ASTAP, Astrometry, StellarSolver)
+    Guider,     // Guiding software (PHD2)
+    Server,     // Device servers (INDI)
+    Connector,  // Connection managers
     Custom
 };
 
@@ -113,14 +113,14 @@ struct ClientConfig {
 /**
  * @brief Event callback type
  */
-using ClientEventCallback = std::function<void(const std::string& event,
-                                                const std::string& data)>;
+using ClientEventCallback =
+    std::function<void(const std::string& event, const std::string& data)>;
 
 /**
  * @brief Status change callback type
  */
-using ClientStatusCallback = std::function<void(ClientState oldState,
-                                                 ClientState newState)>;
+using ClientStatusCallback =
+    std::function<void(ClientState oldState, ClientState newState)>;
 
 /**
  * @brief Base class for all client components
@@ -135,7 +135,8 @@ public:
      * @param name Unique name for this client instance
      * @param type Client type
      */
-    explicit ClientBase(std::string name, ClientType type = ClientType::Unknown);
+    explicit ClientBase(std::string name,
+                        ClientType type = ClientType::Unknown);
 
     /**
      * @brief Virtual destructor
@@ -413,7 +414,8 @@ public:
      * @param name Client name
      * @return Optional descriptor
      */
-    std::optional<ClientDescriptor> getDescriptor(const std::string& name) const;
+    std::optional<ClientDescriptor> getDescriptor(
+        const std::string& name) const;
 
 private:
     ClientRegistry() = default;
@@ -426,18 +428,20 @@ private:
 /**
  * @brief Helper macro for client registration
  */
-#define LITHIUM_REGISTER_CLIENT(ClientClass, Name, Description, Type, Version, ...) \
-    namespace {                                                                      \
-    static bool _registered_##ClientClass = []() {                                   \
-        lithium::client::ClientDescriptor desc;                                      \
-        desc.name = Name;                                                            \
-        desc.description = Description;                                              \
-        desc.type = Type;                                                            \
-        desc.version = Version;                                                      \
-        desc.requiredBinaries = {__VA_ARGS__};                                       \
-        desc.factory = []() { return std::make_shared<ClientClass>(Name); };         \
-        return lithium::client::ClientRegistry::instance().registerClient(desc);     \
-    }();                                                                             \
+#define LITHIUM_REGISTER_CLIENT(ClientClass, Name, Description, Type, Version, \
+                                ...)                                           \
+    namespace {                                                                \
+    static bool _registered_##ClientClass = []() {                             \
+        lithium::client::ClientDescriptor desc;                                \
+        desc.name = Name;                                                      \
+        desc.description = Description;                                        \
+        desc.type = Type;                                                      \
+        desc.version = Version;                                                \
+        desc.requiredBinaries = {__VA_ARGS__};                                 \
+        desc.factory = []() { return std::make_shared<ClientClass>(Name); };   \
+        return lithium::client::ClientRegistry::instance().registerClient(     \
+            desc);                                                             \
+    }();                                                                       \
     }
 
 }  // namespace lithium::client

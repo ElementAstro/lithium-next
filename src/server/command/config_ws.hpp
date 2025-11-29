@@ -33,8 +33,9 @@ namespace lithium::server::config {
 /**
  * @brief WebSocket-based configuration notification service
  *
- * This class provides real-time configuration change notifications via WebSocket.
- * Clients can subscribe to specific configuration paths or receive all updates.
+ * This class provides real-time configuration change notifications via
+ * WebSocket. Clients can subscribe to specific configuration paths or receive
+ * all updates.
  *
  * Features:
  * - Real-time configuration change notifications
@@ -49,11 +50,12 @@ public:
      * @brief Configuration for the WebSocket service
      */
     struct Config {
-        bool enableBroadcast{true};      ///< Broadcast all changes to all clients
-        bool enableFiltering{true};      ///< Allow clients to filter by path
-        size_t maxClients{100};          ///< Maximum number of WebSocket clients
-        bool includeOldValue{false};     ///< Include old value in change notifications
-        bool includeTimestamp{true};     ///< Include timestamp in notifications
+        bool enableBroadcast{true};  ///< Broadcast all changes to all clients
+        bool enableFiltering{true};  ///< Allow clients to filter by path
+        size_t maxClients{100};      ///< Maximum number of WebSocket clients
+        bool includeOldValue{
+            false};  ///< Include old value in change notifications
+        bool includeTimestamp{true};  ///< Include timestamp in notifications
     };
 
     /**
@@ -118,8 +120,7 @@ public:
      * @param path Configuration path
      * @param data Additional data
      */
-    void broadcastNotification(NotificationType type,
-                               const std::string& path,
+    void broadcastNotification(NotificationType type, const std::string& path,
                                const nlohmann::json& data = {});
 
     /**
@@ -128,8 +129,7 @@ public:
      * @param path Configuration path
      * @param data Additional data
      */
-    void notifySubscribers(NotificationType type,
-                           const std::string& path,
+    void notifySubscribers(NotificationType type, const std::string& path,
                            const nlohmann::json& data = {});
 
     /**
@@ -149,8 +149,9 @@ private:
      * @brief Client subscription information
      */
     struct ClientInfo {
-        std::set<std::string> subscribedPaths;  ///< Paths client is subscribed to
-        bool subscribeAll{false};               ///< Subscribe to all changes
+        std::set<std::string>
+            subscribedPaths;       ///< Paths client is subscribed to
+        bool subscribeAll{false};  ///< Subscribe to all changes
         std::chrono::steady_clock::time_point connectedAt;
         size_t notificationsSent{0};
     };
@@ -190,8 +191,7 @@ private:
      * @param isBinary Whether message is binary
      */
     void onMessage(crow::websocket::connection& conn,
-                   const std::string& message,
-                   bool isBinary);
+                   const std::string& message, bool isBinary);
 
     /**
      * @brief Handle client subscription request
@@ -244,15 +244,15 @@ private:
     void sendToClient(crow::websocket::connection& conn,
                       const std::string& message);
 
-    crow::SimpleApp& app_;                      ///< Reference to Crow app
-    Config config_;                             ///< Service configuration
-    std::atomic<bool> running_{false};          ///< Running state
+    crow::SimpleApp& app_;              ///< Reference to Crow app
+    Config config_;                     ///< Service configuration
+    std::atomic<bool> running_{false};  ///< Running state
 
-    mutable std::mutex clientsMutex_;           ///< Mutex for clients map
+    mutable std::mutex clientsMutex_;  ///< Mutex for clients map
     std::unordered_map<crow::websocket::connection*, ClientInfo> clients_;
 
     std::weak_ptr<lithium::config::ConfigManager> configManager_;
-    size_t configHookId_{0};                    ///< ConfigManager hook ID
+    size_t configHookId_{0};  ///< ConfigManager hook ID
 
     // Statistics
     std::atomic<size_t> totalNotifications_{0};
@@ -262,31 +262,33 @@ private:
 
 /**
  * @brief Register configuration-related WebSocket command handlers
- * 
+ *
  * This function registers handlers for config-related WebSocket commands
- * with the main WebSocketServer. It should be called during server initialization.
- * 
+ * with the main WebSocketServer. It should be called during server
+ * initialization.
+ *
  * Supported commands:
  * - config.subscribe: Subscribe to config path changes
  * - config.unsubscribe: Unsubscribe from config path changes
  * - config.get: Get configuration value
  * - config.set: Set configuration value
  * - config.list: List configuration paths
- * 
+ *
  * @param registerHandler Function to register a command handler
  */
 void registerConfigCommands(
-    std::function<void(const std::string&,
-                       std::function<void(const nlohmann::json&,
-                                          std::function<void(const nlohmann::json&)>)>)>
+    std::function<
+        void(const std::string&,
+             std::function<void(const nlohmann::json&,
+                                std::function<void(const nlohmann::json&)>)>)>
         registerHandler);
 
 /**
  * @brief Initialize configuration notification hooks
- * 
+ *
  * Sets up hooks with ConfigManager to broadcast configuration changes
  * to subscribed WebSocket clients via the message bus.
- * 
+ *
  * @param messageBus Shared pointer to the message bus for broadcasting
  * @return Hook ID for later cleanup
  */

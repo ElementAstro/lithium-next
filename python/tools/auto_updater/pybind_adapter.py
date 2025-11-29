@@ -78,7 +78,11 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info("C++ binding: Checking for updates")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             updates_available = updater.check_for_updates()
 
@@ -87,7 +91,7 @@ class AutoUpdaterPyBindAdapter:
                 "updates_available": updates_available,
                 "latest_version": getattr(config, "latest_version", "unknown"),
                 "current_version": getattr(config, "current_version", "unknown"),
-                "error": None
+                "error": None,
             }
         except Exception as e:
             logger.exception(f"Error in check_for_updates: {e}")
@@ -96,7 +100,7 @@ class AutoUpdaterPyBindAdapter:
                 "updates_available": False,
                 "latest_version": None,
                 "current_version": None,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
@@ -116,7 +120,11 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info("C++ binding: Downloading update")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             download_path = updater.download_update()
 
@@ -126,14 +134,14 @@ class AutoUpdaterPyBindAdapter:
                     "success": True,
                     "download_path": str(download_path),
                     "file_size": file_size,
-                    "error": None
+                    "error": None,
                 }
             else:
                 return {
                     "success": False,
                     "download_path": None,
                     "file_size": 0,
-                    "error": "Download returned empty path"
+                    "error": "Download returned empty path",
                 }
         except Exception as e:
             logger.exception(f"Error in download_update: {e}")
@@ -141,11 +149,13 @@ class AutoUpdaterPyBindAdapter:
                 "success": False,
                 "download_path": None,
                 "file_size": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
-    def verify_update(config_dict: Dict[str, Any], download_path: str) -> Dict[str, Any]:
+    def verify_update(
+        config_dict: Dict[str, Any], download_path: str
+    ) -> Dict[str, Any]:
         """
         Verify downloaded update integrity (C++ binding compatible).
 
@@ -164,7 +174,11 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info(f"C++ binding: Verifying update at {download_path}")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             verified = updater.verify_update(download_path)
 
@@ -177,7 +191,7 @@ class AutoUpdaterPyBindAdapter:
                 "file_hash": file_hash,
                 "expected_hash": getattr(config, "expected_hash", None),
                 "algorithm": "sha256",
-                "error": None
+                "error": None,
             }
         except Exception as e:
             logger.exception(f"Error in verify_update: {e}")
@@ -187,7 +201,7 @@ class AutoUpdaterPyBindAdapter:
                 "file_hash": None,
                 "expected_hash": None,
                 "algorithm": "sha256",
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
@@ -208,21 +222,27 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info("C++ binding: Backing up current installation")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             backup_path = updater.backup_current_installation()
 
             if backup_path:
                 backup_dir = Path(backup_path)
-                backup_size = sum(f.stat().st_size for f in backup_dir.rglob('*') if f.is_file())
-                file_count = len(list(backup_dir.rglob('*')))
+                backup_size = sum(
+                    f.stat().st_size for f in backup_dir.rglob("*") if f.is_file()
+                )
+                file_count = len(list(backup_dir.rglob("*")))
 
                 return {
                     "success": True,
                     "backup_path": str(backup_path),
                     "backup_size": backup_size,
                     "files_backed_up": file_count,
-                    "error": None
+                    "error": None,
                 }
             else:
                 return {
@@ -230,7 +250,7 @@ class AutoUpdaterPyBindAdapter:
                     "backup_path": None,
                     "backup_size": 0,
                     "files_backed_up": 0,
-                    "error": "Backup operation returned empty path"
+                    "error": "Backup operation returned empty path",
                 }
         except Exception as e:
             logger.exception(f"Error in backup_installation: {e}")
@@ -239,11 +259,13 @@ class AutoUpdaterPyBindAdapter:
                 "backup_path": None,
                 "backup_size": 0,
                 "files_backed_up": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
-    def extract_update(config_dict: Dict[str, Any], download_path: str) -> Dict[str, Any]:
+    def extract_update(
+        config_dict: Dict[str, Any], download_path: str
+    ) -> Dict[str, Any]:
         """
         Extract update package (C++ binding compatible).
 
@@ -260,26 +282,30 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info(f"C++ binding: Extracting update from {download_path}")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             extract_path = updater.extract_update(download_path)
 
             if extract_path:
                 extract_dir = Path(extract_path)
-                file_count = len(list(extract_dir.rglob('*')))
+                file_count = len(list(extract_dir.rglob("*")))
 
                 return {
                     "success": True,
                     "extract_path": str(extract_path),
                     "files_extracted": file_count,
-                    "error": None
+                    "error": None,
                 }
             else:
                 return {
                     "success": False,
                     "extract_path": None,
                     "files_extracted": 0,
-                    "error": "Extraction returned empty path"
+                    "error": "Extraction returned empty path",
                 }
         except Exception as e:
             logger.exception(f"Error in extract_update: {e}")
@@ -287,11 +313,13 @@ class AutoUpdaterPyBindAdapter:
                 "success": False,
                 "extract_path": None,
                 "files_extracted": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
-    def install_update(config_dict: Dict[str, Any], extract_path: str) -> Dict[str, Any]:
+    def install_update(
+        config_dict: Dict[str, Any], extract_path: str
+    ) -> Dict[str, Any]:
         """
         Install extracted update (C++ binding compatible).
 
@@ -308,27 +336,31 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info(f"C++ binding: Installing update from {extract_path}")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             installed = updater.install_update(extract_path)
 
             if installed:
                 extract_dir = Path(extract_path)
-                file_count = len(list(extract_dir.rglob('*')))
+                file_count = len(list(extract_dir.rglob("*")))
                 install_dir = getattr(config, "install_path", str(extract_path))
 
                 return {
                     "success": True,
                     "files_installed": file_count,
                     "installation_path": install_dir,
-                    "error": None
+                    "error": None,
                 }
             else:
                 return {
                     "success": False,
                     "files_installed": 0,
                     "installation_path": None,
-                    "error": "Installation failed"
+                    "error": "Installation failed",
                 }
         except Exception as e:
             logger.exception(f"Error in install_update: {e}")
@@ -336,11 +368,13 @@ class AutoUpdaterPyBindAdapter:
                 "success": False,
                 "files_installed": 0,
                 "installation_path": None,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
-    def rollback_update(config_dict: Dict[str, Any], backup_path: str) -> Dict[str, Any]:
+    def rollback_update(
+        config_dict: Dict[str, Any], backup_path: str
+    ) -> Dict[str, Any]:
         """
         Rollback to previous version from backup (C++ binding compatible).
 
@@ -356,32 +390,28 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info(f"C++ binding: Rolling back from backup {backup_path}")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             rolled_back = updater.rollback(backup_path)
 
             if rolled_back:
                 backup_dir = Path(backup_path)
-                file_count = len(list(backup_dir.rglob('*')))
+                file_count = len(list(backup_dir.rglob("*")))
 
-                return {
-                    "success": True,
-                    "files_restored": file_count,
-                    "error": None
-                }
+                return {"success": True, "files_restored": file_count, "error": None}
             else:
                 return {
                     "success": False,
                     "files_restored": 0,
-                    "error": "Rollback operation failed"
+                    "error": "Rollback operation failed",
                 }
         except Exception as e:
             logger.exception(f"Error in rollback_update: {e}")
-            return {
-                "success": False,
-                "files_restored": 0,
-                "error": str(e)
-            }
+            return {"success": False, "files_restored": 0, "error": str(e)}
 
     @staticmethod
     def perform_update(config_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -402,22 +432,22 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info("C++ binding: Performing complete update")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             success = updater.update()
 
             return {
                 "success": success,
                 "status": "completed" if success else "failed",
-                "error": None
+                "error": None,
             }
         except Exception as e:
             logger.exception(f"Error in perform_update: {e}")
-            return {
-                "success": False,
-                "status": "error",
-                "error": str(e)
-            }
+            return {"success": False, "status": "error", "error": str(e)}
 
     @staticmethod
     def cleanup_update(config_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -435,22 +465,22 @@ class AutoUpdaterPyBindAdapter:
         """
         logger.info("C++ binding: Cleaning up update temporary files")
         try:
-            config = UpdaterConfig(**config_dict) if isinstance(config_dict, dict) else config_dict
+            config = (
+                UpdaterConfig(**config_dict)
+                if isinstance(config_dict, dict)
+                else config_dict
+            )
             updater = AutoUpdaterSync(config)
             updater.cleanup()
 
             return {
                 "success": True,
                 "space_freed": 0,  # Would require tracking before/after
-                "error": None
+                "error": None,
             }
         except Exception as e:
             logger.exception(f"Error in cleanup_update: {e}")
-            return {
-                "success": False,
-                "space_freed": 0,
-                "error": str(e)
-            }
+            return {"success": False, "space_freed": 0, "error": str(e)}
 
     @staticmethod
     def compare_version_strings(current: str, latest: str) -> Dict[str, Any]:
@@ -473,14 +503,18 @@ class AutoUpdaterPyBindAdapter:
         try:
             result = compare_versions(current, latest)
 
-            status = "up_to_date" if result == 0 else "update_available" if result < 0 else "newer_installed"
+            status = (
+                "up_to_date"
+                if result == 0
+                else "update_available" if result < 0 else "newer_installed"
+            )
 
             return {
                 "current": current,
                 "latest": latest,
                 "comparison": result,
                 "needs_update": result < 0,
-                "status": status
+                "status": status,
             }
         except Exception as e:
             logger.exception(f"Error in compare_version_strings: {e}")
@@ -489,7 +523,7 @@ class AutoUpdaterPyBindAdapter:
                 "latest": latest,
                 "comparison": 0,
                 "needs_update": False,
-                "status": "error"
+                "status": "error",
             }
 
     @staticmethod
@@ -517,7 +551,7 @@ class AutoUpdaterPyBindAdapter:
                 "components": list(components),
                 "major": components[0] if len(components) > 0 else 0,
                 "minor": components[1] if len(components) > 1 else 0,
-                "patch": components[2] if len(components) > 2 else 0
+                "patch": components[2] if len(components) > 2 else 0,
             }
         except Exception as e:
             logger.exception(f"Error in parse_version_string: {e}")
@@ -526,7 +560,7 @@ class AutoUpdaterPyBindAdapter:
                 "components": [],
                 "major": 0,
                 "minor": 0,
-                "patch": 0
+                "patch": 0,
             }
 
     @staticmethod
@@ -555,7 +589,7 @@ class AutoUpdaterPyBindAdapter:
                 "file_path": file_path,
                 "hash_value": file_hash,
                 "algorithm": algorithm,
-                "error": None
+                "error": None,
             }
         except Exception as e:
             logger.exception(f"Error in calculate_hash: {e}")
@@ -564,7 +598,7 @@ class AutoUpdaterPyBindAdapter:
                 "file_path": file_path,
                 "hash_value": None,
                 "algorithm": algorithm,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod

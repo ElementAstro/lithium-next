@@ -2,9 +2,9 @@
  * @file lithium_task.hpp
  * @brief Unified header for the Lithium Task System
  *
- * This header provides a single include point for all task system functionality.
- * Include this header to access the complete task management, execution, and
- * sequencing capabilities.
+ * This header provides a single include point for all task system
+ * functionality. Include this header to access the complete task management,
+ * execution, and sequencing capabilities.
  *
  * @example
  * ```cpp
@@ -39,10 +39,10 @@
 #define LITHIUM_TASK_HPP
 
 // Core components
-#include "task.hpp"
-#include "target.hpp"
-#include "sequencer.hpp"
 #include "generator.hpp"
+#include "sequencer.hpp"
+#include "target.hpp"
+#include "task.hpp"
 
 // Factory and registration
 #include "custom/factory.hpp"
@@ -98,8 +98,7 @@ inline std::unique_ptr<Task> createTask(const std::string& taskType,
  * @return Unique pointer to the created target
  */
 inline std::unique_ptr<Target> createTarget(
-    const std::string& name,
-    const json& tasksJson = json::array(),
+    const std::string& name, const json& tasksJson = json::array(),
     std::chrono::seconds cooldown = std::chrono::seconds{0},
     int maxRetries = 0) {
     auto target = std::make_unique<Target>(name, cooldown, maxRetries);
@@ -123,9 +122,7 @@ inline std::unique_ptr<ExposureSequence> createSequence() {
  *
  * @return Reference to the TaskFactory
  */
-inline TaskFactory& getFactory() {
-    return TaskFactory::getInstance();
-}
+inline TaskFactory& getFactory() { return TaskFactory::getInstance(); }
 
 /**
  * @brief Check if a task type is available
@@ -153,7 +150,8 @@ inline auto getTasksByCategory() {
  * @param params Parameters to validate
  * @return true if parameters are valid
  */
-inline bool validateTaskParams(const std::string& taskType, const json& params) {
+inline bool validateTaskParams(const std::string& taskType,
+                               const json& params) {
     return TaskFactory::getInstance().validateTaskParameters(taskType, params);
 }
 
@@ -167,7 +165,8 @@ inline bool validateTaskParams(const std::string& taskType, const json& params) 
 inline bool executeTask(const std::string& taskType, const json& params) {
     try {
         auto task = createTask(taskType, "quick_exec_" + taskType, params);
-        if (!task) return false;
+        if (!task)
+            return false;
         task->execute(params);
         return task->getStatus() == TaskStatus::Completed;
     } catch (...) {

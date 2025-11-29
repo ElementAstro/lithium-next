@@ -12,8 +12,8 @@ Description: Tests for PHD2 guider client
 
 *************************************************/
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "client/phd2/phd2_client.hpp"
 
@@ -105,25 +105,29 @@ TEST_F(PHD2ClientTest, GuiderStateInitial) {
 TEST_F(PHD2ClientTest, EventCallback) {
     std::vector<std::string> events;
 
-    client_->setEventCallback([&events](const std::string& event, const std::string& /*data*/) {
-        events.push_back(event);
-    });
+    client_->setEventCallback(
+        [&events](const std::string& event, const std::string& /*data*/) {
+            events.push_back(event);
+        });
 
     client_->initialize();
     client_->destroy();
 
     // Check that events were emitted
     EXPECT_FALSE(events.empty());
-    EXPECT_TRUE(std::find(events.begin(), events.end(), "initialized") != events.end());
-    EXPECT_TRUE(std::find(events.begin(), events.end(), "destroyed") != events.end());
+    EXPECT_TRUE(std::find(events.begin(), events.end(), "initialized") !=
+                events.end());
+    EXPECT_TRUE(std::find(events.begin(), events.end(), "destroyed") !=
+                events.end());
 }
 
 TEST_F(PHD2ClientTest, StatusCallback) {
     std::vector<std::pair<ClientState, ClientState>> transitions;
 
-    client_->setStatusCallback([&transitions](ClientState old, ClientState current) {
-        transitions.push_back({old, current});
-    });
+    client_->setStatusCallback(
+        [&transitions](ClientState old, ClientState current) {
+            transitions.push_back({old, current});
+        });
 
     client_->initialize();
 
@@ -193,7 +197,8 @@ TEST_F(PHD2ClientIntegrationTest, IsCalibrated) {
 TEST_F(PHD2ClientIntegrationTest, GetDecGuideMode) {
     auto mode = client_->getDecGuideMode();
     // Should be one of: Off, Auto, North, South
-    EXPECT_TRUE(mode == "Off" || mode == "Auto" || mode == "North" || mode == "South" || mode.empty());
+    EXPECT_TRUE(mode == "Off" || mode == "Auto" || mode == "North" ||
+                mode == "South" || mode.empty());
 }
 
 TEST_F(PHD2ClientIntegrationTest, GetCameraFrameSize) {

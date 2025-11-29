@@ -91,7 +91,7 @@ private:
     void updateSearchHistory(const std::string& user, const std::string& query);
 
     std::shared_ptr<target::SearchEngine>
-        searchEngine_;  ///< Search engine instance
+        searchEngine_;    ///< Search engine instance
     json lastResults_{};  ///< Last search results snapshot
 
     static constexpr int DEFAULT_FUZZY_TOLERANCE =

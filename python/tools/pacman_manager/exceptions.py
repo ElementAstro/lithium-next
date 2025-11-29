@@ -6,6 +6,7 @@ Exception types for the Pacman Package Manager
 
 class PacmanError(Exception):
     """Base exception for all pacman-related errors"""
+
     pass
 
 
@@ -20,9 +21,11 @@ class CommandError(PacmanError):
 
 class PackageNotFoundError(PacmanError):
     """Exception raised when a package is not found"""
+
     pass
 
 
 class ConfigError(PacmanError):
     """Exception raised when there's a configuration error"""
+
     pass

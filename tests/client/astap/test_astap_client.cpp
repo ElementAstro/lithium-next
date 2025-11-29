@@ -12,8 +12,8 @@ Description: Tests for ASTAP plate solver client
 
 *************************************************/
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "client/astap/astap_client.hpp"
 
@@ -145,7 +145,8 @@ TEST_F(AstapClientTest, DisconnectWhenNotConnected) {
 }
 
 TEST_F(AstapClientTest, SolveWithoutConnection) {
-    auto result = client_->solve("/path/to/image.fits", std::nullopt, 2.0, 1.5, 1920, 1080);
+    auto result = client_->solve("/path/to/image.fits", std::nullopt, 2.0, 1.5,
+                                 1920, 1080);
 
     EXPECT_FALSE(result.success);
     EXPECT_FALSE(result.errorMessage.empty());
@@ -153,7 +154,8 @@ TEST_F(AstapClientTest, SolveWithoutConnection) {
 
 TEST_F(AstapClientTest, SolveWithNonexistentImage) {
     // Even if we could connect, the image doesn't exist
-    auto result = client_->solve("/nonexistent/image.fits", std::nullopt, 2.0, 1.5, 1920, 1080);
+    auto result = client_->solve("/nonexistent/image.fits", std::nullopt, 2.0,
+                                 1.5, 1920, 1080);
 
     EXPECT_FALSE(result.success);
 }
@@ -173,9 +175,10 @@ TEST_F(AstapClientTest, Destroy) {
 TEST_F(AstapClientTest, EventCallback) {
     std::vector<std::string> events;
 
-    client_->setEventCallback([&events](const std::string& event, const std::string& /*data*/) {
-        events.push_back(event);
-    });
+    client_->setEventCallback(
+        [&events](const std::string& event, const std::string& /*data*/) {
+            events.push_back(event);
+        });
 
     client_->initialize();
     client_->destroy();
@@ -188,9 +191,10 @@ TEST_F(AstapClientTest, EventCallback) {
 TEST_F(AstapClientTest, StatusCallback) {
     std::vector<std::pair<ClientState, ClientState>> transitions;
 
-    client_->setStatusCallback([&transitions](ClientState old, ClientState current) {
-        transitions.push_back({old, current});
-    });
+    client_->setStatusCallback(
+        [&transitions](ClientState old, ClientState current) {
+            transitions.push_back({old, current});
+        });
 
     client_->initialize();
 

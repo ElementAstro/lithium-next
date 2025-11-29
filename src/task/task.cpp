@@ -34,7 +34,7 @@ Task::Task(std::string name, std::function<void(const json&)> action)
 
 void Task::execute(const json& params) {
     auto start = std::chrono::high_resolution_clock::now();
-    
+
     // Record start time
     markStartTime();
 
@@ -59,13 +59,13 @@ void Task::execute(const json& params) {
             status_ = TaskStatus::Failed;
             errorType_ = TaskErrorType::InvalidParameter;
             if (!paramErrors_.empty()) {
-                error_ =
-                    "Parameter validation failed: " +
-                    std::accumulate(std::next(paramErrors_.begin()),
-                                    paramErrors_.end(), paramErrors_[0],
-                                    [](const std::string& a, const std::string& b) {
-                                        return a + "; " + b;
-                                    });
+                error_ = "Parameter validation failed: " +
+                         std::accumulate(
+                             std::next(paramErrors_.begin()),
+                             paramErrors_.end(), paramErrors_[0],
+                             [](const std::string& a, const std::string& b) {
+                                 return a + "; " + b;
+                             });
             } else {
                 error_ = "Parameter validation failed";
             }
@@ -93,7 +93,7 @@ void Task::execute(const json& params) {
                          name_, uuid_);
             action_(params);
         }
-        
+
         // Check if cancelled during execution
         if (cancelled_.load()) {
             status_ = TaskStatus::Failed;
@@ -136,10 +136,10 @@ void Task::execute(const json& params) {
         spdlog::error("Task {} with uuid {} failed: {}", name_, uuid_,
                       e.what());
     }
-    
+
     // Record end time
     markEndTime();
-    
+
     spdlog::info("Task {} with uuid {} completed with status {}", name_, uuid_,
                  static_cast<int>(status_));
 
@@ -401,9 +401,7 @@ void Task::setTaskType(const std::string& type) {
     spdlog::info("Task '{}' type set to '{}'", name_, type);
 }
 
-auto Task::getTaskType() const -> const std::string& {
-    return taskType_;
-}
+auto Task::getTaskType() const -> const std::string& { return taskType_; }
 
 json Task::toJson() const {
     auto paramDefs = json::array();
@@ -450,13 +448,12 @@ bool Task::cancel() {
     return false;
 }
 
-auto Task::isCancelled() const -> bool {
-    return cancelled_.load();
-}
+auto Task::isCancelled() const -> bool { return cancelled_.load(); }
 
 void Task::setStatus(TaskStatus status) {
     status_ = status;
-    spdlog::debug("Task {} status changed to {}", name_, static_cast<int>(status));
+    spdlog::debug("Task {} status changed to {}", name_,
+                  static_cast<int>(status));
 }
 
 void Task::setError(const std::string& error) {
@@ -474,22 +471,18 @@ auto Task::getCreationTime() const -> std::chrono::system_clock::time_point {
     return creationTime_;
 }
 
-auto Task::getStartTime() const 
+auto Task::getStartTime() const
     -> std::optional<std::chrono::system_clock::time_point> {
     return startTime_;
 }
 
-auto Task::getEndTime() const 
+auto Task::getEndTime() const
     -> std::optional<std::chrono::system_clock::time_point> {
     return endTime_;
 }
 
-void Task::markStartTime() {
-    startTime_ = std::chrono::system_clock::now();
-}
+void Task::markStartTime() { startTime_ = std::chrono::system_clock::now(); }
 
-void Task::markEndTime() {
-    endTime_ = std::chrono::system_clock::now();
-}
+void Task::markEndTime() { endTime_ = std::chrono::system_clock::now(); }
 
 }  // namespace lithium::task

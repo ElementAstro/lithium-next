@@ -22,39 +22,39 @@ static auto astrometrySolver =
 
 AstrometrySolver::AstrometrySolver(std::string name)
     : AtomSolver(std::move(name)) {
-    DLOG_INFO( "Initializing Astrometry Solver...");
+    DLOG_INFO("Initializing Astrometry Solver...");
 }
 
 AstrometrySolver::~AstrometrySolver() {
-    DLOG_INFO( "Destroying Astrometry Solver...");
+    DLOG_INFO("Destroying Astrometry Solver...");
 }
 
 auto AstrometrySolver::connect(std::string_view solverPath) -> bool {
     if (solverPath.empty()) {
-        LOG_ERROR( "Failed to execute {}: Invalid Parameters",
-              ATOM_FUNC_NAME);
+        LOG_ERROR("Failed to execute {}: Invalid Parameters", ATOM_FUNC_NAME);
         return false;
     }
-    DLOG_INFO( "Connecting to Astap Solver...");
+    DLOG_INFO("Connecting to Astap Solver...");
     if (!atom::io::isFileNameValid(solverPath.data()) ||
         !atom::io::isFileExists(solverPath.data())) {
-        LOG_ERROR( "Failed to execute {}: Invalid Parameters",
-              ATOM_FUNC_NAME);
+        LOG_ERROR("Failed to execute {}: Invalid Parameters", ATOM_FUNC_NAME);
         return false;
     }
     solverPath_ = solverPath;
-    DLOG_INFO( "Connected to Astap Solver");
+    DLOG_INFO("Connected to Astap Solver");
     return true;
 }
 
 auto AstrometrySolver::disconnect() -> bool {
-    DLOG_INFO( "Disconnecting from Astap Solver...");
+    DLOG_INFO("Disconnecting from Astap Solver...");
     solverPath_.clear();
-    DLOG_INFO( "Disconnected from Astap Solver");
+    DLOG_INFO("Disconnected from Astap Solver");
     return true;
 }
 
-auto AstrometrySolver::isConnected() const -> bool { return !solverPath_.empty(); }
+auto AstrometrySolver::isConnected() const -> bool {
+    return !solverPath_.empty();
+}
 
 auto AstrometrySolver::scanSolver() -> std::vector<std::string> {
     return atom::io::checkFileTypeInFolder("/usr/bin", {"solve-field"},
@@ -65,15 +65,15 @@ auto AstrometrySolver::solveImage(
     std::string_view image, std::optional<std::string_view> target_ra,
     std::optional<std::string_view> target_dec, std::optional<double> radius,
     std::optional<int> downsample, std::optional<int> depth, bool overWrite,
-    bool noPlot, int timeout, int debug, const SolveOptions &options) -> bool {
-    DLOG_INFO( "Solving Image {}...", image);
+    bool noPlot, int timeout, int debug, const SolveOptions& options) -> bool {
+    DLOG_INFO("Solving Image {}...", image);
     if (!isConnected()) {
-        LOG_ERROR( "Failed to execute {}: Not Connected", __func__);
+        LOG_ERROR("Failed to execute {}: Not Connected", __func__);
         return false;
     }
     if (!atom::io::isFileNameValid(image.data()) ||
         !atom::io::isFileExists(image.data())) {
-        LOG_ERROR( "Failed to execute {}: Invalid Parameters", __func__);
+        LOG_ERROR("Failed to execute {}: Invalid Parameters", __func__);
         return false;
     }
     try {
@@ -83,8 +83,8 @@ auto AstrometrySolver::solveImage(
         std::string output = atom::system::executeCommand(command, false);
 
         solveResult_ = readSolveResult(output);
-    } catch (const std::exception &e) {
-        LOG_ERROR( "Failed to execute {}: {}", __func__, e.what());
+    } catch (const std::exception& e) {
+        LOG_ERROR("Failed to execute {}: {}", __func__, e.what());
         return false;
     }
     return true;
@@ -92,11 +92,11 @@ auto AstrometrySolver::solveImage(
 
 auto AstrometrySolver::getSolveResult(std::string_view /*image*/)
     -> SolveResult {
-    DLOG_INFO( "Getting Solve Result...");
+    DLOG_INFO("Getting Solve Result...");
     return solveResult_;
 }
 
-auto AstrometrySolver::readSolveResult(const std::string &output)
+auto AstrometrySolver::readSolveResult(const std::string& output)
     -> SolveResult {
     SolveResult result;
     std::unordered_map<std::string, std::string> tokens;
@@ -149,7 +149,7 @@ std::string AstrometrySolver::buildCommand(
     std::string_view image, std::optional<std::string_view> target_ra,
     std::optional<std::string_view> target_dec, std::optional<double> radius,
     std::optional<int> downsample, std::optional<int> depth, bool overWrite,
-    bool noPlot, int timeout, int debug, const SolveOptions &options) {
+    bool noPlot, int timeout, int debug, const SolveOptions& options) {
     std::vector<std::pair<std::string, std::optional<std::string>>> optionMap =
         {{"--backend-config", options.backend_config},
          {"--config", options.config},
@@ -328,7 +328,7 @@ std::string AstrometrySolver::buildCommand(
     std::vector<std::string> commandParts;
     commandParts.emplace_back(std::string(solverPath_) + " solve-field");
 
-    for (const auto &[flag, value] : optionMap) {
+    for (const auto& [flag, value] : optionMap) {
         if (value.has_value()) {
             if (value.value().empty()) {
                 commandParts.emplace_back(flag);
@@ -346,14 +346,14 @@ std::string AstrometrySolver::buildCommand(
 
     // 拼接命令
     std::ostringstream commandStream;
-    for (const auto &part : commandParts) {
+    for (const auto& part : commandParts) {
         commandStream << part << " ";
     }
 
     return commandStream.str();
 }
 
-SolveResults AstrometrySolver::plateSolve(const std::string &filename,
+SolveResults AstrometrySolver::plateSolve(const std::string& filename,
                                           int focalLength,
                                           double cameraSizeWidth,
                                           double cameraSizeHeight) {
@@ -369,15 +369,15 @@ SolveResults AstrometrySolver::plateSolve(const std::string &filename,
         << " --nsigma 8 --no-plots --no-remove-lines --uniformize 0 "
            "--timestamp";
 
-    LOG_INFO( "Executing command: {}", cmd.str());
+    LOG_INFO("Executing command: {}", cmd.str());
     std::string output = atom::system::executeCommand(cmd.str());
 
     return result;
 }
 
-auto AstrometrySolver::readSolveResult(const std::string &filename,
-                                       int imageWidth,
-                                       int imageHeight) -> SolveResults {
+auto AstrometrySolver::readSolveResult(const std::string& filename,
+                                       int imageWidth, int imageHeight)
+    -> SolveResults {
     isSolveImageFinished = false;
     SolveResults result;
 
@@ -385,11 +385,11 @@ auto AstrometrySolver::readSolveResult(const std::string &filename,
     std::string baseFilename = filename.substr(0, filename.length() - 5);
 
     std::string cmd = "wcsinfo " + baseFilename + ".wcs";
-    LOG_INFO( "Executing command: {}", cmd);
+    LOG_INFO("Executing command: {}", cmd);
 
     std::string output = atom::system::executeCommand(cmd);
     if (output.empty()) {
-        LOG_ERROR( "Tools:Plate Solve Failure");
+        LOG_ERROR("Tools:Plate Solve Failure");
         result.RA_Degree = -1;
         result.DEC_Degree = -1;
         plateSolveInProgress = false;
@@ -403,16 +403,15 @@ auto AstrometrySolver::readSolveResult(const std::string &filename,
     size_t raHPos = output.find("ra_center_h");
 
     std::string raStr = output.substr(raPos + 10, decPos - raPos - 11);
-    std::string decStr =
-        output.substr(decPos + 11, orientPos - decPos - 12);
-    std::string rotStr =
-        output.substr(orientPos + 19, raHPos - orientPos - 20);
+    std::string decStr = output.substr(decPos + 11, orientPos - decPos - 12);
+    std::string rotStr = output.substr(orientPos + 19, raHPos - orientPos - 20);
 
     double raDegree = std::stod(raStr);
     double decDegree = std::stod(decStr);
     double rotationDegree = std::stod(rotStr);
 
-    lithium::tools::solver::WCSParams wcs = lithium::tools::solver::extractWCSParams(output);
+    lithium::tools::solver::WCSParams wcs =
+        lithium::tools::solver::extractWCSParams(output);
     std::vector<lithium::tools::conversion::SphericalCoordinates> corners =
         lithium::tools::solver::getFOVCorners(wcs, imageWidth, imageHeight);
 
@@ -428,8 +427,8 @@ auto AstrometrySolver::readSolveResult(const std::string &filename,
     result.RA_Degree = raDegree;
     result.DEC_Degree = decDegree;
 
-    LOG_INFO( "Plate Solve Success");
-    LOG_INFO( "RA: {} DEC: {}", raDegree, decDegree);
+    LOG_INFO("Plate Solve Success");
+    LOG_INFO("RA: {} DEC: {}", raDegree, decDegree);
 
     plateSolveInProgress = false;
     return result;
@@ -437,16 +436,16 @@ auto AstrometrySolver::readSolveResult(const std::string &filename,
 
 PlateSolveResult AstrometrySolver::solve(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH, int imageWidth, int imageHeight) {
-
-    std::string command = buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH, int imageWidth, int imageHeight) {
+    std::string command =
+        buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
     std::string output;
 
     try {
         output = atom::system::executeCommand(command);
     } catch (const std::exception& e) {
-        LOG_ERROR( "Solve failed: {}", e.what());
+        LOG_ERROR("Solve failed: {}", e.what());
         return PlateSolveResult{.success = false};
     }
 
@@ -455,13 +454,13 @@ PlateSolveResult AstrometrySolver::solve(
 
 std::future<PlateSolveResult> AstrometrySolver::async_solve(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH, int imageWidth, int imageHeight) {
-
-    return std::async(std::launch::async,
-        [this, imageFilePath, initialCoordinates, fovW, fovH, imageWidth, imageHeight]() {
-            return this->solve(imageFilePath, initialCoordinates,
-                             fovW, fovH, imageWidth, imageHeight);
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH, int imageWidth, int imageHeight) {
+    return std::async(
+        std::launch::async, [this, imageFilePath, initialCoordinates, fovW,
+                             fovH, imageWidth, imageHeight]() {
+            return this->solve(imageFilePath, initialCoordinates, fovW, fovH,
+                               imageWidth, imageHeight);
         });
 }
 
@@ -470,9 +469,7 @@ bool AstrometrySolver::configure(const SolveOptions& options) {
     return true;
 }
 
-const SolveOptions& AstrometrySolver::getOptions() const {
-    return options_;
-}
+const SolveOptions& AstrometrySolver::getOptions() const { return options_; }
 
 double AstrometrySolver::toRadians(double degrees) {
     return degrees * M_PI / 180.0;
@@ -486,26 +483,23 @@ double AstrometrySolver::arcsecToDegree(double arcsec) {
     return arcsec / 3600.0;
 }
 
-std::string AstrometrySolver::getOutputPath(const std::string& imageFilePath) const {
+std::string AstrometrySolver::getOutputPath(
+    const std::string& imageFilePath) const {
     std::filesystem::path path(imageFilePath);
     return (path.parent_path() / (path.stem().string() + ".wcs")).string();
 }
 
 std::string AstrometrySolver::buildCommand(
-    const std::string& imageFilePath,
-    const std::optional<Coordinates>& coords,
+    const std::string& imageFilePath, const std::optional<Coordinates>& coords,
     double fovW, double fovH) {
-
     std::ostringstream cmd;
     cmd << "solve-field"
         << " --overwrite"
         << " --scale-units degwidth"
-        << " --scale-low " << (fovW * 0.9)
-        << " --scale-high " << (fovW * 1.1);
+        << " --scale-low " << (fovW * 0.9) << " --scale-high " << (fovW * 1.1);
 
     if (coords) {
-        cmd << " --ra " << coords->ra
-            << " --dec " << coords->dec
+        cmd << " --ra " << coords->ra << " --dec " << coords->dec
             << " --radius 5";
     }
 
@@ -534,9 +528,9 @@ PlateSolveResult AstrometrySolver::parseSolveOutput(const std::string& output) {
     return result;
 }
 
-ATOM_MODULE(astrometry, [](Component &component) {
-    LOG_INFO( "Registering astrometry module...");
-    LOG_INFO( "AstrometryComponent Constructed");
+ATOM_MODULE(astrometry, [](Component& component) {
+    LOG_INFO("Registering astrometry module...");
+    LOG_INFO("AstrometryComponent Constructed");
 
     component.def("connect", &AstrometrySolver::connect, "main",
                   "Connect to astrometry solver");
@@ -557,5 +551,5 @@ ATOM_MODULE(astrometry, [](Component &component) {
     component.defType<AstrometrySolver>("astrometry", "device.solver",
                                         "Astap solver");
 
-    LOG_INFO( "Registered astrometry module.");
+    LOG_INFO("Registered astrometry module.");
 });

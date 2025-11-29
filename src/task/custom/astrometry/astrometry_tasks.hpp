@@ -28,7 +28,9 @@ class PlateSolveTask : public TaskBase {
 public:
     PlateSolveTask() : TaskBase("PlateSolve") { setupParameters(); }
     PlateSolveTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "PlateSolve"; }
     static std::string getStaticTaskTypeName() { return "PlateSolve"; }
@@ -49,9 +51,13 @@ private:
  */
 class PlateSolveExposureTask : public TaskBase {
 public:
-    PlateSolveExposureTask() : TaskBase("PlateSolveExposure") { setupParameters(); }
+    PlateSolveExposureTask() : TaskBase("PlateSolveExposure") {
+        setupParameters();
+    }
     PlateSolveExposureTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "PlateSolveExposure"; }
     static std::string getStaticTaskTypeName() { return "PlateSolveExposure"; }
@@ -73,7 +79,9 @@ class CenteringTask : public TaskBase {
 public:
     CenteringTask() : TaskBase("Centering") { setupParameters(); }
     CenteringTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Centering"; }
     static std::string getStaticTaskTypeName() { return "Centering"; }
@@ -83,7 +91,8 @@ protected:
 
 private:
     void setupParameters();
-    double calculateSeparation(double ra1, double dec1, double ra2, double dec2);
+    double calculateSeparation(double ra1, double dec1, double ra2,
+                               double dec2);
 };
 
 /**
@@ -96,7 +105,9 @@ class SyncToSolveTask : public TaskBase {
 public:
     SyncToSolveTask() : TaskBase("SyncToSolve") { setupParameters(); }
     SyncToSolveTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "SyncToSolve"; }
     static std::string getStaticTaskTypeName() { return "SyncToSolve"; }
@@ -118,7 +129,9 @@ class BlindSolveTask : public TaskBase {
 public:
     BlindSolveTask() : TaskBase("BlindSolve") { setupParameters(); }
     BlindSolveTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "BlindSolve"; }
     static std::string getStaticTaskTypeName() { return "BlindSolve"; }

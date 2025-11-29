@@ -14,19 +14,23 @@ Custom exceptions for the convert_to_header package.
 
 class ConversionError(Exception):
     """Base exception for conversion errors."""
+
     pass
 
 
 class FileFormatError(ConversionError):
     """Exception raised for file format errors."""
+
     pass
 
 
 class CompressionError(ConversionError):
     """Exception raised for compression/decompression errors."""
+
     pass
 
 
 class ChecksumError(ConversionError):
     """Exception raised for checksum verification errors."""
+
     pass

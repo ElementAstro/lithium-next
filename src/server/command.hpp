@@ -17,7 +17,6 @@
 #include "atom/memory/memory.hpp"
 #include "eventloop.hpp"
 
-
 namespace lithium::app {
 
 /**
@@ -49,7 +48,7 @@ struct CommandResult {
 class CommandDispatcher {
 public:
     using CommandID = std::string;
-    using CommandHandler = std::function<void(const std::any&)>;
+    using CommandHandler = std::function<void(std::any&)>;
     using ResultType = std::variant<std::any, std::exception_ptr>;
     using CommandCallback =
         std::function<void(const CommandID&, const ResultType&)>;
@@ -81,12 +80,13 @@ public:
      *
      * @tparam CommandType Command data type
      * @param id Unique command identifier
-     * @param handler Command execution function
+     * @param handler Command execution function (non-const to allow in-place
+     * result assignment)
      * @param undoHandler Optional command undo function
      */
     template <typename CommandType>
     void registerCommand(const CommandID& id,
-                         std::function<void(const CommandType&)> handler,
+                         std::function<void(CommandType&)> handler,
                          std::optional<std::function<void(const CommandType&)>>
                              undoHandler = std::nullopt);
 
@@ -345,14 +345,14 @@ auto CommandDispatcher::dispatch(const CommandID& id,
 
 template <typename CommandType>
 void CommandDispatcher::registerCommand(
-    const CommandID& id, std::function<void(const CommandType&)> handler,
+    const CommandID& id, std::function<void(CommandType&)> handler,
     std::optional<std::function<void(const CommandType&)>> undoHandler) {
     std::unique_lock lock(accessMutex_);
-    commandHandlers_[id] = [handler](const std::any& cmd) {
-        handler(std::any_cast<const CommandType&>(cmd));
+    commandHandlers_[id] = [handler](std::any& cmd) {
+        handler(std::any_cast<CommandType&>(cmd));
     };
     if (undoHandler) {
-        undoHandlers_[id] = [undoHandler](const std::any& cmd) {
+        undoHandlers_[id] = [undoHandler](std::any& cmd) {
             (*undoHandler)(std::any_cast<const CommandType&>(cmd));
         };
     }

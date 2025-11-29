@@ -6,7 +6,7 @@ info:
     Real-time WebSocket API for controlling astronomical equipment and monitoring device status.
     This API provides bidirectional communication for device control, event notifications, and
     progress monitoring of long-running operations like exposures and sequences.
-    
+
     ## Features
     - Real-time device status updates
     - Asynchronous event notifications
@@ -14,22 +14,22 @@ info:
     - Device control commands
     - System management operations
     - File system operations
-    
+
     ## Connection
     Connect to: `ws://your-server-address/api/v1/ws?apiKey=your-api-key`
     For secure connections, use: `wss://your-server-address/api/v1/ws?apiKey=your-api-key`
-    
+
     ## Authentication
     API key must be provided as a query parameter during WebSocket connection handshake.
     Invalid or missing API key will result in connection close with code 4001 (Unauthorized).
-    
+
     ## Heartbeat
     Server sends ping messages every 30 seconds. Client must respond with pong within 5 seconds.
-    
+
     ## Subscription Model
     After connection, clients can subscribe to specific event topics using the subscribe command.
     Topic patterns support wildcards (e.g., "device.camera.*", "exposure.*").
-    
+
     ## Error Handling
     Command errors are returned in response messages with success: false and error details.
     Connection errors result in WebSocket close codes:
@@ -38,7 +38,7 @@ info:
     - 1002: Protocol error (e.g., failed heartbeat)
     - 4001: Unauthorized (invalid API key)
     - 4002: Rate limited
-    
+
   contact:
     name: API Support
     url: https://github.com/ElementAstro/lithium-next
@@ -121,7 +121,7 @@ operations:
     description: Sent immediately after successful WebSocket connection and authentication
     messages:
       - $ref: '#/channels/root/messages/connectionEstablished'
-  
+
   onPing:
     action: receive
     channel:
@@ -130,7 +130,7 @@ operations:
     description: Server sends ping every 30 seconds to maintain connection health
     messages:
       - $ref: '#/channels/root/messages/ping'
-  
+
   sendPong:
     action: send
     channel:
@@ -139,7 +139,7 @@ operations:
     description: Client must respond to ping within 5 seconds
     messages:
       - $ref: '#/channels/root/messages/pong'
-  
+
   # Device Events
   onDeviceConnected:
     action: receive
@@ -148,7 +148,7 @@ operations:
     summary: Device connected event
     messages:
       - $ref: '#/channels/root/messages/deviceConnected'
-  
+
   onDeviceDisconnected:
     action: receive
     channel:
@@ -156,7 +156,7 @@ operations:
     summary: Device disconnected event
     messages:
       - $ref: '#/channels/root/messages/deviceDisconnected'
-  
+
   onDeviceStatusUpdate:
     action: receive
     channel:
@@ -165,7 +165,7 @@ operations:
     description: Periodic updates of device status (every 1-5 seconds)
     messages:
       - $ref: '#/channels/root/messages/deviceStatusUpdate'
-  
+
   # Exposure Events
   onExposureStarted:
     action: receive
@@ -174,7 +174,7 @@ operations:
     summary: Exposure started event
     messages:
       - $ref: '#/channels/root/messages/exposureStarted'
-  
+
   onExposureProgress:
     action: receive
     channel:
@@ -183,7 +183,7 @@ operations:
     description: Sent every 1-2 seconds during exposure
     messages:
       - $ref: '#/channels/root/messages/exposureProgress'
-  
+
   onExposureFinished:
     action: receive
     channel:
@@ -191,7 +191,7 @@ operations:
     summary: Exposure finished event
     messages:
       - $ref: '#/channels/root/messages/exposureFinished'
-  
+
   onExposureAborted:
     action: receive
     channel:
@@ -199,7 +199,7 @@ operations:
     summary: Exposure aborted event
     messages:
       - $ref: '#/channels/root/messages/exposureAborted'
-  
+
   # Mount Events
   onMountSlewStarted:
     action: receive
@@ -208,7 +208,7 @@ operations:
     summary: Mount slew started event
     messages:
       - $ref: '#/channels/root/messages/mountSlewStarted'
-  
+
   onMountSlewFinished:
     action: receive
     channel:
@@ -216,7 +216,7 @@ operations:
     summary: Mount slew finished event
     messages:
       - $ref: '#/channels/root/messages/mountSlewFinished'
-  
+
   onMountMeridianFlipRequired:
     action: receive
     channel:
@@ -224,7 +224,7 @@ operations:
     summary: Meridian flip required alert
     messages:
       - $ref: '#/channels/root/messages/mountMeridianFlipRequired'
-  
+
   # Sequence Events
   onSequenceStarted:
     action: receive
@@ -233,7 +233,7 @@ operations:
     summary: Sequence started event
     messages:
       - $ref: '#/channels/root/messages/sequenceStarted'
-  
+
   onSequenceProgress:
     action: receive
     channel:
@@ -241,7 +241,7 @@ operations:
     summary: Sequence progress event
     messages:
       - $ref: '#/channels/root/messages/sequenceProgress'
-  
+
   onSequenceFinished:
     action: receive
     channel:
@@ -249,7 +249,7 @@ operations:
     summary: Sequence finished event
     messages:
       - $ref: '#/channels/root/messages/sequenceFinished'
-  
+
   # System Events
   onNotification:
     action: receive
@@ -258,7 +258,7 @@ operations:
     summary: System notification
     messages:
       - $ref: '#/channels/root/messages/notification'
-  
+
   onSafetyAlert:
     action: receive
     channel:
@@ -266,7 +266,7 @@ operations:
     summary: Safety alert event
     messages:
       - $ref: '#/channels/root/messages/safetyAlert'
-  
+
   # Commands (Client to Server)
   sendCommand:
     action: send
@@ -276,7 +276,7 @@ operations:
     description: All client-to-server commands use this operation
     messages:
       - $ref: '#/channels/root/messages/command'
-  
+
   onCommandResponse:
     action: receive
     channel:
@@ -302,21 +302,21 @@ components:
       summary: Sent after successful connection and authentication
       payload:
         $ref: '#/components/schemas/connectionEstablishedPayload'
-    
+
     ping:
       name: ping
       title: Ping
       summary: Heartbeat ping from server
       payload:
         $ref: '#/components/schemas/pingPayload'
-    
+
     pong:
       name: pong
       title: Pong
       summary: Heartbeat pong response from client
       payload:
         $ref: '#/components/schemas/pongPayload'
-    
+
     # Device Messages
     deviceConnected:
       name: deviceConnected
@@ -324,21 +324,21 @@ components:
       summary: Device connection established
       payload:
         $ref: '#/components/schemas/deviceConnectedPayload'
-    
+
     deviceDisconnected:
       name: deviceDisconnected
       title: Device Disconnected
       summary: Device connection lost or manually disconnected
       payload:
         $ref: '#/components/schemas/deviceDisconnectedPayload'
-    
+
     deviceStatusUpdate:
       name: deviceStatusUpdate
       title: Device Status Update
       summary: Periodic device status update
       payload:
         $ref: '#/components/schemas/deviceStatusUpdatePayload'
-    
+
     # Exposure Messages
     exposureStarted:
       name: exposureStarted
@@ -346,28 +346,28 @@ components:
       summary: Camera exposure has begun
       payload:
         $ref: '#/components/schemas/exposureStartedPayload'
-    
+
     exposureProgress:
       name: exposureProgress
       title: Exposure Progress
       summary: Exposure progress update
       payload:
         $ref: '#/components/schemas/exposureProgressPayload'
-    
+
     exposureFinished:
       name: exposureFinished
       title: Exposure Finished
       summary: Exposure completed (success or failure)
       payload:
         $ref: '#/components/schemas/exposureFinishedPayload'
-    
+
     exposureAborted:
       name: exposureAborted
       title: Exposure Aborted
       summary: Exposure was manually aborted
       payload:
         $ref: '#/components/schemas/exposureAbortedPayload'
-    
+
     # Mount Messages
     mountSlewStarted:
       name: mountSlewStarted
@@ -375,21 +375,21 @@ components:
       summary: Mount slew operation has begun
       payload:
         $ref: '#/components/schemas/mountSlewStartedPayload'
-    
+
     mountSlewFinished:
       name: mountSlewFinished
       title: Mount Slew Finished
       summary: Mount slew operation completed
       payload:
         $ref: '#/components/schemas/mountSlewFinishedPayload'
-    
+
     mountMeridianFlipRequired:
       name: mountMeridianFlipRequired
       title: Meridian Flip Required
       summary: Meridian flip is approaching or required
       payload:
         $ref: '#/components/schemas/mountMeridianFlipRequiredPayload'
-    
+
     # Sequence Messages
     sequenceStarted:
       name: sequenceStarted
@@ -397,21 +397,21 @@ components:
       summary: Imaging sequence has begun execution
       payload:
         $ref: '#/components/schemas/sequenceStartedPayload'
-    
+
     sequenceProgress:
       name: sequenceProgress
       title: Sequence Progress
       summary: Sequence progress update
       payload:
         $ref: '#/components/schemas/sequenceProgressPayload'
-    
+
     sequenceFinished:
       name: sequenceFinished
       title: Sequence Finished
       summary: Sequence completed
       payload:
         $ref: '#/components/schemas/sequenceFinishedPayload'
-    
+
     # System Messages
     notification:
       name: notification
@@ -419,14 +419,14 @@ components:
       summary: General system notification or alert
       payload:
         $ref: '#/components/schemas/notificationPayload'
-    
+
     safetyAlert:
       name: safetyAlert
       title: Safety Alert
       summary: Safety condition alert
       payload:
         $ref: '#/components/schemas/safetyAlertPayload'
-    
+
     # Command Messages
     command:
       name: command
@@ -434,7 +434,7 @@ components:
       summary: Client command to server
       payload:
         $ref: '#/components/schemas/commandPayload'
-    
+
     commandResponse:
       name: commandResponse
       title: Command Response
@@ -450,7 +450,7 @@ components:
       description: ISO 8601 timestamp
       examples:
         - "2023-11-20T12:00:00Z"
-    
+
     deviceId:
       type: string
       description: Unique device identifier
@@ -458,7 +458,7 @@ components:
         - "cam-001"
         - "mnt-001"
         - "foc-001"
-    
+
     deviceType:
       type: string
       enum:
@@ -472,7 +472,7 @@ components:
         - weatherstation
         - flatpanel
       description: Type of astronomical device
-    
+
     coordinates:
       type: object
       properties:
@@ -489,7 +489,7 @@ components:
       required:
         - ra
         - dec
-    
+
     errorObject:
       type: object
       properties:
@@ -511,7 +511,7 @@ components:
       required:
         - code
         - message
-    
+
     # Event Payloads
     connectionEstablishedPayload:
       type: object
@@ -548,7 +548,7 @@ components:
             sessionId: "sess_abc123"
             serverVersion: "1.0.0"
             protocolVersion: "1.0"
-    
+
     pingPayload:
       type: object
       properties:
@@ -560,7 +560,7 @@ components:
       required:
         - type
         - timestamp
-    
+
     pongPayload:
       type: object
       properties:
@@ -572,7 +572,7 @@ components:
       required:
         - type
         - timestamp
-    
+
     deviceConnectedPayload:
       type: object
       properties:
@@ -599,7 +599,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     deviceDisconnectedPayload:
       type: object
       properties:
@@ -626,7 +626,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     deviceStatusUpdatePayload:
       type: object
       properties:
@@ -653,7 +653,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     exposureStartedPayload:
       type: object
       properties:
@@ -685,7 +685,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     exposureProgressPayload:
       type: object
       properties:
@@ -719,7 +719,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     exposureFinishedPayload:
       type: object
       properties:
@@ -753,7 +753,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     exposureAbortedPayload:
       type: object
       properties:
@@ -777,7 +777,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     mountSlewStartedPayload:
       type: object
       properties:
@@ -805,7 +805,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     mountSlewFinishedPayload:
       type: object
       properties:
@@ -832,7 +832,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     mountMeridianFlipRequiredPayload:
       type: object
       properties:
@@ -860,7 +860,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     sequenceStartedPayload:
       type: object
       properties:
@@ -889,7 +889,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     sequenceProgressPayload:
       type: object
       properties:
@@ -933,7 +933,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     sequenceFinishedPayload:
       type: object
       properties:
@@ -966,7 +966,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     notificationPayload:
       type: object
       properties:
@@ -999,7 +999,7 @@ components:
         - type
         - timestamp
         - data
-    
+
     safetyAlertPayload:
       type: object
       properties:
@@ -1033,13 +1033,13 @@ components:
         - type
         - timestamp
         - data
-    
+
     # Command Payloads
     commandPayload:
       type: object
       description: |
         Generic command structure for all client-to-server commands.
-        
+
         Available commands include:
         - Subscription: subscribe, unsubscribe
         - Device queries: device.get_status
@@ -1050,7 +1050,7 @@ components:
         - Sequence: sequence.pause, sequence.resume, sequence.stop
         - System: system.get_status, system.restart_service, system.shutdown, system.restart
         - Filesystem: filesystem.list, filesystem.read, filesystem.write, filesystem.delete, filesystem.move, filesystem.copy
-        
+
         See the original specification for complete parameter documentation for each command.
       properties:
         type:
@@ -1098,7 +1098,7 @@ components:
                 x: 1
                 y: 1
               gain: 100
-    
+
     commandResponsePayload:
       type: object
       description: Server response to client commands

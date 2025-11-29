@@ -68,16 +68,16 @@ struct SectionHeader {
  * @brief Represents a symbol in the ELF file.
  */
 struct Symbol {
-    std::string name;    ///< Symbol name
-    uint64_t value;      ///< Symbol value
-    uint64_t size;       ///< Symbol size
-    unsigned char bind;  ///< Symbol binding
-    unsigned char type;  ///< Symbol type
-    uint16_t shndx;      ///< Section index
+    std::string name;           ///< Symbol name
+    uint64_t value;             ///< Symbol value
+    uint64_t size;              ///< Symbol size
+    unsigned char bind;         ///< Symbol binding
+    unsigned char type;         ///< Symbol type
+    uint16_t shndx;             ///< Section index
     std::string demangledName;  // 新增：解除名称修饰后的符号名
     uint16_t version;           // 新增：符号版本
-    bool isWeak;               // 新增：是否为弱符号
-    bool isHidden;             // 新增：是否为隐藏符号
+    bool isWeak;                // 新增：是否为弱符号
+    bool isHidden;              // 新增：是否为隐藏符号
 } ATOM_ALIGNAS(64);
 
 /**
@@ -240,15 +240,21 @@ public:
     void clearCache();
 
     // 新增方法
-    [[nodiscard]] auto demangleSymbolName(const std::string& name) const -> std::string;
-    [[nodiscard]] auto getSymbolVersion(const Symbol& symbol) const -> std::optional<std::string>;
+    [[nodiscard]] auto demangleSymbolName(const std::string& name) const
+        -> std::string;
+    [[nodiscard]] auto getSymbolVersion(const Symbol& symbol) const
+        -> std::optional<std::string>;
     [[nodiscard]] auto getWeakSymbols() const -> std::vector<Symbol>;
-    [[nodiscard]] auto getSymbolsByType(unsigned char type) const -> std::vector<Symbol>;
+    [[nodiscard]] auto getSymbolsByType(unsigned char type) const
+        -> std::vector<Symbol>;
     [[nodiscard]] auto getExportedSymbols() const -> std::vector<Symbol>;
     [[nodiscard]] auto getImportedSymbols() const -> std::vector<Symbol>;
-    [[nodiscard]] auto findSymbolsByPattern(const std::string& pattern) const -> std::vector<Symbol>;
-    [[nodiscard]] auto getSectionsByType(uint32_t type) const -> std::vector<SectionHeader>;
-    [[nodiscard]] auto getSegmentPermissions(const ProgramHeader& header) const -> std::string;
+    [[nodiscard]] auto findSymbolsByPattern(const std::string& pattern) const
+        -> std::vector<Symbol>;
+    [[nodiscard]] auto getSectionsByType(uint32_t type) const
+        -> std::vector<SectionHeader>;
+    [[nodiscard]] auto getSegmentPermissions(const ProgramHeader& header) const
+        -> std::string;
     [[nodiscard]] auto calculateChecksum() const -> uint64_t;
     [[nodiscard]] auto isStripped() const -> bool;
     [[nodiscard]] auto getDependencies() const -> std::vector<std::string>;
@@ -267,7 +273,8 @@ private:
     mutable bool verified_{false};
     bool useParallelProcessing_{false};
     size_t maxCacheSize_{1024 * 1024};  // 默认1MB缓存
-    mutable std::unordered_map<uint32_t, std::vector<SectionHeader>> sectionTypeCache_;
+    mutable std::unordered_map<uint32_t, std::vector<SectionHeader>>
+        sectionTypeCache_;
     mutable std::unordered_map<std::string, std::string> demangledNameCache_;
 };
 

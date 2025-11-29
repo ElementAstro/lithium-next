@@ -20,8 +20,8 @@ protected:
 
         // Create gradient image
         gradient = cv::Mat(100, 100, CV_8UC1);
-        for(int i = 0; i < gradient.rows; i++) {
-            for(int j = 0; j < gradient.cols; j++) {
+        for (int i = 0; i < gradient.rows; i++) {
+            for (int j = 0; j < gradient.cols; j++) {
                 gradient.at<uint8_t>(i, j) = static_cast<uint8_t>((i + j) / 2);
             }
         }
@@ -89,9 +89,12 @@ TEST_F(BinningTest, DifferentBinningFactors) {
 }
 
 TEST_F(BinningTest, InvalidInputs) {
-    EXPECT_THROW(processMatWithBinAvg(cv::Mat(), 2, 2, false, true), cv::Exception);
-    EXPECT_THROW(processMatWithBinAvg(smallImage, 0, 2, false, true), cv::Exception);
-    EXPECT_THROW(processMatWithBinAvg(smallImage, 2, 0, false, true), cv::Exception);
+    EXPECT_THROW(processMatWithBinAvg(cv::Mat(), 2, 2, false, true),
+                 cv::Exception);
+    EXPECT_THROW(processMatWithBinAvg(smallImage, 0, 2, false, true),
+                 cv::Exception);
+    EXPECT_THROW(processMatWithBinAvg(smallImage, 2, 0, false, true),
+                 cv::Exception);
 }
 
 TEST_F(BinningTest, BinningPreservesAverageIntensity) {
@@ -104,8 +107,8 @@ TEST_F(BinningTest, BinningPreservesAverageIntensity) {
 
 TEST_F(BinningTest, ColorImagePreservesChannels) {
     cv::Mat colorGradient(100, 100, CV_8UC3);
-    for(int i = 0; i < colorGradient.rows; i++) {
-        for(int j = 0; j < colorGradient.cols; j++) {
+    for (int i = 0; i < colorGradient.rows; i++) {
+        for (int j = 0; j < colorGradient.cols; j++) {
             colorGradient.at<cv::Vec3b>(i, j) = cv::Vec3b(i, j, 128);
         }
     }

@@ -83,8 +83,7 @@ public:
      * @param rule The rule object
      */
     template <typename T>
-    void addTypedRule(const std::string& name, T&& rule)
-    {
+    void addTypedRule(const std::string& name, T&& rule) {
         std::unique_lock lock(ruleMutex_);
 
         auto wrapper = [r = std::forward<T>(rule)](

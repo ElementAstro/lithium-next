@@ -50,17 +50,14 @@ public:
      * @param port The port number (default: 4400)
      * @param eventHandler Optional event handler
      */
-    explicit Client(
-        std::string host = "localhost",
-        int port = 4400,
-        std::shared_ptr<EventHandler> eventHandler = nullptr);
+    explicit Client(std::string host = "localhost", int port = 4400,
+                    std::shared_ptr<EventHandler> eventHandler = nullptr);
 
     /**
      * @brief Construct with connection config
      */
-    explicit Client(
-        ConnectionConfig config,
-        std::shared_ptr<EventHandler> eventHandler = nullptr);
+    explicit Client(ConnectionConfig config,
+                    std::shared_ptr<EventHandler> eventHandler = nullptr);
 
     ~Client();
 
@@ -83,9 +80,11 @@ public:
      * @brief Connect with chrono duration
      */
     template <typename Rep, typename Period>
-    [[nodiscard]] auto connect(std::chrono::duration<Rep, Period> timeout) -> bool {
+    [[nodiscard]] auto connect(std::chrono::duration<Rep, Period> timeout)
+        -> bool {
         return connect(static_cast<int>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+            std::chrono::duration_cast<std::chrono::milliseconds>(timeout)
+                .count()));
     }
 
     /**
@@ -212,9 +211,9 @@ public:
      * @return Future that completes when settled
      */
     [[nodiscard]] auto startGuiding(
-        const SettleParams& settle,
-        bool recalibrate = false,
-        std::optional<std::array<int, 4>> roi = std::nullopt) -> std::future<bool>;
+        const SettleParams& settle, bool recalibrate = false,
+        std::optional<std::array<int, 4>> roi = std::nullopt)
+        -> std::future<bool>;
 
     /**
      * @brief Stop guiding and capturing
@@ -233,10 +232,8 @@ public:
      * @param settle Settlement parameters
      * @return Future that completes when settled
      */
-    [[nodiscard]] auto dither(
-        double amount,
-        bool raOnly,
-        const SettleParams& settle) -> std::future<bool>;
+    [[nodiscard]] auto dither(double amount, bool raOnly,
+                              const SettleParams& settle) -> std::future<bool>;
 
     /**
      * @brief Get current app state
@@ -306,7 +303,8 @@ public:
      * @brief Get calibration data
      * @param which "Mount" or "AO"
      */
-    [[nodiscard]] auto getCalibrationData(std::string_view which = "Mount") -> json;
+    [[nodiscard]] auto getCalibrationData(std::string_view which = "Mount")
+        -> json;
 
     // ==================== Algorithm Settings ====================
 
@@ -327,7 +325,8 @@ public:
      * @param name Parameter name
      * @param value Parameter value
      */
-    void setAlgoParam(std::string_view axis, std::string_view name, double value);
+    void setAlgoParam(std::string_view axis, std::string_view name,
+                      double value);
 
     /**
      * @brief Get algorithm parameter
@@ -348,9 +347,8 @@ public:
      * @param roi Optional region of interest
      * @return Star position [x, y]
      */
-    [[nodiscard]] auto findStar(
-        std::optional<std::array<int, 4>> roi = std::nullopt)
-        -> std::array<double, 2>;
+    [[nodiscard]] auto findStar(std::optional<std::array<int, 4>> roi =
+                                    std::nullopt) -> std::array<double, 2>;
 
     /**
      * @brief Get lock position

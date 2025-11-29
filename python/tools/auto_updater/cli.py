@@ -7,6 +7,7 @@ import sys
 from .core import AutoUpdater
 from .types import UpdaterError
 
+
 def main() -> int:
     """
     The main entry point for the command-line interface.
@@ -22,31 +23,29 @@ def main() -> int:
         "--config",
         type=str,
         required=True,
-        help="Path to the configuration file (JSON)"
+        help="Path to the configuration file (JSON)",
     )
 
     parser.add_argument(
         "--check-only",
         action="store_true",
-        help="Only check for updates, don't download or install"
+        help="Only check for updates, don't download or install",
     )
 
     parser.add_argument(
         "--download-only",
         action="store_true",
-        help="Download but don't install updates"
+        help="Download but don't install updates",
     )
 
     parser.add_argument(
         "--verify-only",
         action="store_true",
-        help="Download and verify but don't install updates"
+        help="Download and verify but don't install updates",
     )
 
     parser.add_argument(
-        "--rollback",
-        type=str,
-        help="Path to backup directory to rollback to"
+        "--rollback", type=str, help="Path to backup directory to rollback to"
     )
 
     parser.add_argument(
@@ -54,7 +53,7 @@ def main() -> int:
         "-v",
         action="count",
         default=0,
-        help="Increase verbosity (can be used multiple times)"
+        help="Increase verbosity (can be used multiple times)",
     )
 
     args = parser.parse_args()
@@ -62,17 +61,18 @@ def main() -> int:
     # Configure logger based on verbosity level
     if args.verbose > 0:
         from .logger import logger
+
         logger.remove()
         logger.add(
             sink=sys.stderr,
             level="DEBUG" if args.verbose > 1 else "INFO",
-            format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+            format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         )
 
     updater = None  # Ensure updater is always defined
     try:
         # Load configuration
-        with open(args.config, 'r') as f:
+        with open(args.config, "r") as f:
             config = json.load(f)
 
         # Create updater
@@ -97,7 +97,8 @@ def main() -> int:
                 print(f"Update available: {updater.update_info['version']}")
             else:
                 print(
-                    f"No updates available (current version: {config['current_version']})")
+                    f"No updates available (current version: {config['current_version']})"
+                )
             return 0
 
         elif args.download_only:
@@ -105,7 +106,8 @@ def main() -> int:
             update_available = updater.check_for_updates()
             if not update_available:
                 print(
-                    f"No updates available (current version: {config['current_version']})")
+                    f"No updates available (current version: {config['current_version']})"
+                )
                 return 0
 
             download_path = updater.download_update()
@@ -117,7 +119,8 @@ def main() -> int:
             update_available = updater.check_for_updates()
             if not update_available:
                 print(
-                    f"No updates available (current version: {config['current_version']})")
+                    f"No updates available (current version: {config['current_version']})"
+                )
                 return 0
 
             download_path = updater.download_update()
@@ -134,7 +137,8 @@ def main() -> int:
             success = updater.update()
             if success and updater.update_info:
                 print(
-                    f"Update to version {updater.update_info['version']} completed successfully")
+                    f"Update to version {updater.update_info['version']} completed successfully"
+                )
                 return 0
             else:
                 print("No updates installed")
@@ -152,6 +156,7 @@ def main() -> int:
     except Exception as e:
         print(f"Unexpected error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
     finally:

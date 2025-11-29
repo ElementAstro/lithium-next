@@ -63,8 +63,8 @@ auto getConnectionStatus() -> nlohmann::json;
  * @param recalibrate Force recalibration
  */
 auto startGuiding(double settlePixels = 1.5, double settleTime = 10.0,
-                  double settleTimeout = 60.0,
-                  bool recalibrate = false) -> nlohmann::json;
+                  double settleTimeout = 60.0, bool recalibrate = false)
+    -> nlohmann::json;
 
 /**
  * @brief Stop guiding
@@ -219,7 +219,8 @@ auto getStarImage(int size = 15) -> nlohmann::json;
  * @brief Capture single frame
  * @param exposureMs Optional exposure time
  */
-auto captureSingleFrame(std::optional<int> exposureMs = std::nullopt) -> nlohmann::json;
+auto captureSingleFrame(std::optional<int> exposureMs = std::nullopt)
+    -> nlohmann::json;
 
 // ==================== Guide Pulse ====================
 
@@ -250,8 +251,8 @@ auto setDecGuideMode(const std::string& mode) -> nlohmann::json;
  * @param axis "ra" or "dec"
  * @param name Parameter name
  */
-auto getAlgoParam(const std::string& axis,
-                  const std::string& name) -> nlohmann::json;
+auto getAlgoParam(const std::string& axis, const std::string& name)
+    -> nlohmann::json;
 
 /**
  * @brief Set algorithm parameter
@@ -331,5 +332,18 @@ auto setLockShiftEnabled(bool enable) -> nlohmann::json;
 auto shutdownGuider() -> nlohmann::json;
 
 }  // namespace lithium::middleware
+
+// Command registration for WebSocket dispatcher
+namespace lithium::app {
+
+class CommandDispatcher;
+
+/**
+ * @brief Register guider commands with the WebSocket command dispatcher
+ * @param dispatcher The command dispatcher instance
+ */
+void registerGuider(std::shared_ptr<CommandDispatcher> dispatcher);
+
+}  // namespace lithium::app
 
 #endif  // LITHIUM_SERVER_COMMAND_GUIDER_HPP

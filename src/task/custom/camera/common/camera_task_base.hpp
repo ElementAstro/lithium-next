@@ -32,8 +32,7 @@ public:
      * @brief Constructor with task type name
      * @param taskType The task type identifier
      */
-    explicit CameraTaskBase(const std::string& taskType)
-        : TaskBase(taskType) {
+    explicit CameraTaskBase(const std::string& taskType) : TaskBase(taskType) {
         setupCameraParameters();
     }
 
@@ -63,10 +62,12 @@ protected:
     /**
      * @brief Validate exposure time
      */
-    void validateExposure(double exposure, double minExp = 0.0, double maxExp = 86400.0) {
+    void validateExposure(double exposure, double minExp = 0.0,
+                          double maxExp = 86400.0) {
         if (exposure < minExp || exposure > maxExp) {
-            throw std::invalid_argument("Exposure must be between " + 
-                std::to_string(minExp) + " and " + std::to_string(maxExp));
+            throw std::invalid_argument("Exposure must be between " +
+                                        std::to_string(minExp) + " and " +
+                                        std::to_string(maxExp));
         }
     }
 
@@ -75,8 +76,9 @@ protected:
      */
     void validateGain(int gain, int minGain = 0, int maxGain = 1000) {
         if (gain < minGain || gain > maxGain) {
-            throw std::invalid_argument("Gain must be between " + 
-                std::to_string(minGain) + " and " + std::to_string(maxGain));
+            throw std::invalid_argument("Gain must be between " +
+                                        std::to_string(minGain) + " and " +
+                                        std::to_string(maxGain));
         }
     }
 
@@ -92,19 +94,28 @@ protected:
     /**
      * @brief Validate parameter type
      */
-    void validateType(const json& params, const std::string& key, const std::string& type) {
-        if (!params.contains(key)) return;
-        
+    void validateType(const json& params, const std::string& key,
+                      const std::string& type) {
+        if (!params.contains(key))
+            return;
+
         bool valid = false;
-        if (type == "string") valid = params[key].is_string();
-        else if (type == "number") valid = params[key].is_number();
-        else if (type == "integer") valid = params[key].is_number_integer();
-        else if (type == "boolean") valid = params[key].is_boolean();
-        else if (type == "array") valid = params[key].is_array();
-        else if (type == "object") valid = params[key].is_object();
-        
+        if (type == "string")
+            valid = params[key].is_string();
+        else if (type == "number")
+            valid = params[key].is_number();
+        else if (type == "integer")
+            valid = params[key].is_number_integer();
+        else if (type == "boolean")
+            valid = params[key].is_boolean();
+        else if (type == "array")
+            valid = params[key].is_array();
+        else if (type == "object")
+            valid = params[key].is_object();
+
         if (!valid) {
-            throw std::invalid_argument("Parameter " + key + " must be of type " + type);
+            throw std::invalid_argument("Parameter " + key +
+                                        " must be of type " + type);
         }
     }
 };
@@ -112,26 +123,31 @@ protected:
 /**
  * @brief Macro for defining a camera task class
  */
-#define DECLARE_CAMERA_TASK(ClassName, TaskTypeName) \
-class ClassName : public CameraTaskBase { \
-public: \
-    ClassName() : CameraTaskBase(TaskTypeName) { setupParameters(); } \
-    ClassName(const std::string& name, const json& config) \
-        : CameraTaskBase(name, config) { setupParameters(); } \
-    static std::string taskName() { return TaskTypeName; } \
-    static std::string getStaticTaskTypeName() { return TaskTypeName; } \
-protected: \
-    void executeImpl(const json& params) override; \
-private: \
-    void setupParameters(); \
-};
+#define DECLARE_CAMERA_TASK(ClassName, TaskTypeName)                        \
+    class ClassName : public CameraTaskBase {                               \
+    public:                                                                 \
+        ClassName() : CameraTaskBase(TaskTypeName) { setupParameters(); }   \
+        ClassName(const std::string& name, const json& config)              \
+            : CameraTaskBase(name, config) {                                \
+            setupParameters();                                              \
+        }                                                                   \
+        static std::string taskName() { return TaskTypeName; }              \
+        static std::string getStaticTaskTypeName() { return TaskTypeName; } \
+                                                                            \
+    protected:                                                              \
+        void executeImpl(const json& params) override;                      \
+                                                                            \
+    private:                                                                \
+        void setupParameters();                                             \
+    };
 
 /**
  * @brief Exception class for validation errors
  */
 class ValidationError : public std::runtime_error {
 public:
-    explicit ValidationError(const std::string& msg) : std::runtime_error(msg) {}
+    explicit ValidationError(const std::string& msg)
+        : std::runtime_error(msg) {}
 };
 
 }  // namespace lithium::task::camera

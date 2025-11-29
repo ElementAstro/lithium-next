@@ -17,43 +17,58 @@
 #include "rate_limiter.hpp"
 
 /**
- * @brief WebSocketServer provides a high-level interface for managing WebSocket connections,
- * broadcasting messages, handling commands, authentication, topic subscriptions, and integration
- * with a message bus and command dispatcher.
+ * @brief WebSocketServer provides a high-level interface for managing WebSocket
+ * connections, broadcasting messages, handling commands, authentication, topic
+ * subscriptions, and integration with a message bus and command dispatcher.
  *
  * This class is thread-safe and designed for high concurrency and scalability.
- * It supports rate limiting, connection timeouts, message compression, and custom command handlers.
+ * It supports rate limiting, connection timeouts, message compression, and
+ * custom command handlers.
  */
 class WebSocketServer {
 public:
     /**
      * @brief Configuration structure for WebSocketServer.
      *
-     * Contains all tunable parameters for server operation, including payload size, thread pool,
-     * SSL, connection timeouts, and more.
+     * Contains all tunable parameters for server operation, including payload
+     * size, thread pool, SSL, connection timeouts, and more.
      */
     struct Config {
-        uint64_t max_payload_size = UINT64_MAX; ///< Maximum payload size for WebSocket messages (bytes).
-        std::vector<std::string> subprotocols;  ///< List of supported WebSocket subprotocols.
-        size_t max_retry_attempts = 3;          ///< Maximum retry attempts for failed connections.
-        std::chrono::milliseconds retry_delay{1000}; ///< Delay between retry attempts (milliseconds).
-        bool enable_compression = false;        ///< Enable or disable per-message compression.
-        size_t max_connections = 1000;          ///< Maximum number of concurrent client connections.
-        size_t thread_pool_size = 4;            ///< Number of threads in the server's thread pool.
-        size_t message_queue_size = 1000;       ///< Maximum size of the internal message queue.
-        bool enable_ssl = false;                ///< Enable SSL/TLS for secure WebSocket connections.
-        std::string ssl_cert;                   ///< Path to the SSL certificate file.
-        std::string ssl_key;                    ///< Path to the SSL private key file.
-        size_t ping_interval = 30;              ///< Interval (seconds) between ping frames for keepalive.
-        size_t connection_timeout = 60;         ///< Connection timeout (seconds) for idle clients.
+        uint64_t max_payload_size =
+            UINT64_MAX;  ///< Maximum payload size for WebSocket messages
+                         ///< (bytes).
+        std::vector<std::string>
+            subprotocols;  ///< List of supported WebSocket subprotocols.
+        size_t max_retry_attempts =
+            3;  ///< Maximum retry attempts for failed connections.
+        std::chrono::milliseconds retry_delay{
+            1000};  ///< Delay between retry attempts (milliseconds).
+        bool enable_compression =
+            false;  ///< Enable or disable per-message compression.
+        size_t max_connections =
+            1000;  ///< Maximum number of concurrent client connections.
+        size_t thread_pool_size =
+            4;  ///< Number of threads in the server's thread pool.
+        size_t message_queue_size =
+            1000;  ///< Maximum size of the internal message queue.
+        bool enable_ssl =
+            false;  ///< Enable SSL/TLS for secure WebSocket connections.
+        std::string ssl_cert;  ///< Path to the SSL certificate file.
+        std::string ssl_key;   ///< Path to the SSL private key file.
+        size_t ping_interval =
+            30;  ///< Interval (seconds) between ping frames for keepalive.
+        size_t connection_timeout =
+            60;  ///< Connection timeout (seconds) for idle clients.
     };
 
     /**
      * @brief Constructs a WebSocketServer instance.
      *
      * @param app Reference to the Crow application instance.
-     * @param message_bus Shared pointer to the message bus for inter-component communication.
-     * @param command_dispatcher Shared pointer to the command dispatcher for handling commands.
+     * @param message_bus Shared pointer to the message bus for inter-component
+     * communication.
+     * @param command_dispatcher Shared pointer to the command dispatcher for
+     * handling commands.
      * @param config Configuration settings for the WebSocket server.
      */
     WebSocketServer(
@@ -65,8 +80,8 @@ public:
     /**
      * @brief Starts the WebSocket server in a background thread.
      *
-     * Initializes the thread pool and begins listening for WebSocket connections.
-     * This method is thread-safe and idempotent.
+     * Initializes the thread pool and begins listening for WebSocket
+     * connections. This method is thread-safe and idempotent.
      */
     void start();
 
@@ -99,7 +114,8 @@ public:
      *
      * @param messages The messages to broadcast.
      *
-     * Each message in the batch is sent to all clients. Rate limiting is enforced per message.
+     * Each message in the batch is sent to all clients. Rate limiting is
+     * enforced per message.
      */
     void broadcast_batch(const std::vector<std::string>& messages);
 
@@ -137,7 +153,8 @@ public:
      *
      * @param topic The topic to subscribe to.
      *
-     * All messages published to this topic will be broadcast to relevant clients.
+     * All messages published to this topic will be broadcast to relevant
+     * clients.
      */
     void subscribe_to_topic(const std::string& topic);
 
@@ -189,7 +206,8 @@ public:
      *
      * @param conn Reference to the WebSocket connection.
      *
-     * Removes the client from all internal tracking structures and closes the connection.
+     * Removes the client from all internal tracking structures and closes the
+     * connection.
      */
     void disconnect_client(crow::websocket::connection& conn);
 
@@ -292,42 +310,53 @@ private:
     void forward_to_message_bus(const std::string& topic,
                                 const std::string& message);
 
-    crow::SimpleApp& app_; ///< Reference to the Crow application instance.
-    std::shared_ptr<atom::async::MessageBus> message_bus_; ///< Shared pointer to the message bus.
-    std::shared_ptr<lithium::app::CommandDispatcher> command_dispatcher_; ///< Shared pointer to the command dispatcher.
-    std::unordered_set<crow::websocket::connection*> clients_; ///< Set of active client connections.
-    std::shared_mutex conn_mutex_; ///< Mutex for synchronizing access to client data.
+    crow::SimpleApp& app_;  ///< Reference to the Crow application instance.
+    std::shared_ptr<atom::async::MessageBus>
+        message_bus_;  ///< Shared pointer to the message bus.
+    std::shared_ptr<lithium::app::CommandDispatcher>
+        command_dispatcher_;  ///< Shared pointer to the command dispatcher.
+    std::unordered_set<crow::websocket::connection*>
+        clients_;  ///< Set of active client connections.
+    std::shared_mutex
+        conn_mutex_;  ///< Mutex for synchronizing access to client data.
 
-    uint64_t max_payload_size_ = UINT64_MAX; ///< Maximum allowed payload size.
-    std::vector<std::string> subprotocols_; ///< Supported WebSocket subprotocols.
+    uint64_t max_payload_size_ = UINT64_MAX;  ///< Maximum allowed payload size.
+    std::vector<std::string>
+        subprotocols_;  ///< Supported WebSocket subprotocols.
 
-    Config config_; ///< Server configuration.
+    Config config_;  ///< Server configuration.
 
     std::unordered_map<std::string,
                        std::function<void(crow::websocket::connection&,
                                           const nlohmann::json&)>>
-        message_handlers_; ///< Custom message handlers by type.
+        message_handlers_;  ///< Custom message handlers by type.
 
     std::unordered_map<crow::websocket::connection*, std::string>
-        client_tokens_; ///< Authentication tokens for each client.
+        client_tokens_;  ///< Authentication tokens for each client.
     std::unordered_map<std::string, std::set<crow::websocket::connection*>>
-        topic_subscribers_; ///< Mapping from topic to set of subscribed clients.
+        topic_subscribers_;  ///< Mapping from topic to set of subscribed
+                             ///< clients.
 
-    std::atomic<size_t> retry_count_{0}; ///< Retry counter for connection attempts.
+    std::atomic<size_t> retry_count_{
+        0};  ///< Retry counter for connection attempts.
     std::unordered_map<std::string, atom::async::MessageBus::Token>
-        bus_subscriptions_; ///< Tokens for message bus subscriptions.
+        bus_subscriptions_;  ///< Tokens for message bus subscriptions.
 
-    std::atomic<bool> running_{false}; ///< Server running state.
-    std::thread server_thread_; ///< Background server thread.
-    std::unique_ptr<atom::async::ThreadPool<>> thread_pool_; ///< Thread pool for async tasks.
+    std::atomic<bool> running_{false};  ///< Server running state.
+    std::thread server_thread_;         ///< Background server thread.
+    std::unique_ptr<atom::async::ThreadPool<>>
+        thread_pool_;  ///< Thread pool for async tasks.
 
-    std::atomic<size_t> total_messages_{0}; ///< Total number of messages sent.
-    std::atomic<size_t> error_count_{0}; ///< Total number of errors encountered.
+    std::atomic<size_t> total_messages_{0};  ///< Total number of messages sent.
+    std::atomic<size_t> error_count_{
+        0};  ///< Total number of errors encountered.
 
-    std::unique_ptr<RateLimiter> rate_limiter_; ///< Rate limiter for outgoing messages.
+    std::unique_ptr<RateLimiter>
+        rate_limiter_;  ///< Rate limiter for outgoing messages.
 
-    bool compression_enabled_{false}; ///< Whether message compression is enabled.
-    int compression_level_{6}; ///< Compression level.
+    bool compression_enabled_{
+        false};                 ///< Whether message compression is enabled.
+    int compression_level_{6};  ///< Compression level.
 
     /**
      * @brief Tracks the last activity time for each client connection.

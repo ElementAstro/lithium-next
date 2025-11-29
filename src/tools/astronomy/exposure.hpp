@@ -37,15 +37,15 @@ using json = nlohmann::json;
  * including exposure time, count, binning, and camera settings.
  */
 struct ExposurePlan {
-    std::string filterName;       ///< Filter name (e.g., "L", "R", "Ha")
-    double exposureTime{0.0};     ///< Exposure time in seconds
-    int count{1};                 ///< Number of exposures planned
-    int completedCount{0};        ///< Number of completed exposures
-    int binning{1};               ///< Binning (1x1, 2x2, etc.)
-    int gain{-1};                 ///< Camera gain (-1 = use default)
-    int offset{-1};               ///< Camera offset (-1 = use default)
-    bool ditherEnabled{true};     ///< Enable dithering between exposures
-    int ditherEvery{1};           ///< Dither every N exposures
+    std::string filterName;    ///< Filter name (e.g., "L", "R", "Ha")
+    double exposureTime{0.0};  ///< Exposure time in seconds
+    int count{1};              ///< Number of exposures planned
+    int completedCount{0};     ///< Number of completed exposures
+    int binning{1};            ///< Binning (1x1, 2x2, etc.)
+    int gain{-1};              ///< Camera gain (-1 = use default)
+    int offset{-1};            ///< Camera offset (-1 = use default)
+    bool ditherEnabled{true};  ///< Enable dithering between exposures
+    int ditherEvery{1};        ///< Dither every N exposures
 
     // ========================================================================
     // Constructors
@@ -55,8 +55,12 @@ struct ExposurePlan {
 
     ExposurePlan(const std::string& filter, double expTime, int cnt,
                  int bin = 1, int g = -1, int off = -1)
-        : filterName(filter), exposureTime(expTime), count(cnt),
-          binning(bin), gain(g), offset(off) {}
+        : filterName(filter),
+          exposureTime(expTime),
+          count(cnt),
+          binning(bin),
+          gain(g),
+          offset(off) {}
 
     // ========================================================================
     // Progress Tracking
@@ -75,7 +79,8 @@ struct ExposurePlan {
      * @return Progress as percentage (0-100).
      */
     [[nodiscard]] double progress() const noexcept {
-        if (count == 0) return 100.0;
+        if (count == 0)
+            return 100.0;
         return (static_cast<double>(completedCount) / count) * 100.0;
     }
 
@@ -124,7 +129,8 @@ struct ExposurePlan {
      * @return true if exposure was recorded, false if already complete.
      */
     bool recordExposure() noexcept {
-        if (isComplete()) return false;
+        if (isComplete())
+            return false;
         ++completedCount;
         return true;
     }
@@ -132,9 +138,7 @@ struct ExposurePlan {
     /**
      * @brief Reset progress to zero.
      */
-    void reset() noexcept {
-        completedCount = 0;
-    }
+    void reset() noexcept { completedCount = 0; }
 
     /**
      * @brief Check if dithering should occur after this exposure.
@@ -142,8 +146,10 @@ struct ExposurePlan {
      * @return true if dithering should occur.
      */
     [[nodiscard]] bool shouldDither(int exposureNumber) const noexcept {
-        if (!ditherEnabled) return false;
-        if (ditherEvery <= 0) return false;
+        if (!ditherEnabled)
+            return false;
+        if (ditherEvery <= 0)
+            return false;
         return (exposureNumber % ditherEvery) == 0;
     }
 
@@ -152,17 +158,15 @@ struct ExposurePlan {
     // ========================================================================
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"filterName", filterName},
-            {"exposureTime", exposureTime},
-            {"count", count},
-            {"completedCount", completedCount},
-            {"binning", binning},
-            {"gain", gain},
-            {"offset", offset},
-            {"ditherEnabled", ditherEnabled},
-            {"ditherEvery", ditherEvery}
-        };
+        return {{"filterName", filterName},
+                {"exposureTime", exposureTime},
+                {"count", count},
+                {"completedCount", completedCount},
+                {"binning", binning},
+                {"gain", gain},
+                {"offset", offset},
+                {"ditherEnabled", ditherEnabled},
+                {"ditherEvery", ditherEvery}};
     }
 
     [[nodiscard]] static ExposurePlan fromJson(const json& j) {
@@ -186,10 +190,8 @@ struct ExposurePlan {
     bool operator==(const ExposurePlan& other) const noexcept {
         return filterName == other.filterName &&
                std::abs(exposureTime - other.exposureTime) < EPSILON &&
-               count == other.count &&
-               binning == other.binning &&
-               gain == other.gain &&
-               offset == other.offset;
+               count == other.count && binning == other.binning &&
+               gain == other.gain && offset == other.offset;
     }
 
     bool operator!=(const ExposurePlan& other) const noexcept {
@@ -227,17 +229,13 @@ public:
      * @brief Add an exposure plan.
      * @param plan The plan to add.
      */
-    void addPlan(const ExposurePlan& plan) {
-        plans_.push_back(plan);
-    }
+    void addPlan(const ExposurePlan& plan) { plans_.push_back(plan); }
 
     /**
      * @brief Add an exposure plan (move version).
      * @param plan The plan to add.
      */
-    void addPlan(ExposurePlan&& plan) {
-        plans_.push_back(std::move(plan));
-    }
+    void addPlan(ExposurePlan&& plan) { plans_.push_back(std::move(plan)); }
 
     /**
      * @brief Remove a plan by filter name.
@@ -246,9 +244,9 @@ public:
      */
     bool removePlan(const std::string& filterName) {
         auto it = std::find_if(plans_.begin(), plans_.end(),
-            [&filterName](const ExposurePlan& p) {
-                return p.filterName == filterName;
-            });
+                               [&filterName](const ExposurePlan& p) {
+                                   return p.filterName == filterName;
+                               });
         if (it != plans_.end()) {
             plans_.erase(it);
             return true;
@@ -263,9 +261,9 @@ public:
      */
     [[nodiscard]] ExposurePlan* getPlan(const std::string& filterName) {
         auto it = std::find_if(plans_.begin(), plans_.end(),
-            [&filterName](const ExposurePlan& p) {
-                return p.filterName == filterName;
-            });
+                               [&filterName](const ExposurePlan& p) {
+                                   return p.filterName == filterName;
+                               });
         return it != plans_.end() ? &(*it) : nullptr;
     }
 
@@ -274,11 +272,12 @@ public:
      * @param filterName Filter name to find.
      * @return Pointer to plan, or nullptr if not found.
      */
-    [[nodiscard]] const ExposurePlan* getPlan(const std::string& filterName) const {
+    [[nodiscard]] const ExposurePlan* getPlan(
+        const std::string& filterName) const {
         auto it = std::find_if(plans_.begin(), plans_.end(),
-            [&filterName](const ExposurePlan& p) {
-                return p.filterName == filterName;
-            });
+                               [&filterName](const ExposurePlan& p) {
+                                   return p.filterName == filterName;
+                               });
         return it != plans_.end() ? &(*it) : nullptr;
     }
 
@@ -294,32 +293,24 @@ public:
      * @brief Get mutable reference to all plans.
      * @return Mutable reference to vector of plans.
      */
-    [[nodiscard]] std::vector<ExposurePlan>& plans() noexcept {
-        return plans_;
-    }
+    [[nodiscard]] std::vector<ExposurePlan>& plans() noexcept { return plans_; }
 
     /**
      * @brief Get number of plans.
      * @return Number of exposure plans.
      */
-    [[nodiscard]] size_t size() const noexcept {
-        return plans_.size();
-    }
+    [[nodiscard]] size_t size() const noexcept { return plans_.size(); }
 
     /**
      * @brief Check if collection is empty.
      * @return true if no plans.
      */
-    [[nodiscard]] bool empty() const noexcept {
-        return plans_.empty();
-    }
+    [[nodiscard]] bool empty() const noexcept { return plans_.empty(); }
 
     /**
      * @brief Clear all plans.
      */
-    void clear() noexcept {
-        plans_.clear();
-    }
+    void clear() noexcept { plans_.clear(); }
 
     // ========================================================================
     // Aggregate Statistics
@@ -360,7 +351,8 @@ public:
             totalPlanned += plan.count;
             totalCompleted += plan.completedCount;
         }
-        if (totalPlanned == 0) return 100.0;
+        if (totalPlanned == 0)
+            return 100.0;
         return (totalCompleted / totalPlanned) * 100.0;
     }
 
@@ -369,9 +361,11 @@ public:
      * @return true if all plans are complete.
      */
     [[nodiscard]] bool isComplete() const noexcept {
-        if (plans_.empty()) return true;
+        if (plans_.empty())
+            return true;
         for (const auto& plan : plans_) {
-            if (!plan.isComplete()) return false;
+            if (!plan.isComplete())
+                return false;
         }
         return true;
     }

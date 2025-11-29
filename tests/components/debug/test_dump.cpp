@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
+#include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <memory>
-#include <cstdlib>
-#include <ctime>
 #include "components/debug/dump.hpp"
 
 namespace lithium::test {
@@ -22,8 +22,7 @@ protected:
         // Clean up any remaining test files
         std::vector<std::string> testFiles = {
             "test_core_dump", "corrupted_dump", "empty_dump", "truncated_dump",
-            "test_dump_1", "test_dump_2", "large_dump"
-        };
+            "test_dump_1",    "test_dump_2",    "large_dump"};
         for (const auto& file : testFiles) {
             if (std::filesystem::exists(file)) {
                 std::filesystem::remove(file);
@@ -116,7 +115,7 @@ TEST_F(CoreDumpAnalyzerTest, AnalysisWithDifferentOptions) {
     analyzer->setAnalysisOptions(false, false, true);  // stack only
     EXPECT_NO_THROW(analyzer->analyze());
 
-    analyzer->setAnalysisOptions(true, true, true);    // all
+    analyzer->setAnalysisOptions(true, true, true);  // all
     EXPECT_NO_THROW(analyzer->analyze());
 
     std::filesystem::remove("test_core_dump");
@@ -173,8 +172,7 @@ TEST_F(CoreDumpAnalyzerTest, ReportContainsMemorySection) {
     auto report = analyzer->generateReport();
     // Report should contain some memory-related information
     EXPECT_TRUE(report.find("memory") != std::string::npos ||
-                report.find("Memory") != std::string::npos ||
-                !report.empty());
+                report.find("Memory") != std::string::npos || !report.empty());
 
     std::filesystem::remove("test_core_dump");
 }
@@ -252,7 +250,8 @@ TEST_F(CoreDumpAnalyzerTest, AnalyzeWithoutReading) {
 // ============================================================================
 
 TEST_F(CoreDumpAnalyzerTest, GetMemoryRegions) {
-    std::ofstream("test_core_dump") << "Memory regions test content with more data";
+    std::ofstream("test_core_dump")
+        << "Memory regions test content with more data";
     EXPECT_TRUE(analyzer->readFile("test_core_dump"));
     analyzer->analyze();
 

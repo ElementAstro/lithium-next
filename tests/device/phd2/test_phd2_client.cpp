@@ -4,11 +4,11 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "client/phd2/phd2_client.hpp"
 #include "client/common/guider_client.hpp"
+#include "client/phd2/phd2_client.hpp"
 
 using namespace lithium::client;
 using namespace testing;
@@ -215,9 +215,7 @@ protected:
         client->initialize();
     }
 
-    void TearDown() override {
-        client->destroy();
-    }
+    void TearDown() override { client->destroy(); }
 };
 
 TEST_F(PHD2ClientStateTest, InitialState) {
@@ -304,13 +302,13 @@ TEST_F(PHD2ConfigTest, CustomValues) {
 
 TEST_F(PHD2ConfigTest, ConfigureClient) {
     PHD2Client client("TestClient");
-    
+
     PHD2Config customConfig;
     customConfig.host = "192.168.1.50";
     customConfig.port = 4402;
-    
+
     client.configurePHD2(customConfig);
-    
+
     auto retrievedConfig = client.getPHD2Config();
     EXPECT_EQ(retrievedConfig.host, "192.168.1.50");
     EXPECT_EQ(retrievedConfig.port, 4402);

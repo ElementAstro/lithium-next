@@ -29,7 +29,9 @@ class AutoFocusTask : public TaskBase {
 public:
     AutoFocusTask() : TaskBase("AutoFocus") { setupParameters(); }
     AutoFocusTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "AutoFocus"; }
     static std::string getStaticTaskTypeName() { return "AutoFocus"; }
@@ -40,7 +42,7 @@ protected:
 private:
     void setupParameters();
     FocusResult findBestFocus(int startPos, int stepSize, int numSteps,
-                               const json& params);
+                              const json& params);
     double measureFocusMetric(int position, const json& params);
 };
 
@@ -54,7 +56,9 @@ class FocusSeriesTask : public TaskBase {
 public:
     FocusSeriesTask() : TaskBase("FocusSeries") { setupParameters(); }
     FocusSeriesTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "FocusSeries"; }
     static std::string getStaticTaskTypeName() { return "FocusSeries"; }
@@ -76,7 +80,9 @@ class TemperatureFocusTask : public TaskBase {
 public:
     TemperatureFocusTask() : TaskBase("TemperatureFocus") { setupParameters(); }
     TemperatureFocusTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "TemperatureFocus"; }
     static std::string getStaticTaskTypeName() { return "TemperatureFocus"; }
@@ -86,7 +92,8 @@ protected:
 
 private:
     void setupParameters();
-    int calculateCompensation(double currentTemp, double referenceTemp, double coefficient);
+    int calculateCompensation(double currentTemp, double referenceTemp,
+                              double coefficient);
 };
 
 /**
@@ -96,7 +103,9 @@ class MoveFocuserTask : public TaskBase {
 public:
     MoveFocuserTask() : TaskBase("MoveFocuser") { setupParameters(); }
     MoveFocuserTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "MoveFocuser"; }
     static std::string getStaticTaskTypeName() { return "MoveFocuser"; }
@@ -113,9 +122,13 @@ private:
  */
 class MoveFocuserRelativeTask : public TaskBase {
 public:
-    MoveFocuserRelativeTask() : TaskBase("MoveFocuserRelative") { setupParameters(); }
+    MoveFocuserRelativeTask() : TaskBase("MoveFocuserRelative") {
+        setupParameters();
+    }
     MoveFocuserRelativeTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "MoveFocuserRelative"; }
     static std::string getStaticTaskTypeName() { return "MoveFocuserRelative"; }

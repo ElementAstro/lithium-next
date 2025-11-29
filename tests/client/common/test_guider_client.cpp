@@ -12,8 +12,8 @@ Description: Tests for guider client base class
 
 *************************************************/
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "client/common/guider_client.hpp"
 
@@ -39,7 +39,8 @@ public:
         return true;
     }
 
-    bool connect(const std::string& /*target*/, int /*timeout*/, int /*maxRetry*/) override {
+    bool connect(const std::string& /*target*/, int /*timeout*/,
+                 int /*maxRetry*/) override {
         setState(ClientState::Connected);
         return true;
     }
@@ -53,57 +54,46 @@ public:
         return getState() == ClientState::Connected;
     }
 
-    std::vector<std::string> scan() override {
-        return {"localhost:4400"};
-    }
+    std::vector<std::string> scan() override { return {"localhost:4400"}; }
 
-    std::future<bool> startGuiding(const SettleParams& settle, bool recalibrate) override {
+    std::future<bool> startGuiding(const SettleParams& settle,
+                                   bool recalibrate) override {
         lastSettleParams_ = settle;
         lastRecalibrate_ = recalibrate;
         guiderState_.store(GuiderState::Guiding);
 
         return std::async(std::launch::async, [this]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(settleDelayMs_));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(settleDelayMs_));
             return settleResult_;
         });
     }
 
-    void stopGuiding() override {
-        guiderState_.store(GuiderState::Stopped);
-    }
+    void stopGuiding() override { guiderState_.store(GuiderState::Stopped); }
 
     void pause(bool full) override {
         lastPauseFull_ = full;
         guiderState_.store(GuiderState::Paused);
     }
 
-    void resume() override {
-        guiderState_.store(GuiderState::Guiding);
-    }
+    void resume() override { guiderState_.store(GuiderState::Guiding); }
 
     std::future<bool> dither(const DitherParams& params) override {
         lastDitherParams_ = params;
         return std::async(std::launch::async, [this]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(ditherDelayMs_));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(ditherDelayMs_));
             return ditherResult_;
         });
     }
 
-    void loop() override {
-        guiderState_.store(GuiderState::Looping);
-    }
+    void loop() override { guiderState_.store(GuiderState::Looping); }
 
-    bool isCalibrated() const override {
-        return calibrated_;
-    }
+    bool isCalibrated() const override { return calibrated_; }
 
-    void clearCalibration() override {
-        calibrated_ = false;
-    }
+    void clearCalibration() override { calibrated_ = false; }
 
-    void flipCalibration() override {
-        calibrationFlipped_ = true;
-    }
+    void flipCalibration() override { calibrationFlipped_ = true; }
 
     CalibrationData getCalibrationData() const override {
         return calibrationData_;
@@ -123,33 +113,21 @@ public:
         return lockPosition_;
     }
 
-    int getExposure() const override {
-        return exposure_;
-    }
+    int getExposure() const override { return exposure_; }
 
-    void setExposure(int exposureMs) override {
-        exposure_ = exposureMs;
-    }
+    void setExposure(int exposureMs) override { exposure_ = exposureMs; }
 
     std::vector<int> getExposureDurations() const override {
         return exposureDurations_;
     }
 
-    GuiderState getGuiderState() const override {
-        return guiderState_.load();
-    }
+    GuiderState getGuiderState() const override { return guiderState_.load(); }
 
-    GuideStats getGuideStats() const override {
-        return guideStats_;
-    }
+    GuideStats getGuideStats() const override { return guideStats_; }
 
-    GuideStar getCurrentStar() const override {
-        return currentStar_;
-    }
+    GuideStar getCurrentStar() const override { return currentStar_; }
 
-    double getPixelScale() const override {
-        return pixelScale_;
-    }
+    double getPixelScale() const override { return pixelScale_; }
 
     // Test helpers
     void setSettleResult(bool result) { settleResult_ = result; }
@@ -157,12 +135,16 @@ public:
     void setDitherResult(bool result) { ditherResult_ = result; }
     void setDitherDelay(int ms) { ditherDelayMs_ = ms; }
     void setCalibrated(bool calibrated) { calibrated_ = calibrated; }
-    void setCalibrationData(const CalibrationData& data) { calibrationData_ = data; }
+    void setCalibrationData(const CalibrationData& data) {
+        calibrationData_ = data;
+    }
     void setFoundStar(const GuideStar& star) { foundStar_ = star; }
     void setCurrentStar(const GuideStar& star) { currentStar_ = star; }
     void setGuideStats(const GuideStats& stats) { guideStats_ = stats; }
     void setPixelScale(double scale) { pixelScale_ = scale; }
-    void setExposureDurations(const std::vector<int>& durations) { exposureDurations_ = durations; }
+    void setExposureDurations(const std::vector<int>& durations) {
+        exposureDurations_ = durations;
+    }
 
     SettleParams getLastSettleParams() const { return lastSettleParams_; }
     bool getLastRecalibrate() const { return lastRecalibrate_; }

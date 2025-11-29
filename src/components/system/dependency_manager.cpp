@@ -46,7 +46,8 @@ public:
         // Try multiple config paths
         std::vector<std::filesystem::path> configPaths;
         configPaths.reserve(8);
-        auto addUniquePath = [&configPaths](const std::filesystem::path& candidate) {
+        auto addUniquePath = [&configPaths](
+                                 const std::filesystem::path& candidate) {
             if (candidate.empty()) {
                 return;
             }
@@ -90,15 +91,17 @@ public:
             }
 
             packageRegistry_.loadPackageManagerConfig(path.string());
-            spdlog::info("Loaded package manager config from: {}", path.string());
+            spdlog::info("Loaded package manager config from: {}",
+                         path.string());
             configLoaded = true;
         }
 
         if (!configLoaded) {
             spdlog::warn(
-                "No package manager config file found, falling back to system defaults");
+                "No package manager config file found, falling back to system "
+                "defaults");
         }
-        
+
         initializeCache();
     }
 
@@ -246,51 +249,51 @@ public:
         auto it = std::ranges::find_if(
             dependencies_,
             [&](const DependencyInfo& dep) { return dep.name == depName; });
-        
+
         if (it != dependencies_.end()) {
             lock.unlock();
             return isDependencyInstalled(*it);
         }
-        
+
         // If not in managed dependencies, create a temporary one to check
         DependencyInfo tempDep;
         tempDep.name = depName;
         tempDep.packageManager = platformDetector_.getDefaultPackageManager();
         lock.unlock();
-        
+
         return verifyDependencyInstalled(tempDep);
     }
 
-    auto getInstalledVersionByName(const std::string& depName) 
+    auto getInstalledVersionByName(const std::string& depName)
         -> std::optional<VersionInfo> {
         std::shared_lock lock(cacheMutex_);
         auto it = std::ranges::find_if(
             dependencies_,
             [&](const DependencyInfo& dep) { return dep.name == depName; });
-        
+
         if (it != dependencies_.end()) {
             lock.unlock();
             return getInstalledVersion(*it);
         }
-        
+
         // If not in managed dependencies, create a temporary one
         DependencyInfo tempDep;
         tempDep.name = depName;
         tempDep.packageManager = platformDetector_.getDefaultPackageManager();
         lock.unlock();
-        
+
         return getInstalledVersion(tempDep);
     }
 
     void refreshCache() {
         spdlog::info("Refreshing dependency cache...");
-        
+
         std::unique_lock lock(cacheMutex_);
         installedCache_.clear();
         lock.unlock();
-        
+
         installationCache_.clear();
-        
+
         // Re-check all dependencies
         for (const auto& dep : dependencies_) {
             bool installed = verifyDependencyInstalled(dep);
@@ -300,7 +303,7 @@ public:
             }
             installationCache_.put(dep.name, installed);
         }
-        
+
         spdlog::info("Cache refresh complete");
     }
 
@@ -537,7 +540,7 @@ private:
             cached.has_value()) {
             return cached.value();
         }
-        
+
         // Check local cache
         {
             std::shared_lock lock(cacheMutex_);
@@ -546,51 +549,54 @@ private:
                 return it->second;
             }
         }
-        
+
         // Actually verify installation via system command
         bool installed = verifyDependencyInstalled(dep);
-        
+
         // Update caches
         {
             std::unique_lock lock(cacheMutex_);
             installedCache_[dep.name] = installed;
         }
         installationCache_.put(dep.name, installed);
-        
+
         return installed;
     }
-    
+
     bool verifyDependencyInstalled(const DependencyInfo& dep) {
         try {
-            auto pkgMgr = packageRegistry_.getPackageManager(dep.packageManager);
+            auto pkgMgr =
+                packageRegistry_.getPackageManager(dep.packageManager);
             if (!pkgMgr) {
                 // Try default package manager
                 auto defaultPm = platformDetector_.getDefaultPackageManager();
                 pkgMgr = packageRegistry_.getPackageManager(defaultPm);
                 if (!pkgMgr) {
-                    spdlog::warn("No package manager available to check {}", dep.name);
+                    spdlog::warn("No package manager available to check {}",
+                                 dep.name);
                     return false;
                 }
             }
-            
+
             // Execute check command
             std::string checkCmd = pkgMgr->getCheckCommand(dep);
             auto result = atom::system::executeCommandWithStatus(checkCmd);
-            
+
             bool installed = (result.second == 0);
-            spdlog::debug("Dependency {} check result: {}", dep.name, 
-                         installed ? "installed" : "not installed");
+            spdlog::debug("Dependency {} check result: {}", dep.name,
+                          installed ? "installed" : "not installed");
             return installed;
         } catch (const std::exception& e) {
-            spdlog::error("Error checking dependency {}: {}", dep.name, e.what());
+            spdlog::error("Error checking dependency {}: {}", dep.name,
+                          e.what());
             return false;
         }
     }
-    
+
     std::optional<VersionInfo> getInstalledVersion(const DependencyInfo& dep) {
         try {
             std::string versionCmd;
-            
+
 #if defined(_WIN32)
             if (dep.packageManager == "choco") {
                 versionCmd = "choco list --local-only " + dep.name + " --exact";
@@ -605,36 +611,39 @@ private:
             }
 #else
             if (dep.packageManager == "apt") {
-                versionCmd = "dpkg -s " + dep.name + " 2>/dev/null | grep Version";
-            } else if (dep.packageManager == "dnf" || dep.packageManager == "yum") {
+                versionCmd =
+                    "dpkg -s " + dep.name + " 2>/dev/null | grep Version";
+            } else if (dep.packageManager == "dnf" ||
+                       dep.packageManager == "yum") {
                 versionCmd = "rpm -q " + dep.name;
             } else if (dep.packageManager == "pacman") {
                 versionCmd = "pacman -Q " + dep.name;
             }
 #endif
-            
+
             if (versionCmd.empty()) {
                 return std::nullopt;
             }
-            
+
             auto result = atom::system::executeCommandWithStatus(versionCmd);
             if (result.second != 0) {
                 return std::nullopt;
             }
-            
+
             // Parse version from output
             return parseVersionFromOutput(result.first, dep.packageManager);
         } catch (const std::exception& e) {
-            spdlog::error("Error getting installed version for {}: {}", dep.name, e.what());
+            spdlog::error("Error getting installed version for {}: {}",
+                          dep.name, e.what());
             return std::nullopt;
         }
     }
-    
-    std::optional<VersionInfo> parseVersionFromOutput(const std::string& output, 
-                                                       const std::string& pkgManager) {
+
+    std::optional<VersionInfo> parseVersionFromOutput(
+        const std::string& output, const std::string& pkgManager) {
         std::regex versionRegex(R"((\d+)\.(\d+)(?:\.(\d+))?)");
         std::smatch matches;
-        
+
         if (std::regex_search(output, matches, versionRegex)) {
             VersionInfo version;
             version.major = std::stoi(matches[1]);
@@ -644,7 +653,7 @@ private:
             }
             return version;
         }
-        
+
         return std::nullopt;
     }
 
@@ -841,17 +850,16 @@ auto DependencyManager::getPackageManagers() const
     return pImpl_->getPackageManagers();
 }
 
-auto DependencyManager::isDependencyInstalled(const std::string& depName) -> bool {
+auto DependencyManager::isDependencyInstalled(const std::string& depName)
+    -> bool {
     return pImpl_->isDependencyInstalledByName(depName);
 }
 
-auto DependencyManager::getInstalledVersion(const std::string& depName) 
+auto DependencyManager::getInstalledVersion(const std::string& depName)
     -> std::optional<VersionInfo> {
     return pImpl_->getInstalledVersionByName(depName);
 }
 
-void DependencyManager::refreshCache() {
-    pImpl_->refreshCache();
-}
+void DependencyManager::refreshCache() { pImpl_->refreshCache(); }
 
 }  // namespace lithium::system

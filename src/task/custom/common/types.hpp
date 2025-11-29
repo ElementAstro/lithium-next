@@ -10,8 +10,8 @@
 #ifndef LITHIUM_TASK_COMMON_TYPES_HPP
 #define LITHIUM_TASK_COMMON_TYPES_HPP
 
-#include "atom/type/json.hpp"
 #include <string>
+#include "atom/type/json.hpp"
 
 namespace lithium::task {
 
@@ -27,20 +27,21 @@ namespace camera {
  * @brief Exposure frame type enumeration
  */
 enum class ExposureType {
-    Light,     ///< Light frame - main science exposure
-    Dark,      ///< Dark frame - noise calibration
-    Bias,      ///< Bias frame - readout noise calibration
-    Flat,      ///< Flat frame - optical system response
-    Snapshot   ///< Quick preview exposure
+    Light,    ///< Light frame - main science exposure
+    Dark,     ///< Dark frame - noise calibration
+    Bias,     ///< Bias frame - readout noise calibration
+    Flat,     ///< Flat frame - optical system response
+    Snapshot  ///< Quick preview exposure
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType, {
-    {ExposureType::Light, "light"},
-    {ExposureType::Dark, "dark"},
-    {ExposureType::Bias, "bias"},
-    {ExposureType::Flat, "flat"},
-    {ExposureType::Snapshot, "snapshot"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType,
+                             {
+                                 {ExposureType::Light, "light"},
+                                 {ExposureType::Dark, "dark"},
+                                 {ExposureType::Bias, "bias"},
+                                 {ExposureType::Flat, "flat"},
+                                 {ExposureType::Snapshot, "snapshot"},
+                             })
 
 /**
  * @brief Camera binning configuration
@@ -116,12 +117,13 @@ enum class FocusMethod {
     Bahtinov   ///< Bahtinov mask focus
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(FocusMethod, {
-    {FocusMethod::HFD, "hfd"},
-    {FocusMethod::FWHM, "fwhm"},
-    {FocusMethod::Contrast, "contrast"},
-    {FocusMethod::Bahtinov, "bahtinov"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(FocusMethod,
+                             {
+                                 {FocusMethod::HFD, "hfd"},
+                                 {FocusMethod::FWHM, "fwhm"},
+                                 {FocusMethod::Contrast, "contrast"},
+                                 {FocusMethod::Bahtinov, "bahtinov"},
+                             })
 
 /**
  * @brief Focus result structure
@@ -134,12 +136,10 @@ struct FocusResult {
 };
 
 inline void to_json(json& j, const FocusResult& r) {
-    j = json{
-        {"position", r.position},
-        {"metric", r.metric},
-        {"temperature", r.temperature},
-        {"success", r.success}
-    };
+    j = json{{"position", r.position},
+             {"metric", r.metric},
+             {"temperature", r.temperature},
+             {"success", r.success}};
 }
 
 inline void from_json(const json& j, FocusResult& r) {
@@ -172,15 +172,15 @@ enum class FilterType {
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(FilterType, {
-    {FilterType::Luminance, "L"},
-    {FilterType::Red, "R"},
-    {FilterType::Green, "G"},
-    {FilterType::Blue, "B"},
-    {FilterType::Ha, "Ha"},
-    {FilterType::OIII, "OIII"},
-    {FilterType::SII, "SII"},
-    {FilterType::Custom, "custom"},
-})
+                                             {FilterType::Luminance, "L"},
+                                             {FilterType::Red, "R"},
+                                             {FilterType::Green, "G"},
+                                             {FilterType::Blue, "B"},
+                                             {FilterType::Ha, "Ha"},
+                                             {FilterType::OIII, "OIII"},
+                                             {FilterType::SII, "SII"},
+                                             {FilterType::Custom, "custom"},
+                                         })
 
 /**
  * @brief Filter configuration
@@ -193,12 +193,10 @@ struct FilterConfig {
 };
 
 inline void to_json(json& j, const FilterConfig& f) {
-    j = json{
-        {"position", f.position},
-        {"name", f.name},
-        {"type", f.type},
-        {"focusOffset", f.focusOffset}
-    };
+    j = json{{"position", f.position},
+             {"name", f.name},
+             {"type", f.type},
+             {"focusOffset", f.focusOffset}};
 }
 
 inline void from_json(const json& j, FilterConfig& f) {
@@ -220,22 +218,23 @@ namespace guider {
  * @brief Guiding state enumeration
  */
 enum class GuidingState {
-    Idle,       ///< Not guiding
-    Calibrating,///< Calibrating guider
-    Guiding,    ///< Actively guiding
-    Settling,   ///< Settling after dither
-    Paused,     ///< Guiding paused
-    Error       ///< Guiding error
+    Idle,         ///< Not guiding
+    Calibrating,  ///< Calibrating guider
+    Guiding,      ///< Actively guiding
+    Settling,     ///< Settling after dither
+    Paused,       ///< Guiding paused
+    Error         ///< Guiding error
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(GuidingState, {
-    {GuidingState::Idle, "idle"},
-    {GuidingState::Calibrating, "calibrating"},
-    {GuidingState::Guiding, "guiding"},
-    {GuidingState::Settling, "settling"},
-    {GuidingState::Paused, "paused"},
-    {GuidingState::Error, "error"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(GuidingState,
+                             {
+                                 {GuidingState::Idle, "idle"},
+                                 {GuidingState::Calibrating, "calibrating"},
+                                 {GuidingState::Guiding, "guiding"},
+                                 {GuidingState::Settling, "settling"},
+                                 {GuidingState::Paused, "paused"},
+                                 {GuidingState::Error, "error"},
+                             })
 
 /**
  * @brief Guiding statistics
@@ -250,14 +249,9 @@ struct GuidingStats {
 };
 
 inline void to_json(json& j, const GuidingStats& s) {
-    j = json{
-        {"rmsRA", s.rmsRA},
-        {"rmsDec", s.rmsDec},
-        {"rmsTotal", s.rmsTotal},
-        {"peakRA", s.peakRA},
-        {"peakDec", s.peakDec},
-        {"sampleCount", s.sampleCount}
-    };
+    j = json{{"rmsRA", s.rmsRA},       {"rmsDec", s.rmsDec},
+             {"rmsTotal", s.rmsTotal}, {"peakRA", s.peakRA},
+             {"peakDec", s.peakDec},   {"sampleCount", s.sampleCount}};
 }
 
 inline void from_json(const json& j, GuidingStats& s) {
@@ -288,22 +282,20 @@ struct PlateSolveResult {
     double fovWidth = 0.0;    ///< Field of view width in degrees
     double fovHeight = 0.0;   ///< Field of view height in degrees
     bool success = false;
-    std::string solver;       ///< Solver used
-    double solveTime = 0.0;   ///< Time to solve in seconds
+    std::string solver;      ///< Solver used
+    double solveTime = 0.0;  ///< Time to solve in seconds
 };
 
 inline void to_json(json& j, const PlateSolveResult& r) {
-    j = json{
-        {"ra", r.ra},
-        {"dec", r.dec},
-        {"rotation", r.rotation},
-        {"pixelScale", r.pixelScale},
-        {"fovWidth", r.fovWidth},
-        {"fovHeight", r.fovHeight},
-        {"success", r.success},
-        {"solver", r.solver},
-        {"solveTime", r.solveTime}
-    };
+    j = json{{"ra", r.ra},
+             {"dec", r.dec},
+             {"rotation", r.rotation},
+             {"pixelScale", r.pixelScale},
+             {"fovWidth", r.fovWidth},
+             {"fovHeight", r.fovHeight},
+             {"success", r.success},
+             {"solver", r.solver},
+             {"solveTime", r.solveTime}};
 }
 
 inline void from_json(const json& j, PlateSolveResult& r) {
@@ -341,17 +333,19 @@ enum class WeatherCondition {
     Unknown
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(WeatherCondition, {
-    {WeatherCondition::Clear, "clear"},
-    {WeatherCondition::Cloudy, "cloudy"},
-    {WeatherCondition::PartlyCloudy, "partly_cloudy"},
-    {WeatherCondition::Overcast, "overcast"},
-    {WeatherCondition::Rain, "rain"},
-    {WeatherCondition::Snow, "snow"},
-    {WeatherCondition::Fog, "fog"},
-    {WeatherCondition::Windy, "windy"},
-    {WeatherCondition::Unknown, "unknown"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(WeatherCondition,
+                             {
+                                 {WeatherCondition::Clear, "clear"},
+                                 {WeatherCondition::Cloudy, "cloudy"},
+                                 {WeatherCondition::PartlyCloudy,
+                                  "partly_cloudy"},
+                                 {WeatherCondition::Overcast, "overcast"},
+                                 {WeatherCondition::Rain, "rain"},
+                                 {WeatherCondition::Snow, "snow"},
+                                 {WeatherCondition::Fog, "fog"},
+                                 {WeatherCondition::Windy, "windy"},
+                                 {WeatherCondition::Unknown, "unknown"},
+                             })
 
 /**
  * @brief Safety status
@@ -367,15 +361,13 @@ struct SafetyStatus {
 };
 
 inline void to_json(json& j, const SafetyStatus& s) {
-    j = json{
-        {"isSafe", s.isSafe},
-        {"weather", s.weather},
-        {"temperature", s.temperature},
-        {"humidity", s.humidity},
-        {"windSpeed", s.windSpeed},
-        {"cloudCover", s.cloudCover},
-        {"reason", s.reason}
-    };
+    j = json{{"isSafe", s.isSafe},
+             {"weather", s.weather},
+             {"temperature", s.temperature},
+             {"humidity", s.humidity},
+             {"windSpeed", s.windSpeed},
+             {"cloudCover", s.cloudCover},
+             {"reason", s.reason}};
 }
 
 inline void from_json(const json& j, SafetyStatus& s) {

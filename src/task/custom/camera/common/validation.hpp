@@ -10,9 +10,9 @@
 #ifndef LITHIUM_TASK_CAMERA_VALIDATION_HPP
 #define LITHIUM_TASK_CAMERA_VALIDATION_HPP
 
-#include "types.hpp"
 #include <stdexcept>
 #include <string>
+#include "types.hpp"
 
 namespace lithium::task::camera {
 
@@ -32,12 +32,13 @@ public:
  * @param maxExp Maximum allowed exposure (default 7200s)
  * @throws ValidationError if exposure is out of range
  */
-inline void validateExposure(double exposure, double minExp = 0.0001, double maxExp = 7200.0) {
+inline void validateExposure(double exposure, double minExp = 0.0001,
+                             double maxExp = 7200.0) {
     if (exposure < minExp || exposure > maxExp) {
-        throw ValidationError(
-            "Exposure time must be between " + std::to_string(minExp) +
-            " and " + std::to_string(maxExp) + " seconds, got " +
-            std::to_string(exposure));
+        throw ValidationError("Exposure time must be between " +
+                              std::to_string(minExp) + " and " +
+                              std::to_string(maxExp) + " seconds, got " +
+                              std::to_string(exposure));
     }
 }
 
@@ -50,9 +51,8 @@ inline void validateExposure(double exposure, double minExp = 0.0001, double max
 inline void validateGain(int gain, int minGain = 0, int maxGain = 1000) {
     if (gain < minGain || gain > maxGain) {
         throw ValidationError(
-            "Gain must be between " + std::to_string(minGain) +
-            " and " + std::to_string(maxGain) + ", got " +
-            std::to_string(gain));
+            "Gain must be between " + std::to_string(minGain) + " and " +
+            std::to_string(maxGain) + ", got " + std::to_string(gain));
     }
 }
 
@@ -65,9 +65,8 @@ inline void validateGain(int gain, int minGain = 0, int maxGain = 1000) {
 inline void validateOffset(int offset, int minOffset = 0, int maxOffset = 500) {
     if (offset < minOffset || offset > maxOffset) {
         throw ValidationError(
-            "Offset must be between " + std::to_string(minOffset) +
-            " and " + std::to_string(maxOffset) + ", got " +
-            std::to_string(offset));
+            "Offset must be between " + std::to_string(minOffset) + " and " +
+            std::to_string(maxOffset) + ", got " + std::to_string(offset));
     }
 }
 
@@ -77,10 +76,12 @@ inline void validateOffset(int offset, int minOffset = 0, int maxOffset = 500) {
  * @param maxBin Maximum binning value (default 4)
  */
 inline void validateBinning(const BinningConfig& binning, int maxBin = 4) {
-    if (binning.x < 1 || binning.x > maxBin || binning.y < 1 || binning.y > maxBin) {
-        throw ValidationError(
-            "Binning must be between 1 and " + std::to_string(maxBin) +
-            ", got " + std::to_string(binning.x) + "x" + std::to_string(binning.y));
+    if (binning.x < 1 || binning.x > maxBin || binning.y < 1 ||
+        binning.y > maxBin) {
+        throw ValidationError("Binning must be between 1 and " +
+                              std::to_string(maxBin) + ", got " +
+                              std::to_string(binning.x) + "x" +
+                              std::to_string(binning.y));
     }
 }
 
@@ -90,7 +91,8 @@ inline void validateBinning(const BinningConfig& binning, int maxBin = 4) {
  * @param maxWidth Maximum sensor width
  * @param maxHeight Maximum sensor height
  */
-inline void validateSubframe(const SubframeConfig& subframe, int maxWidth, int maxHeight) {
+inline void validateSubframe(const SubframeConfig& subframe, int maxWidth,
+                             int maxHeight) {
     if (subframe.x < 0 || subframe.y < 0) {
         throw ValidationError("Subframe coordinates cannot be negative");
     }
@@ -112,9 +114,9 @@ inline void validateSubframe(const SubframeConfig& subframe, int maxWidth, int m
  */
 inline void validateCount(int count, int maxCount = 10000) {
     if (count < 1 || count > maxCount) {
-        throw ValidationError(
-            "Count must be between 1 and " + std::to_string(maxCount) +
-            ", got " + std::to_string(count));
+        throw ValidationError("Count must be between 1 and " +
+                              std::to_string(maxCount) + ", got " +
+                              std::to_string(count));
     }
 }
 
@@ -124,12 +126,12 @@ inline void validateCount(int count, int maxCount = 10000) {
  * @param minTemp Minimum temperature (default -50)
  * @param maxTemp Maximum temperature (default 50)
  */
-inline void validateTemperature(double temp, double minTemp = -50.0, double maxTemp = 50.0) {
+inline void validateTemperature(double temp, double minTemp = -50.0,
+                                double maxTemp = 50.0) {
     if (temp < minTemp || temp > maxTemp) {
         throw ValidationError(
-            "Temperature must be between " + std::to_string(minTemp) +
-            " and " + std::to_string(maxTemp) + "°C, got " +
-            std::to_string(temp));
+            "Temperature must be between " + std::to_string(minTemp) + " and " +
+            std::to_string(maxTemp) + "°C, got " + std::to_string(temp));
     }
 }
 
@@ -140,9 +142,9 @@ inline void validateTemperature(double temp, double minTemp = -50.0, double maxT
  */
 inline void validateFocusPosition(int position, int maxPosition = 100000) {
     if (position < 0 || position > maxPosition) {
-        throw ValidationError(
-            "Focus position must be between 0 and " + std::to_string(maxPosition) +
-            ", got " + std::to_string(position));
+        throw ValidationError("Focus position must be between 0 and " +
+                              std::to_string(maxPosition) + ", got " +
+                              std::to_string(position));
     }
 }
 
@@ -153,12 +155,12 @@ inline void validateFocusPosition(int position, int maxPosition = 100000) {
  */
 inline void validateCoordinates(double ra, double dec) {
     if (ra < 0.0 || ra > 24.0) {
-        throw ValidationError(
-            "RA must be between 0 and 24 hours, got " + std::to_string(ra));
+        throw ValidationError("RA must be between 0 and 24 hours, got " +
+                              std::to_string(ra));
     }
     if (dec < -90.0 || dec > 90.0) {
-        throw ValidationError(
-            "Dec must be between -90 and 90 degrees, got " + std::to_string(dec));
+        throw ValidationError("Dec must be between -90 and 90 degrees, got " +
+                              std::to_string(dec));
     }
 }
 
@@ -181,7 +183,8 @@ inline void validateRequired(const json& params, const std::string& key) {
  */
 inline void validateType(const json& params, const std::string& key,
                          const std::string& expectedType) {
-    if (!params.contains(key)) return;
+    if (!params.contains(key))
+        return;
 
     const auto& val = params[key];
     bool valid = false;
@@ -201,8 +204,8 @@ inline void validateType(const json& params, const std::string& key,
     }
 
     if (!valid) {
-        throw ValidationError(
-            "Parameter '" + key + "' must be of type " + expectedType);
+        throw ValidationError("Parameter '" + key + "' must be of type " +
+                              expectedType);
     }
 }
 

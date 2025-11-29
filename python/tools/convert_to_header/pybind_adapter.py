@@ -36,7 +36,7 @@ class ConvertToHeaderPyBindAdapter:
         compression: str = "none",
         verify_checksum: bool = False,
         checksum_algorithm: str = "sha256",
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Synchronous conversion of binary file to C/C++ header (for C++ binding).
@@ -65,8 +65,7 @@ class ConvertToHeaderPyBindAdapter:
             }
         """
         try:
-            logger.info(
-                f"C++ binding: Converting binary file {input_file} to header")
+            logger.info(f"C++ binding: Converting binary file {input_file} to header")
 
             # Build ConversionOptions
             options_dict = {
@@ -78,10 +77,13 @@ class ConvertToHeaderPyBindAdapter:
                 "checksum_algorithm": checksum_algorithm,
             }
             options_dict.update(kwargs)
-            options = ConversionOptions(**{
-                k: v for k, v in options_dict.items()
-                if k in ConversionOptions.__dataclass_fields__
-            })
+            options = ConversionOptions(
+                **{
+                    k: v
+                    for k, v in options_dict.items()
+                    if k in ConversionOptions.__dataclass_fields__
+                }
+            )
 
             # Perform conversion
             output_paths = convert_to_header(input_file, output_file)
@@ -91,7 +93,7 @@ class ConvertToHeaderPyBindAdapter:
                 "success": True,
                 "output_files": output_files,
                 "error": None,
-                "message": f"Successfully converted {input_file} to {len(output_files)} header file(s)"
+                "message": f"Successfully converted {input_file} to {len(output_files)} header file(s)",
             }
             logger.info(result["message"])
             return result
@@ -102,7 +104,7 @@ class ConvertToHeaderPyBindAdapter:
                 "success": False,
                 "output_files": [],
                 "error": str(e),
-                "message": f"Conversion failed: {str(e)}"
+                "message": f"Conversion failed: {str(e)}",
             }
 
     @staticmethod
@@ -115,7 +117,7 @@ class ConvertToHeaderPyBindAdapter:
         compression: str = "none",
         verify_checksum: bool = False,
         checksum_algorithm: str = "sha256",
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Asynchronous conversion of binary file to C/C++ header.
@@ -146,16 +148,20 @@ class ConvertToHeaderPyBindAdapter:
         # Run the synchronous operation in a thread pool to avoid blocking
         return await asyncio.to_thread(
             ConvertToHeaderPyBindAdapter.to_header_sync,
-            input_file, output_file, array_name, array_type,
-            data_format, compression, verify_checksum, checksum_algorithm,
-            **kwargs
+            input_file,
+            output_file,
+            array_name,
+            array_type,
+            data_format,
+            compression,
+            verify_checksum,
+            checksum_algorithm,
+            **kwargs,
         )
 
     @staticmethod
     def to_file_sync(
-        input_header: str,
-        output_file: Optional[str] = None,
-        **kwargs
+        input_header: str, output_file: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         """
         Synchronous conversion of C/C++ header back to binary file (for C++ binding).
@@ -177,7 +183,8 @@ class ConvertToHeaderPyBindAdapter:
         """
         try:
             logger.info(
-                f"C++ binding: Converting header file {input_header} back to binary")
+                f"C++ binding: Converting header file {input_header} back to binary"
+            )
 
             # Perform conversion
             output_path = convert_to_file(input_header, output_file)
@@ -186,7 +193,7 @@ class ConvertToHeaderPyBindAdapter:
                 "success": True,
                 "output_file": str(output_path),
                 "error": None,
-                "message": f"Successfully converted {input_header} to {output_path}"
+                "message": f"Successfully converted {input_header} to {output_path}",
             }
             logger.info(result["message"])
             return result
@@ -197,14 +204,12 @@ class ConvertToHeaderPyBindAdapter:
                 "success": False,
                 "output_file": None,
                 "error": str(e),
-                "message": f"Conversion failed: {str(e)}"
+                "message": f"Conversion failed: {str(e)}",
             }
 
     @staticmethod
     async def to_file_async(
-        input_header: str,
-        output_file: Optional[str] = None,
-        **kwargs
+        input_header: str, output_file: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         """
         Asynchronous conversion of C/C++ header back to binary file.
@@ -227,7 +232,9 @@ class ConvertToHeaderPyBindAdapter:
         # Run the synchronous operation in a thread pool to avoid blocking
         return await asyncio.to_thread(
             ConvertToHeaderPyBindAdapter.to_file_sync,
-            input_header, output_file, **kwargs
+            input_header,
+            output_file,
+            **kwargs,
         )
 
     @staticmethod
@@ -266,7 +273,7 @@ class ConvertToHeaderPyBindAdapter:
                 "success": True,
                 "info": serializable_info,
                 "error": None,
-                "message": f"Successfully extracted information from {header_file}"
+                "message": f"Successfully extracted information from {header_file}",
             }
             logger.info(result["message"])
             return result
@@ -277,7 +284,7 @@ class ConvertToHeaderPyBindAdapter:
                 "success": False,
                 "info": None,
                 "error": str(e),
-                "message": f"Failed to extract header info: {str(e)}"
+                "message": f"Failed to extract header info: {str(e)}",
             }
 
     @staticmethod
@@ -299,8 +306,7 @@ class ConvertToHeaderPyBindAdapter:
         """
         # Run the synchronous operation in a thread pool to avoid blocking
         return await asyncio.to_thread(
-            ConvertToHeaderPyBindAdapter.get_header_info_sync,
-            header_file
+            ConvertToHeaderPyBindAdapter.get_header_info_sync, header_file
         )
 
     @staticmethod
@@ -308,7 +314,7 @@ class ConvertToHeaderPyBindAdapter:
         input_files: List[str],
         output_dir: str,
         array_name_prefix: str = "resource",
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Batch convert multiple binary files to headers (synchronous version).
@@ -332,7 +338,8 @@ class ConvertToHeaderPyBindAdapter:
         """
         try:
             logger.info(
-                f"C++ binding: Batch converting {len(input_files)} binary files")
+                f"C++ binding: Batch converting {len(input_files)} binary files"
+            )
 
             results = []
             converted_count = 0
@@ -345,25 +352,31 @@ class ConvertToHeaderPyBindAdapter:
                     output_file = Path(output_dir) / f"{input_path.stem}.hpp"
 
                     # Perform conversion
-                    output_paths = convert_to_header(input_file, str(output_file), **kwargs)
+                    output_paths = convert_to_header(
+                        input_file, str(output_file), **kwargs
+                    )
                     output_files = [str(p) for p in output_paths]
 
-                    results.append({
-                        "file": input_file,
-                        "success": True,
-                        "output": output_files,
-                        "error": None
-                    })
+                    results.append(
+                        {
+                            "file": input_file,
+                            "success": True,
+                            "output": output_files,
+                            "error": None,
+                        }
+                    )
                     converted_count += 1
 
                 except Exception as e:
                     logger.warning(f"Failed to convert {input_file}: {e}")
-                    results.append({
-                        "file": input_file,
-                        "success": False,
-                        "output": None,
-                        "error": str(e)
-                    })
+                    results.append(
+                        {
+                            "file": input_file,
+                            "success": False,
+                            "output": None,
+                            "error": str(e),
+                        }
+                    )
                     failed_count += 1
 
             return {
@@ -372,7 +385,7 @@ class ConvertToHeaderPyBindAdapter:
                 "converted_files": converted_count,
                 "failed_files": failed_count,
                 "results": results,
-                "message": f"Batch conversion complete: {converted_count}/{len(input_files)} succeeded"
+                "message": f"Batch conversion complete: {converted_count}/{len(input_files)} succeeded",
             }
 
         except Exception as e:
@@ -384,7 +397,7 @@ class ConvertToHeaderPyBindAdapter:
                 "failed_files": len(input_files),
                 "results": [],
                 "error": str(e),
-                "message": f"Batch conversion failed: {str(e)}"
+                "message": f"Batch conversion failed: {str(e)}",
             }
 
     @staticmethod
@@ -392,7 +405,7 @@ class ConvertToHeaderPyBindAdapter:
         input_files: List[str],
         output_dir: str,
         array_name_prefix: str = "resource",
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Batch convert multiple binary files to headers (asynchronous version).
@@ -417,6 +430,8 @@ class ConvertToHeaderPyBindAdapter:
         # Run the synchronous operation in a thread pool to avoid blocking
         return await asyncio.to_thread(
             ConvertToHeaderPyBindAdapter.batch_convert_to_header_sync,
-            input_files, output_dir, array_name_prefix,
-            **kwargs
+            input_files,
+            output_dir,
+            array_name_prefix,
+            **kwargs,
         )

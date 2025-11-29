@@ -28,42 +28,46 @@ namespace lithium::client {
  */
 struct AstapOptions {
     // Basic solving options
-    int searchRadius{180};       // -r: Search radius in degrees (default: all-sky)
-    int maxStars{500};           // -s: Maximum stars to use for solving
-    double tolerance{0.007};     // -t: Hash code tolerance for quad matching
-    int speed{0};                // -speed: Speed mode (0=auto, 1-4, higher=faster but less accurate)
-    
+    int searchRadius{180};    // -r: Search radius in degrees (default: all-sky)
+    int maxStars{500};        // -s: Maximum stars to use for solving
+    double tolerance{0.007};  // -t: Hash code tolerance for quad matching
+    int speed{0};  // -speed: Speed mode (0=auto, 1-4, higher=faster but less
+                   // accurate)
+
     // Database options
-    std::string database;        // -d: Star database path (D05, D20, D50, D80, G05, V50, W08)
-    
+    std::string
+        database;  // -d: Star database path (D05, D20, D50, D80, G05, V50, W08)
+
     // Output options
-    bool update{false};          // -update: Update FITS header with WCS
-    bool analyse{false};         // -analyse: Analyse image (HFD, background, etc.)
-    bool annotate{false};        // -annotate: Annotate solved image
-    std::string wcsFile;         // -wcs: Output WCS file path
-    
+    bool update{false};    // -update: Update FITS header with WCS
+    bool analyse{false};   // -analyse: Analyse image (HFD, background, etc.)
+    bool annotate{false};  // -annotate: Annotate solved image
+    std::string wcsFile;   // -wcs: Output WCS file path
+
     // Image processing options
-    int downsample{0};           // -z: Downsample factor (0=auto, 2, 3, 4)
-    double minStarSize{1.5};     // Minimum star HFD in arcsec to filter hot pixels
-    bool useSIP{false};          // -sip: Add SIP polynomial coefficients for distortion
-    bool useTriples{false};      // -triples: Use triples instead of quads (for sparse fields)
-    bool slow{false};            // -slow: Force 50% overlap between search fields
-    
+    int downsample{0};        // -z: Downsample factor (0=auto, 2, 3, 4)
+    double minStarSize{1.5};  // Minimum star HFD in arcsec to filter hot pixels
+    bool useSIP{false};  // -sip: Add SIP polynomial coefficients for distortion
+    bool useTriples{
+        false};  // -triples: Use triples instead of quads (for sparse fields)
+    bool slow{false};  // -slow: Force 50% overlap between search fields
+
     // Photometry options (requires V50 database)
     bool photometry{false};      // -photometry: Perform photometry calibration
     std::string photometryFile;  // Output photometry results file
-    
+
     // Stacking options (for batch processing)
-    bool stack{false};           // -stack: Stack multiple images
-    std::string stackMethod;     // -stackmethod: average, sigma_clip
-    double sigmaFactor{2.5};     // -sigma: Sigma factor for sigma clip stacking
-    
+    bool stack{false};        // -stack: Stack multiple images
+    std::string stackMethod;  // -stackmethod: average, sigma_clip
+    double sigmaFactor{2.5};  // -sigma: Sigma factor for sigma clip stacking
+
     // Alignment options
-    std::string alignmentMethod{"star"};  // star, astrometric, manual, ephemeris
-    
+    std::string alignmentMethod{
+        "star"};  // star, astrometric, manual, ephemeris
+
     // Log and debug
-    bool verbose{false};         // -log: Enable verbose logging
-    std::string logFile;         // -logfile: Log file path
+    bool verbose{false};  // -log: Enable verbose logging
+    std::string logFile;  // -logfile: Log file path
 };
 
 /**
@@ -97,11 +101,10 @@ public:
 
     // ==================== Solver Interface ====================
 
-    PlateSolveResult solve(
-        const std::string& imageFilePath,
-        const std::optional<Coordinates>& initialCoordinates,
-        double fovW, double fovH,
-        int imageWidth, int imageHeight) override;
+    PlateSolveResult solve(const std::string& imageFilePath,
+                           const std::optional<Coordinates>& initialCoordinates,
+                           double fovW, double fovH, int imageWidth,
+                           int imageHeight) override;
 
     void abort() override;
 
@@ -111,7 +114,9 @@ public:
      * @brief Set ASTAP-specific options
      * @param options ASTAP options
      */
-    void setAstapOptions(const AstapOptions& options) { astapOptions_ = options; }
+    void setAstapOptions(const AstapOptions& options) {
+        astapOptions_ = options;
+    }
 
     /**
      * @brief Get ASTAP-specific options
@@ -155,9 +160,10 @@ private:
      * @param fovH Field of view height
      * @return Command string
      */
-    std::string buildCommand(const std::string& imageFilePath,
-                             const std::optional<Coordinates>& initialCoordinates,
-                             double fovW, double fovH);
+    std::string buildCommand(
+        const std::string& imageFilePath,
+        const std::optional<Coordinates>& initialCoordinates, double fovW,
+        double fovH);
 
     /**
      * @brief Execute ASTAP solve process

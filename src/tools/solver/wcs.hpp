@@ -85,7 +85,7 @@ struct alignas(64) WCSParams {
  * @return Spherical coordinates (RA/Dec in degrees).
  */
 [[nodiscard]] SphericalCoordinates pixelToRaDec(double x, double y,
-                                                 const WCSParams& wcs);
+                                                const WCSParams& wcs);
 
 /**
  * @brief Convert RA/Dec to pixel coordinates using WCS.
@@ -97,7 +97,7 @@ struct alignas(64) WCSParams {
  * @return true if conversion successful.
  */
 [[nodiscard]] bool raDecToPixel(double ra, double dec, const WCSParams& wcs,
-                                 double& x, double& y);
+                                double& x, double& y);
 
 /**
  * @brief Get FOV corner coordinates.

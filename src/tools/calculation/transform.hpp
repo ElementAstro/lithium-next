@@ -59,8 +59,8 @@ using namespace lithium::tools::astronomy;
     double altitude = toDegrees(std::asin(sinAlt));
 
     // Calculate azimuth
-    double cosAz = (sinDec - sinAlt * sinLat) /
-                   (std::cos(toRadians(altitude)) * cosLat);
+    double cosAz =
+        (sinDec - sinAlt * sinLat) / (std::cos(toRadians(altitude)) * cosLat);
     cosAz = std::clamp(cosAz, -1.0, 1.0);
     double azimuth = toDegrees(std::acos(cosAz));
 
@@ -119,7 +119,8 @@ using namespace lithium::tools::astronomy;
     double dec = toDegrees(std::asin(sinDec));
 
     // Calculate hour angle
-    double cosHA = (sinAlt - sinLat * sinDec) / (cosLat * std::cos(toRadians(dec)));
+    double cosHA =
+        (sinAlt - sinLat * sinDec) / (cosLat * std::cos(toRadians(dec)));
     cosHA = std::clamp(cosHA, -1.0, 1.0);
     double ha = toDegrees(std::acos(cosHA));
 
@@ -148,7 +149,7 @@ using namespace lithium::tools::astronomy;
  */
 template <std::floating_point T>
 [[nodiscard]] auto calculateAltAzCoordinates(T hourAngle, T declination,
-                                              T latitude) -> std::pair<T, T> {
+                                             T latitude) -> std::pair<T, T> {
     T haRad = hourAngle * static_cast<T>(DEG_TO_RAD);
     T decRad = declination * static_cast<T>(DEG_TO_RAD);
     T latRad = latitude * static_cast<T>(DEG_TO_RAD);
@@ -193,8 +194,8 @@ template <std::floating_point T>
  * @return Field rotation rate in degrees per hour.
  */
 template <std::floating_point T>
-[[nodiscard]] auto calculateFieldRotationRate(T altitude, T azimuth,
-                                               T latitude) -> T {
+[[nodiscard]] auto calculateFieldRotationRate(T altitude, T azimuth, T latitude)
+    -> T {
     T altRad = altitude * static_cast<T>(DEG_TO_RAD);
     T azRad = azimuth * static_cast<T>(DEG_TO_RAD);
     T latRad = latitude * static_cast<T>(DEG_TO_RAD);
@@ -220,7 +221,7 @@ template <std::floating_point T>
  */
 template <std::floating_point T>
 [[nodiscard]] auto calculateRefraction(T altitude, T temperature = 10.0,
-                                        T pressure = 1010.0) -> T {
+                                       T pressure = 1010.0) -> T {
     if (altitude < static_cast<T>(-0.5)) {
         return static_cast<T>(0.0);  // Below horizon
     }
@@ -236,10 +237,11 @@ template <std::floating_point T>
         T a = altitude;
         refraction = static_cast<T>(0.1594) + static_cast<T>(0.0196) * a +
                      static_cast<T>(0.00002) * a * a;
-        refraction *= pressure *
-                      (static_cast<T>(1.0) -
-                       static_cast<T>(0.00012) * (temperature - static_cast<T>(10.0))) /
-                      static_cast<T>(1010.0);
+        refraction *=
+            pressure *
+            (static_cast<T>(1.0) -
+             static_cast<T>(0.00012) * (temperature - static_cast<T>(10.0))) /
+            static_cast<T>(1010.0);
         refraction /= static_cast<T>(60.0);  // Convert arcminutes to degrees
     }
 

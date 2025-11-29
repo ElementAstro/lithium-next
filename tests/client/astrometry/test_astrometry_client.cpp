@@ -12,8 +12,8 @@ Description: Tests for Astrometry.net plate solver client
 
 *************************************************/
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "client/astrometry/astrometry_client.hpp"
 
@@ -142,7 +142,8 @@ TEST_F(AstrometryClientTest, DisconnectWhenNotConnected) {
 }
 
 TEST_F(AstrometryClientTest, SolveWithoutConnection) {
-    auto result = client_->solve("/path/to/image.fits", std::nullopt, 2.0, 1.5, 1920, 1080);
+    auto result = client_->solve("/path/to/image.fits", std::nullopt, 2.0, 1.5,
+                                 1920, 1080);
 
     EXPECT_FALSE(result.success);
     EXPECT_FALSE(result.errorMessage.empty());
@@ -239,7 +240,8 @@ TEST_F(AstrometryClientTest, ScampOptions) {
     EXPECT_EQ(*retrieved.scampRef, "/tmp/ref.cat");
 }
 
-// ==================== Integration Tests (require Astrometry.net) ====================
+// ==================== Integration Tests (require Astrometry.net)
+// ====================
 
 class AstrometryClientIntegrationTest : public ::testing::Test {
 protected:
@@ -247,7 +249,8 @@ protected:
         client_ = std::make_shared<AstrometryClient>("integration_test");
 
         if (!AstrometryClient::isAstrometryInstalled()) {
-            GTEST_SKIP() << "Astrometry.net not installed, skipping integration tests";
+            GTEST_SKIP()
+                << "Astrometry.net not installed, skipping integration tests";
         }
     }
 

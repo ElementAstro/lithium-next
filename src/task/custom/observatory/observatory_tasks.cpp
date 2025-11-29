@@ -8,8 +8,8 @@
  */
 
 #include "observatory_tasks.hpp"
-#include <thread>
 #include <random>
+#include <thread>
 
 namespace lithium::task::observatory {
 
@@ -18,11 +18,16 @@ namespace lithium::task::observatory {
 // ============================================================================
 
 void WeatherMonitorTask::setupParameters() {
-    addParamDefinition("check_interval", "integer", false, 60, "Check interval in seconds");
-    addParamDefinition("duration", "integer", false, 0, "Monitor duration (0=continuous)");
-    addParamDefinition("wind_threshold", "number", false, 40.0, "Wind speed threshold (km/h)");
-    addParamDefinition("humidity_threshold", "number", false, 85.0, "Humidity threshold (%)");
-    addParamDefinition("rain_threshold", "boolean", false, true, "Stop on any rain detection");
+    addParamDefinition("check_interval", "integer", false, 60,
+                       "Check interval in seconds");
+    addParamDefinition("duration", "integer", false, 0,
+                       "Monitor duration (0=continuous)");
+    addParamDefinition("wind_threshold", "number", false, 40.0,
+                       "Wind speed threshold (km/h)");
+    addParamDefinition("humidity_threshold", "number", false, 85.0,
+                       "Humidity threshold (%)");
+    addParamDefinition("rain_threshold", "boolean", false, true,
+                       "Stop on any rain detection");
 }
 
 void WeatherMonitorTask::executeImpl(const json& params) {
@@ -32,17 +37,18 @@ void WeatherMonitorTask::executeImpl(const json& params) {
     double humidityThreshold = params.value("humidity_threshold", 85.0);
 
     logProgress("Starting weather monitoring");
-    logProgress("Thresholds - Wind: " + std::to_string(windThreshold) + 
-               " km/h, Humidity: " + std::to_string(humidityThreshold) + "%");
+    logProgress("Thresholds - Wind: " + std::to_string(windThreshold) +
+                " km/h, Humidity: " + std::to_string(humidityThreshold) + "%");
 
     int elapsed = 0;
     while (shouldContinue() && (duration == 0 || elapsed < duration)) {
         SafetyStatus status = checkWeather();
 
-        logProgress("Weather check: " + std::string(status.isSafe ? "SAFE" : "UNSAFE"));
+        logProgress("Weather check: " +
+                    std::string(status.isSafe ? "SAFE" : "UNSAFE"));
         logProgress("Temp: " + std::to_string(status.temperature) + "°C, " +
-                   "Humidity: " + std::to_string(status.humidity) + "%, " +
-                   "Wind: " + std::to_string(status.windSpeed) + " km/h");
+                    "Humidity: " + std::to_string(status.humidity) + "%, " +
+                    "Wind: " + std::to_string(status.windSpeed) + " km/h");
 
         if (!status.isSafe) {
             logProgress("ALERT: Unsafe conditions detected - " + status.reason);
@@ -54,7 +60,8 @@ void WeatherMonitorTask::executeImpl(const json& params) {
             break;
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(std::min(checkInterval, 1)));
+        std::this_thread::sleep_for(
+            std::chrono::seconds(std::min(checkInterval, 1)));
         elapsed += checkInterval;
     }
 
@@ -86,8 +93,10 @@ SafetyStatus WeatherMonitorTask::checkWeather() {
 // ============================================================================
 
 void CloudDetectionTask::setupParameters() {
-    addParamDefinition("threshold", "number", false, 50.0, "Cloud cover threshold (%)");
-    addParamDefinition("exposure", "number", false, 1.0, "Sky quality meter exposure");
+    addParamDefinition("threshold", "number", false, 50.0,
+                       "Cloud cover threshold (%)");
+    addParamDefinition("exposure", "number", false, 1.0,
+                       "Sky quality meter exposure");
 }
 
 void CloudDetectionTask::executeImpl(const json& params) {
@@ -111,11 +120,11 @@ void CloudDetectionTask::executeImpl(const json& params) {
 double CloudDetectionTask::measureCloudCover() {
     // Simulate cloud measurement
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    
+
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0.0, 40.0);
-    
+
     return dist(gen);
 }
 
@@ -124,11 +133,13 @@ double CloudDetectionTask::measureCloudCover() {
 // ============================================================================
 
 void SafetyShutdownTask::setupParameters() {
-    addParamDefinition("reason", "string", false, "Manual shutdown", "Shutdown reason");
+    addParamDefinition("reason", "string", false, "Manual shutdown",
+                       "Shutdown reason");
     addParamDefinition("park_mount", "boolean", false, true, "Park mount");
     addParamDefinition("close_dome", "boolean", false, true, "Close dome/roof");
     addParamDefinition("warm_camera", "boolean", false, true, "Warm up camera");
-    addParamDefinition("emergency", "boolean", false, false, "Emergency shutdown (faster)");
+    addParamDefinition("emergency", "boolean", false, false,
+                       "Emergency shutdown (faster)");
 }
 
 void SafetyShutdownTask::executeImpl(const json& params) {
@@ -197,8 +208,10 @@ void ObservatoryStartupTask::setupParameters() {
     addParamDefinition("unpark_mount", "boolean", false, true, "Unpark mount");
     addParamDefinition("open_dome", "boolean", false, true, "Open dome/roof");
     addParamDefinition("cool_camera", "boolean", false, true, "Cool camera");
-    addParamDefinition("target_temp", "number", false, -10.0, "Camera target temperature");
-    addParamDefinition("safety_check", "boolean", false, true, "Perform safety check first");
+    addParamDefinition("target_temp", "number", false, -10.0,
+                       "Camera target temperature");
+    addParamDefinition("safety_check", "boolean", false, true,
+                       "Perform safety check first");
 }
 
 void ObservatoryStartupTask::executeImpl(const json& params) {
@@ -231,7 +244,8 @@ void ObservatoryStartupTask::executeImpl(const json& params) {
 
     // Cool camera
     if (coolCamera) {
-        logProgress("Cooling camera to " + std::to_string(targetTemp) + "°C...", 0.7);
+        logProgress("Cooling camera to " + std::to_string(targetTemp) + "°C...",
+                    0.7);
         std::this_thread::sleep_for(std::chrono::seconds(2));
     }
 
@@ -243,9 +257,12 @@ void ObservatoryStartupTask::executeImpl(const json& params) {
 // ============================================================================
 
 void DomeControlTask::setupParameters() {
-    addParamDefinition("action", "string", true, nullptr, "Action (open/close/goto/slave)");
-    addParamDefinition("azimuth", "number", false, nullptr, "Target azimuth for goto");
-    addParamDefinition("slave_enable", "boolean", false, nullptr, "Enable/disable slaving");
+    addParamDefinition("action", "string", true, nullptr,
+                       "Action (open/close/goto/slave)");
+    addParamDefinition("azimuth", "number", false, nullptr,
+                       "Target azimuth for goto");
+    addParamDefinition("slave_enable", "boolean", false, nullptr,
+                       "Enable/disable slaving");
 }
 
 void DomeControlTask::executeImpl(const json& params) {
@@ -269,14 +286,18 @@ void DomeControlTask::executeImpl(const json& params) {
             throw std::invalid_argument("Azimuth required for goto action");
         }
         double azimuth = params["azimuth"].get<double>();
-        logProgress("Rotating dome to azimuth " + std::to_string(azimuth) + "°");
+        logProgress("Rotating dome to azimuth " + std::to_string(azimuth) +
+                    "°");
         std::this_thread::sleep_for(std::chrono::seconds(3));
         logProgress("Dome at target azimuth", 1.0);
     } else if (action == "slave") {
         bool enable = params.value("slave_enable", true);
-        logProgress(enable ? "Enabling dome slaving" : "Disabling dome slaving");
+        logProgress(enable ? "Enabling dome slaving"
+                           : "Disabling dome slaving");
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        logProgress("Dome slaving " + std::string(enable ? "enabled" : "disabled"), 1.0);
+        logProgress(
+            "Dome slaving " + std::string(enable ? "enabled" : "disabled"),
+            1.0);
     } else {
         throw std::invalid_argument("Unknown action: " + action);
     }
@@ -287,8 +308,10 @@ void DomeControlTask::executeImpl(const json& params) {
 // ============================================================================
 
 void FlatPanelTask::setupParameters() {
-    addParamDefinition("action", "string", true, nullptr, "Action (on/off/brightness)");
-    addParamDefinition("brightness", "integer", false, 128, "Brightness level (0-255)");
+    addParamDefinition("action", "string", true, nullptr,
+                       "Action (on/off/brightness)");
+    addParamDefinition("brightness", "integer", false, 128,
+                       "Brightness level (0-255)");
 }
 
 void FlatPanelTask::executeImpl(const json& params) {
@@ -301,7 +324,8 @@ void FlatPanelTask::executeImpl(const json& params) {
 
     if (action == "on") {
         int brightness = params.value("brightness", 128);
-        logProgress("Turning on flat panel at brightness " + std::to_string(brightness));
+        logProgress("Turning on flat panel at brightness " +
+                    std::to_string(brightness));
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         logProgress("Flat panel on", 1.0);
     } else if (action == "off") {
@@ -310,7 +334,8 @@ void FlatPanelTask::executeImpl(const json& params) {
         logProgress("Flat panel off", 1.0);
     } else if (action == "brightness") {
         int brightness = params.value("brightness", 128);
-        logProgress("Setting flat panel brightness to " + std::to_string(brightness));
+        logProgress("Setting flat panel brightness to " +
+                    std::to_string(brightness));
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         logProgress("Brightness set", 1.0);
     } else {
@@ -323,9 +348,12 @@ void FlatPanelTask::executeImpl(const json& params) {
 // ============================================================================
 
 void SafetyCheckTask::setupParameters() {
-    addParamDefinition("check_weather", "boolean", false, true, "Check weather");
-    addParamDefinition("check_devices", "boolean", false, true, "Check device status");
-    addParamDefinition("check_power", "boolean", false, true, "Check power status");
+    addParamDefinition("check_weather", "boolean", false, true,
+                       "Check weather");
+    addParamDefinition("check_devices", "boolean", false, true,
+                       "Check device status");
+    addParamDefinition("check_power", "boolean", false, true,
+                       "Check power status");
 }
 
 void SafetyCheckTask::executeImpl(const json& params) {
@@ -338,7 +366,11 @@ void SafetyCheckTask::executeImpl(const json& params) {
     SafetyStatus status = performCheck();
 
     if (checkWeather) {
-        logProgress("Weather: " + std::string(status.weather == WeatherCondition::Clear ? "Clear" : "Check conditions"), 0.3);
+        logProgress(
+            "Weather: " + std::string(status.weather == WeatherCondition::Clear
+                                          ? "Clear"
+                                          : "Check conditions"),
+            0.3);
     }
 
     if (checkDevices) {

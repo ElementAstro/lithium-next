@@ -26,12 +26,12 @@ Description: High-performance Configuration Manager with Split Components
 #include <unordered_map>
 #include <vector>
 
-#include "atom/type/json.hpp"
-#include "exception.hpp"
 #include "../components/cache.hpp"
 #include "../components/serializer.hpp"
 #include "../components/validator.hpp"
 #include "../components/watcher.hpp"
+#include "atom/type/json.hpp"
+#include "exception.hpp"
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -80,7 +80,7 @@ public:
     struct Options {
         ConfigCache::Config cache_options;          ///< Cache configuration
         ConfigValidator::Config validator_options;  ///< Validator configuration
-        SerializationOptions serializer_options;    ///< Serializer configuration
+        SerializationOptions serializer_options;  ///< Serializer configuration
         ConfigWatcher::WatcherOptions
             watcher_options;            ///< Watcher configuration
         bool enable_auto_reload{true};  ///< Enable automatic file reloading
@@ -508,9 +508,9 @@ public:
      * @param path Configuration path involved
      * @param value Optional value (for GET/SET events)
      */
-    using ConfigHook = std::function<void(ConfigEvent event,
-                                          std::string_view path,
-                                          const std::optional<json>& value)>;
+    using ConfigHook =
+        std::function<void(ConfigEvent event, std::string_view path,
+                           const std::optional<json>& value)>;
 
     /**
      * @brief Register a configuration event hook

@@ -31,13 +31,12 @@ struct ASCOMDriverInfo : public DriverInfo {
     int deviceNumber{0};
     std::string uniqueId;
     std::string progId;  // COM ProgID for native ASCOM
-    
-    ASCOMDriverInfo() {
-        backend = "ASCOM";
-    }
-    
+
+    ASCOMDriverInfo() { backend = "ASCOM"; }
+
     // Convert from ASCOMDeviceDescription
-    static ASCOMDriverInfo fromDescription(const ascom::ASCOMDeviceDescription& desc) {
+    static ASCOMDriverInfo fromDescription(
+        const ascom::ASCOMDeviceDescription& desc) {
         ASCOMDriverInfo info;
         info.name = desc.deviceName;
         info.label = desc.deviceName;
@@ -89,7 +88,8 @@ public:
 
     bool startDriver(const DriverInfo& driver) override;
     bool stopDriver(const std::string& driverName) override;
-    std::unordered_map<std::string, DriverInfo> getRunningDrivers() const override;
+    std::unordered_map<std::string, DriverInfo> getRunningDrivers()
+        const override;
     std::vector<DriverInfo> getAvailableDrivers() const override;
 
     // ==================== Device Management ====================
@@ -101,8 +101,7 @@ public:
 
     // ==================== Property Access ====================
 
-    bool setProperty(const std::string& device,
-                     const std::string& property,
+    bool setProperty(const std::string& device, const std::string& property,
                      const std::string& element,
                      const std::string& value) override;
 
@@ -146,7 +145,9 @@ public:
      * @brief Get backend name
      * @return "ASCOM"
      */
-    [[nodiscard]] std::string getBackendName() const override { return "ASCOM"; }
+    [[nodiscard]] std::string getBackendName() const override {
+        return "ASCOM";
+    }
 
     /**
      * @brief Execute device action
@@ -164,22 +165,24 @@ public:
      * @param deviceName Device name
      * @return Vector of action names
      */
-    std::vector<std::string> getSupportedActions(const std::string& deviceName) const;
+    std::vector<std::string> getSupportedActions(
+        const std::string& deviceName) const;
 
 private:
     // Helper to convert device description to DeviceInfo
-    DeviceInfo convertToDeviceInfo(const ascom::ASCOMDeviceDescription& desc) const;
-    
+    DeviceInfo convertToDeviceInfo(
+        const ascom::ASCOMDeviceDescription& desc) const;
+
     // Helper to find device by name
     std::optional<std::pair<ascom::ASCOMDeviceType, int>> findDevice(
         const std::string& deviceName) const;
-    
+
     // Convert ASCOM device type to DeviceInterface flags
     static DeviceInterface deviceTypeToInterface(ascom::ASCOMDeviceType type);
 
     std::unique_ptr<ascom::AlpacaClient> alpacaClient_;
     std::vector<ASCOMDriverInfo> availableDrivers_;
-    
+
     // Cache of discovered devices
     mutable std::vector<ascom::ASCOMDeviceDescription> deviceCache_;
     mutable std::mutex cacheMutex_;

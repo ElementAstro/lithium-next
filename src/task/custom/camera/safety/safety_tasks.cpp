@@ -10,12 +10,18 @@ namespace lithium::task::camera {
 
 // WeatherMonitorTask
 void WeatherMonitorTask::setupParameters() {
-    addParamDefinition("check_interval", "number", false, 60.0, "Check interval (seconds)");
-    addParamDefinition("wind_limit", "number", false, 30.0, "Wind speed limit (km/h)");
-    addParamDefinition("humidity_limit", "number", false, 85.0, "Humidity limit (%)");
-    addParamDefinition("rain_threshold", "number", false, 0.1, "Rain threshold");
-    addParamDefinition("cloud_limit", "number", false, 50.0, "Cloud cover limit (%)");
-    addParamDefinition("action_on_unsafe", "string", false, "park", "Action on unsafe (park/close/alert)");
+    addParamDefinition("check_interval", "number", false, 60.0,
+                       "Check interval (seconds)");
+    addParamDefinition("wind_limit", "number", false, 30.0,
+                       "Wind speed limit (km/h)");
+    addParamDefinition("humidity_limit", "number", false, 85.0,
+                       "Humidity limit (%)");
+    addParamDefinition("rain_threshold", "number", false, 0.1,
+                       "Rain threshold");
+    addParamDefinition("cloud_limit", "number", false, 50.0,
+                       "Cloud cover limit (%)");
+    addParamDefinition("action_on_unsafe", "string", false, "park",
+                       "Action on unsafe (park/close/alert)");
 }
 
 void WeatherMonitorTask::validateParams(const json& params) {
@@ -34,8 +40,10 @@ void WeatherMonitorTask::executeImpl(const json& params) {
     double cloudCover = 20.0;
     bool rain = false;
 
-    logProgress("Wind: " + std::to_string(wind) + " km/h (limit: " + std::to_string(windLimit) + ")");
-    logProgress("Humidity: " + std::to_string(humidity) + "% (limit: " + std::to_string(humidityLimit) + ")");
+    logProgress("Wind: " + std::to_string(wind) +
+                " km/h (limit: " + std::to_string(windLimit) + ")");
+    logProgress("Humidity: " + std::to_string(humidity) +
+                "% (limit: " + std::to_string(humidityLimit) + ")");
     logProgress("Cloud cover: " + std::to_string(cloudCover) + "%");
     logProgress("Rain: " + std::string(rain ? "Yes" : "No"));
 
@@ -48,8 +56,10 @@ void WeatherMonitorTask::executeImpl(const json& params) {
 // CloudDetectionTask
 void CloudDetectionTask::setupParameters() {
     addParamDefinition("exposure", "number", false, 10.0, "All-sky exposure");
-    addParamDefinition("threshold", "number", false, 50.0, "Cloud threshold (%)");
-    addParamDefinition("analysis_method", "string", false, "brightness", "Analysis method");
+    addParamDefinition("threshold", "number", false, 50.0,
+                       "Cloud threshold (%)");
+    addParamDefinition("analysis_method", "string", false, "brightness",
+                       "Analysis method");
 }
 
 void CloudDetectionTask::validateParams(const json& params) {
@@ -80,8 +90,10 @@ void SafetyShutdownTask::setupParameters() {
     addParamDefinition("park_mount", "boolean", false, true, "Park mount");
     addParamDefinition("close_roof", "boolean", false, true, "Close roof/dome");
     addParamDefinition("warm_camera", "boolean", false, true, "Warm up camera");
-    addParamDefinition("disconnect_devices", "boolean", false, false, "Disconnect devices");
-    addParamDefinition("emergency", "boolean", false, false, "Emergency shutdown");
+    addParamDefinition("disconnect_devices", "boolean", false, false,
+                       "Disconnect devices");
+    addParamDefinition("emergency", "boolean", false, false,
+                       "Emergency shutdown");
 }
 
 void SafetyShutdownTask::validateParams(const json& params) {

@@ -12,8 +12,8 @@ Description: Tests for client base class and registry
 
 *************************************************/
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "client/common/client_base.hpp"
 
@@ -38,7 +38,8 @@ public:
         return destroyResult_;
     }
 
-    bool connect(const std::string& target, int timeout, int maxRetry) override {
+    bool connect(const std::string& target, int timeout,
+                 int maxRetry) override {
         lastTarget_ = target;
         lastTimeout_ = timeout;
         lastMaxRetry_ = maxRetry;
@@ -57,16 +58,16 @@ public:
         return getState() == ClientState::Connected;
     }
 
-    std::vector<std::string> scan() override {
-        return scanResults_;
-    }
+    std::vector<std::string> scan() override { return scanResults_; }
 
     // Test helpers
     void setInitializeResult(bool result) { initializeResult_ = result; }
     void setDestroyResult(bool result) { destroyResult_ = result; }
     void setConnectResult(bool result) { connectResult_ = result; }
     void setDisconnectResult(bool result) { disconnectResult_ = result; }
-    void setScanResults(std::vector<std::string> results) { scanResults_ = std::move(results); }
+    void setScanResults(std::vector<std::string> results) {
+        scanResults_ = std::move(results);
+    }
 
     std::string getLastTarget() const { return lastTarget_; }
     int getLastTimeout() const { return lastTimeout_; }
@@ -196,10 +197,11 @@ TEST_F(ClientBaseTest, EventCallback) {
     std::string lastEvent;
     std::string lastData;
 
-    client_->setEventCallback([&](const std::string& event, const std::string& data) {
-        lastEvent = event;
-        lastData = data;
-    });
+    client_->setEventCallback(
+        [&](const std::string& event, const std::string& data) {
+            lastEvent = event;
+            lastData = data;
+        });
 
     // Events are emitted by derived classes
     // This test verifies callback registration works
@@ -250,12 +252,15 @@ TEST_F(ClientRegistryTest, RegisterClient) {
     desc.description = "Test Client";
     desc.type = ClientType::Custom;
     desc.version = "1.0.0";
-    desc.factory = []() { return std::make_shared<MockClient>("test_client_1"); };
+    desc.factory = []() {
+        return std::make_shared<MockClient>("test_client_1");
+    };
 
     EXPECT_TRUE(registry.registerClient(desc));
 
     auto clients = registry.getRegisteredClients();
-    EXPECT_TRUE(std::find(clients.begin(), clients.end(), "test_client_1") != clients.end());
+    EXPECT_TRUE(std::find(clients.begin(), clients.end(), "test_client_1") !=
+                clients.end());
 }
 
 TEST_F(ClientRegistryTest, UnregisterClient) {
@@ -265,13 +270,16 @@ TEST_F(ClientRegistryTest, UnregisterClient) {
     desc.name = "test_client_2";
     desc.description = "Test Client";
     desc.type = ClientType::Custom;
-    desc.factory = []() { return std::make_shared<MockClient>("test_client_2"); };
+    desc.factory = []() {
+        return std::make_shared<MockClient>("test_client_2");
+    };
 
     registry.registerClient(desc);
     EXPECT_TRUE(registry.unregisterClient("test_client_2"));
 
     auto clients = registry.getRegisteredClients();
-    EXPECT_TRUE(std::find(clients.begin(), clients.end(), "test_client_2") == clients.end());
+    EXPECT_TRUE(std::find(clients.begin(), clients.end(), "test_client_2") ==
+                clients.end());
 }
 
 TEST_F(ClientRegistryTest, CreateClient) {
@@ -281,7 +289,9 @@ TEST_F(ClientRegistryTest, CreateClient) {
     desc.name = "test_client_3";
     desc.description = "Test Client";
     desc.type = ClientType::Custom;
-    desc.factory = []() { return std::make_shared<MockClient>("test_client_3"); };
+    desc.factory = []() {
+        return std::make_shared<MockClient>("test_client_3");
+    };
 
     registry.registerClient(desc);
 
@@ -305,7 +315,9 @@ TEST_F(ClientRegistryTest, GetDescriptor) {
     desc.type = ClientType::Solver;
     desc.version = "2.0.0";
     desc.requiredBinaries = {"binary1", "binary2"};
-    desc.factory = []() { return std::make_shared<MockClient>("test_client_4"); };
+    desc.factory = []() {
+        return std::make_shared<MockClient>("test_client_4");
+    };
 
     registry.registerClient(desc);
 
@@ -324,17 +336,23 @@ TEST_F(ClientRegistryTest, GetClientsByType) {
     ClientDescriptor solver1;
     solver1.name = "test_solver_1";
     solver1.type = ClientType::Solver;
-    solver1.factory = []() { return std::make_shared<MockClient>("test_solver_1"); };
+    solver1.factory = []() {
+        return std::make_shared<MockClient>("test_solver_1");
+    };
 
     ClientDescriptor solver2;
     solver2.name = "test_solver_2";
     solver2.type = ClientType::Solver;
-    solver2.factory = []() { return std::make_shared<MockClient>("test_solver_2"); };
+    solver2.factory = []() {
+        return std::make_shared<MockClient>("test_solver_2");
+    };
 
     ClientDescriptor guider1;
     guider1.name = "test_guider_1";
     guider1.type = ClientType::Guider;
-    guider1.factory = []() { return std::make_shared<MockClient>("test_guider_1"); };
+    guider1.factory = []() {
+        return std::make_shared<MockClient>("test_guider_1");
+    };
 
     registry.registerClient(solver1);
     registry.registerClient(solver2);
@@ -357,15 +375,19 @@ TEST(ClientCapabilityTest, BitwiseOr) {
 }
 
 TEST(ClientCapabilityTest, BitwiseAnd) {
-    auto caps = ClientCapability::Connect | ClientCapability::Scan | ClientCapability::AsyncOperation;
+    auto caps = ClientCapability::Connect | ClientCapability::Scan |
+                ClientCapability::AsyncOperation;
     auto filtered = caps & ClientCapability::Connect;
     EXPECT_TRUE(hasCapability(filtered, ClientCapability::Connect));
 }
 
 TEST(ClientCapabilityTest, HasCapability) {
-    EXPECT_TRUE(hasCapability(ClientCapability::Connect, ClientCapability::Connect));
-    EXPECT_FALSE(hasCapability(ClientCapability::Connect, ClientCapability::Scan));
-    EXPECT_FALSE(hasCapability(ClientCapability::None, ClientCapability::Connect));
+    EXPECT_TRUE(
+        hasCapability(ClientCapability::Connect, ClientCapability::Connect));
+    EXPECT_FALSE(
+        hasCapability(ClientCapability::Connect, ClientCapability::Scan));
+    EXPECT_FALSE(
+        hasCapability(ClientCapability::None, ClientCapability::Connect));
 }
 
 // ==================== Main ====================

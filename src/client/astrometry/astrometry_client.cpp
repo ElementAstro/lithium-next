@@ -131,11 +131,9 @@ std::vector<std::string> AstrometryClient::scan() {
     logger_->debug("Scanning for Astrometry.net installations");
     std::vector<std::string> results;
 
-    std::vector<std::string> searchPaths = {
-        "/usr/bin/solve-field",
-        "/usr/local/bin/solve-field",
-        "/opt/astrometry/bin/solve-field"
-    };
+    std::vector<std::string> searchPaths = {"/usr/bin/solve-field",
+                                            "/usr/local/bin/solve-field",
+                                            "/opt/astrometry/bin/solve-field"};
 
     for (const auto& path : searchPaths) {
         if (atom::io::isFileExists(path)) {
@@ -158,7 +156,8 @@ bool AstrometryClient::scanSolver() {
         solverPath_ = paths[0];
         // Try to get version
         try {
-            auto output = atom::system::executeCommand(solverPath_ + " --version", false);
+            auto output =
+                atom::system::executeCommand(solverPath_ + " --version", false);
             // Parse version from output
             std::regex versionRegex(R"((\d+\.\d+(?:\.\d+)?))");
             std::smatch match;
@@ -171,7 +170,8 @@ bool AstrometryClient::scanSolver() {
             solverVersion_ = "unknown";
         }
 
-        logger_->info("Found solve-field version {} at {}", solverVersion_, solverPath_);
+        logger_->info("Found solve-field version {} at {}", solverVersion_,
+                      solverPath_);
         return true;
     }
 
@@ -180,10 +180,8 @@ bool AstrometryClient::scanSolver() {
 
 PlateSolveResult AstrometryClient::solve(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH,
-    int /*imageWidth*/, int /*imageHeight*/) {
-
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH, int /*imageWidth*/, int /*imageHeight*/) {
     auto startTime = std::chrono::steady_clock::now();
     lastResult_.clear();
 
@@ -223,14 +221,16 @@ PlateSolveResult AstrometryClient::solve(
     }
 
     auto endTime = std::chrono::steady_clock::now();
-    lastResult_.solveTime = std::chrono::duration<double>(endTime - startTime).count();
+    lastResult_.solveTime =
+        std::chrono::duration<double>(endTime - startTime).count();
 
     solving_.store(false);
 
     if (lastResult_.success) {
-        logger_->info("Solve successful: RA={:.4f}, Dec={:.4f}, Scale={:.2f}\"/px",
-                      lastResult_.coordinates.ra, lastResult_.coordinates.dec,
-                      lastResult_.pixelScale);
+        logger_->info(
+            "Solve successful: RA={:.4f}, Dec={:.4f}, Scale={:.2f}\"/px",
+            lastResult_.coordinates.ra, lastResult_.coordinates.dec,
+            lastResult_.pixelScale);
         emitEvent("solve_completed", imageFilePath);
     } else {
         logger_->error("Solve failed for: {}", imageFilePath);
@@ -261,9 +261,8 @@ void AstrometryClient::abort() {
 
 std::string AstrometryClient::buildCommand(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH) {
-
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH) {
     std::ostringstream cmd;
     cmd << "\"" << solverPath_ << "\"";
     cmd << " \"" << imageFilePath << "\"";
@@ -308,11 +307,13 @@ std::string AstrometryClient::buildCommand(
     // ==================== Scale Options ====================
 
     if (options_.scaleLow || astrometryOptions_.scaleLow) {
-        double low = astrometryOptions_.scaleLow.value_or(options_.scaleLow.value_or(0));
+        double low =
+            astrometryOptions_.scaleLow.value_or(options_.scaleLow.value_or(0));
         cmd << " --scale-low " << low;
     }
     if (options_.scaleHigh || astrometryOptions_.scaleHigh) {
-        double high = astrometryOptions_.scaleHigh.value_or(options_.scaleHigh.value_or(0));
+        double high = astrometryOptions_.scaleHigh.value_or(
+            options_.scaleHigh.value_or(0));
         cmd << " --scale-high " << high;
     }
     if (astrometryOptions_.scaleUnits) {
@@ -351,7 +352,8 @@ std::string AstrometryClient::buildCommand(
     }
 
     if (options_.downsample || astrometryOptions_.downsample) {
-        int ds = astrometryOptions_.downsample.value_or(options_.downsample.value_or(0));
+        int ds = astrometryOptions_.downsample.value_or(
+            options_.downsample.value_or(0));
         if (ds > 0) {
             cmd << " --downsample " << ds;
         }
@@ -438,7 +440,8 @@ std::string AstrometryClient::buildCommand(
     }
 
     if (astrometryOptions_.oddsStopLooking) {
-        cmd << " --odds-to-stop-looking " << *astrometryOptions_.oddsStopLooking;
+        cmd << " --odds-to-stop-looking "
+            << *astrometryOptions_.oddsStopLooking;
     }
 
     // ==================== Output Options ====================
@@ -510,10 +513,12 @@ std::string AstrometryClient::buildCommand(
     if (astrometryOptions_.useSourceExtractor) {
         cmd << " --use-source-extractor";
         if (astrometryOptions_.sourceExtractorPath) {
-            cmd << " --source-extractor-path \"" << *astrometryOptions_.sourceExtractorPath << "\"";
+            cmd << " --source-extractor-path \""
+                << *astrometryOptions_.sourceExtractorPath << "\"";
         }
         if (astrometryOptions_.sourceExtractorConfig) {
-            cmd << " --source-extractor-config \"" << *astrometryOptions_.sourceExtractorConfig << "\"";
+            cmd << " --source-extractor-config \""
+                << *astrometryOptions_.sourceExtractorConfig << "\"";
         }
     }
 
@@ -534,7 +539,8 @@ std::string AstrometryClient::buildCommand(
     }
 
     if (astrometryOptions_.backendConfig) {
-        cmd << " --backend-config \"" << *astrometryOptions_.backendConfig << "\"";
+        cmd << " --backend-config \"" << *astrometryOptions_.backendConfig
+            << "\"";
     }
 
     // ==================== FITS Extension ====================
@@ -568,10 +574,10 @@ std::string AstrometryClient::buildCommand(
 
 bool AstrometryClient::executeSolve(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH) {
-
-    std::string command = buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH) {
+    std::string command =
+        buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
     logger_->debug("Executing: {}", command);
 
     try {
@@ -586,7 +592,8 @@ bool AstrometryClient::executeSolve(
         // Check for failure
         if (result.find("Did not solve") != std::string::npos ||
             result.find("failed") != std::string::npos) {
-            lastResult_.errorMessage = "Astrometry.net could not solve the image";
+            lastResult_.errorMessage =
+                "Astrometry.net could not solve the image";
             return false;
         }
 
@@ -605,7 +612,8 @@ PlateSolveResult AstrometryClient::parseSolveOutput(const std::string& output) {
     PlateSolveResult result;
 
     // Parse field center from output
-    std::regex centerRegex(R"(Field center:\s*\(RA,Dec\)\s*=\s*\(([^,]+),\s*([^)]+)\))");
+    std::regex centerRegex(
+        R"(Field center:\s*\(RA,Dec\)\s*=\s*\(([^,]+),\s*([^)]+)\))");
     std::smatch match;
 
     if (std::regex_search(output, match, centerRegex)) {
@@ -630,7 +638,8 @@ PlateSolveResult AstrometryClient::parseSolveOutput(const std::string& output) {
     }
 
     // Parse rotation
-    std::regex rotRegex(R"(Field rotation angle:\s*up is\s*([0-9.-]+)\s*degrees)");
+    std::regex rotRegex(
+        R"(Field rotation angle:\s*up is\s*([0-9.-]+)\s*degrees)");
     if (std::regex_search(output, match, rotRegex)) {
         result.positionAngle = std::stod(match[1].str());
     }
@@ -686,27 +695,25 @@ PlateSolveResult AstrometryClient::readWCS(const std::string& filename) {
     return result;
 }
 
-std::string AstrometryClient::getOutputPath(const std::string& imageFilePath) const {
+std::string AstrometryClient::getOutputPath(
+    const std::string& imageFilePath) const {
     std::filesystem::path path(imageFilePath);
     return (path.parent_path() / (path.stem().string() + ".wcs")).string();
 }
 
 std::vector<std::string> AstrometryClient::getIndexFiles(
     const std::vector<std::string>& directories) const {
-
     std::vector<std::string> results;
     std::vector<std::string> searchDirs = directories;
 
     if (searchDirs.empty()) {
-        searchDirs = {
-            "/usr/share/astrometry",
-            "/usr/local/share/astrometry",
-            "~/.local/share/astrometry"
-        };
+        searchDirs = {"/usr/share/astrometry", "/usr/local/share/astrometry",
+                      "~/.local/share/astrometry"};
     }
 
     for (const auto& dir : searchDirs) {
-        if (!std::filesystem::exists(dir)) continue;
+        if (!std::filesystem::exists(dir))
+            continue;
 
         for (const auto& entry : std::filesystem::directory_iterator(dir)) {
             if (entry.path().extension() == ".fits" &&
@@ -728,7 +735,8 @@ std::string AstrometryClient::getDefaultPath() {
 }
 
 // Register with client registry
-LITHIUM_REGISTER_CLIENT(AstrometryClient, "astrometry", "Astrometry.net Plate Solver",
-                        ClientType::Solver, "1.0.0", "solve-field")
+LITHIUM_REGISTER_CLIENT(AstrometryClient, "astrometry",
+                        "Astrometry.net Plate Solver", ClientType::Solver,
+                        "1.0.0", "solve-field")
 
 }  // namespace lithium::client

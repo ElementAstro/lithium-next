@@ -62,7 +62,7 @@ FilterWheelService::FilterWheelService()
 FilterWheelService::~FilterWheelService() = default;
 
 auto FilterWheelService::list() -> json {
-    LOG_INFO( "FilterWheelService::list: Listing all available filter wheels");
+    LOG_INFO("FilterWheelService::list: Listing all available filter wheels");
     json response;
     response["status"] = "success";
 
@@ -80,24 +80,24 @@ auto FilterWheelService::list() -> json {
             wheelList.push_back(info);
         } catch (...) {
             LOG_WARN(
-                  "FilterWheelService::list: Main filter wheel not available");
+                "FilterWheelService::list: Main filter wheel not available");
         }
 
         response["data"] = wheelList;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::list: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::list: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::list: Completed");
+    LOG_INFO("FilterWheelService::list: Completed");
     return response;
 }
 
 auto FilterWheelService::getStatus(const std::string& deviceId) -> json {
     LOG_INFO(
-          "FilterWheelService::getStatus: Getting status for filter wheel: %s",
-          deviceId.c_str());
+        "FilterWheelService::getStatus: Getting status for filter wheel: %s",
+        deviceId.c_str());
     json response;
 
     try {
@@ -106,9 +106,8 @@ auto FilterWheelService::getStatus(const std::string& deviceId) -> json {
 
         if (!wheel->isConnected()) {
             response["status"] = "error";
-            response["error"] = {
-                {"code", "device_not_connected"},
-                {"message", "Filter wheel is not connected"}};
+            response["error"] = {{"code", "device_not_connected"},
+                                 {"message", "Filter wheel is not connected"}};
             return response;
         }
 
@@ -135,7 +134,8 @@ auto FilterWheelService::getStatus(const std::string& deviceId) -> json {
                 maxSlot = minSlot;
             }
             data["position"] = currentSlot;
-            data["filters"] = impl_->buildFilterList(deviceId, minSlot, maxSlot);
+            data["filters"] =
+                impl_->buildFilterList(deviceId, minSlot, maxSlot);
         } else {
             data["position"] = nullptr;
             data["filters"] = json::array();
@@ -144,19 +144,19 @@ auto FilterWheelService::getStatus(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = data;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::getStatus: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::getStatus: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::getStatus: Completed");
+    LOG_INFO("FilterWheelService::getStatus: Completed");
     return response;
 }
 
-auto FilterWheelService::connect(const std::string& deviceId,
-                                 bool connected) -> json {
-    LOG_INFO( "FilterWheelService::connect: %s filter wheel: %s",
-          connected ? "Connecting" : "Disconnecting", deviceId.c_str());
+auto FilterWheelService::connect(const std::string& deviceId, bool connected)
+    -> json {
+    LOG_INFO("FilterWheelService::connect: %s filter wheel: %s",
+             connected ? "Connecting" : "Disconnecting", deviceId.c_str());
     json response;
 
     try {
@@ -175,19 +175,19 @@ auto FilterWheelService::connect(const std::string& deviceId,
                                  {"message", "Connection operation failed."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::connect: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::connect: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::connect: Completed");
+    LOG_INFO("FilterWheelService::connect: Completed");
     return response;
 }
 
 auto FilterWheelService::setPosition(const std::string& deviceId,
                                      const json& requestBody) -> json {
-    LOG_INFO( "FilterWheelService::setPosition: Moving filter wheel: %s",
-          deviceId.c_str());
+    LOG_INFO("FilterWheelService::setPosition: Moving filter wheel: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -266,23 +266,24 @@ auto FilterWheelService::setPosition(const std::string& deviceId,
             response["data"] = data;
         } else {
             response["status"] = "error";
-            response["error"] = {{"code", "move_failed"},
-                                 {"message", "Filter wheel move command failed."}};
+            response["error"] = {
+                {"code", "move_failed"},
+                {"message", "Filter wheel move command failed."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::setPosition: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::setPosition: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::setPosition: Completed");
+    LOG_INFO("FilterWheelService::setPosition: Completed");
     return response;
 }
 
 auto FilterWheelService::setByName(const std::string& deviceId,
                                    const json& requestBody) -> json {
-    LOG_INFO( "FilterWheelService::setByName: Moving filter wheel by name: %s",
-          deviceId.c_str());
+    LOG_INFO("FilterWheelService::setByName: Moving filter wheel by name: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -330,19 +331,19 @@ auto FilterWheelService::setByName(const std::string& deviceId,
         innerRequest["position"] = targetSlot;
         return setPosition(deviceId, innerRequest);
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::setByName: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::setByName: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::setByName: Completed");
+    LOG_INFO("FilterWheelService::setByName: Completed");
     return response;
 }
 
 auto FilterWheelService::getCapabilities(const std::string& deviceId) -> json {
     LOG_INFO(
-          "FilterWheelService::getCapabilities: Getting capabilities for: %s",
-          deviceId.c_str());
+        "FilterWheelService::getCapabilities: Getting capabilities for: %s",
+        deviceId.c_str());
     json response;
 
     try {
@@ -395,20 +396,21 @@ auto FilterWheelService::getCapabilities(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = data;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::getCapabilities: Exception: %s",
-              e.what());
+        LOG_ERROR("FilterWheelService::getCapabilities: Exception: %s",
+                  e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::getCapabilities: Completed");
+    LOG_INFO("FilterWheelService::getCapabilities: Completed");
     return response;
 }
 
 auto FilterWheelService::configureNames(const std::string& deviceId,
                                         const json& requestBody) -> json {
-    LOG_INFO( "FilterWheelService::configureNames: Configuring filter names for: %s",
-          deviceId.c_str());
+    LOG_INFO(
+        "FilterWheelService::configureNames: Configuring filter names for: %s",
+        deviceId.c_str());
     json response;
 
     try {
@@ -441,19 +443,19 @@ auto FilterWheelService::configureNames(const std::string& deviceId,
         response["status"] = "success";
         response["message"] = "Filter names updated.";
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::configureNames: Exception: %s",
-              e.what());
+        LOG_ERROR("FilterWheelService::configureNames: Exception: %s",
+                  e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::configureNames: Completed");
+    LOG_INFO("FilterWheelService::configureNames: Completed");
     return response;
 }
 
 auto FilterWheelService::getOffsets(const std::string& deviceId) -> json {
-    LOG_INFO( "FilterWheelService::getOffsets: Getting filter offsets for: %s",
-          deviceId.c_str());
+    LOG_INFO("FilterWheelService::getOffsets: Getting filter offsets for: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -485,19 +487,19 @@ auto FilterWheelService::getOffsets(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = data;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::getOffsets: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::getOffsets: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::getOffsets: Completed");
+    LOG_INFO("FilterWheelService::getOffsets: Completed");
     return response;
 }
 
 auto FilterWheelService::setOffsets(const std::string& deviceId,
                                     const json& requestBody) -> json {
-    LOG_INFO( "FilterWheelService::setOffsets: Setting filter offsets for: %s",
-          deviceId.c_str());
+    LOG_INFO("FilterWheelService::setOffsets: Setting filter offsets for: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -531,18 +533,18 @@ auto FilterWheelService::setOffsets(const std::string& deviceId,
         response["status"] = "success";
         response["message"] = "Filter offsets updated.";
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::setOffsets: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::setOffsets: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::setOffsets: Completed");
+    LOG_INFO("FilterWheelService::setOffsets: Completed");
     return response;
 }
 
 auto FilterWheelService::halt(const std::string& deviceId) -> json {
-    LOG_INFO( "FilterWheelService::halt: Halting filter wheel: %s",
-          deviceId.c_str());
+    LOG_INFO("FilterWheelService::halt: Halting filter wheel: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -552,18 +554,18 @@ auto FilterWheelService::halt(const std::string& deviceId) -> json {
             {"code", "feature_not_supported"},
             {"message", "Halting the filter wheel is not supported."}};
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::halt: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::halt: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::halt: Completed");
+    LOG_INFO("FilterWheelService::halt: Completed");
     return response;
 }
 
 auto FilterWheelService::calibrate(const std::string& deviceId) -> json {
-    LOG_INFO( "FilterWheelService::calibrate: Calibrating filter wheel: %s",
-          deviceId.c_str());
+    LOG_INFO("FilterWheelService::calibrate: Calibrating filter wheel: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -573,89 +575,89 @@ auto FilterWheelService::calibrate(const std::string& deviceId) -> json {
             {"code", "feature_not_supported"},
             {"message", "Filter wheel calibration is not implemented."}};
     } catch (const std::exception& e) {
-        LOG_ERROR( "FilterWheelService::calibrate: Exception: %s", e.what());
+        LOG_ERROR("FilterWheelService::calibrate: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FilterWheelService::calibrate: Completed");
+    LOG_INFO("FilterWheelService::calibrate: Completed");
     return response;
 }
 
 // ========== INDI-specific operations ==========
 
-auto FilterWheelService::getINDIProperties(const std::string& deviceId) -> json {
-    return withConnectedDevice(deviceId, "getINDIProperties",
-                               [this, &deviceId](auto wheel) -> json {
-        json data;
-        data["driverName"] = "INDI Filter Wheel";
-        data["driverVersion"] = "1.0";
+auto FilterWheelService::getINDIProperties(const std::string& deviceId)
+    -> json {
+    return withConnectedDevice(
+        deviceId, "getINDIProperties", [this, &deviceId](auto wheel) -> json {
+            json data;
+            data["driverName"] = "INDI Filter Wheel";
+            data["driverVersion"] = "1.0";
 
-        json properties = json::object();
+            json properties = json::object();
 
-        // Current position
-        if (auto pos = wheel->getPosition()) {
-            double current;
-            double minVal;
-            double maxVal;
-            std::tie(current, minVal, maxVal) = *pos;
+            // Current position
+            if (auto pos = wheel->getPosition()) {
+                double current;
+                double minVal;
+                double maxVal;
+                std::tie(current, minVal, maxVal) = *pos;
 
-            properties["FILTER_SLOT"] = {
-                {"value", static_cast<int>(current)},
-                {"min", static_cast<int>(minVal)},
-                {"max", static_cast<int>(maxVal)},
-                {"type", "number"}
-            };
-        }
-
-        // Filter names
-        {
-            std::lock_guard<std::mutex> lock(impl_->filterMetaMutex);
-            auto& meta = impl_->filterMeta[deviceId];
-            json names = json::array();
-            for (const auto& [slot, name] : meta.names) {
-                names.push_back({{"slot", slot}, {"name", name}});
+                properties["FILTER_SLOT"] = {
+                    {"value", static_cast<int>(current)},
+                    {"min", static_cast<int>(minVal)},
+                    {"max", static_cast<int>(maxVal)},
+                    {"type", "number"}};
             }
-            properties["FILTER_NAME"] = {
-                {"value", names},
-                {"type", "text"}
-            };
-        }
 
-        data["properties"] = properties;
-        return makeSuccessResponse(data);
-    });
+            // Filter names
+            {
+                std::lock_guard<std::mutex> lock(impl_->filterMetaMutex);
+                auto& meta = impl_->filterMeta[deviceId];
+                json names = json::array();
+                for (const auto& [slot, name] : meta.names) {
+                    names.push_back({{"slot", slot}, {"name", name}});
+                }
+                properties["FILTER_NAME"] = {{"value", names},
+                                             {"type", "text"}};
+            }
+
+            data["properties"] = properties;
+            return makeSuccessResponse(data);
+        });
 }
 
 auto FilterWheelService::setINDIProperty(const std::string& deviceId,
                                          const std::string& propertyName,
                                          const json& value) -> json {
-    return withConnectedDevice(deviceId, "setINDIProperty",
-                               [&](auto wheel) -> json {
-        bool success = false;
+    return withConnectedDevice(
+        deviceId, "setINDIProperty", [&](auto wheel) -> json {
+            bool success = false;
 
-        if (propertyName == "FILTER_SLOT" && value.is_number_integer()) {
-            success = wheel->setPosition(value.get<int>());
-        } else if (propertyName == "FILTER_NAME" && value.is_object()) {
-            if (value.contains("slot") && value.contains("name")) {
-                int slot = value["slot"].get<int>();
-                std::string name = value["name"].get<std::string>();
+            if (propertyName == "FILTER_SLOT" && value.is_number_integer()) {
+                success = wheel->setPosition(value.get<int>());
+            } else if (propertyName == "FILTER_NAME" && value.is_object()) {
+                if (value.contains("slot") && value.contains("name")) {
+                    int slot = value["slot"].get<int>();
+                    std::string name = value["name"].get<std::string>();
 
-                std::lock_guard<std::mutex> lock(impl_->filterMetaMutex);
-                impl_->filterMeta[deviceId].names[slot] = name;
-                success = true;
+                    std::lock_guard<std::mutex> lock(impl_->filterMetaMutex);
+                    impl_->filterMeta[deviceId].names[slot] = name;
+                    success = true;
+                }
+            } else {
+                return makeErrorResponse(
+                    ErrorCode::INVALID_FIELD_VALUE,
+                    "Unknown or invalid property: " + propertyName);
             }
-        } else {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Unknown or invalid property: " + propertyName);
-        }
 
-        if (success) {
-            return makeSuccessResponse("Property " + propertyName + " updated");
-        }
-        return makeErrorResponse(ErrorCode::OPERATION_FAILED,
-                                 "Failed to set property " + propertyName);
-    });
+            if (success) {
+                return makeSuccessResponse("Property " + propertyName +
+                                           " updated");
+            }
+            return makeErrorResponse(ErrorCode::OPERATION_FAILED,
+                                     "Failed to set property " + propertyName);
+        });
 }
 
 }  // namespace lithium::device

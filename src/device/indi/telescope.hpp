@@ -19,8 +19,8 @@ public:
 
     auto destroy() -> bool override;
 
-    auto connect(const std::string &deviceName, int timeout,
-                 int maxRetry) -> bool override;
+    auto connect(const std::string &deviceName, int timeout, int maxRetry)
+        -> bool override;
 
     auto disconnect() -> bool override;
 
@@ -35,8 +35,8 @@ public:
     auto getTelescopeInfo()
         -> std::optional<std::tuple<double, double, double, double>> override;
     auto setTelescopeInfo(double telescopeAperture, double telescopeFocal,
-                          double guiderAperture,
-                          double guiderFocal) -> bool override;
+                          double guiderAperture, double guiderFocal)
+        -> bool override;
     auto getPierSide() -> std::optional<PierSide> override;
 
     auto getTrackRate() -> std::optional<TrackMode> override;
@@ -81,8 +81,8 @@ public:
     auto getTargetRADECJNow()
         -> std::optional<std::pair<double, double>> override;
     auto setTargetRADECJNow(double RAHours, double DECDegree) -> bool override;
-    auto slewToRADECJNow(double RAHours, double DECDegree,
-                         bool EnableTracking) -> bool override;
+    auto slewToRADECJNow(double RAHours, double DECDegree, bool EnableTracking)
+        -> bool override;
 
     auto syncToRADECJNow(double RAHours, double DECDegree) -> bool override;
     auto getAZALT() -> std::optional<std::pair<double, double>> override;

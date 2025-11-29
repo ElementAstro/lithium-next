@@ -7,8 +7,8 @@
 #include "atom/error/exception.hpp"
 #include "atom/log/spdlog_logger.hpp"
 
-auto calculateHist(const cv::Mat& img, int histSize,
-                   bool normalize) -> std::vector<cv::Mat> {
+auto calculateHist(const cv::Mat& img, int histSize, bool normalize)
+    -> std::vector<cv::Mat> {
     LOG_F(INFO, "Starting histogram calculation for BGR image");
     LOG_F(DEBUG, "Parameters: histSize={}, normalize={}", histSize, normalize);
 
@@ -63,8 +63,8 @@ auto calculateHist(const cv::Mat& img, int histSize,
     return histograms;
 }
 
-auto calculateGrayHist(const cv::Mat& img, int histSize,
-                       bool normalize) -> cv::Mat {
+auto calculateGrayHist(const cv::Mat& img, int histSize, bool normalize)
+    -> cv::Mat {
     LOG_F(INFO, "Starting grayscale histogram calculation");
     LOG_F(DEBUG, "Parameters: histSize={}, normalize={}", histSize, normalize);
     LOG_F(DEBUG, "Input image: {}x{}, depth={}", img.cols, img.rows,
@@ -189,8 +189,8 @@ auto equalizeHistogram(const cv::Mat& img) -> cv::Mat {
     return equalized;
 }
 
-auto drawHistogram(const cv::Mat& hist, int histSize, int width,
-                   int height) -> cv::Mat {
+auto drawHistogram(const cv::Mat& hist, int histSize, int width, int height)
+    -> cv::Mat {
     LOG_F(INFO, "Starting histogram visualization");
     LOG_F(DEBUG, "Parameters: histSize={}, width={}, height={}", histSize,
           width, height);

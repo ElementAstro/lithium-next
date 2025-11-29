@@ -24,8 +24,8 @@ Description: High-performance Configuration Manager with Split Components
 #include <thread>
 #include <unordered_map>
 
-#include "atom/type/json.hpp"
 #include <spdlog/spdlog.h>
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 
@@ -687,12 +687,13 @@ auto ConfigManager::save(const fs::path& file_path) const -> bool {
 
     std::shared_lock lock(impl_->rwMutex_);
     try {
-        bool result = impl_->serializer_.serializeToFile(impl_->config_,
-                                                         file_path);
+        bool result =
+            impl_->serializer_.serializeToFile(impl_->config_, file_path);
         if (result) {
             ++impl_->metrics_.files_saved;
             impl_->updateOperationMetrics("save", start_time);
-            impl_->logger_->info("Saved config to file: {}", file_path.string());
+            impl_->logger_->info("Saved config to file: {}",
+                                 file_path.string());
         }
         return result;
     } catch (const std::exception& e) {
@@ -905,8 +906,7 @@ ValidationResult ConfigManager::validateAll() const {
 bool ConfigManager::enableAutoReload(const fs::path& file_path) {
     try {
         bool result = impl_->watcher_.watchFile(
-            file_path,
-            [this](const fs::path& changed_path, FileEvent event) {
+            file_path, [this](const fs::path& changed_path, FileEvent event) {
                 onFileChanged(changed_path, event);
             });
 

@@ -29,12 +29,7 @@ from typing import Dict, Any, List
 from .manager import PacmanManager
 from .models import PackageInfo, CommandResult, PackageStatus
 from .config import PacmanConfig
-from .exceptions import (
-    PacmanError,
-    CommandError,
-    PackageNotFoundError,
-    ConfigError
-)
+from .exceptions import PacmanError, CommandError, PackageNotFoundError, ConfigError
 from .pybind_integration import PacmanPyBindAdapter
 
 __version__ = "1.0.0"
@@ -45,21 +40,17 @@ __all__ = [
     # Core classes
     "PacmanManager",
     "PacmanConfig",
-
     # Data models
     "PackageInfo",
     "CommandResult",
     "PackageStatus",
-
     # Exceptions
     "PacmanError",
     "CommandError",
     "PackageNotFoundError",
     "ConfigError",
-
     # pybind adapter
     "PacmanPyBindAdapter",
-
     # Discovery function
     "get_tool_info",
 ]
@@ -128,7 +119,7 @@ def get_tool_info() -> Dict[str, Any]:
             "PacmanManager": "Main package manager interface",
             "PacmanConfig": "Configuration file management",
             "PacmanPyBindAdapter": "Simplified pybind11 interface",
-        }
+        },
     }
 
 

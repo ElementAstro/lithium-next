@@ -2,10 +2,10 @@ openapi: 3.0.3
 info:
   title: Astronomical Equipment Control API
   description: |
-    A comprehensive API for controlling astronomical equipment including cameras, mounts, focusers, 
-    filter wheels, domes, and other observatory devices. The API provides both RESTful HTTP endpoints 
+    A comprehensive API for controlling astronomical equipment including cameras, mounts, focusers,
+    filter wheels, domes, and other observatory devices. The API provides both RESTful HTTP endpoints
     for stateless operations and WebSocket connections for real-time communication and event streaming.
-    
+
     ## Features
     - Device management (cameras, mounts, focusers, filter wheels, domes, etc.)
     - Automated imaging sequences
@@ -14,10 +14,10 @@ info:
     - Weather monitoring and safety systems
     - File system operations
     - System control and monitoring
-    
+
     ## Authentication
     All endpoints require API key authentication via the `X-API-Key` header.
-    
+
   version: 1.0.0
   contact:
     name: API Support
@@ -1339,7 +1339,7 @@ paths:
                     example: success
                   data:
                     $ref: '#/components/schemas/SystemConfig'
-    
+
     put:
       tags:
         - System Control
@@ -2400,7 +2400,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-    
+
     delete:
       tags:
         - Image Management

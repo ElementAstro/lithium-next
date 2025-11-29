@@ -249,10 +249,14 @@ template void process_mono_bin<uint32_t>(std::span<const uint8_t> srcData,
                                          cv::Mat& result, uint32_t srcStride,
                                          uint32_t camxbin, uint32_t camybin);
 
-// New functions to handle specific image processing requirements for the project
+// New functions to handle specific image processing requirements for the
+// project
 
-cv::Mat processWithCustomBinning(const cv::Mat& image, uint32_t camxbin, uint32_t camybin) {
-    LOG_F(INFO, "Entering processWithCustomBinning with camxbin: {}, camybin: {}", camxbin, camybin);
+cv::Mat processWithCustomBinning(const cv::Mat& image, uint32_t camxbin,
+                                 uint32_t camybin) {
+    LOG_F(INFO,
+          "Entering processWithCustomBinning with camxbin: {}, camybin: {}",
+          camxbin, camybin);
     CV_Assert(!image.empty() && camxbin > 0 && camybin > 0);
 
     const uint32_t WIDTH = image.cols;
@@ -261,14 +265,18 @@ cv::Mat processWithCustomBinning(const cv::Mat& image, uint32_t camxbin, uint32_
     const uint32_t NEW_HEIGHT = HEIGHT / camybin;
 
     cv::Mat result;
-    cv::resize(image, result, cv::Size(NEW_WIDTH, NEW_HEIGHT), 0, 0, cv::INTER_AREA);
+    cv::resize(image, result, cv::Size(NEW_WIDTH, NEW_HEIGHT), 0, 0,
+               cv::INTER_AREA);
 
     LOG_F(INFO, "Exiting processWithCustomBinning");
     return result;
 }
 
-cv::Mat processWithCustomAverage(const cv::Mat& image, uint32_t camxbin, uint32_t camybin) {
-    LOG_F(INFO, "Entering processWithCustomAverage with camxbin: {}, camybin: {}", camxbin, camybin);
+cv::Mat processWithCustomAverage(const cv::Mat& image, uint32_t camxbin,
+                                 uint32_t camybin) {
+    LOG_F(INFO,
+          "Entering processWithCustomAverage with camxbin: {}, camybin: {}",
+          camxbin, camybin);
     CV_Assert(!image.empty() && camxbin > 0 && camybin > 0);
 
     const uint32_t WIDTH = image.cols;
@@ -283,11 +291,12 @@ cv::Mat processWithCustomAverage(const cv::Mat& image, uint32_t camxbin, uint32_
             cv::Rect binRect(x * camxbin, y * camybin, camxbin, camybin);
             cv::Mat bin = image(binRect);
             cv::Scalar meanScalar = cv::mean(bin);
-            result.at<cv::Vec3b>(y, x) = cv::Vec3b(static_cast<uchar>(meanScalar[0]),
-                                                 static_cast<uchar>(meanScalar[1]),
-                                                 static_cast<uchar>(meanScalar[2]));
-    }
+            result.at<cv::Vec3b>(y, x) =
+                cv::Vec3b(static_cast<uchar>(meanScalar[0]),
+                          static_cast<uchar>(meanScalar[1]),
+                          static_cast<uchar>(meanScalar[2]));
+        }
 
-    LOG_F(INFO, "Exiting processWithCustomAverage");
-    return result;
-}
+        LOG_F(INFO, "Exiting processWithCustomAverage");
+        return result;
+    }

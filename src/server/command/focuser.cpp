@@ -1,134 +1,350 @@
+/*
+ * focuser.cpp - Focuser Command Handlers
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
 #include "focuser.hpp"
 
-#include <spdlog/spdlog.h>
-
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "command.hpp"
 #include "device/service/focuser_service.hpp"
+#include "response.hpp"
 
 namespace lithium::app {
 
-using nlohmann::json;
+using json = nlohmann::json;
+using command::CommandResponse;
 
-// Global service instance
-static lithium::device::FocuserService& getFocuserService() {
+namespace {
+
+auto& getFocuserService() {
     static lithium::device::FocuserService instance;
     return instance;
 }
 
+}  // namespace
+
 void registerFocuser(std::shared_ptr<CommandDispatcher> dispatcher) {
     // Focuser: list
-    dispatcher->registerCommand<json>(
-        "focuser.list",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
-            (void)p;
+    dispatcher->registerCommand<json>("focuser.list", [](json& payload) {
+        LOG_INFO("Executing focuser.list");
+
+        try {
             auto result = getFocuserService().list();
-            p = result;
-        });
-    spdlog::info("Registered command handler for 'focuser.list'");
+
+            if (result.contains("status") && result["status"] == "error") {
+                LOG_ERROR("focuser.list failed");
+                payload = result;
+            } else {
+                LOG_INFO("focuser.list completed successfully");
+                payload = CommandResponse::success(result);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("focuser.list exception: {}", e.what());
+            payload =
+                CommandResponse::operationFailed("focuser.list", e.what());
+        }
+    });
 
     // Focuser: status
-    dispatcher->registerCommand<json>(
-        "focuser.status",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+    dispatcher->registerCommand<json>("focuser.status", [](json& payload) {
+        LOG_INFO("Executing focuser.status");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
+        // Validate required deviceId
+        if (!payload.contains("deviceId") || !payload["deviceId"].is_string() ||
+            payload["deviceId"].get<std::string>().empty()) {
+            LOG_WARN("focuser.status: missing deviceId");
+            payload = CommandResponse::missingParameter("deviceId");
+            return;
+        }
+        std::string deviceId = payload["deviceId"].get<std::string>();
+
+        try {
             auto result = getFocuserService().getStatus(deviceId);
-            p = result;
-        });
-    spdlog::info("Registered command handler for 'focuser.status'");
+
+            if (result.contains("status") && result["status"] == "error") {
+                LOG_ERROR("focuser.status failed for device {}", deviceId);
+                payload = result;
+            } else {
+                LOG_INFO("focuser.status completed successfully for device {}",
+                         deviceId);
+                payload = CommandResponse::success(result);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("focuser.status exception for device {}: {}", deviceId,
+                      e.what());
+            payload =
+                CommandResponse::operationFailed("focuser.status", e.what());
+        }
+    });
 
     // Focuser: connect / disconnect
-    dispatcher->registerCommand<json>(
-        "focuser.connect",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+    dispatcher->registerCommand<json>("focuser.connect", [](json& payload) {
+        LOG_INFO("Executing focuser.connect");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
-            if (!p.contains("connected")) {
-                throw std::runtime_error(
-                    "focuser.connect: missing 'connected'");
-            }
-            bool connected = p["connected"].get<bool>();
+        // Validate required deviceId
+        if (!payload.contains("deviceId") || !payload["deviceId"].is_string() ||
+            payload["deviceId"].get<std::string>().empty()) {
+            LOG_WARN("focuser.connect: missing deviceId");
+            payload = CommandResponse::missingParameter("deviceId");
+            return;
+        }
+        std::string deviceId = payload["deviceId"].get<std::string>();
+
+        // Validate required connected parameter
+        if (!payload.contains("connected")) {
+            LOG_WARN("focuser.connect: missing connected for device {}",
+                     deviceId);
+            payload = CommandResponse::missingParameter("connected");
+            return;
+        }
+        if (!payload["connected"].is_boolean()) {
+            payload = CommandResponse::invalidParameter("connected",
+                                                        "must be a boolean");
+            return;
+        }
+        bool connected = payload["connected"].get<bool>();
+
+        try {
             auto result = getFocuserService().connect(deviceId, connected);
-            p = result;
-        });
-    spdlog::info("Registered command handler for 'focuser.connect'");
+
+            if (result.contains("status") && result["status"] == "error") {
+                LOG_ERROR("focuser.connect failed for device {}", deviceId);
+                payload = result;
+            } else {
+                LOG_INFO("focuser.connect completed successfully for device {}",
+                         deviceId);
+                payload = CommandResponse::success(result);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("focuser.connect exception for device {}: {}", deviceId,
+                      e.what());
+            payload =
+                CommandResponse::operationFailed("focuser.connect", e.what());
+        }
+    });
 
     // Focuser: move (absolute or relative)
-    dispatcher->registerCommand<json>(
-        "focuser.move",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+    dispatcher->registerCommand<json>("focuser.move", [](json& payload) {
+        LOG_INFO("Executing focuser.move");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
-            auto result = getFocuserService().move(deviceId, p);
-            p = result;
-        });
-    spdlog::info("Registered command handler for 'focuser.move'");
+        // Validate required deviceId
+        if (!payload.contains("deviceId") || !payload["deviceId"].is_string() ||
+            payload["deviceId"].get<std::string>().empty()) {
+            LOG_WARN("focuser.move: missing deviceId");
+            payload = CommandResponse::missingParameter("deviceId");
+            return;
+        }
+        std::string deviceId = payload["deviceId"].get<std::string>();
+
+        try {
+            auto result = getFocuserService().move(deviceId, payload);
+
+            if (result.contains("status") && result["status"] == "error") {
+                LOG_ERROR("focuser.move failed for device {}", deviceId);
+                payload = result;
+            } else {
+                LOG_INFO("focuser.move completed successfully for device {}",
+                         deviceId);
+                payload = CommandResponse::success(result);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("focuser.move exception for device {}: {}", deviceId,
+                      e.what());
+            payload =
+                CommandResponse::operationFailed("focuser.move", e.what());
+        }
+    });
 
     // Focuser: update settings
     dispatcher->registerCommand<json>(
-        "focuser.update_settings",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+        "focuser.update_settings", [](json& payload) {
+            LOG_INFO("Executing focuser.update_settings");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
-            auto result = getFocuserService().updateSettings(deviceId, p);
-            p = result;
+            // Validate required deviceId
+            if (!payload.contains("deviceId") ||
+                !payload["deviceId"].is_string() ||
+                payload["deviceId"].get<std::string>().empty()) {
+                LOG_WARN("focuser.update_settings: missing deviceId");
+                payload = CommandResponse::missingParameter("deviceId");
+                return;
+            }
+            std::string deviceId = payload["deviceId"].get<std::string>();
+
+            try {
+                auto result =
+                    getFocuserService().updateSettings(deviceId, payload);
+
+                if (result.contains("status") && result["status"] == "error") {
+                    LOG_ERROR("focuser.update_settings failed for device {}",
+                              deviceId);
+                    payload = result;
+                } else {
+                    LOG_INFO(
+                        "focuser.update_settings completed successfully for "
+                        "device {}",
+                        deviceId);
+                    payload = CommandResponse::success(result);
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("focuser.update_settings exception for device {}: {}",
+                          deviceId, e.what());
+                payload = CommandResponse::operationFailed(
+                    "focuser.update_settings", e.what());
+            }
         });
-    spdlog::info("Registered command handler for 'focuser.update_settings'");
 
     // Focuser: halt
-    dispatcher->registerCommand<json>(
-        "focuser.halt",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+    dispatcher->registerCommand<json>("focuser.halt", [](json& payload) {
+        LOG_INFO("Executing focuser.halt");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
+        // Validate required deviceId
+        if (!payload.contains("deviceId") || !payload["deviceId"].is_string() ||
+            payload["deviceId"].get<std::string>().empty()) {
+            LOG_WARN("focuser.halt: missing deviceId");
+            payload = CommandResponse::missingParameter("deviceId");
+            return;
+        }
+        std::string deviceId = payload["deviceId"].get<std::string>();
+
+        try {
             auto result = getFocuserService().halt(deviceId);
-            p = result;
-        });
-    spdlog::info("Registered command handler for 'focuser.halt'");
+
+            if (result.contains("status") && result["status"] == "error") {
+                LOG_ERROR("focuser.halt failed for device {}", deviceId);
+                payload = result;
+            } else {
+                LOG_INFO("focuser.halt completed successfully for device {}",
+                         deviceId);
+                payload = CommandResponse::success(result);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("focuser.halt exception for device {}: {}", deviceId,
+                      e.what());
+            payload =
+                CommandResponse::operationFailed("focuser.halt", e.what());
+        }
+    });
 
     // Focuser: capabilities
     dispatcher->registerCommand<json>(
-        "focuser.capabilities",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+        "focuser.capabilities", [](json& payload) {
+            LOG_INFO("Executing focuser.capabilities");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
-            auto result = getFocuserService().getCapabilities(deviceId);
-            p = result;
+            // Validate required deviceId
+            if (!payload.contains("deviceId") ||
+                !payload["deviceId"].is_string() ||
+                payload["deviceId"].get<std::string>().empty()) {
+                LOG_WARN("focuser.capabilities: missing deviceId");
+                payload = CommandResponse::missingParameter("deviceId");
+                return;
+            }
+            std::string deviceId = payload["deviceId"].get<std::string>();
+
+            try {
+                auto result = getFocuserService().getCapabilities(deviceId);
+
+                if (result.contains("status") && result["status"] == "error") {
+                    LOG_ERROR("focuser.capabilities failed for device {}",
+                              deviceId);
+                    payload = result;
+                } else {
+                    LOG_INFO(
+                        "focuser.capabilities completed successfully for "
+                        "device {}",
+                        deviceId);
+                    payload = CommandResponse::success(result);
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("focuser.capabilities exception for device {}: {}",
+                          deviceId, e.what());
+                payload = CommandResponse::operationFailed(
+                    "focuser.capabilities", e.what());
+            }
         });
-    spdlog::info("Registered command handler for 'focuser.capabilities'");
 
     // Focuser: start autofocus
     dispatcher->registerCommand<json>(
-        "focuser.autofocus_start",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+        "focuser.autofocus_start", [](json& payload) {
+            LOG_INFO("Executing focuser.autofocus_start");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
-            auto result = getFocuserService().startAutofocus(deviceId, p);
-            p = result;
+            // Validate required deviceId
+            if (!payload.contains("deviceId") ||
+                !payload["deviceId"].is_string() ||
+                payload["deviceId"].get<std::string>().empty()) {
+                LOG_WARN("focuser.autofocus_start: missing deviceId");
+                payload = CommandResponse::missingParameter("deviceId");
+                return;
+            }
+            std::string deviceId = payload["deviceId"].get<std::string>();
+
+            try {
+                auto result =
+                    getFocuserService().startAutofocus(deviceId, payload);
+
+                if (result.contains("status") && result["status"] == "error") {
+                    LOG_ERROR("focuser.autofocus_start failed for device {}",
+                              deviceId);
+                    payload = result;
+                } else {
+                    LOG_INFO(
+                        "focuser.autofocus_start completed successfully for "
+                        "device {}",
+                        deviceId);
+                    payload = CommandResponse::success(result);
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("focuser.autofocus_start exception for device {}: {}",
+                          deviceId, e.what());
+                payload = CommandResponse::operationFailed(
+                    "focuser.autofocus_start", e.what());
+            }
         });
-    spdlog::info("Registered command handler for 'focuser.autofocus_start'");
 
     // Focuser: autofocus status
     dispatcher->registerCommand<json>(
-        "focuser.autofocus_status",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+        "focuser.autofocus_status", [](json& payload) {
+            LOG_INFO("Executing focuser.autofocus_status");
 
-            std::string deviceId = p.value("deviceId", std::string("foc-001"));
-            std::string autofocusId = p.value("autofocusId", std::string(""));
-            auto result = getFocuserService().getAutofocusStatus(deviceId, autofocusId);
-            p = result;
+            // Validate required deviceId
+            if (!payload.contains("deviceId") ||
+                !payload["deviceId"].is_string() ||
+                payload["deviceId"].get<std::string>().empty()) {
+                LOG_WARN("focuser.autofocus_status: missing deviceId");
+                payload = CommandResponse::missingParameter("deviceId");
+                return;
+            }
+            std::string deviceId = payload["deviceId"].get<std::string>();
+
+            // autofocusId is optional
+            std::string autofocusId =
+                payload.value("autofocusId", std::string(""));
+
+            try {
+                auto result = getFocuserService().getAutofocusStatus(
+                    deviceId, autofocusId);
+
+                if (result.contains("status") && result["status"] == "error") {
+                    LOG_ERROR("focuser.autofocus_status failed for device {}",
+                              deviceId);
+                    payload = result;
+                } else {
+                    LOG_INFO(
+                        "focuser.autofocus_status completed successfully for "
+                        "device {}",
+                        deviceId);
+                    payload = CommandResponse::success(result);
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR(
+                    "focuser.autofocus_status exception for device {}: {}",
+                    deviceId, e.what());
+                payload = CommandResponse::operationFailed(
+                    "focuser.autofocus_status", e.what());
+            }
         });
-    spdlog::info("Registered command handler for 'focuser.autofocus_status'");
 }
 
 }  // namespace lithium::app

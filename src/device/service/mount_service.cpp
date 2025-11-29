@@ -28,10 +28,9 @@ using json = nlohmann::json;
 namespace {
 
 auto toUpper(std::string value) -> std::string {
-    std::transform(value.begin(), value.end(), value.begin(),
-                   [](unsigned char c) {
-                       return static_cast<char>(std::toupper(c));
-                   });
+    std::transform(
+        value.begin(), value.end(), value.begin(),
+        [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
     return value;
 }
 
@@ -145,35 +144,36 @@ MountService::MountService()
 MountService::~MountService() = default;
 
 auto MountService::list() -> json {
-    LOG_INFO( "MountService::list: Listing all available mounts");
+    LOG_INFO("MountService::list: Listing all available mounts");
     json response;
     response["status"] = "success";
     try {
         json mountList = json::array();
         std::shared_ptr<AtomTelescope> telescope;
         try {
-            GET_OR_CREATE_PTR(telescope, AtomTelescope, Constants::MAIN_TELESCOPE)
+            GET_OR_CREATE_PTR(telescope, AtomTelescope,
+                              Constants::MAIN_TELESCOPE)
             json info;
             info["deviceId"] = "mnt-001";
             info["name"] = telescope->getName();
             info["isConnected"] = telescope->isConnected();
             mountList.push_back(info);
         } catch (...) {
-            LOG_WARN( "MountService::list: Main telescope not available");
+            LOG_WARN("MountService::list: Main telescope not available");
         }
         response["data"] = mountList;
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::list: Exception: %s", e.what());
+        LOG_ERROR("MountService::list: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::list: Completed");
+    LOG_INFO("MountService::list: Completed");
     return response;
 }
 
 auto MountService::getStatus(const std::string& deviceId) -> json {
-    LOG_INFO( "MountService::getStatus: Getting status for mount: %s",
-          deviceId.c_str());
+    LOG_INFO("MountService::getStatus: Getting status for mount: %s",
+             deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -228,17 +228,18 @@ auto MountService::getStatus(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = data;
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::getStatus: Exception: %s", e.what());
+        LOG_ERROR("MountService::getStatus: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::getStatus: Completed");
+    LOG_INFO("MountService::getStatus: Completed");
     return response;
 }
 
-auto MountService::connect(const std::string& deviceId, bool connected) -> json {
-    LOG_INFO( "MountService::connect: %s mount: %s",
-          connected ? "Connecting" : "Disconnecting", deviceId.c_str());
+auto MountService::connect(const std::string& deviceId, bool connected)
+    -> json {
+    LOG_INFO("MountService::connect: %s mount: %s",
+             connected ? "Connecting" : "Disconnecting", deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -248,9 +249,9 @@ auto MountService::connect(const std::string& deviceId, bool connected) -> json 
             connected ? telescope->connect("") : telescope->disconnect();
         if (success) {
             response["status"] = "success";
-            response["message"] = connected
-                                      ? "Mount connection process initiated."
-                                      : "Mount disconnection process initiated.";
+            response["message"] =
+                connected ? "Mount connection process initiated."
+                          : "Mount disconnection process initiated.";
 
             std::shared_ptr<atom::async::MessageBus> messageBusPtr;
             GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
@@ -264,18 +265,18 @@ auto MountService::connect(const std::string& deviceId, bool connected) -> json 
                                  {"message", "Connection operation failed."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::connect: Exception: %s", e.what());
+        LOG_ERROR("MountService::connect: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::connect: Completed");
+    LOG_INFO("MountService::connect: Completed");
     return response;
 }
 
 auto MountService::slew(const std::string& deviceId, const std::string& ra,
                         const std::string& dec) -> json {
-    LOG_INFO( "MountService::slew: Slewing mount %s to RA=%s DEC=%s",
-          deviceId.c_str(), ra.c_str(), dec.c_str());
+    LOG_INFO("MountService::slew: Slewing mount %s to RA=%s DEC=%s",
+             deviceId.c_str(), ra.c_str(), dec.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -309,16 +310,16 @@ auto MountService::slew(const std::string& deviceId, const std::string& ra,
                                  {"message", "Failed to start slew."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::slew: Exception: %s", e.what());
+        LOG_ERROR("MountService::slew: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::slew: Completed");
+    LOG_INFO("MountService::slew: Completed");
     return response;
 }
 
 auto MountService::stop(const std::string& deviceId) -> json {
-    LOG_INFO( "MountService::stop: Stopping mount: %s", deviceId.c_str());
+    LOG_INFO("MountService::stop: Stopping mount: %s", deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -341,17 +342,18 @@ auto MountService::stop(const std::string& deviceId) -> json {
                                  {"message", "Failed to stop mount motion."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::stop: Exception: %s", e.what());
+        LOG_ERROR("MountService::stop: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::stop: Completed");
+    LOG_INFO("MountService::stop: Completed");
     return response;
 }
 
-auto MountService::setTracking(const std::string& deviceId, bool tracking) -> json {
-    LOG_INFO( "MountService::setTracking: %s tracking on mount: %s",
-          tracking ? "Enabling" : "Disabling", deviceId.c_str());
+auto MountService::setTracking(const std::string& deviceId, bool tracking)
+    -> json {
+    LOG_INFO("MountService::setTracking: %s tracking on mount: %s",
+             tracking ? "Enabling" : "Disabling", deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -376,18 +378,18 @@ auto MountService::setTracking(const std::string& deviceId, bool tracking) -> js
                 {"message", "Failed to update tracking state."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::setTracking: Exception: %s", e.what());
+        LOG_ERROR("MountService::setTracking: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::setTracking: Completed");
+    LOG_INFO("MountService::setTracking: Completed");
     return response;
 }
 
 auto MountService::setPosition(const std::string& deviceId,
                                const std::string& command) -> json {
-    LOG_INFO( "MountService::setPosition: Command '%s' for mount: %s",
-          command.c_str(), deviceId.c_str());
+    LOG_INFO("MountService::setPosition: Command '%s' for mount: %s",
+             command.c_str(), deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -428,19 +430,20 @@ auto MountService::setPosition(const std::string& deviceId,
                                  {"message", "Mount position command failed."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::setPosition: Exception: %s", e.what());
+        LOG_ERROR("MountService::setPosition: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::setPosition: Completed");
+    LOG_INFO("MountService::setPosition: Completed");
     return response;
 }
 
 auto MountService::pulseGuide(const std::string& deviceId,
-                              const std::string& direction,
-                              int durationMs) -> json {
-    LOG_INFO( "MountService::pulseGuide: Direction=%s duration=%dms for mount: %s",
-          direction.c_str(), durationMs, deviceId.c_str());
+                              const std::string& direction, int durationMs)
+    -> json {
+    LOG_INFO(
+        "MountService::pulseGuide: Direction=%s duration=%dms for mount: %s",
+        direction.c_str(), durationMs, deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -479,18 +482,18 @@ auto MountService::pulseGuide(const std::string& deviceId,
                                  {"message", "Pulse guide command failed."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::pulseGuide: Exception: %s", e.what());
+        LOG_ERROR("MountService::pulseGuide: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::pulseGuide: Completed");
+    LOG_INFO("MountService::pulseGuide: Completed");
     return response;
 }
 
 auto MountService::sync(const std::string& deviceId, const std::string& ra,
                         const std::string& dec) -> json {
-    LOG_INFO( "MountService::sync: Syncing mount %s to RA=%s DEC=%s",
-          deviceId.c_str(), ra.c_str(), dec.c_str());
+    LOG_INFO("MountService::sync: Syncing mount %s to RA=%s DEC=%s",
+             deviceId.c_str(), ra.c_str(), dec.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -517,26 +520,27 @@ auto MountService::sync(const std::string& deviceId, const std::string& ra,
         if (success) {
             response["status"] = "success";
             response["message"] = "Mount position synchronized.";
-            response["data"] = json{
-                {"syncError", json{{"raError", 0.0}, {"decError", 0.0}}}};
+            response["data"] =
+                json{{"syncError", json{{"raError", 0.0}, {"decError", 0.0}}}};
         } else {
             response["status"] = "error";
             response["error"] = {{"code", "sync_failed"},
                                  {"message", "Failed to sync mount position."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::sync: Exception: %s", e.what());
+        LOG_ERROR("MountService::sync: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::sync: Completed");
+    LOG_INFO("MountService::sync: Completed");
     return response;
 }
 
 auto MountService::getCapabilities(const std::string& deviceId) -> json {
     (void)deviceId;
-    LOG_INFO( "MountService::getCapabilities: Getting capabilities for mount: %s",
-          deviceId.c_str());
+    LOG_INFO(
+        "MountService::getCapabilities: Getting capabilities for mount: %s",
+        deviceId.c_str());
     json response;
     try {
         std::lock_guard<std::mutex> lock(impl_->configMutex);
@@ -564,18 +568,18 @@ auto MountService::getCapabilities(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = caps;
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::getCapabilities: Exception: %s", e.what());
+        LOG_ERROR("MountService::getCapabilities: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::getCapabilities: Completed");
+    LOG_INFO("MountService::getCapabilities: Completed");
     return response;
 }
 
 auto MountService::setGuideRates(const std::string& deviceId, double raRate,
                                  double decRate) -> json {
-    LOG_INFO( "MountService::setGuideRates: RA=%f DEC=%f for mount: %s",
-          raRate, decRate, deviceId.c_str());
+    LOG_INFO("MountService::setGuideRates: RA=%f DEC=%f for mount: %s", raRate,
+             decRate, deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -606,18 +610,18 @@ auto MountService::setGuideRates(const std::string& deviceId, double raRate,
         response["message"] = "Guide rates updated.";
         response["data"] = json{{"raRate", raRate}, {"decRate", decRate}};
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::setGuideRates: Exception: %s", e.what());
+        LOG_ERROR("MountService::setGuideRates: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::setGuideRates: Completed");
+    LOG_INFO("MountService::setGuideRates: Completed");
     return response;
 }
 
 auto MountService::setTrackingRate(const std::string& deviceId,
                                    const std::string& rate) -> json {
-    LOG_INFO( "MountService::setTrackingRate: rate=%s for mount: %s",
-          rate.c_str(), deviceId.c_str());
+    LOG_INFO("MountService::setTrackingRate: rate=%s for mount: %s",
+             rate.c_str(), deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -651,17 +655,17 @@ auto MountService::setTrackingRate(const std::string& deviceId,
                 {"message", "Failed to update tracking rate."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::setTrackingRate: Exception: %s", e.what());
+        LOG_ERROR("MountService::setTrackingRate: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::setTrackingRate: Completed");
+    LOG_INFO("MountService::setTrackingRate: Completed");
     return response;
 }
 
 auto MountService::getPierSide(const std::string& deviceId) -> json {
-    LOG_INFO( "MountService::getPierSide: Getting pier side for mount: %s",
-          deviceId.c_str());
+    LOG_INFO("MountService::getPierSide: Getting pier side for mount: %s",
+             deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -696,18 +700,19 @@ auto MountService::getPierSide(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = data;
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::getPierSide: Exception: %s", e.what());
+        LOG_ERROR("MountService::getPierSide: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::getPierSide: Completed");
+    LOG_INFO("MountService::getPierSide: Completed");
     return response;
 }
 
 auto MountService::performMeridianFlip(const std::string& deviceId) -> json {
     LOG_INFO(
-          "MountService::performMeridianFlip: Initiating meridian flip for mount: %s",
-          deviceId.c_str());
+        "MountService::performMeridianFlip: Initiating meridian flip for "
+        "mount: %s",
+        deviceId.c_str());
     json response;
     try {
         std::shared_ptr<AtomTelescope> telescope;
@@ -725,225 +730,224 @@ auto MountService::performMeridianFlip(const std::string& deviceId) -> json {
             {"code", "feature_not_supported"},
             {"message", "Meridian flip is not implemented for this mount."}};
     } catch (const std::exception& e) {
-        LOG_ERROR( "MountService::performMeridianFlip: Exception: %s",
-              e.what());
+        LOG_ERROR("MountService::performMeridianFlip: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
-    LOG_INFO( "MountService::performMeridianFlip: Completed");
+    LOG_INFO("MountService::performMeridianFlip: Completed");
     return response;
 }
 
 // ========== INDI-specific operations ==========
 
 auto MountService::getINDIProperties(const std::string& deviceId) -> json {
-    return withConnectedDevice(deviceId, "getINDIProperties",
-                               [this](auto telescope) -> json {
-        json data;
-        data["driverName"] = "INDI Telescope";
-        data["driverVersion"] = "1.0";
+    return withConnectedDevice(
+        deviceId, "getINDIProperties", [this](auto telescope) -> json {
+            json data;
+            data["driverName"] = "INDI Telescope";
+            data["driverVersion"] = "1.0";
 
-        json properties = json::object();
+            json properties = json::object();
 
-        // Tracking state
-        properties["TELESCOPE_TRACK_STATE"] = {
-            {"value", telescope->isTrackingEnabled()},
-            {"type", "switch"}
-        };
+            // Tracking state
+            properties["TELESCOPE_TRACK_STATE"] = {
+                {"value", telescope->isTrackingEnabled()}, {"type", "switch"}};
 
-        // Park state
-        properties["TELESCOPE_PARK"] = {
-            {"value", telescope->isParked()},
-            {"type", "switch"}
-        };
+            // Park state
+            properties["TELESCOPE_PARK"] = {{"value", telescope->isParked()},
+                                            {"type", "switch"}};
 
-        // Pier side
-        if (auto pierSide = telescope->getPierSide()) {
-            std::string side = "Unknown";
-            switch (*pierSide) {
-                case PierSide::EAST:
-                    side = "East";
-                    break;
-                case PierSide::WEST:
-                    side = "West";
-                    break;
-                default:
-                    break;
+            // Pier side
+            if (auto pierSide = telescope->getPierSide()) {
+                std::string side = "Unknown";
+                switch (*pierSide) {
+                    case PierSide::EAST:
+                        side = "East";
+                        break;
+                    case PierSide::WEST:
+                        side = "West";
+                        break;
+                    default:
+                        break;
+                }
+                properties["TELESCOPE_PIER_SIDE"] = {{"value", side},
+                                                     {"type", "text"}};
             }
-            properties["TELESCOPE_PIER_SIDE"] = {
-                {"value", side},
-                {"type", "text"}
-            };
-        }
 
-        // Coordinates
-        if (auto coords = telescope->getRADECJNow()) {
-            properties["EQUATORIAL_EOD_COORD"] = {
-                {"RA", coords->first},
-                {"DEC", coords->second},
-                {"type", "number"}
-            };
-        }
+            // Coordinates
+            if (auto coords = telescope->getRADECJNow()) {
+                properties["EQUATORIAL_EOD_COORD"] = {{"RA", coords->first},
+                                                      {"DEC", coords->second},
+                                                      {"type", "number"}};
+            }
 
-        data["properties"] = properties;
-        return makeSuccessResponse(data);
-    });
+            data["properties"] = properties;
+            return makeSuccessResponse(data);
+        });
 }
 
 auto MountService::setINDIProperty(const std::string& deviceId,
                                    const std::string& propertyName,
                                    const json& value) -> json {
-    return withConnectedDevice(deviceId, "setINDIProperty",
-                               [&](auto telescope) -> json {
-        bool success = false;
+    return withConnectedDevice(
+        deviceId, "setINDIProperty", [&](auto telescope) -> json {
+            bool success = false;
 
-        if (propertyName == "TELESCOPE_TRACK_STATE" && value.is_boolean()) {
-            success = telescope->enableTracking(value.get<bool>());
-        } else if (propertyName == "TELESCOPE_PARK" && value.is_boolean()) {
-            success = telescope->park(value.get<bool>());
-        } else if (propertyName == "TELESCOPE_TRACK_RATE" && value.is_string()) {
-            std::string rate = value.get<std::string>();
-            TrackMode mode = TrackMode::SIDEREAL;
-            if (rate == "LUNAR") {
-                mode = TrackMode::LUNAR;
-            } else if (rate == "SOLAR") {
-                mode = TrackMode::SOLAR;
+            if (propertyName == "TELESCOPE_TRACK_STATE" && value.is_boolean()) {
+                success = telescope->enableTracking(value.get<bool>());
+            } else if (propertyName == "TELESCOPE_PARK" && value.is_boolean()) {
+                success = telescope->park(value.get<bool>());
+            } else if (propertyName == "TELESCOPE_TRACK_RATE" &&
+                       value.is_string()) {
+                std::string rate = value.get<std::string>();
+                TrackMode mode = TrackMode::SIDEREAL;
+                if (rate == "LUNAR") {
+                    mode = TrackMode::LUNAR;
+                } else if (rate == "SOLAR") {
+                    mode = TrackMode::SOLAR;
+                }
+                success = telescope->setTrackRate(mode);
+            } else {
+                return makeErrorResponse(
+                    ErrorCode::INVALID_FIELD_VALUE,
+                    "Unknown or invalid property: " + propertyName);
             }
-            success = telescope->setTrackRate(mode);
-        } else {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Unknown or invalid property: " + propertyName);
-        }
 
-        if (success) {
-            return makeSuccessResponse("Property " + propertyName + " updated");
-        }
-        return makeErrorResponse(ErrorCode::OPERATION_FAILED,
-                                 "Failed to set property " + propertyName);
-    });
+            if (success) {
+                return makeSuccessResponse("Property " + propertyName +
+                                           " updated");
+            }
+            return makeErrorResponse(ErrorCode::OPERATION_FAILED,
+                                     "Failed to set property " + propertyName);
+        });
 }
 
 auto MountService::getTelescopeInfo(const std::string& deviceId) -> json {
-    return withConnectedDevice(deviceId, "getTelescopeInfo",
-                               [](auto telescope) -> json {
-        json data;
+    return withConnectedDevice(
+        deviceId, "getTelescopeInfo", [](auto telescope) -> json {
+            json data;
 
-        if (auto info = telescope->getTelescopeInfo()) {
-            auto [aperture, focalLength, guiderAperture, guiderFocalLength] = *info;
-            data["aperture"] = aperture;
-            data["focalLength"] = focalLength;
-            data["guiderAperture"] = guiderAperture;
-            data["guiderFocalLength"] = guiderFocalLength;
-            data["focalRatio"] = (aperture > 0) ? focalLength / aperture : 0.0;
-        } else {
-            data["aperture"] = 0.0;
-            data["focalLength"] = 0.0;
-            data["guiderAperture"] = 0.0;
-            data["guiderFocalLength"] = 0.0;
-            data["focalRatio"] = 0.0;
-        }
+            if (auto info = telescope->getTelescopeInfo()) {
+                auto [aperture, focalLength, guiderAperture,
+                      guiderFocalLength] = *info;
+                data["aperture"] = aperture;
+                data["focalLength"] = focalLength;
+                data["guiderAperture"] = guiderAperture;
+                data["guiderFocalLength"] = guiderFocalLength;
+                data["focalRatio"] =
+                    (aperture > 0) ? focalLength / aperture : 0.0;
+            } else {
+                data["aperture"] = 0.0;
+                data["focalLength"] = 0.0;
+                data["guiderAperture"] = 0.0;
+                data["guiderFocalLength"] = 0.0;
+                data["focalRatio"] = 0.0;
+            }
 
-        return makeSuccessResponse(data);
-    });
+            return makeSuccessResponse(data);
+        });
 }
 
 auto MountService::setTelescopeInfo(const std::string& deviceId,
                                     double aperture, double focalLength,
                                     double guiderAperture,
                                     double guiderFocalLength) -> json {
-    return withConnectedDevice(deviceId, "setTelescopeInfo",
-                               [&](auto telescope) -> json {
-        if (aperture <= 0 || focalLength <= 0) {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Aperture and focal length must be positive");
-        }
+    return withConnectedDevice(
+        deviceId, "setTelescopeInfo", [&](auto telescope) -> json {
+            if (aperture <= 0 || focalLength <= 0) {
+                return makeErrorResponse(
+                    ErrorCode::INVALID_FIELD_VALUE,
+                    "Aperture and focal length must be positive");
+            }
 
-        if (telescope->setTelescopeInfo(aperture, focalLength,
-                                        guiderAperture, guiderFocalLength)) {
-            json data;
-            data["aperture"] = aperture;
-            data["focalLength"] = focalLength;
-            data["guiderAperture"] = guiderAperture;
-            data["guiderFocalLength"] = guiderFocalLength;
-            return makeSuccessResponse(data, "Telescope info updated");
-        }
-        return makeErrorResponse(ErrorCode::OPERATION_FAILED,
-                                 "Failed to set telescope info");
-    });
+            if (telescope->setTelescopeInfo(
+                    aperture, focalLength, guiderAperture, guiderFocalLength)) {
+                json data;
+                data["aperture"] = aperture;
+                data["focalLength"] = focalLength;
+                data["guiderAperture"] = guiderAperture;
+                data["guiderFocalLength"] = guiderFocalLength;
+                return makeSuccessResponse(data, "Telescope info updated");
+            }
+            return makeErrorResponse(ErrorCode::OPERATION_FAILED,
+                                     "Failed to set telescope info");
+        });
 }
 
 auto MountService::getSiteLocation(const std::string& deviceId) -> json {
-    return withConnectedDevice(deviceId, "getSiteLocation",
-                               [this](auto telescope) -> json {
-        (void)telescope;
-        json data;
-        {
-            std::lock_guard<std::mutex> lock(impl_->configMutex);
-            data["latitude"] = impl_->latitude;
-            data["longitude"] = impl_->longitude;
-            data["elevation"] = impl_->elevation;
-        }
-        return makeSuccessResponse(data);
-    });
+    return withConnectedDevice(
+        deviceId, "getSiteLocation", [this](auto telescope) -> json {
+            (void)telescope;
+            json data;
+            {
+                std::lock_guard<std::mutex> lock(impl_->configMutex);
+                data["latitude"] = impl_->latitude;
+                data["longitude"] = impl_->longitude;
+                data["elevation"] = impl_->elevation;
+            }
+            return makeSuccessResponse(data);
+        });
 }
 
-auto MountService::setSiteLocation(const std::string& deviceId,
-                                   double latitude, double longitude,
-                                   double elevation) -> json {
-    return withConnectedDevice(deviceId, "setSiteLocation",
-                               [&](auto telescope) -> json {
-        (void)telescope;
-        if (latitude < -90.0 || latitude > 90.0) {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Latitude must be between -90 and 90");
-        }
-        if (longitude < -180.0 || longitude > 180.0) {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Longitude must be between -180 and 180");
-        }
+auto MountService::setSiteLocation(const std::string& deviceId, double latitude,
+                                   double longitude, double elevation) -> json {
+    return withConnectedDevice(
+        deviceId, "setSiteLocation", [&](auto telescope) -> json {
+            (void)telescope;
+            if (latitude < -90.0 || latitude > 90.0) {
+                return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
+                                         "Latitude must be between -90 and 90");
+            }
+            if (longitude < -180.0 || longitude > 180.0) {
+                return makeErrorResponse(
+                    ErrorCode::INVALID_FIELD_VALUE,
+                    "Longitude must be between -180 and 180");
+            }
 
-        {
-            std::lock_guard<std::mutex> lock(impl_->configMutex);
-            impl_->latitude = latitude;
-            impl_->longitude = longitude;
-            impl_->elevation = elevation;
-        }
+            {
+                std::lock_guard<std::mutex> lock(impl_->configMutex);
+                impl_->latitude = latitude;
+                impl_->longitude = longitude;
+                impl_->elevation = elevation;
+            }
 
-        json data;
-        data["latitude"] = latitude;
-        data["longitude"] = longitude;
-        data["elevation"] = elevation;
-        return makeSuccessResponse(data, "Site location updated");
-    });
+            json data;
+            data["latitude"] = latitude;
+            data["longitude"] = longitude;
+            data["elevation"] = elevation;
+            return makeSuccessResponse(data, "Site location updated");
+        });
 }
 
 auto MountService::getUTCOffset(const std::string& deviceId) -> json {
-    return withConnectedDevice(deviceId, "getUTCOffset",
-                               [](auto telescope) -> json {
-        (void)telescope;
-        // Get system UTC offset
-        auto now = std::chrono::system_clock::now();
-        auto time_t_now = std::chrono::system_clock::to_time_t(now);
-        std::tm local_tm{};
-        std::tm utc_tm{};
+    return withConnectedDevice(
+        deviceId, "getUTCOffset", [](auto telescope) -> json {
+            (void)telescope;
+            // Get system UTC offset
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            std::tm local_tm{};
+            std::tm utc_tm{};
 
 #ifdef _WIN32
-        localtime_s(&local_tm, &time_t_now);
-        gmtime_s(&utc_tm, &time_t_now);
+            localtime_s(&local_tm, &time_t_now);
+            gmtime_s(&utc_tm, &time_t_now);
 #else
         localtime_r(&time_t_now, &local_tm);
         gmtime_r(&time_t_now, &utc_tm);
 #endif
 
-        int offset_hours = local_tm.tm_hour - utc_tm.tm_hour;
-        if (offset_hours > 12) offset_hours -= 24;
-        if (offset_hours < -12) offset_hours += 24;
+            int offset_hours = local_tm.tm_hour - utc_tm.tm_hour;
+            if (offset_hours > 12)
+                offset_hours -= 24;
+            if (offset_hours < -12)
+                offset_hours += 24;
 
-        json data;
-        data["utcOffset"] = offset_hours;
-        data["timezone"] = "Local";
-        return makeSuccessResponse(data);
-    });
+            json data;
+            data["utcOffset"] = offset_hours;
+            data["timezone"] = "Local";
+            return makeSuccessResponse(data);
+        });
 }
 
 }  // namespace lithium::device

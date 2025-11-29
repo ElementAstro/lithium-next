@@ -33,24 +33,24 @@ using json = nlohmann::json;
 class DynamicLibraryParser::Impl {
 public:
     explicit Impl(std::string executable) : executable_(std::move(executable)) {
-        LOG_INFO( "Initialized DynamicLibraryParser for executable: {}",
-              executable_);
+        LOG_INFO("Initialized DynamicLibraryParser for executable: {}",
+                 executable_);
         loadCache();
     }
 
     void setJsonOutput(bool json_output) {
         json_output_ = json_output;
-        LOG_INFO( "Set JSON output to: {}", json_output_ ? "true" : "false");
+        LOG_INFO("Set JSON output to: {}", json_output_ ? "true" : "false");
     }
 
     void setOutputFilename(const std::string& filename) {
         output_filename_ = filename;
-        LOG_INFO( "Set output filename to: {}", output_filename_);
+        LOG_INFO("Set output filename to: {}", output_filename_);
     }
 
     void setConfig(const ParserConfig& config) {
         config_ = config;
-        LOG_INFO( "Updated parser configuration");
+        LOG_INFO("Updated parser configuration");
     }
 
     void parse() {
@@ -65,9 +65,9 @@ public:
             }
             analyzeDependencies();
             saveCache();
-            LOG_INFO( "Parse process completed successfully.");
+            LOG_INFO("Parse process completed successfully.");
         } catch (const std::exception& e) {
-            LOG_ERROR( "Exception caught during parsing: {}", e.what());
+            LOG_ERROR("Exception caught during parsing: {}", e.what());
             throw;
         }
     }
@@ -84,7 +84,7 @@ public:
 
     void clearCache() {
         cache_.clear();
-        LOG_INFO( "Cache cleared successfully");
+        LOG_INFO("Cache cleared successfully");
     }
 
     void parseAsync(const std::function<void(bool)>& callback) {
@@ -93,7 +93,7 @@ public:
                 parse();
                 callback(true);
             } catch (const std::exception& e) {
-                LOG_ERROR( "Async parsing failed: {}", e.what());
+                LOG_ERROR("Async parsing failed: {}", e.what());
                 callback(false);
             }
         }).detach();
@@ -101,7 +101,7 @@ public:
 
     static auto verifyLibrary(const std::string& library_path) -> bool {
         if (!std::filesystem::exists(library_path)) {
-            LOG_WARN( "Library not found: {}", library_path);
+            LOG_WARN("Library not found: {}", library_path);
             return false;
         }
 
@@ -134,7 +134,7 @@ private:
         LOG_SCOPE_FUNCTION(INFO);
         std::ifstream file(executable_, std::ios::binary);
         if (!file) {
-            LOG_ERROR( "Failed to open file: {}", executable_);
+            LOG_ERROR("Failed to open file: {}", executable_);
             THROW_FAIL_TO_OPEN_FILE("Failed to open file: " + executable_);
         }
 
@@ -142,7 +142,7 @@ private:
         Elf64_Ehdr elfHeader;
         file.read(reinterpret_cast<char*>(&elfHeader), sizeof(elfHeader));
         if (std::memcmp(elfHeader.e_ident, ELFMAG, SELFMAG) != 0) {
-            LOG_ERROR( "Not a valid ELF file: {}", executable_);
+            LOG_ERROR("Not a valid ELF file: {}", executable_);
             THROW_RUNTIME_ERROR("Not a valid ELF file: " + executable_);
         }
 
@@ -175,12 +175,12 @@ private:
                           static_cast<std::streamsize>(strtabHeader.sh_size));
 
                 // Collect needed libraries
-                LOG_INFO( "Needed libraries from ELF:");
+                LOG_INFO("Needed libraries from ELF:");
                 for (const auto& entry : dynamic_entries) {
                     if (entry.d_tag == DT_NEEDED) {
                         std::string lib(&strtab[entry.d_un.d_val]);
                         libraries_.emplace_back(lib);
-                        LOG_INFO( " - {}", lib);
+                        LOG_INFO(" - {}", lib);
                     }
                 }
                 break;
@@ -188,7 +188,7 @@ private:
         }
 
         if (libraries_.empty()) {
-            LOG_WARN( "No dynamic libraries found in ELF file.");
+            LOG_WARN("No dynamic libraries found in ELF file.");
         }
     }
 
@@ -207,12 +207,12 @@ private:
 #endif
 
         command += executable_;
-        LOG_INFO( "Running command: {}", command);
+        LOG_INFO("Running command: {}", command);
 
         auto [output, status] = atom::system::executeCommandWithStatus(command);
 
         command_output_ = output;
-        LOG_INFO( "Command output: \n{}", command_output_);
+        LOG_INFO("Command output: \n{}", command_output_);
     }
 
     void handleJsonOutput() {
@@ -221,7 +221,7 @@ private:
         if (!output_filename_.empty()) {
             writeOutputToFile(jsonContent);
         } else {
-            LOG_INFO( "JSON output:\n{}", jsonContent);
+            LOG_INFO("JSON output:\n{}", jsonContent);
         }
     }
 
@@ -240,9 +240,9 @@ private:
         if (outFile) {
             outFile << content;
             outFile.close();
-            LOG_INFO( "Output successfully written to {}", output_filename_);
+            LOG_INFO("Output successfully written to {}", output_filename_);
         } else {
-            LOG_ERROR( "Failed to write to file: {}", output_filename_);
+            LOG_ERROR("Failed to write to file: {}", output_filename_);
             throw std::runtime_error("Failed to write to file: " +
                                      output_filename_);
         }
@@ -260,10 +260,10 @@ private:
                 json cacheData = json::parse(f);
                 cache_ =
                     cacheData.get<std::unordered_map<std::string, time_t>>();
-                LOG_INFO( "Cache loaded successfully");
+                LOG_INFO("Cache loaded successfully");
             }
         } catch (const std::exception& e) {
-            LOG_WARN( "Failed to load cache: {}", e.what());
+            LOG_WARN("Failed to load cache: {}", e.what());
         }
     }
 
@@ -278,9 +278,9 @@ private:
             std::ofstream f(cacheFile);
             json cacheData(cache_);
             f << cacheData.dump(4);
-            LOG_INFO( "Cache saved successfully");
+            LOG_INFO("Cache saved successfully");
         } catch (const std::exception& e) {
-            LOG_ERROR( "Failed to save cache: {}", e.what());
+            LOG_ERROR("Failed to save cache: {}", e.what());
         }
     }
 
@@ -299,8 +299,8 @@ private:
                 subDeps = parser.getDependencies();
                 dependency_graph_[lib] = subDeps;
             } catch (const std::exception& e) {
-                LOG_WARN( "Failed to analyze dependencies for {}: {}", lib,
-                      e.what());
+                LOG_WARN("Failed to analyze dependencies for {}: {}", lib,
+                         e.what());
             }
         }
     }

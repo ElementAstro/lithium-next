@@ -337,13 +337,13 @@ public:
      * @brief Get serialization metrics
      */
     struct Metrics {
-        size_t totalSerializations{0};      ///< Total serialization operations
-        size_t totalDeserializations{0};    ///< Total deserialization operations
-        size_t serializationErrors{0};      ///< Serialization error count
-        size_t deserializationErrors{0};    ///< Deserialization error count
-        double avgSerializationTimeMs{0.0}; ///< Average serialization time
-        double avgDeserializationTimeMs{0.0}; ///< Average deserialization time
-        size_t totalBytesProcessed{0};      ///< Total bytes processed
+        size_t totalSerializations{0};    ///< Total serialization operations
+        size_t totalDeserializations{0};  ///< Total deserialization operations
+        size_t serializationErrors{0};    ///< Serialization error count
+        size_t deserializationErrors{0};  ///< Deserialization error count
+        double avgSerializationTimeMs{0.0};    ///< Average serialization time
+        double avgDeserializationTimeMs{0.0};  ///< Average deserialization time
+        size_t totalBytesProcessed{0};         ///< Total bytes processed
     };
 
     /**
@@ -381,10 +381,9 @@ public:
      * @param dataSize Size of data being processed
      * @param success Whether operation succeeded (for AFTER_* events)
      */
-    using SerializerHook = std::function<void(SerializerEvent event,
-                                              SerializationFormat format,
-                                              size_t dataSize,
-                                              bool success)>;
+    using SerializerHook =
+        std::function<void(SerializerEvent event, SerializationFormat format,
+                           size_t dataSize, bool success)>;
 
     /**
      * @brief Register a serializer event hook

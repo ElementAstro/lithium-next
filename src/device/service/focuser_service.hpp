@@ -58,8 +58,8 @@ public:
     /**
      * @brief Update focuser settings
      */
-    auto updateSettings(const std::string& deviceId,
-                        const json& settings) -> json;
+    auto updateSettings(const std::string& deviceId, const json& settings)
+        -> json;
 
     /**
      * @brief Halt focuser movement
@@ -94,8 +94,8 @@ public:
      * @brief Set INDI-specific focuser property
      */
     auto setINDIProperty(const std::string& deviceId,
-                         const std::string& propertyName,
-                         const json& value) -> json;
+                         const std::string& propertyName, const json& value)
+        -> json;
 
     /**
      * @brief Sync focuser position

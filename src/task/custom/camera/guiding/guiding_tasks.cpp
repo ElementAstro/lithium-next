@@ -4,9 +4,9 @@
  */
 
 #include "guiding_tasks.hpp"
-#include "../exposure/exposure_tasks.hpp"
-#include <thread>
 #include <random>
+#include <thread>
+#include "../exposure/exposure_tasks.hpp"
 
 namespace lithium::task::camera {
 
@@ -15,12 +15,18 @@ namespace lithium::task::camera {
 // ============================================================================
 
 void AutoGuidingTask::setupParameters() {
-    addParamDefinition("action", "string", false, "start", "Action (start/stop/calibrate)");
-    addParamDefinition("exposure", "number", false, 2.0, "Guide camera exposure");
-    addParamDefinition("settle_timeout", "number", false, 60.0, "Settling timeout");
-    addParamDefinition("settle_threshold", "number", false, 0.5, "Settle threshold (arcsec)");
-    addParamDefinition("calibration_step", "integer", false, 1000, "Calibration step size");
-    addParamDefinition("guide_rate", "number", false, 0.5, "Guide rate (x sidereal)");
+    addParamDefinition("action", "string", false, "start",
+                       "Action (start/stop/calibrate)");
+    addParamDefinition("exposure", "number", false, 2.0,
+                       "Guide camera exposure");
+    addParamDefinition("settle_timeout", "number", false, 60.0,
+                       "Settling timeout");
+    addParamDefinition("settle_threshold", "number", false, 0.5,
+                       "Settle threshold (arcsec)");
+    addParamDefinition("calibration_step", "integer", false, 1000,
+                       "Calibration step size");
+    addParamDefinition("guide_rate", "number", false, 0.5,
+                       "Guide rate (x sidereal)");
 }
 
 void AutoGuidingTask::validateParams(const json& params) {
@@ -28,7 +34,8 @@ void AutoGuidingTask::validateParams(const json& params) {
 
     std::string action = params.value("action", "start");
     if (action != "start" && action != "stop" && action != "calibrate") {
-        throw ValidationError("Invalid action. Must be start, stop, or calibrate");
+        throw ValidationError(
+            "Invalid action. Must be start, stop, or calibrate");
     }
 }
 
@@ -82,7 +89,8 @@ bool AutoGuidingTask::startGuiding(const json& params) {
     logProgress("Waiting for guiding to settle");
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    logProgress("Guiding settled within " + std::to_string(settleThreshold) + " arcsec");
+    logProgress("Guiding settled within " + std::to_string(settleThreshold) +
+                " arcsec");
     return true;
 }
 
@@ -93,12 +101,16 @@ bool AutoGuidingTask::startGuiding(const json& params) {
 void GuidedExposureTask::setupParameters() {
     addParamDefinition("exposure", "number", true, nullptr, "Exposure time");
     addParamDefinition("count", "integer", false, 1, "Number of exposures");
-    addParamDefinition("wait_for_guide", "boolean", false, true, "Wait for guiding to settle");
-    addParamDefinition("guide_timeout", "number", false, 60.0, "Guide settling timeout");
-    addParamDefinition("abort_on_guide_loss", "boolean", false, true, "Abort if guiding lost");
+    addParamDefinition("wait_for_guide", "boolean", false, true,
+                       "Wait for guiding to settle");
+    addParamDefinition("guide_timeout", "number", false, 60.0,
+                       "Guide settling timeout");
+    addParamDefinition("abort_on_guide_loss", "boolean", false, true,
+                       "Abort if guiding lost");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
     addParamDefinition("filter", "string", false, "L", "Filter name");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
 }
 
 void GuidedExposureTask::validateParams(const json& params) {
@@ -123,20 +135,21 @@ void GuidedExposureTask::executeImpl(const json& params) {
         if (waitGuide) {
             logProgress("Waiting for guiding to settle", progress);
             if (!waitForGuiding(guideTimeout)) {
-                throw std::runtime_error("Guiding did not settle within timeout");
+                throw std::runtime_error(
+                    "Guiding did not settle within timeout");
             }
         }
 
         logProgress("Taking guided exposure " + std::to_string(i + 1) + "/" +
-                   std::to_string(count), progress);
+                        std::to_string(count),
+                    progress);
 
         json exposureParams = {
             {"exposure", exposure},
             {"type", "light"},
             {"filter", params.value("filter", "L")},
             {"gain", params.value("gain", 100)},
-            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-        };
+            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
         TakeExposureTask guidedExposure;
         guidedExposure.execute(exposureParams);
@@ -157,12 +170,18 @@ bool GuidedExposureTask::waitForGuiding(double timeout) {
 
 void DitherSequenceTask::setupParameters() {
     addParamDefinition("exposure", "number", true, nullptr, "Exposure time");
-    addParamDefinition("count", "integer", true, nullptr, "Number of exposures");
-    addParamDefinition("dither_amount", "number", false, 5.0, "Dither amount (pixels)");
-    addParamDefinition("dither_every", "integer", false, 1, "Dither every N frames");
-    addParamDefinition("settle_timeout", "number", false, 30.0, "Settle timeout after dither");
-    addParamDefinition("settle_threshold", "number", false, 0.5, "Settle threshold (arcsec)");
-    addParamDefinition("random_dither", "boolean", false, true, "Random dither pattern");
+    addParamDefinition("count", "integer", true, nullptr,
+                       "Number of exposures");
+    addParamDefinition("dither_amount", "number", false, 5.0,
+                       "Dither amount (pixels)");
+    addParamDefinition("dither_every", "integer", false, 1,
+                       "Dither every N frames");
+    addParamDefinition("settle_timeout", "number", false, 30.0,
+                       "Settle timeout after dither");
+    addParamDefinition("settle_threshold", "number", false, 0.5,
+                       "Settle threshold (arcsec)");
+    addParamDefinition("random_dither", "boolean", false, true,
+                       "Random dither pattern");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
     addParamDefinition("filter", "string", false, "L", "Filter name");
 }
@@ -180,7 +199,8 @@ void DitherSequenceTask::validateParams(const json& params) {
 
     double ditherAmount = params.value("dither_amount", 5.0);
     if (ditherAmount < 0.5 || ditherAmount > 50.0) {
-        throw ValidationError("Dither amount must be between 0.5 and 50 pixels");
+        throw ValidationError(
+            "Dither amount must be between 0.5 and 50 pixels");
     }
 }
 
@@ -192,7 +212,8 @@ void DitherSequenceTask::executeImpl(const json& params) {
     double settleTimeout = params.value("settle_timeout", 30.0);
     double settleThreshold = params.value("settle_threshold", 0.5);
 
-    logProgress("Starting dither sequence with " + std::to_string(count) + " exposures");
+    logProgress("Starting dither sequence with " + std::to_string(count) +
+                " exposures");
 
     for (int i = 0; i < count; ++i) {
         double progress = static_cast<double>(i) / count;
@@ -208,20 +229,21 @@ void DitherSequenceTask::executeImpl(const json& params) {
             }
         }
 
-        logProgress("Exposure " + std::to_string(i + 1) + "/" + std::to_string(count), progress);
+        logProgress(
+            "Exposure " + std::to_string(i + 1) + "/" + std::to_string(count),
+            progress);
 
-        json exposureParams = {
-            {"exposure", exposure},
-            {"type", "light"},
-            {"filter", params.value("filter", "L")},
-            {"gain", params.value("gain", 100)}
-        };
+        json exposureParams = {{"exposure", exposure},
+                               {"type", "light"},
+                               {"filter", params.value("filter", "L")},
+                               {"gain", params.value("gain", 100)}};
 
         TakeExposureTask frameExposure;
         frameExposure.execute(exposureParams);
     }
 
-    logProgress("Dither sequence complete: " + std::to_string(count) + " frames", 1.0);
+    logProgress(
+        "Dither sequence complete: " + std::to_string(count) + " frames", 1.0);
 }
 
 void DitherSequenceTask::performDither(double amount) {
@@ -233,7 +255,8 @@ void DitherSequenceTask::performDither(double amount) {
     double dx = dis(gen);
     double dy = dis(gen);
 
-    logProgress("Dithering by (" + std::to_string(dx) + ", " + std::to_string(dy) + ") pixels");
+    logProgress("Dithering by (" + std::to_string(dx) + ", " +
+                std::to_string(dy) + ") pixels");
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 

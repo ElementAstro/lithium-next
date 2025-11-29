@@ -30,13 +30,13 @@
 
 #include "server/controller/config.hpp"
 // #include "server/controller/python.hpp"
+#include "server/controller/camera.hpp"
+#include "server/controller/filterwheel.hpp"
+#include "server/controller/focuser.hpp"
+#include "server/controller/mount.hpp"
 #include "server/controller/script.hpp"
 #include "server/controller/search.hpp"
 #include "server/controller/sequencer.hpp"
-#include "server/controller/mount.hpp"
-#include "server/controller/focuser.hpp"
-#include "server/controller/filterwheel.hpp"
-#include "server/controller/camera.hpp"
 #include "server/websocket.hpp"
 
 using namespace std::string_literals;

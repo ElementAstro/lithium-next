@@ -72,8 +72,8 @@ public:
     bool pixelToWCS(const QPointF& pixelPoint, FITSImage::wcs_point& skyPoint);
     bool wcsToPixel(const FITSImage::wcs_point& skyPoint, QPointF& pixelPoint);
 
-    auto findStarsByStellarSolver(bool AllStars,
-                                  bool runHFR) -> QList<FITSImage::Star>;
+    auto findStarsByStellarSolver(bool AllStars, bool runHFR)
+        -> QList<FITSImage::Star>;
 
     // 新增方法
     bool initSolver(const QString& configFile = QString());
@@ -110,8 +110,8 @@ private:
 
     auto findStarsByStellarSolver(bool AllStars,
                                   const FITSImage::Statistic& imagestats,
-                                  const uint8_t* imageBuffer,
-                                  bool runHFR) -> QList<FITSImage::Star>;
+                                  const uint8_t* imageBuffer, bool runHFR)
+        -> QList<FITSImage::Star>;
 
     // 成员变量
     QCoreApplication* app;

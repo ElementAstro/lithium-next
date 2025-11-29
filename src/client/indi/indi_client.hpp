@@ -28,14 +28,12 @@ namespace lithium::client {
  * @brief INDI-specific driver information (extends base DriverInfo)
  */
 struct INDIDriverInfo : public DriverInfo {
-    std::string exec;           // Executable name (alias for binary)
-    std::string skel;           // Skeleton file (alias for skeleton)
-    bool custom{false};         // Is custom driver
-    
-    INDIDriverInfo() {
-        backend = "INDI";
-    }
-    
+    std::string exec;    // Executable name (alias for binary)
+    std::string skel;    // Skeleton file (alias for skeleton)
+    bool custom{false};  // Is custom driver
+
+    INDIDriverInfo() { backend = "INDI"; }
+
     // Convert from INDIDeviceContainer
     static INDIDriverInfo fromContainer(const INDIDeviceContainer& container) {
         INDIDriverInfo info;
@@ -51,7 +49,7 @@ struct INDIDriverInfo : public DriverInfo {
         info.backend = "INDI";
         return info;
     }
-    
+
     // Convert to INDIDeviceContainer
     auto toContainer() const -> std::shared_ptr<INDIDeviceContainer> {
         return std::make_shared<INDIDeviceContainer>(
@@ -98,7 +96,8 @@ public:
 
     bool startDriver(const DriverInfo& driver) override;
     bool stopDriver(const std::string& driverName) override;
-    std::unordered_map<std::string, DriverInfo> getRunningDrivers() const override;
+    std::unordered_map<std::string, DriverInfo> getRunningDrivers()
+        const override;
     std::vector<DriverInfo> getAvailableDrivers() const override;
 
     /**
@@ -124,8 +123,7 @@ public:
 
     // ==================== Property Access ====================
 
-    bool setProperty(const std::string& device,
-                     const std::string& property,
+    bool setProperty(const std::string& device, const std::string& property,
                      const std::string& element,
                      const std::string& value) override;
 
@@ -146,8 +144,7 @@ public:
      * @param dataPath Data path
      * @param fifoPath FIFO path
      */
-    void configureINDI(const std::string& host = "localhost",
-                       int port = 7624,
+    void configureINDI(const std::string& host = "localhost", int port = 7624,
                        const std::string& configPath = "",
                        const std::string& dataPath = "/usr/share/indi",
                        const std::string& fifoPath = "/tmp/indi.fifo");
@@ -216,30 +213,26 @@ public:
      */
     bool setNumberProperty(const std::string& device,
                            const std::string& property,
-                           const std::string& element,
-                           double value);
+                           const std::string& element, double value);
 
     /**
      * @brief Set switch property
      */
     bool setSwitchProperty(const std::string& device,
                            const std::string& property,
-                           const std::string& element,
-                           bool value);
+                           const std::string& element, bool value);
 
     /**
      * @brief Set text property
      */
-    bool setTextProperty(const std::string& device,
-                         const std::string& property,
-                         const std::string& element,
-                         const std::string& value);
+    bool setTextProperty(const std::string& device, const std::string& property,
+                         const std::string& element, const std::string& value);
 
 private:
     // Helper to convert connector device map to DeviceInfo
     DeviceInfo convertToDeviceInfo(
         const std::unordered_map<std::string, std::string>& devMap) const;
-    
+
     // Helper to parse INDI interface flags
     static DeviceInterface parseInterfaceFlags(const std::string& interfaceStr);
     std::unique_ptr<Connector> connector_;

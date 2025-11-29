@@ -73,8 +73,8 @@ public:
      * @return JSON response
      */
     auto startGuiding(double settlePixels = 1.5, double settleTime = 10.0,
-                      double settleTimeout = 60.0,
-                      bool recalibrate = false) -> json;
+                      double settleTimeout = 60.0, bool recalibrate = false)
+        -> json;
 
     /**
      * @brief Stop guiding
@@ -254,7 +254,8 @@ public:
      * @param exposureMs Optional exposure time
      * @return JSON response
      */
-    auto captureSingleFrame(std::optional<int> exposureMs = std::nullopt) -> json;
+    auto captureSingleFrame(std::optional<int> exposureMs = std::nullopt)
+        -> json;
 
     // ==================== Guide Pulse ====================
 
@@ -384,7 +385,8 @@ private:
     std::shared_ptr<GuiderClient> guider_;
 
     // Helper to get guider with connection check
-    auto getConnectedGuider() -> std::pair<std::shared_ptr<GuiderClient>, std::optional<json>>;
+    auto getConnectedGuider()
+        -> std::pair<std::shared_ptr<GuiderClient>, std::optional<json>>;
 };
 
 }  // namespace lithium::device

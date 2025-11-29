@@ -7,11 +7,19 @@
 
 namespace lithium::server {
 
-// Central HTTP application type with authentication, CORS and request logging
-using ServerApp = crow::App<
-    middleware::CORS,
-    middleware::ApiKeyAuth,
-    middleware::RequestLogger>;
+/**
+ * @brief Central HTTP application type with middleware stack
+ *
+ * Middleware execution order (before_handle):
+ *   1. CORS - Handle preflight OPTIONS requests
+ *   2. RateLimiterMiddleware - Prevent brute force attacks (BEFORE auth)
+ *   3. ApiKeyAuth - Validate API key authentication
+ *   4. RequestLogger - Log request timing
+ *
+ * Note: after_handle runs in reverse order
+ */
+using ServerApp = crow::App<middleware::CORS, middleware::RateLimiterMiddleware,
+                            middleware::ApiKeyAuth, middleware::RequestLogger>;
 
 }  // namespace lithium::server
 

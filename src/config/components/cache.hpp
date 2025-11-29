@@ -224,8 +224,7 @@ public:
      * @return Cached or computed value
      */
     [[nodiscard]] json getOrCompute(
-        std::string_view key,
-        std::function<json()> factory,
+        std::string_view key, std::function<json()> factory,
         std::chrono::milliseconds ttl = std::chrono::milliseconds::zero());
 
     /**
@@ -233,16 +232,17 @@ public:
      * @param keys Vector of keys to retrieve
      * @return Map of key to optional value
      */
-    [[nodiscard]] std::unordered_map<std::string, std::optional<json>> 
-        getBatch(const std::vector<std::string>& keys);
+    [[nodiscard]] std::unordered_map<std::string, std::optional<json>> getBatch(
+        const std::vector<std::string>& keys);
 
     /**
      * @brief Batch put multiple values
      * @param entries Map of key-value pairs to cache
      * @param ttl Optional TTL for all entries
      */
-    void putBatch(const std::unordered_map<std::string, json>& entries,
-                  std::chrono::milliseconds ttl = std::chrono::milliseconds::zero());
+    void putBatch(
+        const std::unordered_map<std::string, json>& entries,
+        std::chrono::milliseconds ttl = std::chrono::milliseconds::zero());
 
     // ========================================================================
     // Hook Support
@@ -252,12 +252,12 @@ public:
      * @brief Cache event types for hooks
      */
     enum class CacheEvent {
-        PUT,        ///< Entry was added/updated
-        GET,        ///< Entry was accessed
-        REMOVE,     ///< Entry was removed
-        EVICT,      ///< Entry was evicted (LRU)
-        EXPIRE,     ///< Entry expired (TTL)
-        CLEAR       ///< Cache was cleared
+        PUT,     ///< Entry was added/updated
+        GET,     ///< Entry was accessed
+        REMOVE,  ///< Entry was removed
+        EVICT,   ///< Entry was evicted (LRU)
+        EXPIRE,  ///< Entry expired (TTL)
+        CLEAR    ///< Cache was cleared
     };
 
     /**
@@ -266,8 +266,7 @@ public:
      * @param key The cache key involved
      * @param value Optional value (for PUT/GET events)
      */
-    using CacheHook = std::function<void(CacheEvent event, 
-                                         std::string_view key, 
+    using CacheHook = std::function<void(CacheEvent event, std::string_view key,
                                          const std::optional<json>& value)>;
 
     /**

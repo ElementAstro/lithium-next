@@ -48,6 +48,7 @@ class PacmanPyBindAdapter:
         if cls._instance is None:
             try:
                 from .manager import PacmanManager
+
                 cls._instance = PacmanManager(use_sudo=True)
             except Exception as e:
                 logger.error(f"Failed to initialize PacmanManager: {e}")
@@ -67,7 +68,11 @@ class PacmanPyBindAdapter:
             "success": True,
             "supported": supported,
             "platform": platform.system(),
-            "error": None if supported else "Pacman is only supported on Linux and Windows (MSYS2)"
+            "error": (
+                None
+                if supported
+                else "Pacman is only supported on Linux and Windows (MSYS2)"
+            ),
         }
 
     @staticmethod
@@ -83,7 +88,11 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
@@ -96,14 +105,16 @@ class PacmanPyBindAdapter:
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
                 "return_code": result.get("return_code", -1),
-                "package": package
+                "package": package,
             }
         except Exception as e:
             logger.exception(f"Error installing package {package}")
             return {"success": False, "error": str(e), "package": package}
 
     @staticmethod
-    async def install_package_async(package: str, no_confirm: bool = True) -> Dict[str, Any]:
+    async def install_package_async(
+        package: str, no_confirm: bool = True
+    ) -> Dict[str, Any]:
         """
         Asynchronously install a package using pacman.
 
@@ -115,7 +126,11 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
@@ -128,15 +143,16 @@ class PacmanPyBindAdapter:
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
                 "return_code": result.get("return_code", -1),
-                "package": package
+                "package": package,
             }
         except Exception as e:
             logger.exception(f"Error installing package {package}")
             return {"success": False, "error": str(e), "package": package}
 
     @staticmethod
-    def remove_package(package: str, remove_deps: bool = False,
-                       no_confirm: bool = True) -> Dict[str, Any]:
+    def remove_package(
+        package: str, remove_deps: bool = False, no_confirm: bool = True
+    ) -> Dict[str, Any]:
         """
         Remove a package using pacman.
 
@@ -149,29 +165,35 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
             if manager is None:
                 return {"success": False, "error": "Failed to initialize PacmanManager"}
 
-            result = manager.remove_package(package, remove_deps=remove_deps,
-                                            no_confirm=no_confirm)
+            result = manager.remove_package(
+                package, remove_deps=remove_deps, no_confirm=no_confirm
+            )
             return {
                 "success": result["success"],
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
                 "return_code": result.get("return_code", -1),
-                "package": package
+                "package": package,
             }
         except Exception as e:
             logger.exception(f"Error removing package {package}")
             return {"success": False, "error": str(e), "package": package}
 
     @staticmethod
-    async def remove_package_async(package: str, remove_deps: bool = False,
-                                   no_confirm: bool = True) -> Dict[str, Any]:
+    async def remove_package_async(
+        package: str, remove_deps: bool = False, no_confirm: bool = True
+    ) -> Dict[str, Any]:
         """
         Asynchronously remove a package using pacman.
 
@@ -184,21 +206,26 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
             if manager is None:
                 return {"success": False, "error": "Failed to initialize PacmanManager"}
 
-            result = await manager.remove_package_async(package, remove_deps=remove_deps,
-                                                        no_confirm=no_confirm)
+            result = await manager.remove_package_async(
+                package, remove_deps=remove_deps, no_confirm=no_confirm
+            )
             return {
                 "success": result["success"],
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
                 "return_code": result.get("return_code", -1),
-                "package": package
+                "package": package,
             }
         except Exception as e:
             logger.exception(f"Error removing package {package}")
@@ -230,7 +257,7 @@ class PacmanPyBindAdapter:
                     "version": pkg.version,
                     "description": pkg.description,
                     "repository": pkg.repository,
-                    "installed": pkg.installed
+                    "installed": pkg.installed,
                 }
                 for pkg in packages
             ]
@@ -264,7 +291,7 @@ class PacmanPyBindAdapter:
                     "version": pkg.version,
                     "description": pkg.description,
                     "repository": pkg.repository,
-                    "installed": pkg.installed
+                    "installed": pkg.installed,
                 }
                 for pkg in packages
             ]
@@ -308,7 +335,9 @@ class PacmanPyBindAdapter:
             return []
 
     @staticmethod
-    async def list_installed_packages_async(refresh: bool = False) -> List[Dict[str, Any]]:
+    async def list_installed_packages_async(
+        refresh: bool = False,
+    ) -> List[Dict[str, Any]]:
         """
         Asynchronously list all installed packages.
 
@@ -351,7 +380,11 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
@@ -363,7 +396,7 @@ class PacmanPyBindAdapter:
                 "success": result["success"],
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
-                "return_code": result.get("return_code", -1)
+                "return_code": result.get("return_code", -1),
             }
         except Exception as e:
             logger.exception("Error updating package database")
@@ -378,7 +411,11 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
@@ -390,7 +427,7 @@ class PacmanPyBindAdapter:
                 "success": result["success"],
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
-                "return_code": result.get("return_code", -1)
+                "return_code": result.get("return_code", -1),
             }
         except Exception as e:
             logger.exception("Error updating package database")
@@ -408,7 +445,11 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
@@ -420,7 +461,7 @@ class PacmanPyBindAdapter:
                 "success": result["success"],
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
-                "return_code": result.get("return_code", -1)
+                "return_code": result.get("return_code", -1),
             }
         except Exception as e:
             logger.exception("Error upgrading system")
@@ -438,7 +479,11 @@ class PacmanPyBindAdapter:
             Dict with success status and result details
         """
         if not _check_platform_support():
-            return {"success": False, "supported": False, "error": "Platform not supported"}
+            return {
+                "success": False,
+                "supported": False,
+                "error": "Platform not supported",
+            }
 
         try:
             manager = PacmanPyBindAdapter._get_manager()
@@ -450,7 +495,7 @@ class PacmanPyBindAdapter:
                 "success": result["success"],
                 "stdout": result.get("stdout", ""),
                 "stderr": result.get("stderr", ""),
-                "return_code": result.get("return_code", -1)
+                "return_code": result.get("return_code", -1),
             }
         except Exception as e:
             logger.exception("Error upgrading system")
@@ -477,9 +522,10 @@ class Pybind11Integration:
         """
         if not Pybind11Integration.check_pybind11_available():
             raise ImportError(
-                "pybind11 is not installed. Install with 'pip install pybind11'")
+                "pybind11 is not installed. Install with 'pip install pybind11'"
+            )
 
-        binding_code = '''
+        binding_code = """
 // pacman_bindings.cpp - pybind11 bindings for PacmanManager
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -504,7 +550,7 @@ PYBIND11_MODULE(pacman_manager_native, m) {
         .def_static("upgrade_system", &PacmanPyBindAdapter::upgrade_system,
                     py::arg("no_confirm") = true);
 }
-'''
+"""
         return binding_code
 
     @staticmethod

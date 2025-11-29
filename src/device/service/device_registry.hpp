@@ -141,8 +141,8 @@ public:
         serviceInfos_[type] = info;
         typeToIndex_[type] = typeIndex;
 
-        LOG_INFO( "DeviceServiceRegistry: Registered %s service v%s",
-              info.name.c_str(), version.c_str());
+        LOG_INFO("DeviceServiceRegistry: Registered %s service v%s",
+                 info.name.c_str(), version.c_str());
     }
 
     /**
@@ -246,8 +246,8 @@ public:
         }
         serviceInfos_.erase(type);
 
-        LOG_INFO( "DeviceServiceRegistry: Unregistered %s service",
-              deviceTypeToString(type).c_str());
+        LOG_INFO("DeviceServiceRegistry: Unregistered %s service",
+                 deviceTypeToString(type).c_str());
     }
 
     /**
@@ -258,7 +258,7 @@ public:
         services_.clear();
         serviceInfos_.clear();
         typeToIndex_.clear();
-        LOG_INFO( "DeviceServiceRegistry: Cleared all services");
+        LOG_INFO("DeviceServiceRegistry: Cleared all services");
     }
 
 private:

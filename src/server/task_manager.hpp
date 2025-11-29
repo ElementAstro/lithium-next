@@ -58,8 +58,8 @@ public:
      * @param runner Callable that performs the actual work
      * @return Generated task ID
      */
-    auto submitTask(const std::string& type, const json& params,
-                    Runner runner) -> std::string;
+    auto submitTask(const std::string& type, const json& params, Runner runner)
+        -> std::string;
 
     /**
      * @brief Look up a task by ID.

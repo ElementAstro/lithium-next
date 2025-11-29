@@ -91,7 +91,7 @@ template <std::floating_point T>
  * @return Formatted string.
  */
 [[nodiscard]] inline std::string formatAngleDegrees(double angle,
-                                                     int precision = 4) {
+                                                    int precision = 4) {
     return std::format("{:.{}f}°", angle, precision);
 }
 

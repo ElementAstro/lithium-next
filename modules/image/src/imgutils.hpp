@@ -35,8 +35,8 @@ auto checkElongated(int width, int height) -> bool;
  * @param y_coord The y-coordinate of the pixel.
  * @return int The value of the pixel (0 for black, 255 for white).
  */
-auto checkWhitePixel(const cv::Mat& rect_contour, int x_coord,
-                     int y_coord) -> int;
+auto checkWhitePixel(const cv::Mat& rect_contour, int x_coord, int y_coord)
+    -> int;
 
 /**
  * @brief Check eight-fold symmetry of a circle.
@@ -142,8 +142,8 @@ auto computeParamsOneChannel(const cv::Mat& img)
 auto autoWhiteBalance(const cv::Mat& img) -> cv::Mat;
 
 auto eightSymmetryCircleCheck(const cv::Mat& rect_contour,
-                              const cv::Point& center, int xCoord,
-                              int yCoord) -> int;
+                              const cv::Point& center, int xCoord, int yCoord)
+    -> int;
 
 auto fourSymmetryCircleCheck(const cv::Mat& rect_contour,
                              const cv::Point& center, float radius) -> int;

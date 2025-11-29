@@ -74,13 +74,13 @@ inline bool hasInterface(DeviceInterface caps, DeviceInterface flag) {
  */
 struct PropertyValue {
     enum class Type { Number, Text, Switch, Light, Blob, Unknown };
-    
+
     Type type{Type::Unknown};
     std::string name;
     std::string label;
     std::string group;
     std::string state;  // Idle, Ok, Busy, Alert
-    
+
     // Value storage
     double numberValue{0.0};
     double numberMin{0.0};
@@ -90,10 +90,10 @@ struct PropertyValue {
     bool switchValue{false};
     std::vector<uint8_t> blobData;
     std::string blobFormat;
-    
+
     // For multi-element properties
     std::unordered_map<std::string, PropertyValue> elements;
-    
+
     [[nodiscard]] auto toJson() const -> nlohmann::json {
         nlohmann::json j;
         j["name"] = name;
@@ -142,48 +142,42 @@ struct PropertyValue {
 /**
  * @brief Device health status
  */
-enum class DeviceHealth {
-    Unknown,
-    Good,
-    Warning,
-    Error,
-    Critical
-};
+enum class DeviceHealth { Unknown, Good, Warning, Error, Critical };
 
 /**
  * @brief Device information structure
  */
 struct DeviceInfo {
     // Basic identification
-    std::string id;              // Unique device ID
-    std::string name;            // Device name
-    std::string displayName;     // Human-readable display name
-    
+    std::string id;           // Unique device ID
+    std::string name;         // Device name
+    std::string displayName;  // Human-readable display name
+
     // Driver information
-    std::string driver;          // Driver name
-    std::string driverVersion;   // Driver version
-    std::string driverExec;      // Driver executable path
-    std::string backend;         // Backend type: "INDI", "ASCOM", etc.
-    
+    std::string driver;         // Driver name
+    std::string driverVersion;  // Driver version
+    std::string driverExec;     // Driver executable path
+    std::string backend;        // Backend type: "INDI", "ASCOM", etc.
+
     // Interface and capabilities
     DeviceInterface interfaces{DeviceInterface::None};
-    std::string interfaceString; // Legacy string representation
-    
+    std::string interfaceString;  // Legacy string representation
+
     // Connection state
     bool connected{false};
     bool initialized{false};
     bool busy{false};
     DeviceHealth health{DeviceHealth::Unknown};
     std::string lastError;
-    
+
     // Timestamps
     std::chrono::system_clock::time_point lastUpdate;
     std::chrono::system_clock::time_point connectedSince;
-    
+
     // Properties
     std::unordered_map<std::string, PropertyValue> properties;
     std::unordered_map<std::string, std::string> metadata;
-    
+
     [[nodiscard]] auto toJson() const -> nlohmann::json {
         nlohmann::json j;
         j["id"] = id;
@@ -200,7 +194,7 @@ struct DeviceInfo {
         j["busy"] = busy;
         j["health"] = static_cast<int>(health);
         j["lastError"] = lastError;
-        
+
         nlohmann::json props = nlohmann::json::object();
         for (const auto& [k, v] : properties) {
             props[k] = v.toJson();
@@ -209,7 +203,7 @@ struct DeviceInfo {
         j["metadata"] = metadata;
         return j;
     }
-    
+
     static auto fromJson(const nlohmann::json& j) -> DeviceInfo {
         DeviceInfo info;
         info.id = j.value("id", "");
@@ -219,7 +213,8 @@ struct DeviceInfo {
         info.driverVersion = j.value("driverVersion", "");
         info.driverExec = j.value("driverExec", "");
         info.backend = j.value("backend", "");
-        info.interfaces = static_cast<DeviceInterface>(j.value("interfaces", 0u));
+        info.interfaces =
+            static_cast<DeviceInterface>(j.value("interfaces", 0u));
         info.interfaceString = j.value("interfaceString", "");
         info.connected = j.value("connected", false);
         info.initialized = j.value("initialized", false);
@@ -227,7 +222,9 @@ struct DeviceInfo {
         info.health = static_cast<DeviceHealth>(j.value("health", 0));
         info.lastError = j.value("lastError", "");
         if (j.contains("metadata")) {
-            info.metadata = j["metadata"].get<std::unordered_map<std::string, std::string>>();
+            info.metadata =
+                j["metadata"]
+                    .get<std::unordered_map<std::string, std::string>>();
         }
         return info;
     }
@@ -256,33 +253,33 @@ enum class DriverFamily {
  */
 struct DriverInfo {
     // Basic identification
-    std::string id;              // Unique driver ID
-    std::string name;            // Internal name
-    std::string label;           // Display label
-    std::string version;         // Driver version
-    
+    std::string id;       // Unique driver ID
+    std::string name;     // Internal name
+    std::string label;    // Display label
+    std::string version;  // Driver version
+
     // Executable information
-    std::string binary;          // Executable path/name
-    std::string skeleton;        // Skeleton file path
-    std::string configPath;      // Configuration path
-    
+    std::string binary;      // Executable path/name
+    std::string skeleton;    // Skeleton file path
+    std::string configPath;  // Configuration path
+
     // Classification
     DriverFamily family{DriverFamily::Unknown};
-    std::string manufacturer;    // Device manufacturer
-    std::string backend;         // Backend: "INDI", "ASCOM"
-    
+    std::string manufacturer;  // Device manufacturer
+    std::string backend;       // Backend: "INDI", "ASCOM"
+
     // State
     bool running{false};
     bool available{true};
-    int pid{0};                  // Process ID if running
-    
+    int pid{0};  // Process ID if running
+
     // Capabilities
     DeviceInterface supportedInterfaces{DeviceInterface::None};
     std::vector<std::string> supportedDevices;
-    
+
     // Metadata
     std::unordered_map<std::string, std::string> metadata;
-    
+
     [[nodiscard]] auto toJson() const -> nlohmann::json {
         nlohmann::json j;
         j["id"] = id;
@@ -303,7 +300,7 @@ struct DriverInfo {
         j["metadata"] = metadata;
         return j;
     }
-    
+
     static auto fromJson(const nlohmann::json& j) -> DriverInfo {
         DriverInfo info;
         info.id = j.value("id", "");
@@ -319,12 +316,16 @@ struct DriverInfo {
         info.running = j.value("running", false);
         info.available = j.value("available", true);
         info.pid = j.value("pid", 0);
-        info.supportedInterfaces = static_cast<DeviceInterface>(j.value("supportedInterfaces", 0u));
+        info.supportedInterfaces =
+            static_cast<DeviceInterface>(j.value("supportedInterfaces", 0u));
         if (j.contains("supportedDevices")) {
-            info.supportedDevices = j["supportedDevices"].get<std::vector<std::string>>();
+            info.supportedDevices =
+                j["supportedDevices"].get<std::vector<std::string>>();
         }
         if (j.contains("metadata")) {
-            info.metadata = j["metadata"].get<std::unordered_map<std::string, std::string>>();
+            info.metadata =
+                j["metadata"]
+                    .get<std::unordered_map<std::string, std::string>>();
         }
         return info;
     }
@@ -338,29 +339,29 @@ struct ServerConfig {
     std::string host{"localhost"};
     int port{7624};
     std::string protocol{"tcp"};  // tcp, websocket, etc.
-    
+
     // Paths
     std::string configPath;
     std::string dataPath;
     std::string fifoPath;
     std::string logPath;
-    
+
     // Server options
     int maxClients{100};
-    int connectionTimeout{5000};   // ms
-    int operationTimeout{30000};   // ms
+    int connectionTimeout{5000};  // ms
+    int operationTimeout{30000};  // ms
     bool verbose{false};
     bool autoStart{false};
     bool enableBlobCompression{false};
-    
+
     // Authentication (optional)
     std::string username;
     std::string password;
     std::string apiKey;
-    
+
     // Backend-specific options
     std::unordered_map<std::string, std::string> extraOptions;
-    
+
     [[nodiscard]] auto toJson() const -> nlohmann::json {
         nlohmann::json j;
         j["host"] = host;
@@ -379,7 +380,7 @@ struct ServerConfig {
         j["extraOptions"] = extraOptions;
         return j;
     }
-    
+
     static auto fromJson(const nlohmann::json& j) -> ServerConfig {
         ServerConfig cfg;
         cfg.host = j.value("host", "localhost");
@@ -399,7 +400,9 @@ struct ServerConfig {
         cfg.password = j.value("password", "");
         cfg.apiKey = j.value("apiKey", "");
         if (j.contains("extraOptions")) {
-            cfg.extraOptions = j["extraOptions"].get<std::unordered_map<std::string, std::string>>();
+            cfg.extraOptions =
+                j["extraOptions"]
+                    .get<std::unordered_map<std::string, std::string>>();
         }
         return cfg;
     }
@@ -433,11 +436,11 @@ enum class ServerEventType {
  */
 struct ServerEvent {
     ServerEventType type;
-    std::string source;       // Server, driver, or device name
+    std::string source;  // Server, driver, or device name
     std::string message;
     nlohmann::json data;
     std::chrono::system_clock::time_point timestamp;
-    
+
     [[nodiscard]] auto toJson() const -> nlohmann::json {
         nlohmann::json j;
         j["type"] = static_cast<int>(type);
@@ -445,7 +448,8 @@ struct ServerEvent {
         j["message"] = message;
         j["data"] = data;
         j["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-            timestamp.time_since_epoch()).count();
+                             timestamp.time_since_epoch())
+                             .count();
         return j;
     }
 };
@@ -519,7 +523,8 @@ public:
      * @brief Get running drivers
      * @return Map of driver name to driver info
      */
-    virtual std::unordered_map<std::string, DriverInfo> getRunningDrivers() const = 0;
+    virtual std::unordered_map<std::string, DriverInfo> getRunningDrivers()
+        const = 0;
 
     /**
      * @brief Get available drivers
@@ -540,7 +545,8 @@ public:
      * @param name Device name
      * @return Device info or nullopt if not found
      */
-    virtual std::optional<DeviceInfo> getDevice(const std::string& name) const = 0;
+    virtual std::optional<DeviceInfo> getDevice(
+        const std::string& name) const = 0;
 
     // ==================== Property Access ====================
 
@@ -603,8 +609,9 @@ public:
      * @param properties Map of property name to value
      * @return true if all properties set successfully
      */
-    virtual bool setProperties(const std::string& device,
-                               const std::unordered_map<std::string, std::string>& properties);
+    virtual bool setProperties(
+        const std::string& device,
+        const std::unordered_map<std::string, std::string>& properties);
 
     /**
      * @brief Get all properties for a device

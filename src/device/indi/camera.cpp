@@ -17,14 +17,14 @@
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/macro.hpp"
 #include "device/template/camera.hpp"
-#include "task/task_camera.hpp" // Include task_camera.hpp
+#include "task/task_camera.hpp"  // Include task_camera.hpp
 
 INDICamera::INDICamera(std::string deviceName)
     : AtomCamera(name_), name_(std::move(deviceName)) {}
 
 auto INDICamera::getDeviceInstance() -> INDI::BaseDevice & {
     if (!isConnected_.load()) {
-        LOG_ERROR( "{} is not connected.", deviceName_);
+        LOG_ERROR("{} is not connected.", deviceName_);
         THROW_NOT_FOUND("Device is not connected.");
     }
     return device_;
@@ -39,12 +39,12 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
     ATOM_UNREF_PARAM(timeout);
     ATOM_UNREF_PARAM(maxRetry);
     if (isConnected_.load()) {
-        LOG_ERROR( "{} is already connected.", deviceName_);
+        LOG_ERROR("{} is already connected.", deviceName_);
         return false;
     }
 
     deviceName_ = deviceName;
-    LOG_INFO( "Connecting to {}...", deviceName_);
+    LOG_INFO("Connecting to {}...", deviceName_);
     // Max: 需要获取初始的参数，然后再注册对应的回调函数
     watchDevice(deviceName_.c_str(), [this](INDI::BaseDevice device) {
         device_ = device;  // save device
@@ -53,7 +53,7 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
         device.watchProperty(
             "CONNECTION",
             [this](INDI::Property) {
-                LOG_INFO( "Connecting to {}...", deviceName_);
+                LOG_INFO("Connecting to {}...", deviceName_);
                 connectDevice(name_.c_str());
             },
             INDI::BaseDevice::WATCH_NEW);
@@ -62,10 +62,10 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             "CONNECTION",
             [this](const INDI::PropertySwitch &property) {
                 if (property[0].getState() == ISS_ON) {
-                    LOG_INFO( "{} is connected.", deviceName_);
+                    LOG_INFO("{} is connected.", deviceName_);
                     isConnected_.store(true);
                 } else {
-                    LOG_INFO( "{} is disconnected.", deviceName_);
+                    LOG_INFO("{} is disconnected.", deviceName_);
                     isConnected_.store(false);
                 }
             },
@@ -76,16 +76,16 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyText &property) {
                 if (property.isValid()) {
                     const auto *driverName = property[0].getText();
-                    LOG_INFO( "Driver name: {}", driverName);
+                    LOG_INFO("Driver name: {}", driverName);
 
                     const auto *driverExec = property[1].getText();
-                    LOG_INFO( "Driver executable: {}", driverExec);
+                    LOG_INFO("Driver executable: {}", driverExec);
                     driverExec_ = driverExec;
                     const auto *driverVersion = property[2].getText();
-                    LOG_INFO( "Driver version: {}", driverVersion);
+                    LOG_INFO("Driver version: {}", driverVersion);
                     driverVersion_ = driverVersion;
                     const auto *driverInterface = property[3].getText();
-                    LOG_INFO( "Driver interface: {}", driverInterface);
+                    LOG_INFO("Driver interface: {}", driverInterface);
                     driverInterface_ = driverInterface;
                 }
             },
@@ -97,10 +97,10 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     auto debugState = property[0].getState();
                     if (debugState == ISS_ON) {
-                        LOG_INFO( "Debug is ON");
+                        LOG_INFO("Debug is ON");
                         isDebug_.store(true);
                     } else if (debugState == ISS_OFF) {
-                        LOG_INFO( "Debug is OFF");
+                        LOG_INFO("Debug is OFF");
                         isDebug_.store(false);
                     }
                 }
@@ -113,9 +113,9 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
                     auto period = property[0].getValue();
-                    LOG_INFO( "Current polling period: {}", period);
+                    LOG_INFO("Current polling period: {}", period);
                     if (period != currentPollingPeriod_.load()) {
-                        LOG_INFO( "Polling period change to: {}", period);
+                        LOG_INFO("Polling period change to: {}", period);
                         currentPollingPeriod_ = period;
                     }
                 }
@@ -127,7 +127,7 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
                     auto exposure = property[0].getValue();
-                    LOG_INFO( "Current exposure time: {}", exposure);
+                    LOG_INFO("Current exposure time: {}", exposure);
                     currentExposure_ = exposure;
                 }
             },
@@ -138,7 +138,7 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
                     auto temp = property[0].getValue();
-                    LOG_INFO( "Current temperature: {} C", temp);
+                    LOG_INFO("Current temperature: {} C", temp);
                     currentTemperature_ = temp;
                 }
             },
@@ -150,10 +150,10 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     auto coolerState = property[0].getState();
                     if (coolerState == ISS_ON) {
-                        LOG_INFO( "Cooler is ON");
+                        LOG_INFO("Cooler is ON");
                         isCooling_.store(true);
                     } else if (coolerState == ISS_OFF) {
-                        LOG_INFO( "Cooler is OFF");
+                        LOG_INFO("Cooler is OFF");
                         isCooling_.store(false);
                     }
                 }
@@ -167,13 +167,12 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
                     auto slope = property[0].getValue();
                     auto threshold = property[1].getValue();
                     if (slope != currentSlope_.load()) {
-                        LOG_INFO( "Max temperature slope change to: {}",
-                              slope);
+                        LOG_INFO("Max temperature slope change to: {}", slope);
                         currentSlope_ = slope;
                     }
                     if (threshold != currentThreshold_.load()) {
-                        LOG_INFO( "Max temperature threshold change to: {}",
-                              threshold);
+                        LOG_INFO("Max temperature threshold change to: {}",
+                                 threshold);
 
                         currentThreshold_ = threshold;
                     }
@@ -185,10 +184,10 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             "CCD_GAIN",
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
-                    LOG_INFO( "Current gain: {}", property[0].getValue());
+                    LOG_INFO("Current gain: {}", property[0].getValue());
                     auto gain = property[0].getValue();
                     if (gain <= minGain_ || gain >= maxGain_) {
-                        LOG_ERROR( "Gain out of range: {}", gain);
+                        LOG_ERROR("Gain out of range: {}", gain);
                     }
                     currentGain_ = gain;
                 }
@@ -199,10 +198,10 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             "CCD_OFFSET",
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
-                    LOG_INFO( "Current offset: {}", property[0].getValue());
+                    LOG_INFO("Current offset: {}", property[0].getValue());
                     auto offset = property[0].getValue();
                     if (offset <= minGain_ || offset >= maxGain_) {
-                        LOG_ERROR( "Gain out of range: {}", offset);
+                        LOG_ERROR("Gain out of range: {}", offset);
                     }
                     currentOffset_ = offset;
                 }
@@ -213,15 +212,14 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             "CCD_FRAME",
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
-                    LOG_INFO( "Current frame X: {}", property[0].getValue());
+                    LOG_INFO("Current frame X: {}", property[0].getValue());
                     frameX_ = property[0].getValue();
-                    LOG_INFO( "Current frame Y: {}", property[1].getValue());
+                    LOG_INFO("Current frame Y: {}", property[1].getValue());
                     frameY_ = property[1].getValue();
-                    LOG_INFO( "Current frame Width: {}",
-                          property[2].getValue());
+                    LOG_INFO("Current frame Width: {}", property[2].getValue());
                     frameWidth_ = property[2].getValue();
-                    LOG_INFO( "Current frame Height: {}",
-                          property[3].getValue());
+                    LOG_INFO("Current frame Height: {}",
+                             property[3].getValue());
                     frameHeight_ = property[3].getValue();
                 }
             },
@@ -231,11 +229,9 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             "CCD_BINNING",
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
-                    LOG_INFO( "Current binning X: {}",
-                          property[0].getValue());
+                    LOG_INFO("Current binning X: {}", property[0].getValue());
                     binHor_ = property[0].getValue();
-                    LOG_INFO( "Current binning Y: {}",
-                          property[1].getValue());
+                    LOG_INFO("Current binning Y: {}", property[1].getValue());
                     binVer_ = property[1].getValue();
                 }
             },
@@ -246,16 +242,16 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     if (property[0].getState() == ISS_ON) {
-                        LOG_INFO( "Transfer format is FITS");
+                        LOG_INFO("Transfer format is FITS");
                         imageFormat_ = ImageFormat::FITS;
                     } else if (property[1].getState() == ISS_ON) {
-                        LOG_INFO( "Transfer format is NATIVE");
+                        LOG_INFO("Transfer format is NATIVE");
                         imageFormat_ = ImageFormat::NATIVE;
                     } else if (property[2].getState() == ISS_ON) {
-                        LOG_INFO( "Transfer format is XISF");
+                        LOG_INFO("Transfer format is XISF");
                         imageFormat_ = ImageFormat::XISF;
                     } else {
-                        LOG_ERROR( "Transfer format is NONE");
+                        LOG_ERROR("Transfer format is NONE");
                         imageFormat_ = ImageFormat::NONE;
                     }
                 }
@@ -266,28 +262,28 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
             "CCD_INFO",
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
-                    LOG_INFO( "CCD_INFO: {}", device_.getDeviceName());
+                    LOG_INFO("CCD_INFO: {}", device_.getDeviceName());
                     auto maxX = property[0].getValue();
-                    LOG_INFO( "CCD maximum X pixel: {}", maxX);
+                    LOG_INFO("CCD maximum X pixel: {}", maxX);
                     maxFrameX_ = maxX;
                     auto maxY = property[1].getValue();
-                    LOG_INFO( "CCD maximum Y pixel: {}", maxY);
+                    LOG_INFO("CCD maximum Y pixel: {}", maxY);
                     maxFrameY_ = maxY;
 
                     auto framePixel = property[2].getValue();
-                    LOG_INFO( "CCD frame pixel: {}", framePixel);
+                    LOG_INFO("CCD frame pixel: {}", framePixel);
                     framePixel_ = framePixel;
 
                     auto framePixelX = property[3].getValue();
-                    LOG_INFO( "CCD frame pixel X: {}", framePixelX);
+                    LOG_INFO("CCD frame pixel X: {}", framePixelX);
                     framePixelX_ = framePixelX;
 
                     auto framePixelY = property[4].getValue();
-                    LOG_INFO( "CCD frame pixel Y: {}", framePixelY);
+                    LOG_INFO("CCD frame pixel Y: {}", framePixelY);
                     framePixelY_ = framePixelY;
 
                     auto frameDepth = property[5].getValue();
-                    LOG_INFO( "CCD frame depth: {}", frameDepth);
+                    LOG_INFO("CCD frame depth: {}", frameDepth);
                     frameDepth_ = frameDepth;
                 }
             },
@@ -297,8 +293,7 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
         device.watchProperty(
             "CCD1",
             [](const INDI::PropertyBlob &property) {
-                LOG_INFO( "Received image, size: {}",
-                      property[0].getBlobLen());
+                LOG_INFO("Received image, size: {}", property[0].getBlobLen());
                 // Save FITS file to disk
                 std::ofstream myfile;
 
@@ -307,7 +302,7 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
                 myfile.write(static_cast<char *>(property[0].getBlob()),
                              property[0].getBlobLen());
                 myfile.close();
-                LOG_INFO( "Saved image to ccd_simulator.fits");
+                LOG_INFO("Saved image to ccd_simulator.fits");
             },
             INDI::BaseDevice::WATCH_UPDATE);
 
@@ -336,12 +331,12 @@ auto INDICamera::connect(const std::string &deviceName, int timeout,
 
 auto INDICamera::disconnect() -> bool {
     if (!isConnected_.load()) {
-        LOG_ERROR( "{} is not connected.", deviceName_);
+        LOG_ERROR("{} is not connected.", deviceName_);
         return false;
     }
-    LOG_INFO( "Disconnecting from {}...", deviceName_);
+    LOG_INFO("Disconnecting from {}...", deviceName_);
     disconnectDevice(name_.c_str());
-    LOG_INFO( "{} is disconnected.", deviceName_);
+    LOG_INFO("{} is disconnected.", deviceName_);
     return true;
 }
 
@@ -365,23 +360,22 @@ void INDICamera::setPropertyNumber(std::string_view propertyName,
         property[0].setValue(value);
         sendNewProperty(property);
     } else {
-        LOG_ERROR( "Error: Unable to find property {}", propertyName);
+        LOG_ERROR("Error: Unable to find property {}", propertyName);
     }
 }
 
 void INDICamera::newMessage(INDI::BaseDevice baseDevice, int messageID) {
     // Handle incoming messages from devices
-    LOG_INFO( "New message from {}.{}", baseDevice.getDeviceName(),
-          messageID);
+    LOG_INFO("New message from {}.{}", baseDevice.getDeviceName(), messageID);
 }
 
 auto INDICamera::startExposure(double exposure) -> bool {
     INDI::PropertyNumber exposureProperty = device_.getProperty("CCD_EXPOSURE");
     if (!exposureProperty.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_EXPOSURE property...");
+        LOG_ERROR("Error: unable to find CCD_EXPOSURE property...");
         return false;
     }
-    LOG_INFO( "Starting exposure of {} seconds...", exposure);
+    LOG_INFO("Starting exposure of {} seconds...", exposure);
     exposureProperty[0].setValue(exposure);
     sendNewProperty(exposureProperty);
     return true;
@@ -390,7 +384,7 @@ auto INDICamera::startExposure(double exposure) -> bool {
 auto INDICamera::abortExposure() -> bool {
     INDI::PropertySwitch ccdAbort = device_.getProperty("CCD_ABORT_EXPOSURE");
     if (!ccdAbort.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_ABORT_EXPOSURE property...");
+        LOG_ERROR("Error: unable to find CCD_ABORT_EXPOSURE property...");
         return false;
     }
     ccdAbort[0].setState(ISS_ON);
@@ -401,25 +395,25 @@ auto INDICamera::abortExposure() -> bool {
 auto INDICamera::getExposureStatus() -> bool {
     INDI::PropertyNumber ccdExposure = device_.getProperty("CCD_EXPOSURE");
     if (!ccdExposure.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_EXPOSURE property...");
+        LOG_ERROR("Error: unable to find CCD_EXPOSURE property...");
         return false;
     }
     if (ccdExposure.getState() == IPS_BUSY) {
-        LOG_INFO( "Exposure is in progress...");
+        LOG_INFO("Exposure is in progress...");
         return true;
     }
-    LOG_INFO( "Exposure is not in progress...");
+    LOG_INFO("Exposure is not in progress...");
     return false;
 }
 
 auto INDICamera::getExposureResult() -> bool {
     INDI::PropertyNumber ccdExposure = device_.getProperty("CCD_EXPOSURE");
     if (!ccdExposure.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_EXPOSURE property...");
+        LOG_ERROR("Error: unable to find CCD_EXPOSURE property...");
         return false;
     }
     if (ccdExposure.getState() == IPS_OK) {
-        LOG_INFO( "Exposure completed successfully.");
+        LOG_INFO("Exposure completed successfully.");
         return true;
     }
     return false;
@@ -427,7 +421,7 @@ auto INDICamera::getExposureResult() -> bool {
 
 auto INDICamera::saveExposureResult() -> bool {
     // Image saving is handled by the CCD1 property watcher
-    LOG_INFO( "Exposure result saving handled by property watcher.");
+    LOG_INFO("Exposure result saving handled by property watcher.");
     return true;
 }
 
@@ -435,7 +429,7 @@ auto INDICamera::saveExposureResult() -> bool {
 auto INDICamera::startVideo() -> bool {
     INDI::PropertySwitch ccdVideo = device_.getProperty("CCD_VIDEO_STREAM");
     if (!ccdVideo.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_VIDEO_STREAM property...");
+        LOG_ERROR("Error: unable to find CCD_VIDEO_STREAM property...");
         return false;
     }
     ccdVideo[0].setState(ISS_ON);
@@ -446,7 +440,7 @@ auto INDICamera::startVideo() -> bool {
 auto INDICamera::stopVideo() -> bool {
     INDI::PropertySwitch ccdVideo = device_.getProperty("CCD_VIDEO_STREAM");
     if (!ccdVideo.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_VIDEO_STREAM property...");
+        LOG_ERROR("Error: unable to find CCD_VIDEO_STREAM property...");
         return false;
     }
     ccdVideo[0].setState(ISS_OFF);
@@ -457,21 +451,21 @@ auto INDICamera::stopVideo() -> bool {
 auto INDICamera::getVideoStatus() -> bool {
     INDI::PropertySwitch ccdVideo = device_.getProperty("CCD_VIDEO_STREAM");
     if (!ccdVideo.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_VIDEO_STREAM property...");
+        LOG_ERROR("Error: unable to find CCD_VIDEO_STREAM property...");
         return false;
     }
     if (ccdVideo[0].getState() == ISS_ON) {
-        LOG_INFO( "Video is in progress...");
+        LOG_INFO("Video is in progress...");
         return true;
     }
-    LOG_INFO( "Video is not in progress...");
+    LOG_INFO("Video is not in progress...");
     return false;
 }
 
 auto INDICamera::getVideoResult() -> bool {
     INDI::PropertySwitch ccdVideo = device_.getProperty("CCD_VIDEO_STREAM");
     if (!ccdVideo.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_VIDEO_STREAM property...");
+        LOG_ERROR("Error: unable to find CCD_VIDEO_STREAM property...");
         return false;
     }
     // Assuming OK state means video is ready or streaming successfully
@@ -482,7 +476,7 @@ auto INDICamera::getVideoResult() -> bool {
 }
 
 auto INDICamera::saveVideoResult() -> bool {
-    LOG_INFO( "Video result saving handled by property watcher.");
+    LOG_INFO("Video result saving handled by property watcher.");
     return true;
 }
 
@@ -493,7 +487,7 @@ auto INDICamera::stopCooling() -> bool { return setCooling(false); }
 auto INDICamera::setCooling(bool enable) -> bool {
     INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
     if (!ccdCooler.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_COOLER property...");
+        LOG_ERROR("Error: unable to find CCD_COOLER property...");
         return false;
     }
     if (enable) {
@@ -509,14 +503,14 @@ auto INDICamera::setCooling(bool enable) -> bool {
 auto INDICamera::getCoolingStatus() -> bool {
     INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
     if (!ccdCooler.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_COOLER property...");
+        LOG_ERROR("Error: unable to find CCD_COOLER property...");
         return false;
     }
     if (ccdCooler[0].getState() == ISS_ON) {
-        LOG_INFO( "Cooler is ON");
+        LOG_INFO("Cooler is ON");
         return true;
     }
-    LOG_INFO( "Cooler is OFF");
+    LOG_INFO("Cooler is OFF");
     return false;
 }
 
@@ -524,14 +518,14 @@ auto INDICamera::getCoolingStatus() -> bool {
 auto INDICamera::isCoolingAvailable() -> bool {
     INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
     if (!ccdCooler.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_COOLER property...");
+        LOG_ERROR("Error: unable to find CCD_COOLER property...");
         return false;
     }
     if (ccdCooler[0].getState() == ISS_ON) {
-        LOG_INFO( "Cooler is available");
+        LOG_INFO("Cooler is available");
         return true;
     }
-    LOG_INFO( "Cooler is not available");
+    LOG_INFO("Cooler is not available");
     return false;
 }
 
@@ -539,31 +533,31 @@ auto INDICamera::getTemperature() -> std::optional<double> {
     INDI::PropertyNumber ccdTemperature =
         device_.getProperty("CCD_TEMPERATURE");
     if (!ccdTemperature.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_TEMPERATURE property...");
+        LOG_ERROR("Error: unable to find CCD_TEMPERATURE property...");
         return std::nullopt;
     }
     currentTemperature_ = ccdTemperature[0].getValue();
-    LOG_INFO( "Current temperature: {} C", currentTemperature_.load());
+    LOG_INFO("Current temperature: {} C", currentTemperature_.load());
     return currentTemperature_;
 }
 
 auto INDICamera::setTemperature(const double &value) -> bool {
     if (!isConnected_.load()) {
-        LOG_ERROR( "{} is not connected.", deviceName_);
+        LOG_ERROR("{} is not connected.", deviceName_);
         return false;
     }
     if (isExposing_.load()) {
-        LOG_ERROR( "{} is exposing.", deviceName_);
+        LOG_ERROR("{} is exposing.", deviceName_);
         return false;
     }
     INDI::PropertyNumber ccdTemperature =
         device_.getProperty("CCD_TEMPERATURE");
 
     if (!ccdTemperature.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_TEMPERATURE property...");
+        LOG_ERROR("Error: unable to find CCD_TEMPERATURE property...");
         return false;
     }
-    LOG_INFO( "Setting temperature to {} C...", value);
+    LOG_INFO("Setting temperature to {} C...", value);
     ccdTemperature[0].setValue(value);
     sendNewProperty(ccdTemperature);
     return true;
@@ -574,10 +568,10 @@ auto INDICamera::getCoolingPower() -> bool {
     INDI::PropertyNumber ccdCoolerPower =
         device_.getProperty("CCD_COOLER_POWER");
     if (!ccdCoolerPower.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_COOLER_POWER property...");
+        LOG_ERROR("Error: unable to find CCD_COOLER_POWER property...");
         return false;
     }
-    LOG_INFO( "Cooling power: {}", ccdCoolerPower[0].getValue());
+    LOG_INFO("Cooling power: {}", ccdCoolerPower[0].getValue());
     return true;
 }
 
@@ -586,10 +580,10 @@ auto INDICamera::setCoolingPower(const double &value) -> bool {
     INDI::PropertyNumber ccdCoolerPower =
         device_.getProperty("CCD_COOLER_POWER");
     if (!ccdCoolerPower.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_COOLER_POWER property...");
+        LOG_ERROR("Error: unable to find CCD_COOLER_POWER property...");
         return false;
     }
-    LOG_INFO( "Setting cooling power to {}...", value);
+    LOG_INFO("Setting cooling power to {}...", value);
     ccdCoolerPower[0].setValue(value);
     sendNewProperty(ccdCoolerPower);
     return true;
@@ -600,7 +594,7 @@ auto INDICamera::getCameraFrameInfo()
     INDI::PropertyNumber ccdFrameInfo = device_.getProperty("CCD_FRAME");
 
     if (!ccdFrameInfo.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_FRAME property...");
+        LOG_ERROR("Error: unable to find CCD_FRAME property...");
         return std::nullopt;
     }
 
@@ -609,20 +603,19 @@ auto INDICamera::getCameraFrameInfo()
     int width = ccdFrameInfo[2].getValue();
     int height = ccdFrameInfo[3].getValue();
 
-    LOG_INFO( "CCD frame info: X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", x, y,
-          width, height);
+    LOG_INFO("CCD frame info: X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", x, y, width,
+             height);
     return std::make_tuple(x, y, width, height);
 }
 
-auto INDICamera::setCameraFrameInfo(int x, int y, int width,
-                                    int height) -> bool {
+auto INDICamera::setCameraFrameInfo(int x, int y, int width, int height)
+    -> bool {
     INDI::PropertyNumber ccdFrameInfo = device_.getProperty("CCD_FRAME");
     if (!ccdFrameInfo.isValid()) {
-        LOG_ERROR(
-              "Error: unable to find CCD Simulator ccdFrameInfo property");
+        LOG_ERROR("Error: unable to find CCD Simulator ccdFrameInfo property");
         return false;
     }
-    LOG_INFO( "setCameraFrameInfo {} {} {} {}", x, y, width, height);
+    LOG_INFO("setCameraFrameInfo {} {} {} {}", x, y, width, height);
     ccdFrameInfo[0].setValue(x);
     ccdFrameInfo[1].setValue(y);
     ccdFrameInfo[2].setValue(width);
@@ -635,14 +628,14 @@ auto INDICamera::resetCameraFrameInfo() -> bool {
     INDI::PropertySwitch resetFrameInfo =
         device_.getProperty("CCD_FRAME_RESET");
     if (!resetFrameInfo.isValid()) {
-        LOG_ERROR( "Error: unable to find resetCCDFrameInfo property...");
+        LOG_ERROR("Error: unable to find resetCCDFrameInfo property...");
         return false;
     }
     resetFrameInfo[0].setState(ISS_ON);
     sendNewProperty(resetFrameInfo);
     resetFrameInfo[0].setState(ISS_OFF);
     sendNewProperty(resetFrameInfo);
-    LOG_INFO( "Camera frame settings reset successfully");
+    LOG_INFO("Camera frame settings reset successfully");
     return true;
 }
 
@@ -650,7 +643,7 @@ auto INDICamera::getGain() -> std::optional<double> {
     INDI::PropertyNumber ccdGain = device_.getProperty("CCD_GAIN");
 
     if (!ccdGain.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_GAIN property...");
+        LOG_ERROR("Error: unable to find CCD_GAIN property...");
         return std::nullopt;
     }
 
@@ -664,10 +657,10 @@ auto INDICamera::setGain(const int &value) -> bool {
     INDI::PropertyNumber ccdGain = device_.getProperty("CCD_GAIN");
 
     if (!ccdGain.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_GAIN property...");
+        LOG_ERROR("Error: unable to find CCD_GAIN property...");
         return false;
     }
-    LOG_INFO( "Setting gain to {}...", value);
+    LOG_INFO("Setting gain to {}...", value);
     ccdGain[0].setValue(value);
     sendNewProperty(ccdGain);
     return true;
@@ -678,7 +671,7 @@ auto INDICamera::isGainAvailable() -> bool {
     INDI::PropertyNumber ccdGain = device_.getProperty("CCD_GAIN");
 
     if (!ccdGain.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_GAIN property...");
+        LOG_ERROR("Error: unable to find CCD_GAIN property...");
         return false;
     }
     return true;
@@ -688,7 +681,7 @@ auto INDICamera::getOffset() -> std::optional<double> {
     INDI::PropertyNumber ccdOffset = device_.getProperty("CCD_OFFSET");
 
     if (!ccdOffset.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_OFFSET property...");
+        LOG_ERROR("Error: unable to find CCD_OFFSET property...");
         return std::nullopt;
     }
 
@@ -702,10 +695,10 @@ auto INDICamera::setOffset(const int &value) -> bool {
     INDI::PropertyNumber ccdOffset = device_.getProperty("CCD_OFFSET");
 
     if (!ccdOffset.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_OFFSET property...");
+        LOG_ERROR("Error: unable to find CCD_OFFSET property...");
         return false;
     }
-    LOG_INFO( "Setting offset to {}...", value);
+    LOG_INFO("Setting offset to {}...", value);
     ccdOffset[0].setValue(value);
     sendNewProperty(ccdOffset);
     return true;
@@ -716,7 +709,7 @@ auto INDICamera::isOffsetAvailable() -> bool {
     INDI::PropertyNumber ccdOffset = device_.getProperty("CCD_OFFSET");
 
     if (!ccdOffset.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_OFFSET property...");
+        LOG_ERROR("Error: unable to find CCD_OFFSET property...");
         return true;
     }
     return true;
@@ -748,7 +741,7 @@ auto INDICamera::getFrame() -> std::optional<std::pair<int, int>> {
     INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
 
     if (!ccdFrame.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_FRAME property...");
+        LOG_ERROR("Error: unable to find CCD_FRAME property...");
         return std::nullopt;
     }
 
@@ -756,8 +749,8 @@ auto INDICamera::getFrame() -> std::optional<std::pair<int, int>> {
     frameY_ = ccdFrame[1].getValue();
     frameWidth_ = ccdFrame[2].getValue();
     frameHeight_ = ccdFrame[3].getValue();
-    LOG_INFO( "Current frame: X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", frameX_,
-          frameY_, frameWidth_, frameHeight_);
+    LOG_INFO("Current frame: X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", frameX_,
+             frameY_, frameWidth_, frameHeight_);
     return std::make_pair(frameWidth_, frameHeight_);
 }
 
@@ -767,11 +760,11 @@ auto INDICamera::setFrame(const int &x, const int &y, const int &w,
     INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
 
     if (!ccdFrame.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_FRAME property...");
+        LOG_ERROR("Error: unable to find CCD_FRAME property...");
         return false;
     }
-    LOG_INFO( "Setting frame to X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", x, y, w,
-          h);
+    LOG_INFO("Setting frame to X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", x, y, w,
+             h);
     ccdFrame[0].setValue(x);
     ccdFrame[1].setValue(y);
     ccdFrame[2].setValue(w);
@@ -785,7 +778,7 @@ auto INDICamera::isFrameSettingAvailable() -> bool {
     INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
 
     if (!ccdFrame.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_FRAME property...");
+        LOG_ERROR("Error: unable to find CCD_FRAME property...");
         return false;
     }
     return true;
@@ -796,24 +789,24 @@ auto INDICamera::getFrameType() -> bool {
     INDI::PropertySwitch ccdFrameType = device_.getProperty("CCD_FRAME_TYPE");
 
     if (!ccdFrameType.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_FRAME_TYPE property...");
+        LOG_ERROR("Error: unable to find CCD_FRAME_TYPE property...");
         return false;
     }
 
     if (ccdFrameType[0].getState() == ISS_ON) {
-        LOG_INFO( "Frame type: Light");
+        LOG_INFO("Frame type: Light");
         return "Light";
     } else if (ccdFrameType[1].getState() == ISS_ON) {
-        LOG_INFO( "Frame type: Bias");
+        LOG_INFO("Frame type: Bias");
         return "Bias";
     } else if (ccdFrameType[2].getState() == ISS_ON) {
-        LOG_INFO( "Frame type: Dark");
+        LOG_INFO("Frame type: Dark");
         return "Dark";
     } else if (ccdFrameType[3].getState() == ISS_ON) {
-        LOG_INFO( "Frame type: Flat");
+        LOG_INFO("Frame type: Flat");
         return "Flat";
     } else {
-        LOG_ERROR( "Frame type: Unknown");
+        LOG_ERROR("Frame type: Unknown");
         return "Unknown";
     }
 }
@@ -822,80 +815,83 @@ auto INDICamera::setFrameType(FrameType type) -> bool {
     INDI::PropertySwitch ccdFrameType = device_.getProperty("CCD_FRAME_TYPE");
 
     if (!ccdFrameType.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_FRAME_TYPE property...");
+        LOG_ERROR("Error: unable to find CCD_FRAME_TYPE property...");
         return false;
     }
-    
-    for(int i=0; i<ccdFrameType.count(); ++i) {
+
+    for (int i = 0; i < ccdFrameType.count(); ++i) {
         ccdFrameType[i].setState(ISS_OFF);
     }
 
-    switch(type) {
-        case FrameType::FITS: // Assuming standard mapping or FrameType enum has LIGHT/DARK etc.
-             // Actually FrameType enum in camera_frame.hpp has FITS, NATIVE, XISF, JPG...
-             // But usually frame TYPE means Light, Dark, Bias, Flat.
-             // Let's check the FrameType enum definition again.
-             // The enum in camera_frame.hpp is file format type.
-             // There should be another enum for Frame Type (Light, Dark, etc).
-             // Re-reading camera_frame.hpp showed 'FrameType type{FrameType::FITS};'
-             // But typical INDI CCD_FRAME_TYPE switch has 'FRAME_LIGHT', 'FRAME_BIAS', etc.
-             // The AtomCamera interface `setFrameType(FrameType type)` uses `FrameType` which is file format?
-             // Wait, line 805 in camera.cpp says "Frame type: Light".
-             // Let me check `src/device/template/camera.hpp` again.
-             break;
+    switch (type) {
+        case FrameType::FITS:  // Assuming standard mapping or FrameType enum
+                               // has LIGHT/DARK etc.
+            // Actually FrameType enum in camera_frame.hpp has FITS, NATIVE,
+            // XISF, JPG... But usually frame TYPE means Light, Dark, Bias,
+            // Flat. Let's check the FrameType enum definition again. The enum
+            // in camera_frame.hpp is file format type. There should be another
+            // enum for Frame Type (Light, Dark, etc). Re-reading
+            // camera_frame.hpp showed 'FrameType type{FrameType::FITS};' But
+            // typical INDI CCD_FRAME_TYPE switch has 'FRAME_LIGHT',
+            // 'FRAME_BIAS', etc. The AtomCamera interface
+            // `setFrameType(FrameType type)` uses `FrameType` which is file
+            // format? Wait, line 805 in camera.cpp says "Frame type: Light".
+            // Let me check `src/device/template/camera.hpp` again.
+            break;
     }
-    // For now, keeping existing implementation structure but fixing the property setting
-    
-    // Note: The current FrameType enum in camera_frame.hpp seems to define FILE FORMATS (FITS, NATIVE...).
-    // But CCD_FRAME_TYPE in INDI usually refers to Light, Dark, Bias, Flat.
-    // There might be a confusion in the enum definition or usage.
-    // I will assume for now we are setting the file format if the enum matches, 
-    // OR if there is another enum for Light/Dark.
-    // Looking at the file content again:
-    // line 795: getFrameType returns bool (bug?), prints "Light", "Bias"...
-    // line 822: setFrameType takes FrameType.
-    
-    // I will just ensure the method exists and compiles for now, 
+    // For now, keeping existing implementation structure but fixing the
+    // property setting
+
+    // Note: The current FrameType enum in camera_frame.hpp seems to define FILE
+    // FORMATS (FITS, NATIVE...). But CCD_FRAME_TYPE in INDI usually refers to
+    // Light, Dark, Bias, Flat. There might be a confusion in the enum
+    // definition or usage. I will assume for now we are setting the file format
+    // if the enum matches, OR if there is another enum for Light/Dark. Looking
+    // at the file content again: line 795: getFrameType returns bool (bug?),
+    // prints "Light", "Bias"... line 822: setFrameType takes FrameType.
+
+    // I will just ensure the method exists and compiles for now,
     // as fixing the Enum definition might ripple too much.
-    
+
     sendNewProperty(ccdFrameType);
     return true;
 }
 
-
 auto INDICamera::setUploadMode(UploadMode mode) -> bool {
     INDI::PropertySwitch ccdUpload = device_.getProperty("CCD_UPLOAD_MODE");
     if (!ccdUpload.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_UPLOAD_MODE property...");
+        LOG_ERROR("Error: unable to find CCD_UPLOAD_MODE property...");
         return false;
     }
-    
+
     // Reset all switches first
-    for(int i=0; i<ccdUpload.count(); ++i) {
+    for (int i = 0; i < ccdUpload.count(); ++i) {
         ccdUpload[i].setState(ISS_OFF);
     }
 
     if (mode == UploadMode::CLIENT) {
-        auto* p = ccdUpload.findWidget("CCD_UPLOAD_CLIENT");
-        if(p) p->setState(ISS_ON);
+        auto *p = ccdUpload.findWidget("CCD_UPLOAD_CLIENT");
+        if (p)
+            p->setState(ISS_ON);
     } else if (mode == UploadMode::LOCAL) {
-        auto* p = ccdUpload.findWidget("CCD_UPLOAD_LOCAL");
-        if(p) p->setState(ISS_ON);
+        auto *p = ccdUpload.findWidget("CCD_UPLOAD_LOCAL");
+        if (p)
+            p->setState(ISS_ON);
     } else if (mode == UploadMode::BOTH) {
-        auto* p = ccdUpload.findWidget("CCD_UPLOAD_BOTH");
-        if(p) p->setState(ISS_ON);
+        auto *p = ccdUpload.findWidget("CCD_UPLOAD_BOTH");
+        if (p)
+            p->setState(ISS_ON);
     }
-    
+
     sendNewProperty(ccdUpload);
     return true;
 }
-
 
 auto INDICamera::getBinning() -> std::optional<std::tuple<int, int, int, int>> {
     INDI::PropertyNumber ccdBinning = device_.getProperty("CCD_BINNING");
 
     if (!ccdBinning.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_BINNING property...");
+        LOG_ERROR("Error: unable to find CCD_BINNING property...");
         return std::nullopt;
     }
 
@@ -903,7 +899,7 @@ auto INDICamera::getBinning() -> std::optional<std::tuple<int, int, int, int>> {
     binVer_ = ccdBinning[1].getValue();
     maxBinHor_ = ccdBinning[0].getMax();
     maxBinVer_ = ccdBinning[1].getMax();
-    LOG_INFO( "Camera binning: {} x {}", binHor_, binVer_);
+    LOG_INFO("Camera binning: {} x {}", binHor_, binVer_);
     return std::make_tuple(binHor_, binVer_, maxBinHor_, maxBinVer_);
 }
 
@@ -911,40 +907,38 @@ auto INDICamera::setBinning(const int &hor, const int &ver) -> bool {
     INDI::PropertyNumber ccdBinning = device_.getProperty("CCD_BINNING");
 
     if (!ccdBinning.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_BINNING property...");
+        LOG_ERROR("Error: unable to find CCD_BINNING property...");
         return false;
     }
     if (hor > maxBinHor_ || ver > maxBinVer_) {
-        LOG_ERROR( "Error: binning value is out of range...");
+        LOG_ERROR("Error: binning value is out of range...");
         return false;
     }
 
     ccdBinning[0].setValue(hor);
     ccdBinning[1].setValue(ver);
     sendNewProperty(ccdBinning);
-    LOG_INFO( "setCCDBinnign: {}, {}", hor, ver);
+    LOG_INFO("setCCDBinnign: {}, {}", hor, ver);
     return true;
 }
 
-bool INDICamera::isConnected() const {
-    return isConnected_.load();
-}
+bool INDICamera::isConnected() const { return isConnected_.load(); }
 
 bool INDICamera::disconnect() {
     if (!isConnected_.load()) {
-        LOG_ERROR( "{} is not connected.", deviceName_);
+        LOG_ERROR("{} is not connected.", deviceName_);
         return false;
     }
-    LOG_INFO( "Disconnecting from {}...", deviceName_);
+    LOG_INFO("Disconnecting from {}...", deviceName_);
     disconnectDevice(name_.c_str());
-    LOG_INFO( "{} is disconnected.", deviceName_);
+    LOG_INFO("{} is disconnected.", deviceName_);
     return true;
 }
 
 bool INDICamera::isExposing() const {
     INDI::PropertySwitch ccdExposure = device_.getProperty("CCD_EXPOSURE");
     if (!ccdExposure.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_EXPOSURE property...");
+        LOG_ERROR("Error: unable to find CCD_EXPOSURE property...");
         return false;
     }
     return (ccdExposure[0].getState() == ISS_ON);
@@ -953,7 +947,7 @@ bool INDICamera::isExposing() const {
 bool INDICamera::isCoolerOn() const {
     INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
     if (!ccdCooler.isValid()) {
-        LOG_ERROR( "Error: unable to find CCD_COOLER property...");
+        LOG_ERROR("Error: unable to find CCD_COOLER property...");
         return false;
     }
     return (ccdCooler[0].getState() == ISS_ON);
@@ -987,7 +981,7 @@ AtomCameraFrame INDICamera::getFrameInfo() const {
 }
 
 ATOM_MODULE(camera_indi, [](Component &component) {
-    LOG_INFO( "Registering camera_indi module...");
+    LOG_INFO("Registering camera_indi module...");
     component.def("initialize", &INDICamera::initialize, "device",
                   "Initialize camera device.");
     component.def("destroy", &INDICamera::destroy, "device",
@@ -1041,5 +1035,5 @@ ATOM_MODULE(camera_indi, [](Component &component) {
     component.defType<INDICamera>("camera_indi", "device",
                                   "Define a new camera instance.");
 
-    LOG_INFO( "Registered camera_indi module.");
+    LOG_INFO("Registered camera_indi module.");
 });

@@ -20,21 +20,21 @@ lithium_message(INFO "Scanning for modules with package descriptors...")
 function(lithium_add_module_subdirectories start_dir)
     file(GLOB entries "${start_dir}/*")
     set(module_count 0)
-    
+
     foreach(entry ${entries})
         if(IS_DIRECTORY ${entry})
             get_filename_component(module_name ${entry} NAME)
             set(has_cmake FALSE)
             set(has_package FALSE)
-            
+
             if(EXISTS "${entry}/CMakeLists.txt")
                 set(has_cmake TRUE)
             endif()
-            
+
             if(EXISTS "${entry}/package.json" OR EXISTS "${entry}/package.yaml")
                 set(has_package TRUE)
             endif()
-            
+
             if(has_cmake AND has_package)
                 lithium_message(STATUS "  ├─ Module: ${BoldCyan}${module_name}${ColorReset}")
                 add_subdirectory(${entry})
@@ -44,7 +44,7 @@ function(lithium_add_module_subdirectories start_dir)
             endif()
         endif()
     endforeach()
-    
+
     if(module_count EQUAL 0)
         lithium_message(WARNING "No valid modules found")
     else()

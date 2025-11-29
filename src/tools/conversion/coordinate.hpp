@@ -35,7 +35,8 @@ struct alignas(32) CartesianCoordinates {
     double z{0.0};
 
     CartesianCoordinates() = default;
-    CartesianCoordinates(double x_, double y_, double z_) : x(x_), y(y_), z(z_) {}
+    CartesianCoordinates(double x_, double y_, double z_)
+        : x(x_), y(y_), z(z_) {}
 
     [[nodiscard]] double magnitude() const noexcept {
         return std::sqrt(x * x + y * y + z * z);
@@ -114,8 +115,9 @@ struct alignas(16) SphericalCoordinates {
  * @param latitudeRad Observer latitude in radians.
  * @return Vector containing [altitude, azimuth] in radians.
  */
-[[nodiscard]] inline std::vector<double> raDecToAltAz(
-    double hourAngleRad, double declinationRad, double latitudeRad) {
+[[nodiscard]] inline std::vector<double> raDecToAltAz(double hourAngleRad,
+                                                      double declinationRad,
+                                                      double latitudeRad) {
     double sinDec = std::sin(declinationRad);
     double cosDec = std::cos(declinationRad);
     double sinLat = std::sin(latitudeRad);
@@ -128,8 +130,8 @@ struct alignas(16) SphericalCoordinates {
     double altitude = std::asin(std::clamp(sinAlt, -1.0, 1.0));
 
     // Calculate azimuth
-    double cosAz = (sinDec - std::sin(altitude) * sinLat) /
-                   (std::cos(altitude) * cosLat);
+    double cosAz =
+        (sinDec - std::sin(altitude) * sinLat) / (std::cos(altitude) * cosLat);
     double azimuth = std::acos(std::clamp(cosAz, -1.0, 1.0));
 
     if (sinHA > 0) {
@@ -161,8 +163,8 @@ inline void altAzToRaDec(double altRad, double azRad, double& haRad,
     decRad = std::asin(std::clamp(sinDec, -1.0, 1.0));
 
     // Calculate hour angle
-    double cosHA = (sinAlt - sinLat * std::sin(decRad)) /
-                   (cosLat * std::cos(decRad));
+    double cosHA =
+        (sinAlt - sinLat * std::sin(decRad)) / (cosLat * std::cos(decRad));
     haRad = std::acos(std::clamp(cosHA, -1.0, 1.0));
 
     if (sinAz > 0) {

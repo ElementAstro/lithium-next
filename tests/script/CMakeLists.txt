@@ -56,12 +56,12 @@ if(Python_FOUND AND pybind11_FOUND)
     add_executable(lithium_python_integration_tests
         test_python_caller.hpp
     )
-    
+
     target_include_directories(lithium_python_integration_tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${Python_INCLUDE_DIRS}
     )
-    
+
     target_link_libraries(lithium_python_integration_tests PRIVATE
         GTest::gtest
         GTest::gtest_main
@@ -69,9 +69,9 @@ if(Python_FOUND AND pybind11_FOUND)
         pybind11::embed
         ${Python_LIBRARIES}
     )
-    
+
     target_compile_features(lithium_python_integration_tests PRIVATE cxx_std_20)
-    
+
     gtest_discover_tests(lithium_python_integration_tests
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         PROPERTIES

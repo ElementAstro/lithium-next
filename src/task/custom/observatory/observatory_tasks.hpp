@@ -28,7 +28,9 @@ class WeatherMonitorTask : public TaskBase {
 public:
     WeatherMonitorTask() : TaskBase("WeatherMonitor") { setupParameters(); }
     WeatherMonitorTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "WeatherMonitor"; }
     static std::string getStaticTaskTypeName() { return "WeatherMonitor"; }
@@ -51,7 +53,9 @@ class CloudDetectionTask : public TaskBase {
 public:
     CloudDetectionTask() : TaskBase("CloudDetection") { setupParameters(); }
     CloudDetectionTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "CloudDetection"; }
     static std::string getStaticTaskTypeName() { return "CloudDetection"; }
@@ -74,7 +78,9 @@ class SafetyShutdownTask : public TaskBase {
 public:
     SafetyShutdownTask() : TaskBase("SafetyShutdown") { setupParameters(); }
     SafetyShutdownTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "SafetyShutdown"; }
     static std::string getStaticTaskTypeName() { return "SafetyShutdown"; }
@@ -98,9 +104,13 @@ private:
  */
 class ObservatoryStartupTask : public TaskBase {
 public:
-    ObservatoryStartupTask() : TaskBase("ObservatoryStartup") { setupParameters(); }
+    ObservatoryStartupTask() : TaskBase("ObservatoryStartup") {
+        setupParameters();
+    }
     ObservatoryStartupTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "ObservatoryStartup"; }
     static std::string getStaticTaskTypeName() { return "ObservatoryStartup"; }
@@ -121,7 +131,9 @@ class DomeControlTask : public TaskBase {
 public:
     DomeControlTask() : TaskBase("DomeControl") { setupParameters(); }
     DomeControlTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "DomeControl"; }
     static std::string getStaticTaskTypeName() { return "DomeControl"; }
@@ -142,7 +154,9 @@ class FlatPanelTask : public TaskBase {
 public:
     FlatPanelTask() : TaskBase("FlatPanel") { setupParameters(); }
     FlatPanelTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "FlatPanel"; }
     static std::string getStaticTaskTypeName() { return "FlatPanel"; }
@@ -163,7 +177,9 @@ class SafetyCheckTask : public TaskBase {
 public:
     SafetyCheckTask() : TaskBase("SafetyCheck") { setupParameters(); }
     SafetyCheckTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "SafetyCheck"; }
     static std::string getStaticTaskTypeName() { return "SafetyCheck"; }

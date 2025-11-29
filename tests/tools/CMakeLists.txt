@@ -1,5 +1,7 @@
 # Tests for lithium_tools module
 
+find_package(GTest REQUIRED)
+
 set(TOOLS_TEST_SOURCES
     test_astronomy_constants.cpp
 )

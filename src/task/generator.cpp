@@ -75,25 +75,36 @@ public:
     // Script generation methods
     void setScriptConfig(const TaskGenerator::ScriptConfig& config);
     TaskGenerator::ScriptConfig getScriptConfig() const;
-    void registerScriptTemplate(const std::string& templateName, const TaskGenerator::ScriptTemplate& templateInfo);
+    void registerScriptTemplate(
+        const std::string& templateName,
+        const TaskGenerator::ScriptTemplate& templateInfo);
     void unregisterScriptTemplate(const std::string& templateName);
-    TaskGenerator::ScriptGenerationResult generateScript(const std::string& templateName, const json& parameters);
-    TaskGenerator::ScriptGenerationResult generateSequenceScript(const json& sequenceConfig);
-    TaskGenerator::ScriptGenerationResult parseScript(const std::string& script, const std::string& format);
+    TaskGenerator::ScriptGenerationResult generateScript(
+        const std::string& templateName, const json& parameters);
+    TaskGenerator::ScriptGenerationResult generateSequenceScript(
+        const json& sequenceConfig);
+    TaskGenerator::ScriptGenerationResult parseScript(
+        const std::string& script, const std::string& format);
     std::vector<std::string> getAvailableTemplates() const;
-    std::optional<TaskGenerator::ScriptTemplate> getTemplateInfo(const std::string& templateName) const;
-    TaskGenerator::ScriptGenerationResult generateCustomTaskScript(const std::string& taskType, const json& taskConfig);
-    TaskGenerator::ScriptGenerationResult optimizeScript(const std::string& script);
-    bool validateScript(const std::string& script, const std::string& templateName);
+    std::optional<TaskGenerator::ScriptTemplate> getTemplateInfo(
+        const std::string& templateName) const;
+    TaskGenerator::ScriptGenerationResult generateCustomTaskScript(
+        const std::string& taskType, const json& taskConfig);
+    TaskGenerator::ScriptGenerationResult optimizeScript(
+        const std::string& script);
+    bool validateScript(const std::string& script,
+                        const std::string& templateName);
     size_t loadTemplatesFromDirectory(const std::string& templateDir);
     bool saveTemplatesToDirectory(const std::string& templateDir) const;
-    TaskGenerator::ScriptGenerationResult convertScriptFormat(const std::string& script, 
-                                                             const std::string& fromFormat,
-                                                             const std::string& toFormat);
+    TaskGenerator::ScriptGenerationResult convertScriptFormat(
+        const std::string& script, const std::string& fromFormat,
+        const std::string& toFormat);
 
     // Task list generation methods
-    TaskGenerator::TaskListResult generateTaskList(const TaskGenerator::TaskListConfig& config);
-    TaskGenerator::TaskListResult generateTaskListFromJson(const json& configJson);
+    TaskGenerator::TaskListResult generateTaskList(
+        const TaskGenerator::TaskListConfig& config);
+    TaskGenerator::TaskListResult generateTaskListFromJson(
+        const json& configJson);
     json expandTaskRepetitions(const json& tasks);
     json processConditionalTasks(const json& tasks, const json& context);
     void initializeBuiltInMacros();
@@ -116,7 +127,8 @@ public:
 
     // Script generation members
     TaskGenerator::ScriptConfig scriptConfig_;
-    std::unordered_map<std::string, TaskGenerator::ScriptTemplate> scriptTemplates_;
+    std::unordered_map<std::string, TaskGenerator::ScriptTemplate>
+        scriptTemplates_;
     mutable std::shared_mutex scriptMutex_;
 
     // Index counter for macros
@@ -133,10 +145,12 @@ public:
         -> std::string;
     void preprocessJsonMacros(json& json_obj);
     void trimCache();
-    
+
     // Script generation helper methods
-    std::string processTemplate(const std::string& templateContent, const json& parameters);
-    bool validateParameters(const std::vector<std::string>& required, const json& provided);
+    std::string processTemplate(const std::string& templateContent,
+                                const json& parameters);
+    bool validateParameters(const std::vector<std::string>& required,
+                            const json& provided);
     json parseJsonScript(const std::string& script);
     json parseYamlScript(const std::string& script);
     std::string generateJsonScript(const json& data);
@@ -564,7 +578,8 @@ void TaskGenerator::Impl::resetStatistics() {
 }
 
 // Script generation implementations
-void TaskGenerator::Impl::setScriptConfig(const TaskGenerator::ScriptConfig& config) {
+void TaskGenerator::Impl::setScriptConfig(
+    const TaskGenerator::ScriptConfig& config) {
     std::unique_lock lock(scriptMutex_);
     scriptConfig_ = config;
     spdlog::info("Script configuration updated");
@@ -575,13 +590,16 @@ TaskGenerator::ScriptConfig TaskGenerator::Impl::getScriptConfig() const {
     return scriptConfig_;
 }
 
-void TaskGenerator::Impl::registerScriptTemplate(const std::string& templateName, const TaskGenerator::ScriptTemplate& templateInfo) {
+void TaskGenerator::Impl::registerScriptTemplate(
+    const std::string& templateName,
+    const TaskGenerator::ScriptTemplate& templateInfo) {
     std::unique_lock lock(scriptMutex_);
     scriptTemplates_[templateName] = templateInfo;
     spdlog::info("Registered script template: {}", templateName);
 }
 
-void TaskGenerator::Impl::unregisterScriptTemplate(const std::string& templateName) {
+void TaskGenerator::Impl::unregisterScriptTemplate(
+    const std::string& templateName) {
     std::unique_lock lock(scriptMutex_);
     auto it = scriptTemplates_.find(templateName);
     if (it != scriptTemplates_.end()) {
@@ -592,276 +610,303 @@ void TaskGenerator::Impl::unregisterScriptTemplate(const std::string& templateNa
     }
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateScript(const std::string& templateName, const json& parameters) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateScript(
+    const std::string& templateName, const json& parameters) {
     std::shared_lock lock(scriptMutex_);
-    
+
     TaskGenerator::ScriptGenerationResult result;
-    
+
     auto it = scriptTemplates_.find(templateName);
     if (it == scriptTemplates_.end()) {
         result.errors.push_back("Template not found: " + templateName);
         return result;
     }
-    
+
     const auto& templateInfo = it->second;
-    
+
     // Validate required parameters
     if (!validateParameters(templateInfo.requiredParams, parameters)) {
         result.errors.push_back("Missing required parameters");
         return result;
     }
-    
+
     try {
         // Process template with macro replacement
-        result.generatedScript = processTemplate(templateInfo.content, parameters);
-        
+        result.generatedScript =
+            processTemplate(templateInfo.content, parameters);
+
         // Add metadata
         result.metadata["template_name"] = templateName;
         result.metadata["template_version"] = templateInfo.version;
-        result.metadata["generated_at"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
-        
+        result.metadata["generated_at"] =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
+
         result.success = true;
         spdlog::info("Generated script from template: {}", templateName);
-        
+
     } catch (const std::exception& e) {
-        result.errors.push_back("Script generation failed: " + std::string(e.what()));
-        spdlog::error("Script generation failed for template {}: {}", templateName, e.what());
+        result.errors.push_back("Script generation failed: " +
+                                std::string(e.what()));
+        spdlog::error("Script generation failed for template {}: {}",
+                      templateName, e.what());
     }
-    
+
     return result;
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateSequenceScript(const json& sequenceConfig) {
+TaskGenerator::ScriptGenerationResult
+TaskGenerator::Impl::generateSequenceScript(const json& sequenceConfig) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
-        if (!sequenceConfig.contains("targets") || !sequenceConfig["targets"].is_array()) {
-            result.errors.push_back("Sequence configuration must contain 'targets' array");
+        if (!sequenceConfig.contains("targets") ||
+            !sequenceConfig["targets"].is_array()) {
+            result.errors.push_back(
+                "Sequence configuration must contain 'targets' array");
             return result;
         }
-        
+
         json sequence;
         sequence["name"] = sequenceConfig.value("name", "Generated Sequence");
-        sequence["description"] = sequenceConfig.value("description", "Auto-generated sequence");
+        sequence["description"] =
+            sequenceConfig.value("description", "Auto-generated sequence");
         sequence["targets"] = json::array();
-        
+
         for (const auto& target : sequenceConfig["targets"]) {
             json targetJson;
             targetJson["name"] = target.value("name", "Unnamed Target");
             targetJson["ra"] = target.value("ra", 0.0);
             targetJson["dec"] = target.value("dec", 0.0);
             targetJson["tasks"] = target.value("tasks", json::array());
-            
+
             sequence["targets"].push_back(targetJson);
         }
-        
+
         if (scriptConfig_.outputFormat == "yaml") {
             result.generatedScript = generateYamlScript(sequence);
         } else {
             result.generatedScript = generateJsonScript(sequence);
         }
-        
+
         result.metadata["type"] = "sequence";
         result.metadata["target_count"] = sequenceConfig["targets"].size();
         result.success = true;
-        
+
     } catch (const std::exception& e) {
-        result.errors.push_back("Sequence generation failed: " + std::string(e.what()));
+        result.errors.push_back("Sequence generation failed: " +
+                                std::string(e.what()));
     }
-    
+
     return result;
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::parseScript(const std::string& script, const std::string& format) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::parseScript(
+    const std::string& script, const std::string& format) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         json parsedScript;
-        
+
         if (format == "yaml") {
             parsedScript = parseYamlScript(script);
         } else {
             parsedScript = parseJsonScript(script);
         }
-        
+
         // Validate structure
         auto errors = validateScriptStructure(parsedScript);
         result.errors = errors;
-        
+
         if (errors.empty()) {
-            result.generatedScript = script; // Original script is valid
+            result.generatedScript = script;  // Original script is valid
             result.metadata = parsedScript.value("metadata", json::object());
             result.success = true;
         } else {
             result.success = false;
         }
-        
+
     } catch (const std::exception& e) {
         result.errors.push_back("Parse error: " + std::string(e.what()));
         result.success = false;
     }
-    
+
     return result;
 }
 
 std::vector<std::string> TaskGenerator::Impl::getAvailableTemplates() const {
     std::shared_lock lock(scriptMutex_);
-    
+
     std::vector<std::string> templates;
     templates.reserve(scriptTemplates_.size());
-    
+
     for (const auto& [name, _] : scriptTemplates_) {
         templates.push_back(name);
     }
-    
+
     std::sort(templates.begin(), templates.end());
     return templates;
 }
 
-std::optional<TaskGenerator::ScriptTemplate> TaskGenerator::Impl::getTemplateInfo(const std::string& templateName) const {
+std::optional<TaskGenerator::ScriptTemplate>
+TaskGenerator::Impl::getTemplateInfo(const std::string& templateName) const {
     std::shared_lock lock(scriptMutex_);
-    
+
     auto it = scriptTemplates_.find(templateName);
     if (it != scriptTemplates_.end()) {
         return it->second;
     }
-    
+
     return std::nullopt;
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::generateCustomTaskScript(const std::string& taskType, const json& taskConfig) {
+TaskGenerator::ScriptGenerationResult
+TaskGenerator::Impl::generateCustomTaskScript(const std::string& taskType,
+                                              const json& taskConfig) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         json taskScript;
         taskScript["task_type"] = taskType;
         taskScript["name"] = taskConfig.value("name", "Custom Task");
-        taskScript["parameters"] = taskConfig.value("parameters", json::object());
+        taskScript["parameters"] =
+            taskConfig.value("parameters", json::object());
         taskScript["timeout"] = taskConfig.value("timeout", 30);
         taskScript["retry_count"] = taskConfig.value("retry_count", 0);
-        
+
         result.generatedScript = generateJsonScript(taskScript);
         result.metadata["task_type"] = taskType;
         result.success = true;
-        
+
     } catch (const std::exception& e) {
-        result.errors.push_back("Custom task script generation failed: " + std::string(e.what()));
+        result.errors.push_back("Custom task script generation failed: " +
+                                std::string(e.what()));
     }
-    
+
     return result;
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::optimizeScript(const std::string& script) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::optimizeScript(
+    const std::string& script) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         auto parsedScript = parseJsonScript(script);
         auto optimizedScript = optimizeScriptJson(parsedScript);
-        
+
         result.generatedScript = generateJsonScript(optimizedScript);
         result.metadata["optimized"] = true;
         result.success = true;
-        
+
     } catch (const std::exception& e) {
-        result.errors.push_back("Script optimization failed: " + std::string(e.what()));
+        result.errors.push_back("Script optimization failed: " +
+                                std::string(e.what()));
     }
-    
+
     return result;
 }
 
-bool TaskGenerator::Impl::validateScript(const std::string& script, const std::string& templateName) {
+bool TaskGenerator::Impl::validateScript(const std::string& script,
+                                         const std::string& templateName) {
     try {
         auto parsedScript = parseJsonScript(script);
         auto errors = validateScriptStructure(parsedScript);
-        
+
         if (!templateName.empty()) {
             std::shared_lock lock(scriptMutex_);
             auto it = scriptTemplates_.find(templateName);
             if (it != scriptTemplates_.end()) {
                 // Additional template-specific validation
                 const auto& templateInfo = it->second;
-                if (!validateParameters(templateInfo.requiredParams, parsedScript)) {
+                if (!validateParameters(templateInfo.requiredParams,
+                                        parsedScript)) {
                     return false;
                 }
             }
         }
-        
+
         return errors.empty();
-        
+
     } catch (const std::exception&) {
         return false;
     }
 }
 
-size_t TaskGenerator::Impl::loadTemplatesFromDirectory(const std::string& templateDir) {
+size_t TaskGenerator::Impl::loadTemplatesFromDirectory(
+    const std::string& templateDir) {
     // Implementation would load template files from directory
     // For now, return 0 as placeholder
     spdlog::info("Loading templates from directory: {}", templateDir);
     return 0;
 }
 
-bool TaskGenerator::Impl::saveTemplatesToDirectory(const std::string& templateDir) const {
+bool TaskGenerator::Impl::saveTemplatesToDirectory(
+    const std::string& templateDir) const {
     // Implementation would save templates to directory
     // For now, return true as placeholder
     spdlog::info("Saving templates to directory: {}", templateDir);
     return true;
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::convertScriptFormat(const std::string& script, 
-                                                                               const std::string& fromFormat,
-                                                                               const std::string& toFormat) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::Impl::convertScriptFormat(
+    const std::string& script, const std::string& fromFormat,
+    const std::string& toFormat) {
     TaskGenerator::ScriptGenerationResult result;
-    
+
     try {
         json parsedScript;
-        
+
         if (fromFormat == "yaml") {
             parsedScript = parseYamlScript(script);
         } else {
             parsedScript = parseJsonScript(script);
         }
-        
+
         if (toFormat == "yaml") {
             result.generatedScript = generateYamlScript(parsedScript);
         } else {
             result.generatedScript = generateJsonScript(parsedScript);
         }
-        
+
         result.metadata["converted_from"] = fromFormat;
         result.metadata["converted_to"] = toFormat;
         result.success = true;
-        
+
     } catch (const std::exception& e) {
-        result.errors.push_back("Format conversion failed: " + std::string(e.what()));
+        result.errors.push_back("Format conversion failed: " +
+                                std::string(e.what()));
     }
-    
+
     return result;
 }
 
 // Helper method implementations
-std::string TaskGenerator::Impl::processTemplate(const std::string& templateContent, const json& parameters) {
+std::string TaskGenerator::Impl::processTemplate(
+    const std::string& templateContent, const json& parameters) {
     std::string result = templateContent;
-    
+
     // Replace template variables with parameter values
     for (const auto& [key, value] : parameters.items()) {
         std::string placeholder = "${" + key + "}";
-        std::string replacement = value.is_string() ? value.get<std::string>() : value.dump();
-        
+        std::string replacement =
+            value.is_string() ? value.get<std::string>() : value.dump();
+
         size_t pos = 0;
         while ((pos = result.find(placeholder, pos)) != std::string::npos) {
             result.replace(pos, placeholder.length(), replacement);
             pos += replacement.length();
         }
     }
-    
+
     // Apply macro processing
     result = replaceMacros(result);
-    
+
     return result;
 }
 
-bool TaskGenerator::Impl::validateParameters(const std::vector<std::string>& required, const json& provided) {
+bool TaskGenerator::Impl::validateParameters(
+    const std::vector<std::string>& required, const json& provided) {
     for (const auto& param : required) {
         if (!provided.contains(param)) {
             return false;
@@ -875,30 +920,31 @@ json TaskGenerator::Impl::parseJsonScript(const std::string& script) {
 }
 
 json TaskGenerator::Impl::parseYamlScript(const std::string& script) {
-    // For now, assume JSON format since YAML parsing would require additional library
-    // In a real implementation, this would use a YAML parser
+    // For now, assume JSON format since YAML parsing would require additional
+    // library In a real implementation, this would use a YAML parser
     return json::parse(script);
 }
 
 std::string TaskGenerator::Impl::generateJsonScript(const json& data) {
-    return data.dump(2); // Pretty print with 2-space indentation
+    return data.dump(2);  // Pretty print with 2-space indentation
 }
 
 std::string TaskGenerator::Impl::generateYamlScript(const json& data) {
-    // For now, return JSON format since YAML generation would require additional library
-    // In a real implementation, this would convert to YAML
+    // For now, return JSON format since YAML generation would require
+    // additional library In a real implementation, this would convert to YAML
     return data.dump(2);
 }
 
-std::vector<std::string> TaskGenerator::Impl::validateScriptStructure(const json& script) {
+std::vector<std::string> TaskGenerator::Impl::validateScriptStructure(
+    const json& script) {
     std::vector<std::string> errors;
-    
+
     // Basic structure validation
     if (!script.is_object()) {
         errors.push_back("Script must be a JSON object");
         return errors;
     }
-    
+
     // Check for required fields based on script type
     if (script.contains("targets") && script["targets"].is_array()) {
         // Sequence script validation
@@ -908,7 +954,7 @@ std::vector<std::string> TaskGenerator::Impl::validateScriptStructure(const json
             }
         }
     }
-    
+
     return errors;
 }
 
@@ -959,114 +1005,158 @@ void TaskGenerator::Impl::initializeBuiltInMacros() {
     });
 
     addMacro("timestamp", [](const std::vector<std::string>&) -> std::string {
-        return std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count());
+        return std::to_string(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count());
     });
 
     addMacro("add", [](const std::vector<std::string>& args) -> std::string {
-        double r = 0; for (const auto& a : args) r += std::stod(a);
-        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r)) : std::to_string(r);
+        double r = 0;
+        for (const auto& a : args)
+            r += std::stod(a);
+        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r))
+                                    : std::to_string(r);
     });
 
     addMacro("sub", [](const std::vector<std::string>& args) -> std::string {
-        if (args.size() != 2) return "0";
+        if (args.size() != 2)
+            return "0";
         double r = std::stod(args[0]) - std::stod(args[1]);
-        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r)) : std::to_string(r);
+        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r))
+                                    : std::to_string(r);
     });
 
     addMacro("mul", [](const std::vector<std::string>& args) -> std::string {
-        double r = 1; for (const auto& a : args) r *= std::stod(a);
-        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r)) : std::to_string(r);
+        double r = 1;
+        for (const auto& a : args)
+            r *= std::stod(a);
+        return (r == std::floor(r)) ? std::to_string(static_cast<int>(r))
+                                    : std::to_string(r);
     });
 
     addMacro("div", [](const std::vector<std::string>& args) -> std::string {
-        if (args.size() != 2 || std::stod(args[1]) == 0) return "0";
+        if (args.size() != 2 || std::stod(args[1]) == 0)
+            return "0";
         return std::to_string(std::stod(args[0]) / std::stod(args[1]));
     });
 
     addMacro("mod", [](const std::vector<std::string>& args) -> std::string {
-        if (args.size() != 2 || std::stoi(args[1]) == 0) return "0";
+        if (args.size() != 2 || std::stoi(args[1]) == 0)
+            return "0";
         return std::to_string(std::stoi(args[0]) % std::stoi(args[1]));
     });
 
-    addMacro("replace", [](const std::vector<std::string>& args) -> std::string {
-        if (args.size() != 3) return args.empty() ? "" : args[0];
-        std::string r = args[0]; size_t p = 0;
-        while ((p = r.find(args[1], p)) != std::string::npos) {
-            r.replace(p, args[1].length(), args[2]); p += args[2].length();
-        }
-        return r;
-    });
+    addMacro("replace",
+             [](const std::vector<std::string>& args) -> std::string {
+                 if (args.size() != 3)
+                     return args.empty() ? "" : args[0];
+                 std::string r = args[0];
+                 size_t p = 0;
+                 while ((p = r.find(args[1], p)) != std::string::npos) {
+                     r.replace(p, args[1].length(), args[2]);
+                     p += args[2].length();
+                 }
+                 return r;
+             });
 
-    addMacro("substring", [](const std::vector<std::string>& args) -> std::string {
-        if (args.size() < 2) return "";
-        size_t s = std::stoul(args[1]);
-        if (s >= args[0].length()) return "";
-        return (args.size() > 2) ? args[0].substr(s, std::stoul(args[2])) : args[0].substr(s);
-    });
+    addMacro(
+        "substring", [](const std::vector<std::string>& args) -> std::string {
+            if (args.size() < 2)
+                return "";
+            size_t s = std::stoul(args[1]);
+            if (s >= args[0].length())
+                return "";
+            return (args.size() > 2) ? args[0].substr(s, std::stoul(args[2]))
+                                     : args[0].substr(s);
+        });
 
     addMacro("pad", [](const std::vector<std::string>& args) -> std::string {
-        if (args.size() < 2) return args.empty() ? "" : args[0];
+        if (args.size() < 2)
+            return args.empty() ? "" : args[0];
         size_t w = std::stoul(args[1]);
         char c = (args.size() > 2 && !args[2].empty()) ? args[2][0] : '0';
-        return (args[0].length() >= w) ? args[0] : std::string(w - args[0].length(), c) + args[0];
+        return (args[0].length() >= w)
+                   ? args[0]
+                   : std::string(w - args[0].length(), c) + args[0];
     });
 
     addMacro("uuid", [](const std::vector<std::string>&) -> std::string {
-        static std::random_device rd; static std::mt19937_64 gen(rd());
+        static std::random_device rd;
+        static std::mt19937_64 gen(rd());
         static std::uniform_int_distribution<uint64_t> dis;
-        std::ostringstream oss; oss << std::hex << std::setfill('0');
+        std::ostringstream oss;
+        oss << std::hex << std::setfill('0');
         uint64_t p1 = dis(gen), p2 = dis(gen);
-        oss << std::setw(8) << (p1>>32) << '-' << std::setw(4) << ((p1>>16)&0xFFFF)
-            << '-' << std::setw(4) << (p1&0xFFFF) << '-' << std::setw(4) << (p2>>48)
-            << '-' << std::setw(12) << (p2&0xFFFFFFFFFFFFULL);
+        oss << std::setw(8) << (p1 >> 32) << '-' << std::setw(4)
+            << ((p1 >> 16) & 0xFFFF) << '-' << std::setw(4) << (p1 & 0xFFFF)
+            << '-' << std::setw(4) << (p2 >> 48) << '-' << std::setw(12)
+            << (p2 & 0xFFFFFFFFFFFFULL);
         return oss.str();
     });
 
     addMacro("env", [](const std::vector<std::string>& args) -> std::string {
-        if (args.empty()) return "";
+        if (args.empty())
+            return "";
         const char* v = std::getenv(args[0].c_str());
         return v ? v : (args.size() > 1 ? args[1] : "");
     });
 
-    addMacro("index", [this](const std::vector<std::string>& args) -> std::string {
-        int start = args.empty() ? 0 : std::stoi(args[0]);
-        int step = args.size() > 1 ? std::stoi(args[1]) : 1;
-        return std::to_string(start + indexCounter_.fetch_add(1) * step);
-    });
+    addMacro(
+        "index", [this](const std::vector<std::string>& args) -> std::string {
+            int start = args.empty() ? 0 : std::stoi(args[0]);
+            int step = args.size() > 1 ? std::stoi(args[1]) : 1;
+            return std::to_string(start + indexCounter_.fetch_add(1) * step);
+        });
 
-    addMacro("reset_index", [this](const std::vector<std::string>&) -> std::string {
-        indexCounter_.store(0); return "";
-    });
+    addMacro("reset_index",
+             [this](const std::vector<std::string>&) -> std::string {
+                 indexCounter_.store(0);
+                 return "";
+             });
     spdlog::info("Built-in macros initialized");
 }
 
 // ==================== Task List Generation ====================
 
-TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskList(const TaskGenerator::TaskListConfig& cfg) {
-    TaskListResult res; res.taskList = json::array();
+TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskList(
+    const TaskGenerator::TaskListConfig& cfg) {
+    TaskListResult res;
+    res.taskList = json::array();
     try {
         for (const auto& td : cfg.tasks) {
-            if (!td.enabled) continue;
-            if (!td.condition.empty() && cfg.processConditions && 
-                !evaluateCondition(td.condition, cfg.globalParams)) continue;
+            if (!td.enabled)
+                continue;
+            if (!td.condition.empty() && cfg.processConditions &&
+                !evaluateCondition(td.condition, cfg.globalParams))
+                continue;
             int n = cfg.expandRepeats ? td.repeatCount : 1;
             for (int i = 0; i < n; ++i) {
-                json t; t["type"] = td.type; t["params"] = td.params; t["priority"] = td.priority;
-                t["name"] = (n > 1) ? td.name + "_" + std::to_string(i+1) : td.name;
+                json t;
+                t["type"] = td.type;
+                t["params"] = td.params;
+                t["priority"] = td.priority;
+                t["name"] =
+                    (n > 1) ? td.name + "_" + std::to_string(i + 1) : td.name;
                 t["dependencies"] = td.dependencies;
-                for (auto& [k,v] : cfg.globalParams.items()) 
-                    if (!t["params"].contains(k)) t["params"][k] = v;
-                if (cfg.applyMacros) processJson(t);
+                for (auto& [k, v] : cfg.globalParams.items())
+                    if (!t["params"].contains(k))
+                        t["params"][k] = v;
+                if (cfg.applyMacros)
+                    processJson(t);
                 res.taskList.push_back(t);
             }
         }
-        res.totalTasks = res.taskList.size(); res.success = true;
-    } catch (const std::exception& e) { res.errors.push_back(e.what()); }
+        res.totalTasks = res.taskList.size();
+        res.success = true;
+    } catch (const std::exception& e) {
+        res.errors.push_back(e.what());
+    }
     return res;
 }
 
-TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskListFromJson(const json& j) {
+TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskListFromJson(
+    const json& j) {
     TaskListConfig cfg;
     cfg.globalParams = j.value("global_params", json::object());
     cfg.expandRepeats = j.value("expand_repeats", true);
@@ -1075,13 +1165,16 @@ TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskListFromJson(cons
     if (j.contains("tasks") && j["tasks"].is_array()) {
         for (const auto& tj : j["tasks"]) {
             TaskDefinition td;
-            td.type = tj.value("type", ""); td.name = tj.value("name", "Task");
+            td.type = tj.value("type", "");
+            td.name = tj.value("name", "Task");
             td.params = tj.value("params", json::object());
             td.repeatCount = tj.value("repeat_count", 1);
             td.condition = tj.value("condition", "");
-            td.priority = tj.value("priority", 0); td.enabled = tj.value("enabled", true);
-            if (tj.contains("dependencies")) 
-                for (const auto& d : tj["dependencies"]) td.dependencies.push_back(d);
+            td.priority = tj.value("priority", 0);
+            td.enabled = tj.value("enabled", true);
+            if (tj.contains("dependencies"))
+                for (const auto& d : tj["dependencies"])
+                    td.dependencies.push_back(d);
             cfg.tasks.push_back(td);
         }
     }
@@ -1091,63 +1184,92 @@ TaskGenerator::TaskListResult TaskGenerator::Impl::generateTaskListFromJson(cons
 json TaskGenerator::Impl::expandTaskRepetitions(const json& tasks) {
     json exp = json::array();
     for (const auto& t : tasks) {
-        int n = t.value("repeat_count", 1); std::string bn = t.value("name", "task");
+        int n = t.value("repeat_count", 1);
+        std::string bn = t.value("name", "task");
         for (int i = 0; i < n; ++i) {
-            json et = t; et.erase("repeat_count");
-            if (n > 1) { et["name"] = bn + "_" + std::to_string(i+1); et["iteration"] = i; }
+            json et = t;
+            et.erase("repeat_count");
+            if (n > 1) {
+                et["name"] = bn + "_" + std::to_string(i + 1);
+                et["iteration"] = i;
+            }
             exp.push_back(et);
         }
     }
     return exp;
 }
 
-json TaskGenerator::Impl::processConditionalTasks(const json& tasks, const json& ctx) {
+json TaskGenerator::Impl::processConditionalTasks(const json& tasks,
+                                                  const json& ctx) {
     json p = json::array();
     for (const auto& t : tasks) {
-        if (!t.contains("condition") || evaluateCondition(t["condition"], ctx)) p.push_back(t);
+        if (!t.contains("condition") || evaluateCondition(t["condition"], ctx))
+            p.push_back(t);
     }
     return p;
 }
 
-bool TaskGenerator::Impl::evaluateCondition(const std::string& c, const json& ctx) {
-    if (c.empty() || c == "true") return true;
-    if (c == "false") return false;
+bool TaskGenerator::Impl::evaluateCondition(const std::string& c,
+                                            const json& ctx) {
+    if (c.empty() || c == "true")
+        return true;
+    if (c == "false")
+        return false;
     if (c.rfind("equals(", 0) == 0) {
-        auto a = c.substr(7, c.length()-8); auto pos = a.find(',');
+        auto a = c.substr(7, c.length() - 8);
+        auto pos = a.find(',');
         if (pos != std::string::npos) {
-            auto l = atom::utils::trim(a.substr(0,pos)), r = atom::utils::trim(a.substr(pos+1));
-            if (ctx.contains(l)) l = ctx[l].is_string() ? ctx[l].get<std::string>() : ctx[l].dump();
-            if (ctx.contains(r)) r = ctx[r].is_string() ? ctx[r].get<std::string>() : ctx[r].dump();
+            auto l = atom::utils::trim(a.substr(0, pos)),
+                 r = atom::utils::trim(a.substr(pos + 1));
+            if (ctx.contains(l))
+                l = ctx[l].is_string() ? ctx[l].get<std::string>()
+                                       : ctx[l].dump();
+            if (ctx.contains(r))
+                r = ctx[r].is_string() ? ctx[r].get<std::string>()
+                                       : ctx[r].dump();
             return l == r;
         }
     }
     return true;
 }
 
-std::optional<MacroValue> TaskGenerator::Impl::getMacro(const std::string& n) const {
+std::optional<MacroValue> TaskGenerator::Impl::getMacro(
+    const std::string& n) const {
     std::shared_lock lk(mutex_);
     auto it = macros_.find(n);
-    return (it != macros_.end()) ? std::optional<MacroValue>(it->second) : std::nullopt;
+    return (it != macros_.end()) ? std::optional<MacroValue>(it->second)
+                                 : std::nullopt;
 }
 
-void TaskGenerator::Impl::addMacros(const std::unordered_map<std::string, MacroValue>& m) {
+void TaskGenerator::Impl::addMacros(
+    const std::unordered_map<std::string, MacroValue>& m) {
     std::unique_lock lk(mutex_);
-    for (const auto& [n,v] : m) macros_[n] = v;
-    std::unique_lock cl(cache_mutex_); macro_cache_.clear();
+    for (const auto& [n, v] : m)
+        macros_[n] = v;
+    std::unique_lock cl(cache_mutex_);
+    macro_cache_.clear();
 }
 
 void TaskGenerator::Impl::registerDefaultTemplates() {
-    ScriptTemplate t; t.name = "exposure"; t.category = "imaging"; t.version = "1.0";
-    t.requiredParams = {"exposure_time","filter"};
-    t.content = R"({"type":"exposure","params":{"exposure_time":${exposure_time},"filter":"${filter}"}})";
+    ScriptTemplate t;
+    t.name = "exposure";
+    t.category = "imaging";
+    t.version = "1.0";
+    t.requiredParams = {"exposure_time", "filter"};
+    t.content =
+        R"({"type":"exposure","params":{"exposure_time":${exposure_time},"filter":"${filter}"}})";
     registerScriptTemplate("exposure", t);
     spdlog::info("Default templates registered");
 }
 
 std::shared_ptr<TaskGenerator> TaskGenerator::Impl::clone() const {
     auto ng = std::make_shared<TaskGenerator>();
-    std::shared_lock l(mutex_); for (const auto& [n,v] : macros_) ng->addMacro(n,v);
-    std::shared_lock sl(scriptMutex_); for (const auto& [n,t] : scriptTemplates_) ng->registerScriptTemplate(n,t);
+    std::shared_lock l(mutex_);
+    for (const auto& [n, v] : macros_)
+        ng->addMacro(n, v);
+    std::shared_lock sl(scriptMutex_);
+    for (const auto& [n, t] : scriptTemplates_)
+        ng->registerScriptTemplate(n, t);
     return ng;
 }
 
@@ -1205,7 +1327,8 @@ TaskGenerator::ScriptConfig TaskGenerator::getScriptConfig() const {
     return impl_->getScriptConfig();
 }
 
-void TaskGenerator::registerScriptTemplate(const std::string& templateName, const ScriptTemplate& templateInfo) {
+void TaskGenerator::registerScriptTemplate(const std::string& templateName,
+                                           const ScriptTemplate& templateInfo) {
     impl_->registerScriptTemplate(templateName, templateInfo);
 }
 
@@ -1213,15 +1336,18 @@ void TaskGenerator::unregisterScriptTemplate(const std::string& templateName) {
     impl_->unregisterScriptTemplate(templateName);
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::generateScript(const std::string& templateName, const json& parameters) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::generateScript(
+    const std::string& templateName, const json& parameters) {
     return impl_->generateScript(templateName, parameters);
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::generateSequenceScript(const json& sequenceConfig) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::generateSequenceScript(
+    const json& sequenceConfig) {
     return impl_->generateSequenceScript(sequenceConfig);
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::parseScript(const std::string& script, const std::string& format) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::parseScript(
+    const std::string& script, const std::string& format) {
     return impl_->parseScript(script, format);
 }
 
@@ -1229,42 +1355,50 @@ std::vector<std::string> TaskGenerator::getAvailableTemplates() const {
     return impl_->getAvailableTemplates();
 }
 
-std::optional<TaskGenerator::ScriptTemplate> TaskGenerator::getTemplateInfo(const std::string& templateName) const {
+std::optional<TaskGenerator::ScriptTemplate> TaskGenerator::getTemplateInfo(
+    const std::string& templateName) const {
     return impl_->getTemplateInfo(templateName);
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::generateCustomTaskScript(const std::string& taskType, const json& taskConfig) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::generateCustomTaskScript(
+    const std::string& taskType, const json& taskConfig) {
     return impl_->generateCustomTaskScript(taskType, taskConfig);
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::optimizeScript(const std::string& script) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::optimizeScript(
+    const std::string& script) {
     return impl_->optimizeScript(script);
 }
 
-bool TaskGenerator::validateScript(const std::string& script, const std::string& templateName) {
+bool TaskGenerator::validateScript(const std::string& script,
+                                   const std::string& templateName) {
     return impl_->validateScript(script, templateName);
 }
 
-size_t TaskGenerator::loadTemplatesFromDirectory(const std::string& templateDir) {
+size_t TaskGenerator::loadTemplatesFromDirectory(
+    const std::string& templateDir) {
     return impl_->loadTemplatesFromDirectory(templateDir);
 }
 
-bool TaskGenerator::saveTemplatesToDirectory(const std::string& templateDir) const {
+bool TaskGenerator::saveTemplatesToDirectory(
+    const std::string& templateDir) const {
     return impl_->saveTemplatesToDirectory(templateDir);
 }
 
-TaskGenerator::ScriptGenerationResult TaskGenerator::convertScriptFormat(const std::string& script, 
-                                                                         const std::string& fromFormat,
-                                                                         const std::string& toFormat) {
+TaskGenerator::ScriptGenerationResult TaskGenerator::convertScriptFormat(
+    const std::string& script, const std::string& fromFormat,
+    const std::string& toFormat) {
     return impl_->convertScriptFormat(script, fromFormat, toFormat);
 }
 
 // Task list generation method implementations
-TaskGenerator::TaskListResult TaskGenerator::generateTaskList(const TaskListConfig& config) {
+TaskGenerator::TaskListResult TaskGenerator::generateTaskList(
+    const TaskListConfig& config) {
     return impl_->generateTaskList(config);
 }
 
-TaskGenerator::TaskListResult TaskGenerator::generateTaskListFromJson(const json& configJson) {
+TaskGenerator::TaskListResult TaskGenerator::generateTaskListFromJson(
+    const json& configJson) {
     return impl_->generateTaskListFromJson(configJson);
 }
 
@@ -1272,7 +1406,8 @@ json TaskGenerator::expandTaskRepetitions(const json& tasks) {
     return impl_->expandTaskRepetitions(tasks);
 }
 
-json TaskGenerator::processConditionalTasks(const json& tasks, const json& context) {
+json TaskGenerator::processConditionalTasks(const json& tasks,
+                                            const json& context) {
     return impl_->processConditionalTasks(tasks, context);
 }
 
@@ -1288,15 +1423,18 @@ void TaskGenerator::registerDefaultTemplates() {
     impl_->registerDefaultTemplates();
 }
 
-bool TaskGenerator::evaluateCondition(const std::string& condition, const json& context) {
+bool TaskGenerator::evaluateCondition(const std::string& condition,
+                                      const json& context) {
     return impl_->evaluateCondition(condition, context);
 }
 
-std::optional<MacroValue> TaskGenerator::getMacro(const std::string& name) const {
+std::optional<MacroValue> TaskGenerator::getMacro(
+    const std::string& name) const {
     return impl_->getMacro(name);
 }
 
-void TaskGenerator::addMacros(const std::unordered_map<std::string, MacroValue>& macros) {
+void TaskGenerator::addMacros(
+    const std::unordered_map<std::string, MacroValue>& macros) {
     impl_->addMacros(macros);
 }
 

@@ -4,10 +4,10 @@
  */
 
 #include "calibration_tasks.hpp"
-#include "../exposure/exposure_tasks.hpp"
-#include <thread>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <thread>
+#include "../exposure/exposure_tasks.hpp"
 
 namespace lithium::task::camera {
 
@@ -16,14 +16,20 @@ namespace lithium::task::camera {
 // ============================================================================
 
 void AutoCalibrationTask::setupParameters() {
-    addParamDefinition("dark_count", "integer", false, 20, "Number of dark frames");
-    addParamDefinition("bias_count", "integer", false, 50, "Number of bias frames");
-    addParamDefinition("flat_count", "integer", false, 20, "Number of flat frames per filter");
-    addParamDefinition("dark_exposures", "array", false, json::array({60, 120, 300}), "Dark exposure times");
-    addParamDefinition("filters", "array", false, json::array({"L", "R", "G", "B"}), "Filters for flats");
+    addParamDefinition("dark_count", "integer", false, 20,
+                       "Number of dark frames");
+    addParamDefinition("bias_count", "integer", false, 50,
+                       "Number of bias frames");
+    addParamDefinition("flat_count", "integer", false, 20,
+                       "Number of flat frames per filter");
+    addParamDefinition("dark_exposures", "array", false,
+                       json::array({60, 120, 300}), "Dark exposure times");
+    addParamDefinition("filters", "array", false,
+                       json::array({"L", "R", "G", "B"}), "Filters for flats");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
     addParamDefinition("offset", "integer", false, 10, "Camera offset");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
 }
 
 void AutoCalibrationTask::validateParams(const json& params) {
@@ -55,13 +61,14 @@ void AutoCalibrationTask::executeImpl(const json& params) {
 
 void AutoCalibrationTask::acquireDarkFrames(const json& params) {
     int darkCount = params.value("dark_count", 20);
-    auto exposures = params.value("dark_exposures", std::vector<double>{60, 120, 300});
+    auto exposures =
+        params.value("dark_exposures", std::vector<double>{60, 120, 300});
 
     logProgress("Acquiring dark frames");
 
     for (double exposure : exposures) {
-        logProgress("Taking " + std::to_string(darkCount) + " darks at " + 
-                   std::to_string(exposure) + "s");
+        logProgress("Taking " + std::to_string(darkCount) + " darks at " +
+                    std::to_string(exposure) + "s");
 
         json darkParams = {
             {"exposure", exposure},
@@ -69,8 +76,7 @@ void AutoCalibrationTask::acquireDarkFrames(const json& params) {
             {"type", "dark"},
             {"gain", params.value("gain", 100)},
             {"offset", params.value("offset", 10)},
-            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-        };
+            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
         TakeManyExposureTask darkTask;
         darkTask.execute(darkParams);
@@ -88,8 +94,7 @@ void AutoCalibrationTask::acquireBiasFrames(const json& params) {
         {"type", "bias"},
         {"gain", params.value("gain", 100)},
         {"offset", params.value("offset", 10)},
-        {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-    };
+        {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
     TakeManyExposureTask biasTask;
     biasTask.execute(biasParams);
@@ -97,12 +102,15 @@ void AutoCalibrationTask::acquireBiasFrames(const json& params) {
 
 void AutoCalibrationTask::acquireFlatFrames(const json& params) {
     int flatCount = params.value("flat_count", 20);
-    auto filters = params.value("filters", std::vector<std::string>{"L", "R", "G", "B"});
+    auto filters =
+        params.value("filters", std::vector<std::string>{"L", "R", "G", "B"});
 
-    logProgress("Acquiring flat frames for " + std::to_string(filters.size()) + " filters");
+    logProgress("Acquiring flat frames for " + std::to_string(filters.size()) +
+                " filters");
 
     for (const auto& filter : filters) {
-        logProgress("Taking " + std::to_string(flatCount) + " flats with filter " + filter);
+        logProgress("Taking " + std::to_string(flatCount) +
+                    " flats with filter " + filter);
 
         json flatParams = params;
         flatParams["count"] = flatCount;
@@ -118,12 +126,16 @@ void AutoCalibrationTask::acquireFlatFrames(const json& params) {
 // ============================================================================
 
 void ThermalCycleTask::setupParameters() {
-    addParamDefinition("start_temp", "number", true, nullptr, "Starting temperature");
-    addParamDefinition("end_temp", "number", true, nullptr, "Ending temperature");
+    addParamDefinition("start_temp", "number", true, nullptr,
+                       "Starting temperature");
+    addParamDefinition("end_temp", "number", true, nullptr,
+                       "Ending temperature");
     addParamDefinition("temp_step", "number", false, 5.0, "Temperature step");
-    addParamDefinition("dark_count", "integer", false, 10, "Darks per temperature");
+    addParamDefinition("dark_count", "integer", false, 10,
+                       "Darks per temperature");
     addParamDefinition("exposure", "number", false, 60.0, "Exposure time");
-    addParamDefinition("settle_time", "number", false, 300.0, "Temperature settling time");
+    addParamDefinition("settle_time", "number", false, 300.0,
+                       "Temperature settling time");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
 }
 
@@ -148,7 +160,7 @@ void ThermalCycleTask::executeImpl(const json& params) {
     double settleTime = params.value("settle_time", 300.0);
 
     logProgress("Starting thermal cycle from " + std::to_string(startTemp) +
-               "°C to " + std::to_string(endTemp) + "°C");
+                "°C to " + std::to_string(endTemp) + "°C");
 
     double currentTemp = startTemp;
     int steps = static_cast<int>(std::abs(endTemp - startTemp) / tempStep) + 1;
@@ -156,21 +168,21 @@ void ThermalCycleTask::executeImpl(const json& params) {
 
     while ((startTemp < endTemp && currentTemp <= endTemp) ||
            (startTemp > endTemp && currentTemp >= endTemp)) {
-        
         double progress = static_cast<double>(step) / steps;
-        logProgress("Setting temperature to " + std::to_string(currentTemp) + "°C", progress);
+        logProgress(
+            "Setting temperature to " + std::to_string(currentTemp) + "°C",
+            progress);
 
         // Wait for temperature to settle (simulated)
         logProgress("Waiting for temperature to stabilize...");
-        std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(settleTime * 10)));
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(static_cast<int>(settleTime * 10)));
 
         // Take dark frames at this temperature
-        json darkParams = {
-            {"exposure", exposure},
-            {"count", darkCount},
-            {"type", "dark"},
-            {"gain", params.value("gain", 100)}
-        };
+        json darkParams = {{"exposure", exposure},
+                           {"count", darkCount},
+                           {"type", "dark"},
+                           {"gain", params.value("gain", 100)}};
 
         TakeManyExposureTask darkTask;
         darkTask.execute(darkParams);
@@ -188,13 +200,18 @@ void ThermalCycleTask::executeImpl(const json& params) {
 
 void FlatFieldSequenceTask::setupParameters() {
     addParamDefinition("count", "integer", false, 20, "Number of flat frames");
-    addParamDefinition("target_adu", "integer", false, 30000, "Target ADU level");
-    addParamDefinition("tolerance", "number", false, 0.1, "ADU tolerance fraction");
-    addParamDefinition("min_exposure", "number", false, 0.1, "Minimum exposure");
-    addParamDefinition("max_exposure", "number", false, 30.0, "Maximum exposure");
+    addParamDefinition("target_adu", "integer", false, 30000,
+                       "Target ADU level");
+    addParamDefinition("tolerance", "number", false, 0.1,
+                       "ADU tolerance fraction");
+    addParamDefinition("min_exposure", "number", false, 0.1,
+                       "Minimum exposure");
+    addParamDefinition("max_exposure", "number", false, 30.0,
+                       "Maximum exposure");
     addParamDefinition("filter", "string", false, "L", "Filter name");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
 }
 
 void FlatFieldSequenceTask::validateParams(const json& params) {
@@ -230,8 +247,7 @@ void FlatFieldSequenceTask::executeImpl(const json& params) {
             {"type", "flat"},
             {"filter", filter},
             {"gain", params.value("gain", 100)},
-            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-        };
+            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
         TakeExposureTask testExposure;
         testExposure.execute(testParams);
@@ -242,11 +258,13 @@ void FlatFieldSequenceTask::executeImpl(const json& params) {
         logProgress("Measured ADU: " + std::to_string(measuredADU));
 
         if (std::abs(measuredADU - targetADU) <= targetADU * tolerance) {
-            logProgress("Optimal exposure found: " + std::to_string(currentExposure) + "s");
+            logProgress("Optimal exposure found: " +
+                        std::to_string(currentExposure) + "s");
             break;
         }
 
-        currentExposure = calculateFlatExposure(currentExposure, measuredADU, targetADU);
+        currentExposure =
+            calculateFlatExposure(currentExposure, measuredADU, targetADU);
         currentExposure = std::clamp(currentExposure, minExposure, maxExposure);
     }
 
@@ -259,8 +277,7 @@ void FlatFieldSequenceTask::executeImpl(const json& params) {
         {"type", "flat"},
         {"filter", filter},
         {"gain", params.value("gain", 100)},
-        {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-    };
+        {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
     TakeManyExposureTask flatTask;
     flatTask.execute(flatParams);
@@ -269,8 +286,8 @@ void FlatFieldSequenceTask::executeImpl(const json& params) {
 }
 
 double FlatFieldSequenceTask::calculateFlatExposure(double currentExposure,
-                                                     int measuredADU,
-                                                     int targetADU) {
+                                                    int measuredADU,
+                                                    int targetADU) {
     // Linear scaling for flat exposure
     return currentExposure * static_cast<double>(targetADU) / measuredADU;
 }

@@ -8,6 +8,7 @@
 #define LITHIUM_SERVER_CONTROLLER_TARGET_HPP
 
 #include "../controller.hpp"
+#include "server/utils/response.hpp"
 
 #include <functional>
 #include <memory>
@@ -15,6 +16,10 @@
 #include "atom/log/spdlog_logger.hpp"
 #include "task/sequencer.hpp"
 #include "task/target.hpp"
+
+namespace lithium::server::controller {
+
+using ResponseBuilder = utils::ResponseBuilder;
 
 /**
  * @brief Comprehensive controller for target management operations
@@ -26,8 +31,7 @@
  */
 class TargetController : public Controller {
 private:
-    static std::weak_ptr<lithium::task::ExposureSequence>
-        mExposureSequence;
+    static std::weak_ptr<lithium::task::ExposureSequence> mExposureSequence;
 
     /**
      * @brief Utility function to handle target actions with comprehensive error
@@ -36,68 +40,38 @@ private:
     static auto handleTargetAction(
         const crow::request& req, const crow::json::rvalue& body,
         const std::string& command,
-        std::function<crow::json::wvalue(
-            std::shared_ptr<lithium::task::ExposureSequence>)>
+        std::function<
+            nlohmann::json(std::shared_ptr<lithium::task::ExposureSequence>)>
             func) {
-        crow::json::wvalue res;
-        res["command"] = command;
-        res["timestamp"] = std::time(nullptr);
-
-        LOG_INFO( "Received target command: {}", command);
-        LOG_INFO( "Request body: {}", req.body);
+        LOG_INFO("Received target command: {}", command);
+        LOG_INFO("Request body: {}", req.body);
 
         try {
             auto exposureSequence = mExposureSequence.lock();
             if (!exposureSequence) {
-                res["status"] = "error";
-                res["code"] = 500;
-                res["error"] =
-                    "Internal Server Error: ExposureSequence instance is null.";
-                LOG_ERROR(
-                      "ExposureSequence instance is null for command: {}",
-                      command);
-                return crow::response(500, res);
+                LOG_ERROR("ExposureSequence instance is null for command: {}",
+                          command);
+                return ResponseBuilder::internalError(
+                    "ExposureSequence instance is null");
             }
 
             auto result = func(exposureSequence);
-            res["status"] = "success";
-            res["code"] = 200;
-            res["data"] = std::move(result);
-            LOG_INFO( "Command '{}' executed successfully", command);
+            LOG_INFO("Command '{}' executed successfully", command);
+            return ResponseBuilder::success(result, command);
 
         } catch (const std::invalid_argument& e) {
-            res["status"] = "error";
-            res["code"] = 400;
-            res["error"] =
-                std::string("Bad Request: Invalid argument - ") + e.what();
-            LOG_ERROR( "Invalid argument for command {}: {}", command,
-                  e.what());
+            LOG_ERROR("Invalid argument for command {}: {}", command, e.what());
+            return ResponseBuilder::badRequest(
+                std::string("Invalid argument - ") + e.what());
         } catch (const std::runtime_error& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Runtime error - ") +
-                e.what();
-            LOG_ERROR( "Runtime error for command {}: {}", command, e.what());
+            LOG_ERROR("Runtime error for command {}: {}", command, e.what());
+            return ResponseBuilder::internalError(
+                std::string("Runtime error - ") + e.what());
         } catch (const std::exception& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Exception occurred - ") +
-                e.what();
-            LOG_ERROR( "Exception for command {}: {}", command, e.what());
+            LOG_ERROR("Exception for command {}: {}", command, e.what());
+            return ResponseBuilder::internalError(
+                std::string("Exception occurred - ") + e.what());
         }
-
-        LOG_INFO( "Response for command '{}': {}", command, res.dump());
-        int code = 500;
-        if (res["code"].t() == crow::json::type::Number) {
-            try {
-                code = std::stoi(res["code"].dump());
-            } catch (...) {
-                code = 500;
-            }
-        }
-        return crow::response(code, res);
     }
 
     /**
@@ -170,8 +144,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "addTarget",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("name")) {
                             throw std::invalid_argument(
@@ -196,8 +170,8 @@ public:
                     crow::json::load(req.body.empty() ? "{}" : req.body);
                 return handleTargetAction(
                     req, body, "removeTarget",
-                    [&body, &req](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body, &req](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         std::string name = extractTargetName(req, body);
                         exposureSequence->removeTarget(name);
@@ -214,8 +188,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "modifyTarget",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("name")) {
                             throw std::invalid_argument(
@@ -271,8 +245,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleTargetAction(
                     req, body, "getTargetNames",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto targetNames = exposureSequence->getTargetNames();
                         result["targets"] = targetNames;
@@ -287,8 +261,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleTargetAction(
                     req, body, "getTargetStatus",
-                    [&req](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&req](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         std::string name =
                             extractTargetName(req, crow::json::rvalue{});
@@ -329,8 +303,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleTargetAction(
                     req, body, "getTargetDetails",
-                    [&req](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&req](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto url_params = crow::query_string(req.url_params);
                         std::string name = url_params.get("name");
@@ -339,10 +313,10 @@ public:
                             // Return details for all targets
                             auto targetNames =
                                 exposureSequence->getTargetNames();
-                            std::vector<crow::json::wvalue> targets;
+                            std::vector<nlohmann::json> targets;
 
                             for (const auto& targetName : targetNames) {
-                                crow::json::wvalue targetInfo;
+                                nlohmann::json targetInfo;
                                 targetInfo["name"] = targetName;
 
                                 auto status = exposureSequence->getTargetStatus(
@@ -388,8 +362,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "setTargetPriority",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("name") || !body.has("priority")) {
                             throw std::invalid_argument(
@@ -416,8 +390,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "addTargetDependency",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("name") || !body.has("dependsOn")) {
                             throw std::invalid_argument(
@@ -443,8 +417,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "removeTargetDependency",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("name") || !body.has("dependsOn")) {
                             throw std::invalid_argument(
@@ -471,8 +445,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleTargetAction(
                     req, body, "getTargetDependencies",
-                    [&req](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&req](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         std::string name =
                             extractTargetName(req, crow::json::rvalue{});
@@ -492,8 +466,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleTargetAction(
                     req, body, "isTargetReady",
-                    [&req](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&req](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         std::string name =
                             extractTargetName(req, crow::json::rvalue{});
@@ -514,8 +488,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "addAlternativeTarget",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("targetName") ||
                             !body.has("alternativeName")) {
@@ -547,8 +521,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleTargetAction(
                     req, body, "getFailedTargets",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto failedTargets =
                             exposureSequence->getFailedTargets();
@@ -565,8 +539,8 @@ public:
                     crow::json::load(req.body.empty() ? "{}" : req.body);
                 return handleTargetAction(
                     req, body, "retryFailedTargets",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->retryFailedTargets();
                         result["message"] = "Failed targets retry initiated";
@@ -582,8 +556,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "batchAddTargets",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("targets")) {
                             throw std::invalid_argument(
@@ -630,8 +604,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleTargetAction(
                     req, body, "batchRemoveTargets",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("names")) {
                             throw std::invalid_argument(
@@ -680,5 +654,7 @@ public:
         return mExposureSequence.lock();
     }
 };
+
+}  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_TARGET_HPP

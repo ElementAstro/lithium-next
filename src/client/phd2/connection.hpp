@@ -74,9 +74,8 @@ public:
      * @param config Connection configuration
      * @param eventHandler Optional event handler
      */
-    explicit Connection(
-        ConnectionConfig config = {},
-        std::shared_ptr<EventHandler> eventHandler = nullptr);
+    explicit Connection(ConnectionConfig config = {},
+                        std::shared_ptr<EventHandler> eventHandler = nullptr);
 
     /**
      * @brief Construct with host/port (backward compatible)
@@ -106,9 +105,11 @@ public:
      * @brief Connect with std::chrono duration
      */
     template <typename Rep, typename Period>
-    [[nodiscard]] auto connect(std::chrono::duration<Rep, Period> timeout) -> bool {
+    [[nodiscard]] auto connect(std::chrono::duration<Rep, Period> timeout)
+        -> bool {
         return connect(static_cast<int>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+            std::chrono::duration_cast<std::chrono::milliseconds>(timeout)
+                .count()));
     }
 
     /**
@@ -133,29 +134,30 @@ public:
      * @param timeoutMs Timeout for the response
      * @return RpcResponse The response from PHD2
      */
-    [[nodiscard]] auto sendRpc(
-        std::string_view method,
-        const json& params = json::object(),
-        int timeoutMs = 10000) -> RpcResponse;
+    [[nodiscard]] auto sendRpc(std::string_view method,
+                               const json& params = json::object(),
+                               int timeoutMs = 10000) -> RpcResponse;
 
     /**
      * @brief Send RPC with std::chrono duration
      */
     template <typename Rep, typename Period>
-    [[nodiscard]] auto sendRpc(
-        std::string_view method,
-        const json& params,
-        std::chrono::duration<Rep, Period> timeout) -> RpcResponse {
-        return sendRpc(method, params, static_cast<int>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+    [[nodiscard]] auto sendRpc(std::string_view method, const json& params,
+                               std::chrono::duration<Rep, Period> timeout)
+        -> RpcResponse {
+        return sendRpc(
+            method, params,
+            static_cast<int>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(timeout)
+                    .count()));
     }
 
     /**
      * @brief Send RPC asynchronously
      */
-    [[nodiscard]] auto sendRpcAsync(
-        std::string_view method,
-        const json& params = json::object()) -> std::future<RpcResponse>;
+    [[nodiscard]] auto sendRpcAsync(std::string_view method,
+                                    const json& params = json::object())
+        -> std::future<RpcResponse>;
 
     /**
      * @brief Set event handler

@@ -16,7 +16,14 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 # Import loguru for logging
 from loguru import logger
 
-from .core import OperatingSystem, NginxError, ConfigError, InstallationError, OperationError, NginxPaths
+from .core import (
+    OperatingSystem,
+    NginxError,
+    ConfigError,
+    InstallationError,
+    OperationError,
+    NginxPaths,
+)
 from .utils import OutputColors
 
 
@@ -50,8 +57,9 @@ class NginxManager:
         """
         system = platform.system().lower()
         try:
-            return next(os_type for os_type in OperatingSystem
-                        if os_type.value == system)
+            return next(
+                os_type for os_type in OperatingSystem if os_type.value == system
+            )
         except StopIteration:
             return OperatingSystem.UNKNOWN
 
@@ -80,8 +88,7 @@ class NginxManager:
 
             case _:
                 # Default to Linux paths if OS is unknown
-                logger.warning(
-                    "Unknown OS detected, defaulting to Linux paths")
+                logger.warning("Unknown OS detected, defaulting to Linux paths")
                 base_path = Path("/etc/nginx")
                 binary_path = Path("/usr/sbin/nginx")
                 logs_path = Path("/var/log/nginx")
@@ -92,8 +99,7 @@ class NginxManager:
         sites_enabled = base_path / "sites-enabled"
         ssl_path = base_path / "ssl"
 
-        logger.debug(
-            f"Nginx paths configured: base={base_path}, binary={binary_path}")
+        logger.debug(f"Nginx paths configured: base={base_path}, binary={binary_path}")
         return NginxPaths(
             base_path=base_path,
             conf_path=conf_path,
@@ -102,7 +108,7 @@ class NginxManager:
             sites_available=sites_available,
             sites_enabled=sites_enabled,
             logs_path=logs_path,
-            ssl_path=ssl_path
+            ssl_path=ssl_path,
         )
 
     def _print_color(self, message: str, color: str = OutputColors.RESET) -> None:
@@ -118,7 +124,9 @@ class NginxManager:
         else:
             print(message)
 
-    def _run_command(self, cmd: Union[List[str], str], check: bool = True, **kwargs) -> subprocess.CompletedProcess:
+    def _run_command(
+        self, cmd: Union[List[str], str], check: bool = True, **kwargs
+    ) -> subprocess.CompletedProcess:
         """
         Run a shell command with proper error handling.
 
@@ -141,7 +149,7 @@ class NginxManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                **kwargs
+                **kwargs,
             )
         except subprocess.CalledProcessError as e:
             error_msg = f"Command '{cmd}' failed with error: {e.stderr.strip() if e.stderr else str(e)}"
@@ -159,8 +167,7 @@ class NginxManager:
             True if Nginx is installed, False otherwise
         """
         try:
-            result = self._run_command(
-                [str(self.paths.binary_path), "-v"], check=False)
+            result = self._run_command([str(self.paths.binary_path), "-v"], check=False)
             return result.returncode == 0
         except FileNotFoundError:
             logger.debug("Nginx binary not found")
@@ -186,36 +193,42 @@ class NginxManager:
                     if Path("/etc/debian_version").exists():
                         logger.info("Detected Debian-based system")
                         self._run_command(
-                            "sudo apt-get update && sudo apt-get install nginx -y", shell=True)
+                            "sudo apt-get update && sudo apt-get install nginx -y",
+                            shell=True,
+                        )
                     elif Path("/etc/redhat-release").exists():
                         logger.info("Detected RedHat-based system")
                         self._run_command(
-                            "sudo yum update && sudo yum install nginx -y", shell=True)
+                            "sudo yum update && sudo yum install nginx -y", shell=True
+                        )
                     else:
                         raise InstallationError(
-                            "Unsupported Linux distribution. Please install Nginx manually.")
+                            "Unsupported Linux distribution. Please install Nginx manually."
+                        )
 
                 case OperatingSystem.WINDOWS:
                     self._print_color(
-                        "Windows automatic installation not supported. Please install manually.", OutputColors.YELLOW)
+                        "Windows automatic installation not supported. Please install manually.",
+                        OutputColors.YELLOW,
+                    )
                     raise InstallationError(
-                        "Automatic installation on Windows is not supported.")
+                        "Automatic installation on Windows is not supported."
+                    )
 
                 case OperatingSystem.MACOS:
                     logger.info("Installing Nginx via Homebrew")
-                    self._run_command(
-                        "brew update && brew install nginx", shell=True)
+                    self._run_command("brew update && brew install nginx", shell=True)
 
                 case _:
                     raise InstallationError(
-                        "Unsupported platform. Please install Nginx manually.")
+                        "Unsupported platform. Please install Nginx manually."
+                    )
 
             logger.success("Nginx installed successfully")
 
         except Exception as e:
             logger.exception("Installation failed")
-            raise InstallationError(
-                f"Failed to install Nginx: {str(e)}") from e
+            raise InstallationError(f"Failed to install Nginx: {str(e)}") from e
 
     def start_nginx(self) -> None:
         """
@@ -243,7 +256,7 @@ class NginxManager:
             logger.error("Nginx binary not found")
             raise OperationError("Nginx binary not found")
 
-        self._run_command([str(self.paths.binary_path), '-s', 'stop'])
+        self._run_command([str(self.paths.binary_path), "-s", "stop"])
         self._print_color("Nginx has been stopped", OutputColors.GREEN)
         logger.success("Nginx stopped")
 
@@ -258,9 +271,8 @@ class NginxManager:
             logger.error("Nginx binary not found")
             raise OperationError("Nginx binary not found")
 
-        self._run_command([str(self.paths.binary_path), '-s', 'reload'])
-        self._print_color(
-            "Nginx configuration has been reloaded", OutputColors.GREEN)
+        self._run_command([str(self.paths.binary_path), "-s", "reload"])
+        self._print_color("Nginx configuration has been reloaded", OutputColors.GREEN)
         logger.success("Nginx configuration reloaded")
 
     def restart_nginx(self) -> None:
@@ -287,15 +299,18 @@ class NginxManager:
             raise ConfigError("Nginx configuration file not found")
 
         try:
-            self._run_command([str(self.paths.binary_path),
-                              '-t', '-c', str(self.paths.conf_path)])
+            self._run_command(
+                [str(self.paths.binary_path), "-t", "-c", str(self.paths.conf_path)]
+            )
             self._print_color(
-                "Nginx configuration syntax is correct", OutputColors.GREEN)
+                "Nginx configuration syntax is correct", OutputColors.GREEN
+            )
             logger.success("Nginx configuration syntax is correct")
             return True
         except OperationError:
             self._print_color(
-                "Nginx configuration syntax is incorrect", OutputColors.RED)
+                "Nginx configuration syntax is incorrect", OutputColors.RED
+            )
             logger.error("Nginx configuration syntax is incorrect")
             return False
 
@@ -310,10 +325,10 @@ class NginxManager:
             match self.os:
                 case OperatingSystem.WINDOWS:
                     result = self._run_command(
-                        'tasklist | findstr nginx.exe', shell=True, check=False)
+                        "tasklist | findstr nginx.exe", shell=True, check=False
+                    )
                 case _:
-                    result = self._run_command(
-                        'pgrep nginx', shell=True, check=False)
+                    result = self._run_command("pgrep nginx", shell=True, check=False)
 
             is_running = result.returncode == 0 and result.stdout.strip() != ""
 
@@ -340,7 +355,7 @@ class NginxManager:
         Raises:
             OperationError: If the version cannot be retrieved
         """
-        result = self._run_command([str(self.paths.binary_path), '-v'])
+        result = self._run_command([str(self.paths.binary_path), "-v"])
         version_output = result.stderr.strip()
         self._print_color(version_output, OutputColors.CYAN)
         logger.info(f"Nginx version: {version_output}")
@@ -369,13 +384,14 @@ class NginxManager:
         try:
             shutil.copy2(self.paths.conf_path, backup_file)
             self._print_color(
-                f"Nginx configuration file has been backed up to {backup_file}", OutputColors.GREEN)
+                f"Nginx configuration file has been backed up to {backup_file}",
+                OutputColors.GREEN,
+            )
             logger.success(f"Configuration backed up to {backup_file}")
             return backup_file
         except Exception as e:
             logger.exception("Backup failed")
-            raise OperationError(
-                f"Failed to backup configuration: {str(e)}") from e
+            raise OperationError(f"Failed to backup configuration: {str(e)}") from e
 
     def list_backups(self) -> List[Path]:
         """
@@ -388,23 +404,24 @@ class NginxManager:
             logger.info("No backup directory found")
             return []
 
-        backups = sorted(list(self.paths.backup_path.glob("nginx.conf.*.bak")),
-                         key=lambda p: p.stat().st_mtime,
-                         reverse=True)
+        backups = sorted(
+            list(self.paths.backup_path.glob("nginx.conf.*.bak")),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
 
         if backups:
-            self._print_color(
-                "Available configuration backups:", OutputColors.CYAN)
+            self._print_color("Available configuration backups:", OutputColors.CYAN)
             for i, backup in enumerate(backups, 1):
-                backup_time = datetime.datetime.fromtimestamp(
-                    backup.stat().st_mtime)
+                backup_time = datetime.datetime.fromtimestamp(backup.stat().st_mtime)
                 self._print_color(
-                    f"{i}. {backup.name} - {backup_time.strftime('%Y-%m-%d %H:%M:%S')}", OutputColors.CYAN)
+                    f"{i}. {backup.name} - {backup_time.strftime('%Y-%m-%d %H:%M:%S')}",
+                    OutputColors.CYAN,
+                )
 
             logger.info(f"Found {len(backups)} backup(s)")
         else:
-            self._print_color(
-                "No configuration backups found", OutputColors.YELLOW)
+            self._print_color("No configuration backups found", OutputColors.YELLOW)
             logger.info("No configuration backups found")
 
         return backups
@@ -437,13 +454,16 @@ class NginxManager:
         try:
             # Make a backup of current config before restoring
             current_backup = self.backup_config(
-                custom_name=f"pre_restore.{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.bak")
+                custom_name=f"pre_restore.{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.bak"
+            )
             logger.info(f"Created safety backup at {current_backup}")
 
             # Restore the backup
             shutil.copy2(backup_file, self.paths.conf_path)
             self._print_color(
-                f"Nginx configuration has been restored from {backup_file}", OutputColors.GREEN)
+                f"Nginx configuration has been restored from {backup_file}",
+                OutputColors.GREEN,
+            )
             logger.success(f"Configuration restored from {backup_file}")
 
             # Check if the restored config is valid
@@ -451,11 +471,15 @@ class NginxManager:
 
         except Exception as e:
             logger.exception("Restore failed")
-            raise OperationError(
-                f"Failed to restore configuration: {str(e)}") from e
+            raise OperationError(f"Failed to restore configuration: {str(e)}") from e
 
-    def create_virtual_host(self, server_name: str, port: int = 80,
-                            root_dir: Optional[str] = None, template: str = 'basic') -> Path:
+    def create_virtual_host(
+        self,
+        server_name: str,
+        port: int = 80,
+        root_dir: Optional[str] = None,
+        template: str = "basic",
+    ) -> Path:
         """
         Create a new virtual host configuration.
 
@@ -490,7 +514,7 @@ class NginxManager:
 
         # Templates for different virtual host configurations
         templates = {
-            'basic': f"""server {{
+            "basic": f"""server {{
     listen {port};
     server_name {server_name};
     root {root_dir};
@@ -504,7 +528,7 @@ class NginxManager:
     error_log {self.paths.logs_path}/{server_name}.error.log;
 }}
 """,
-            'php': f"""server {{
+            "php": f"""server {{
     listen {port};
     server_name {server_name};
     root {root_dir};
@@ -526,7 +550,7 @@ class NginxManager:
     error_log {self.paths.logs_path}/{server_name}.error.log;
 }}
 """,
-            'proxy': f"""server {{
+            "proxy": f"""server {{
     listen {port};
     server_name {server_name};
 
@@ -541,7 +565,7 @@ class NginxManager:
     access_log {self.paths.logs_path}/{server_name}.access.log;
     error_log {self.paths.logs_path}/{server_name}.error.log;
 }}
-"""
+""",
         }
 
         if template not in templates:
@@ -550,19 +574,21 @@ class NginxManager:
 
         try:
             # Write the configuration file
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 f.write(templates[template])
 
             self._print_color(
-                f"Virtual host configuration created at {config_file}", OutputColors.GREEN)
+                f"Virtual host configuration created at {config_file}",
+                OutputColors.GREEN,
+            )
             logger.success(
-                f"Virtual host {server_name} created using {template} template")
+                f"Virtual host {server_name} created using {template} template"
+            )
             return config_file
 
         except Exception as e:
             logger.exception("Virtual host creation failed")
-            raise ConfigError(
-                f"Failed to create virtual host: {str(e)}") from e
+            raise ConfigError(f"Failed to create virtual host: {str(e)}") from e
 
     def enable_virtual_host(self, server_name: str) -> None:
         """
@@ -585,19 +611,18 @@ class NginxManager:
             # Handle different OS symlink capabilities
             match self.os:
                 case OperatingSystem.WINDOWS:
-                    logger.info(
-                        f"Using file copy instead of symlink on Windows")
+                    logger.info(f"Using file copy instead of symlink on Windows")
                     shutil.copy2(source, target)
                 case _:
                     # Create symlink (remove if it already exists)
                     if target.exists():
                         logger.debug(f"Removing existing symlink at {target}")
                         target.unlink()
-                    target.symlink_to(
-                        Path(f"../sites-available/{server_name}.conf"))
+                    target.symlink_to(Path(f"../sites-available/{server_name}.conf"))
 
             self._print_color(
-                f"Virtual host {server_name} has been enabled", OutputColors.GREEN)
+                f"Virtual host {server_name} has been enabled", OutputColors.GREEN
+            )
             logger.success(f"Virtual host {server_name} enabled")
 
             # Check config after enabling
@@ -605,8 +630,7 @@ class NginxManager:
 
         except Exception as e:
             logger.exception("Failed to enable virtual host")
-            raise ConfigError(
-                f"Failed to enable virtual host: {str(e)}") from e
+            raise ConfigError(f"Failed to enable virtual host: {str(e)}") from e
 
     def disable_virtual_host(self, server_name: str) -> None:
         """
@@ -622,20 +646,21 @@ class NginxManager:
 
         if not target.exists():
             self._print_color(
-                f"Virtual host {server_name} is already disabled", OutputColors.YELLOW)
+                f"Virtual host {server_name} is already disabled", OutputColors.YELLOW
+            )
             logger.info(f"Virtual host {server_name} is already disabled")
             return
 
         try:
             target.unlink()
             self._print_color(
-                f"Virtual host {server_name} has been disabled", OutputColors.GREEN)
+                f"Virtual host {server_name} has been disabled", OutputColors.GREEN
+            )
             logger.success(f"Virtual host {server_name} disabled")
 
         except Exception as e:
             logger.exception("Failed to disable virtual host")
-            raise ConfigError(
-                f"Failed to disable virtual host: {str(e)}") from e
+            raise ConfigError(f"Failed to disable virtual host: {str(e)}") from e
 
     def list_virtual_hosts(self) -> Dict[str, bool]:
         """
@@ -650,10 +675,8 @@ class NginxManager:
         self.paths.sites_available.mkdir(parents=True, exist_ok=True)
         self.paths.sites_enabled.mkdir(parents=True, exist_ok=True)
 
-        available_hosts = [
-            f.stem for f in self.paths.sites_available.glob("*.conf")]
-        enabled_hosts = [
-            f.stem for f in self.paths.sites_enabled.glob("*.conf")]
+        available_hosts = [f.stem for f in self.paths.sites_available.glob("*.conf")]
+        enabled_hosts = [f.stem for f in self.paths.sites_enabled.glob("*.conf")]
 
         for host in available_hosts:
             result[host] = host in enabled_hosts
@@ -672,9 +695,12 @@ class NginxManager:
 
         return result
 
-    def analyze_logs(self, domain: Optional[str] = None,
-                     lines: int = 100,
-                     filter_pattern: Optional[str] = None) -> List[Dict[str, str]]:
+    def analyze_logs(
+        self,
+        domain: Optional[str] = None,
+        lines: int = 100,
+        filter_pattern: Optional[str] = None,
+    ) -> List[Dict[str, str]]:
         """
         Analyze Nginx access logs.
 
@@ -692,14 +718,14 @@ class NginxManager:
             log_path = self.paths.logs_path / f"{domain}.access.log"
             if not log_path.exists():
                 self._print_color(
-                    f"No access log found for {domain}", OutputColors.YELLOW)
+                    f"No access log found for {domain}", OutputColors.YELLOW
+                )
                 logger.warning(f"No access log found for {domain}")
                 return []
         else:
             log_path = self.paths.logs_path / "access.log"
             if not log_path.exists():
-                self._print_color(
-                    "No global access log found", OutputColors.YELLOW)
+                self._print_color("No global access log found", OutputColors.YELLOW)
                 logger.warning("No global access log found")
                 return []
 
@@ -731,18 +757,22 @@ class NginxManager:
 
                 match = re.match(log_pattern, line)
                 if match:
-                    ip, user, timestamp, request, status, size, referer, user_agent = match.groups()
+                    ip, user, timestamp, request, status, size, referer, user_agent = (
+                        match.groups()
+                    )
 
-                    parsed_entries.append({
-                        "ip": ip,
-                        "user": user,
-                        "timestamp": timestamp,
-                        "request": request,
-                        "status": status,
-                        "size": size,
-                        "referer": referer,
-                        "user_agent": user_agent
-                    })
+                    parsed_entries.append(
+                        {
+                            "ip": ip,
+                            "user": user,
+                            "timestamp": timestamp,
+                            "request": request,
+                            "status": status,
+                            "size": size,
+                            "referer": referer,
+                            "user_agent": user_agent,
+                        }
+                    )
                 else:
                     # For lines that don't match the pattern, store them as raw entries
                     parsed_entries.append({"raw": line})
@@ -754,18 +784,17 @@ class NginxManager:
                 for entry in parsed_entries:
                     if "status" in entry:
                         status = entry["status"]
-                        status_counts[status] = status_counts.get(
-                            status, 0) + 1
+                        status_counts[status] = status_counts.get(status, 0) + 1
 
                 self._print_color("Log Analysis Summary:", OutputColors.CYAN)
                 self._print_color(
-                    f"  Total entries: {len(parsed_entries)}", OutputColors.CYAN)
+                    f"  Total entries: {len(parsed_entries)}", OutputColors.CYAN
+                )
 
                 logger.info(f"Parsed {len(parsed_entries)} log entries")
 
                 if status_counts:
-                    self._print_color(
-                        "  Status code breakdown:", OutputColors.CYAN)
+                    self._print_color("  Status code breakdown:", OutputColors.CYAN)
 
                     for status, count in sorted(status_counts.items()):
                         if status.startswith("2"):
@@ -789,8 +818,9 @@ class NginxManager:
             logger.exception("Failed to analyze logs")
             return []
 
-    def generate_ssl_cert(self, domain: str, email: Optional[str] = None,
-                          use_letsencrypt: bool = True) -> Tuple[Path, Path]:
+    def generate_ssl_cert(
+        self, domain: str, email: Optional[str] = None, use_letsencrypt: bool = True
+    ) -> Tuple[Path, Path]:
         """
         Generate SSL certificates for a domain.
 
@@ -821,20 +851,24 @@ class NginxManager:
                 logger.info(f"Using Let's Encrypt with email: {email}")
                 # Use certbot to generate certificates
                 cmd = [
-                    "certbot", "certonly", "--webroot",
-                    "-w", "/var/www/html",
-                    "-d", domain,
-                    "--email", email,
-                    "--agree-tos", "--non-interactive"
+                    "certbot",
+                    "certonly",
+                    "--webroot",
+                    "-w",
+                    "/var/www/html",
+                    "-d",
+                    domain,
+                    "--email",
+                    email,
+                    "--agree-tos",
+                    "--non-interactive",
                 ]
 
                 self._run_command(cmd)
 
                 # Link Let's Encrypt certificates to our location
-                letsencrypt_cert = Path(
-                    f"/etc/letsencrypt/live/{domain}/fullchain.pem")
-                letsencrypt_key = Path(
-                    f"/etc/letsencrypt/live/{domain}/privkey.pem")
+                letsencrypt_cert = Path(f"/etc/letsencrypt/live/{domain}/fullchain.pem")
+                letsencrypt_key = Path(f"/etc/letsencrypt/live/{domain}/privkey.pem")
 
                 if letsencrypt_cert.exists() and letsencrypt_key.exists():
                     if cert_path.exists():
@@ -844,35 +878,43 @@ class NginxManager:
 
                     cert_path.symlink_to(letsencrypt_cert)
                     key_path.symlink_to(letsencrypt_key)
-                    logger.debug(
-                        f"Created symlinks to Let's Encrypt certificates")
+                    logger.debug(f"Created symlinks to Let's Encrypt certificates")
                 else:
                     logger.error("Let's Encrypt certificates not found")
-                    raise OperationError(
-                        "Let's Encrypt certificates not found")
+                    raise OperationError("Let's Encrypt certificates not found")
             else:
                 logger.info("Generating self-signed certificate")
                 # Generate self-signed certificate
                 cmd = [
-                    "openssl", "req", "-x509", "-nodes",
-                    "-days", "365", "-newkey", "rsa:2048",
-                    "-keyout", str(key_path),
-                    "-out", str(cert_path),
-                    "-subj", f"/CN={domain}"
+                    "openssl",
+                    "req",
+                    "-x509",
+                    "-nodes",
+                    "-days",
+                    "365",
+                    "-newkey",
+                    "rsa:2048",
+                    "-keyout",
+                    str(key_path),
+                    "-out",
+                    str(cert_path),
+                    "-subj",
+                    f"/CN={domain}",
                 ]
 
                 self._run_command(cmd)
                 logger.debug("Self-signed certificate created successfully")
 
             self._print_color(
-                f"SSL certificate for {domain} generated successfully", OutputColors.GREEN)
+                f"SSL certificate for {domain} generated successfully",
+                OutputColors.GREEN,
+            )
             logger.success(f"SSL certificate generated for {domain}")
             return cert_path, key_path
 
         except Exception as e:
             logger.exception("SSL certificate generation failed")
-            raise OperationError(
-                f"Failed to generate SSL certificate: {str(e)}") from e
+            raise OperationError(f"Failed to generate SSL certificate: {str(e)}") from e
 
     def configure_ssl(self, domain: str, cert_path: Path, key_path: Path) -> None:
         """
@@ -891,18 +933,18 @@ class NginxManager:
 
         if not config_path.exists():
             logger.error(f"Virtual host configuration for {domain} not found")
-            raise ConfigError(
-                f"Virtual host configuration for {domain} not found")
+            raise ConfigError(f"Virtual host configuration for {domain} not found")
 
         try:
             # Read the existing configuration
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config = f.read()
 
             # Check if SSL is already configured
             if "listen 443 ssl" in config:
                 self._print_color(
-                    f"SSL is already configured for {domain}", OutputColors.YELLOW)
+                    f"SSL is already configured for {domain}", OutputColors.YELLOW
+                )
                 logger.warning(f"SSL is already configured for {domain}")
                 return
 
@@ -911,23 +953,24 @@ class NginxManager:
 server {{
     listen 443 ssl;
     server_name {domain};
-    
+
     ssl_certificate {cert_path};
     ssl_certificate_key {key_path};
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
-    
+
     # Rest of configuration copied from HTTP server block
 """
 
             # Extract the contents inside the existing server block
-            match = re.search(r'server\s*{(.*?)}', config, re.DOTALL)
+            match = re.search(r"server\s*{(.*?)}", config, re.DOTALL)
             if match:
                 server_block_content = match.group(1)
 
                 # Remove the listen directive from the copied content
                 server_block_content = re.sub(
-                    r'\s*listen\s+\d+;', '', server_block_content)
+                    r"\s*listen\s+\d+;", "", server_block_content
+                )
 
                 # Complete the SSL server block
                 ssl_config += server_block_content + "\n}"
@@ -945,19 +988,17 @@ server {{
                 new_config = redirect_config + "\n" + ssl_config
                 logger.debug("Created new virtual host configuration with SSL")
 
-                with open(config_path, 'w') as f:
+                with open(config_path, "w") as f:
                     f.write(new_config)
 
-                self._print_color(
-                    f"SSL configured for {domain}", OutputColors.GREEN)
+                self._print_color(f"SSL configured for {domain}", OutputColors.GREEN)
                 logger.success(f"SSL configured for {domain}")
 
                 # Check if configuration is valid
                 self.check_config()
             else:
                 logger.error(f"Could not parse server block in {config_path}")
-                raise ConfigError(
-                    f"Could not parse server block in {config_path}")
+                raise ConfigError(f"Could not parse server block in {config_path}")
 
         except Exception as e:
             logger.exception("SSL configuration failed")
@@ -977,7 +1018,7 @@ server {{
             "config_valid": False,
             "version": None,
             "virtual_hosts": 0,
-            "errors": []
+            "errors": [],
         }
 
         try:
@@ -989,8 +1030,7 @@ server {{
                 # Get Nginx version
                 try:
                     version_output = self.get_version()
-                    version_match = re.search(
-                        r'nginx/(\d+\.\d+\.\d+)', version_output)
+                    version_match = re.search(r"nginx/(\d+\.\d+\.\d+)", version_output)
                     if version_match:
                         results["version"] = version_match.group(1)
                         logger.debug(f"Nginx version: {results['version']}")
@@ -1019,8 +1059,7 @@ server {{
 
                 # Count virtual hosts
                 try:
-                    virtual_hosts = list(
-                        self.paths.sites_available.glob("*.conf"))
+                    virtual_hosts = list(self.paths.sites_available.glob("*.conf"))
                     results["virtual_hosts"] = len(virtual_hosts)
                     logger.debug(f"Virtual hosts: {results['virtual_hosts']}")
                 except Exception as e:
@@ -1033,7 +1072,8 @@ server {{
                     if self.paths.logs_path.exists():
                         if self.os != OperatingSystem.WINDOWS:
                             df_result = self._run_command(
-                                f"df -h {self.paths.logs_path}", shell=True)
+                                f"df -h {self.paths.logs_path}", shell=True
+                            )
                             results["disk_space"] = df_result.stdout.strip()
                             logger.debug("Disk space check completed")
                 except Exception as e:
@@ -1043,22 +1083,33 @@ server {{
 
             # Display results
             self._print_color("Nginx Health Check Results:", OutputColors.CYAN)
-            self._print_color(f"  Installed: {results['nginx_installed']}",
-                              OutputColors.GREEN if results["nginx_installed"] else OutputColors.RED)
+            self._print_color(
+                f"  Installed: {results['nginx_installed']}",
+                OutputColors.GREEN if results["nginx_installed"] else OutputColors.RED,
+            )
 
             if results["nginx_installed"]:
-                self._print_color(f"  Running: {results['nginx_running']}",
-                                  OutputColors.GREEN if results["nginx_running"] else OutputColors.RED)
-                self._print_color(f"  Configuration Valid: {results['config_valid']}",
-                                  OutputColors.GREEN if results["config_valid"] else OutputColors.RED)
                 self._print_color(
-                    f"  Version: {results['version']}", OutputColors.CYAN)
+                    f"  Running: {results['nginx_running']}",
+                    (
+                        OutputColors.GREEN
+                        if results["nginx_running"]
+                        else OutputColors.RED
+                    ),
+                )
                 self._print_color(
-                    f"  Virtual Hosts: {results['virtual_hosts']}", OutputColors.CYAN)
+                    f"  Configuration Valid: {results['config_valid']}",
+                    OutputColors.GREEN if results["config_valid"] else OutputColors.RED,
+                )
+                self._print_color(f"  Version: {results['version']}", OutputColors.CYAN)
+                self._print_color(
+                    f"  Virtual Hosts: {results['virtual_hosts']}", OutputColors.CYAN
+                )
 
                 if "disk_space" in results:
                     self._print_color(
-                        f"  Disk Space:\n{results['disk_space']}", OutputColors.CYAN)
+                        f"  Disk Space:\n{results['disk_space']}", OutputColors.CYAN
+                    )
 
             if results["errors"]:
                 self._print_color("  Errors:", OutputColors.RED)

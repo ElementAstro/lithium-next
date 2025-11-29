@@ -12,10 +12,10 @@
 #include <utility>
 
 #include "atom/error/exception.hpp"
-#include "spdlog/spdlog.h"
 #include "atom/type/json.hpp"
 #include "atom/utils/container.hpp"
 #include "extra/tinyxml2/tinyxml2.h"
+#include "spdlog/spdlog.h"
 
 #if __has_include(<yaml-cpp/yaml.h>)
 #include <yaml-cpp/yaml.h>
@@ -85,9 +85,9 @@ void DependencyGraph::validateVersion(const Node& from, const Node& to,
 
     if (*toVersion < requiredVersion) {
         spdlog::error(
-              "Version requirement not satisfied for dependency {} -> {}. "
-              "Required: {}, Found: {}",
-              from, to, requiredVersion.toString(), toVersion->toString());
+            "Version requirement not satisfied for dependency {} -> {}. "
+            "Required: {}, Found: {}",
+            from, to, requiredVersion.toString(), toVersion->toString());
         THROW_INVALID_ARGUMENT(
             "Version requirement not satisfied for dependency " + from +
             " -> " + to + ". Required: " + requiredVersion.toString() +
@@ -118,7 +118,7 @@ void DependencyGraph::addDependency(const Node& from, const Node& to,
 
     std::unique_lock lock(mutex_);
     spdlog::info("Adding dependency from {} to {} with required version: {}",
-          from, to, requiredVersion.toString());
+                 from, to, requiredVersion.toString());
 
     adjList_[from].insert(to);
     incomingEdges_[to].insert(from);
@@ -236,7 +236,7 @@ auto DependencyGraph::topologicalSort() const noexcept
         }
 
         spdlog::info("Topological sort completed successfully with {} nodes.",
-              sortedNodes.size());
+                     sortedNodes.size());
         return sortedNodes;
     } catch (const std::exception& e) {
         spdlog::error("Error during topological sort: {}", e.what());
@@ -247,7 +247,7 @@ auto DependencyGraph::topologicalSort() const noexcept
 auto DependencyGraph::resolveDependencies(std::span<const Node> directories)
     -> std::vector<Node> {
     spdlog::info("Resolving dependencies for {} directories.",
-          directories.size());
+                 directories.size());
 
     if (directories.empty()) {
         spdlog::warn("No directories provided for dependency resolution.");
@@ -309,7 +309,7 @@ auto DependencyGraph::resolveDependencies(std::span<const Node> directories)
         }
 
         spdlog::info("Dependencies resolved successfully with {} packages.",
-              sortedPackagesOpt->size());
+                     sortedPackagesOpt->size());
 
         return removeDuplicates(*sortedPackagesOpt);
     } catch (const std::exception& e) {
@@ -322,7 +322,7 @@ auto DependencyGraph::resolveSystemDependencies(
     std::span<const Node> directories)
     -> std::unordered_map<std::string, Version> {
     spdlog::info("Resolving system dependencies for {} directories.",
-          directories.size());
+                 directories.size());
 
     try {
         std::unordered_map<std::string, Version> systemDeps;
@@ -349,16 +349,16 @@ auto DependencyGraph::resolveSystemDependencies(
                                 systemDeps.end()) {
                                 systemDeps[systemDepName] = version;
                                 spdlog::info(
-                                      "Added system dependency: {} with "
-                                      "version {}",
-                                      systemDepName, version.toString());
+                                    "Added system dependency: {} with "
+                                    "version {}",
+                                    systemDepName, version.toString());
                             } else {
                                 if (systemDeps[systemDepName] < version) {
                                     systemDeps[systemDepName] = version;
                                     spdlog::info(
-                                          "Updated system dependency: {} to "
-                                          "version {}",
-                                          systemDepName, version.toString());
+                                        "Updated system dependency: {} to "
+                                        "version {}",
+                                        systemDepName, version.toString());
                                 }
                             }
                         }
@@ -368,9 +368,9 @@ auto DependencyGraph::resolveSystemDependencies(
         }
 
         spdlog::info(
-              "System dependencies resolved successfully with {} system "
-              "dependencies.",
-              systemDeps.size());
+            "System dependencies resolved successfully with {} system "
+            "dependencies.",
+            systemDeps.size());
 
         return atom::utils::unique(systemDeps);
     } catch (const std::exception& e) {
@@ -382,7 +382,7 @@ auto DependencyGraph::resolveSystemDependencies(
 auto DependencyGraph::removeDuplicates(std::span<const Node> input) noexcept
     -> std::vector<Node> {
     spdlog::info("Removing duplicates from dependency list with {} items.",
-          input.size());
+                 input.size());
 
     std::unordered_set<Node> uniqueNodes;
     std::vector<Node> result;
@@ -445,8 +445,8 @@ auto DependencyGraph::parsePackageJson(std::string_view path)
                     deps[key] = Version{};
                 }
             } catch (const std::exception& e) {
-                spdlog::error("Error parsing version for dependency {}: {}", key,
-                      e.what());
+                spdlog::error("Error parsing version for dependency {}: {}",
+                              key, e.what());
                 THROW_INVALID_ARGUMENT("Error parsing version for dependency " +
                                        key + ": " + e.what());
             }
@@ -455,8 +455,8 @@ auto DependencyGraph::parsePackageJson(std::string_view path)
 
     file.close();
     spdlog::info(
-          "Parsed package.json file: {} successfully with {} dependencies.",
-          path, deps.size());
+        "Parsed package.json file: {} successfully with {} dependencies.", path,
+        deps.size());
     return {packageName, deps};
 }
 
@@ -522,7 +522,7 @@ auto DependencyGraph::parsePackageYaml(std::string_view path)
                     Version::parse(dep.second.as<std::string>());
             } catch (const std::exception& e) {
                 spdlog::error("Error parsing version for dependency {}: {}",
-                      dep.first.as<std::string>(), e.what());
+                              dep.first.as<std::string>(), e.what());
                 THROW_INVALID_ARGUMENT("Error parsing version for dependency " +
                                        dep.first.as<std::string>() + ": " +
                                        e.what());
@@ -548,15 +548,14 @@ auto DependencyGraph::hasCycleUtil(
                 if (!visited.contains(neighbor) &&
                     hasCycleUtil(neighbor, visited, recStack)) {
                     return true;
-                }
-                else if (recStack.contains(neighbor)) {
+                } else if (recStack.contains(neighbor)) {
                     spdlog::warn("Cycle detected: {} -> {}", node, neighbor);
                     return true;
                 }
             }
         } catch (const std::exception& e) {
             spdlog::error("Error checking for cycles at node {}: {}", node,
-                  e.what());
+                          e.what());
             return false;
         }
     }
@@ -582,7 +581,7 @@ auto DependencyGraph::topologicalSortUtil(
         }
     } catch (const std::exception& e) {
         spdlog::error("Error during topological sort at node {}: {}", node,
-              e.what());
+                      e.what());
         return false;
     }
 
@@ -599,12 +598,12 @@ auto DependencyGraph::getAllDependencies(const Node& node) const noexcept
     try {
         getAllDependenciesUtil(node, allDependencies);
         spdlog::info(
-              "All dependencies for node {} retrieved successfully. {} "
-              "dependencies found.",
-              node, allDependencies.size());
+            "All dependencies for node {} retrieved successfully. {} "
+            "dependencies found.",
+            node, allDependencies.size());
     } catch (const std::exception& e) {
         spdlog::error("Error getting all dependencies for node {}: {}", node,
-              e.what());
+                      e.what());
     }
 
     return allDependencies;
@@ -680,9 +679,9 @@ auto DependencyGraph::detectVersionConflicts() const noexcept
                             conflicts.emplace_back(node, otherNode, required,
                                                    otherRequired);
                             spdlog::info(
-                                  "Version conflict detected: {} and {} "
-                                  "require different versions of {}",
-                                  node, otherNode, dep);
+                                "Version conflict detected: {} and {} "
+                                "require different versions of {}",
+                                node, otherNode, dep);
                         }
                     }
                 }
@@ -739,7 +738,7 @@ auto DependencyGraph::getGroupDependencies(
     }
 
     spdlog::info("Retrieved {} dependencies for group {}", result.size(),
-          groupNameStr);
+                 groupNameStr);
     return std::vector<Node>(result.begin(), result.end());
 }
 
@@ -747,7 +746,7 @@ void DependencyGraph::clearCache() noexcept {
     try {
         std::unique_lock lock(mutex_);
         spdlog::info("Clearing dependency cache with {} entries",
-              dependencyCache_.size());
+                     dependencyCache_.size());
         dependencyCache_.clear();
         spdlog::info("Dependency cache cleared successfully");
     } catch (const std::exception& e) {
@@ -759,12 +758,12 @@ auto DependencyGraph::resolveParallelDependencies(
     std::span<const Node> directories) -> std::vector<Node> {
     if (directories.empty()) {
         spdlog::warn(
-              "No directories provided for parallel dependency resolution");
+            "No directories provided for parallel dependency resolution");
         return {};
     }
 
     spdlog::info("Resolving dependencies in parallel for {} directories",
-          directories.size());
+                 directories.size());
 
     try {
         const size_t processorCount =
@@ -773,7 +772,7 @@ auto DependencyGraph::resolveParallelDependencies(
             std::max(size_t{1}, directories.size() / processorCount);
 
         spdlog::info("Using {} threads with batch size {}", processorCount,
-              BATCH_SIZE);
+                     BATCH_SIZE);
 
         std::vector<std::future<std::vector<Node>>> futures;
         std::vector<Node> result;
@@ -796,9 +795,9 @@ auto DependencyGraph::resolveParallelDependencies(
 
         auto uniqueResult = removeDuplicates(result);
         spdlog::info(
-              "Parallel dependency resolution completed with {} unique "
-              "dependencies",
-              uniqueResult.size());
+            "Parallel dependency resolution completed with {} unique "
+            "dependencies",
+            uniqueResult.size());
 
         return uniqueResult;
     } catch (const std::exception& e) {
@@ -870,34 +869,35 @@ auto DependencyGraph::validateDependencies(const Node& node) const noexcept
                     }
                 } catch (const std::exception& e) {
                     spdlog::error(
-                          "Version validation failed for dependency {} of node "
-                          "{}: "
-                          "{}",
-                          dep, node, e.what());
+                        "Version validation failed for dependency {} of node "
+                        "{}: "
+                        "{}",
+                        dep, node, e.what());
                     return false;
                 }
             }
         }
 
         spdlog::debug("All dependencies validated successfully for node {}",
-               node);
+                      node);
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Error validating dependencies for node {}: {}", node,
-              e.what());
+                      e.what());
         return false;
     }
 }
 
 DependencyGraph::DependencyGenerator DependencyGraph::resolveDependenciesAsync(
     const Node& directory) {
-    spdlog::info("Starting async dependency resolution for directory: {}", directory);
-    
+    spdlog::info("Starting async dependency resolution for directory: {}",
+                 directory);
+
     try {
         // Get all dependencies for this directory
         std::vector<Node> directories = {directory};
         auto resolved = resolveDependencies(directories);
-        
+
         // Yield each resolved dependency one by one
         for (const auto& dep : resolved) {
             spdlog::debug("Yielding dependency: {}", dep);
@@ -906,8 +906,9 @@ DependencyGraph::DependencyGenerator DependencyGraph::resolveDependenciesAsync(
     } catch (const std::exception& e) {
         spdlog::error("Error in async dependency resolution: {}", e.what());
     }
-    
-    spdlog::info("Completed async dependency resolution for directory: {}", directory);
+
+    spdlog::info("Completed async dependency resolution for directory: {}",
+                 directory);
 }
 
 }  // namespace lithium

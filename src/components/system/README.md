@@ -73,7 +73,7 @@ DependencyManager manager;  // 自动映射到 lithium::system::DependencyManage
 
 所有源文件都应该被包含在编译过程中：
 - dependency_types.cpp
-- dependency_manager.cpp  
+- dependency_manager.cpp
 - platform_detector.cpp
 - package_manager.cpp
 
@@ -94,7 +94,7 @@ bool installed = manager.isDependencyInstalled("cmake");
 // 获取已安装版本
 auto version = manager.getInstalledVersion("cmake");
 if (version) {
-    std::cout << "cmake v" << version->major << "." 
+    std::cout << "cmake v" << version->major << "."
               << version->minor << "." << version->patch << std::endl;
 }
 ```

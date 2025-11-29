@@ -21,8 +21,7 @@ Description: INDI server client implementation
 
 namespace lithium::client {
 
-INDIClient::INDIClient(std::string name)
-    : ServerClient(std::move(name)) {
+INDIClient::INDIClient(std::string name) : ServerClient(std::move(name)) {
     spdlog::info("INDIClient created: {}", getName());
 }
 
@@ -174,21 +173,24 @@ bool INDIClient::stopDriver(const std::string& driverName) {
     return false;
 }
 
-bool INDIClient::startDriver(const std::shared_ptr<INDIDeviceContainer>& container) {
+bool INDIClient::startDriver(
+    const std::shared_ptr<INDIDeviceContainer>& container) {
     if (!connector_) {
         return false;
     }
     return connector_->startDriver(container);
 }
 
-bool INDIClient::stopDriver(const std::shared_ptr<INDIDeviceContainer>& container) {
+bool INDIClient::stopDriver(
+    const std::shared_ptr<INDIDeviceContainer>& container) {
     if (!connector_) {
         return false;
     }
     return connector_->stopDriver(container);
 }
 
-std::unordered_map<std::string, DriverInfo> INDIClient::getRunningDrivers() const {
+std::unordered_map<std::string, DriverInfo> INDIClient::getRunningDrivers()
+    const {
     std::unordered_map<std::string, DriverInfo> result;
 
     if (!connector_) {
@@ -236,70 +238,90 @@ DeviceInfo INDIClient::convertToDeviceInfo(
     const std::unordered_map<std::string, std::string>& devMap) const {
     DeviceInfo info;
     info.backend = "INDI";
-    
+
     auto it = devMap.find("device");
     if (it != devMap.end()) {
         info.name = it->second;
         info.id = it->second;  // Use device name as ID for INDI
         info.displayName = it->second;
     }
-    
+
     it = devMap.find("connected");
     if (it != devMap.end()) {
         info.connected = (it->second == "true" || it->second == "On");
     }
-    
+
     it = devMap.find("driver");
     if (it != devMap.end()) {
         info.driver = it->second;
     }
-    
+
     it = devMap.find("version");
     if (it != devMap.end()) {
         info.driverVersion = it->second;
     }
-    
+
     it = devMap.find("interface");
     if (it != devMap.end()) {
         info.interfaceString = it->second;
         info.interfaces = parseInterfaceFlags(it->second);
     }
-    
+
     info.lastUpdate = std::chrono::system_clock::now();
     if (info.connected) {
         info.health = DeviceHealth::Good;
         info.initialized = true;
     }
-    
+
     return info;
 }
 
-DeviceInterface INDIClient::parseInterfaceFlags(const std::string& interfaceStr) {
+DeviceInterface INDIClient::parseInterfaceFlags(
+    const std::string& interfaceStr) {
     DeviceInterface flags = DeviceInterface::None;
-    
+
     // Parse INDI interface bitmask or string
     try {
         uint32_t mask = std::stoul(interfaceStr);
         // INDI interface flags mapping
-        if (mask & 1) flags = flags | DeviceInterface::General;
-        if (mask & 2) flags = flags | DeviceInterface::Telescope;
-        if (mask & 4) flags = flags | DeviceInterface::CCD;
-        if (mask & 8) flags = flags | DeviceInterface::Guider;
-        if (mask & 16) flags = flags | DeviceInterface::Focuser;
-        if (mask & 32) flags = flags | DeviceInterface::FilterWheel;
-        if (mask & 64) flags = flags | DeviceInterface::Dome;
-        if (mask & 128) flags = flags | DeviceInterface::GPS;
-        if (mask & 256) flags = flags | DeviceInterface::Weather;
-        if (mask & 512) flags = flags | DeviceInterface::AO;
-        if (mask & 1024) flags = flags | DeviceInterface::Dustcap;
-        if (mask & 2048) flags = flags | DeviceInterface::Lightbox;
-        if (mask & 4096) flags = flags | DeviceInterface::Detector;
-        if (mask & 8192) flags = flags | DeviceInterface::Rotator;
-        if (mask & 16384) flags = flags | DeviceInterface::Spectrograph;
-        if (mask & 32768) flags = flags | DeviceInterface::Correlator;
-        if (mask & 65536) flags = flags | DeviceInterface::AuxiliaryDevice;
-        if (mask & 131072) flags = flags | DeviceInterface::Output;
-        if (mask & 262144) flags = flags | DeviceInterface::Input;
+        if (mask & 1)
+            flags = flags | DeviceInterface::General;
+        if (mask & 2)
+            flags = flags | DeviceInterface::Telescope;
+        if (mask & 4)
+            flags = flags | DeviceInterface::CCD;
+        if (mask & 8)
+            flags = flags | DeviceInterface::Guider;
+        if (mask & 16)
+            flags = flags | DeviceInterface::Focuser;
+        if (mask & 32)
+            flags = flags | DeviceInterface::FilterWheel;
+        if (mask & 64)
+            flags = flags | DeviceInterface::Dome;
+        if (mask & 128)
+            flags = flags | DeviceInterface::GPS;
+        if (mask & 256)
+            flags = flags | DeviceInterface::Weather;
+        if (mask & 512)
+            flags = flags | DeviceInterface::AO;
+        if (mask & 1024)
+            flags = flags | DeviceInterface::Dustcap;
+        if (mask & 2048)
+            flags = flags | DeviceInterface::Lightbox;
+        if (mask & 4096)
+            flags = flags | DeviceInterface::Detector;
+        if (mask & 8192)
+            flags = flags | DeviceInterface::Rotator;
+        if (mask & 16384)
+            flags = flags | DeviceInterface::Spectrograph;
+        if (mask & 32768)
+            flags = flags | DeviceInterface::Correlator;
+        if (mask & 65536)
+            flags = flags | DeviceInterface::AuxiliaryDevice;
+        if (mask & 131072)
+            flags = flags | DeviceInterface::Output;
+        if (mask & 262144)
+            flags = flags | DeviceInterface::Input;
     } catch (...) {
         // If not a number, try to parse as string
         if (interfaceStr.find("Telescope") != std::string::npos)
@@ -313,7 +335,7 @@ DeviceInterface INDIClient::parseInterfaceFlags(const std::string& interfaceStr)
         if (interfaceStr.find("Dome") != std::string::npos)
             flags = flags | DeviceInterface::Dome;
     }
-    
+
     return flags;
 }
 
@@ -332,9 +354,10 @@ bool INDIClient::connectDevice(const std::string& deviceName) {
         setError(20, "Not connected to INDI server");
         return false;
     }
-    
+
     // Set CONNECTION switch to On
-    bool result = connector_->setProp(deviceName, "CONNECTION", "CONNECT", "On");
+    bool result =
+        connector_->setProp(deviceName, "CONNECTION", "CONNECT", "On");
     if (result) {
         ServerEvent event;
         event.type = ServerEventType::DeviceConnected;
@@ -350,9 +373,10 @@ bool INDIClient::disconnectDevice(const std::string& deviceName) {
     if (!connector_) {
         return true;
     }
-    
+
     // Set CONNECTION switch to Off
-    bool result = connector_->setProp(deviceName, "CONNECTION", "DISCONNECT", "On");
+    bool result =
+        connector_->setProp(deviceName, "CONNECTION", "DISCONNECT", "On");
     if (result) {
         ServerEvent event;
         event.type = ServerEventType::DeviceDisconnected;
@@ -408,15 +432,16 @@ void INDIClient::configureINDI(const std::string& host, int port,
     serverConfig_.fifoPath = fifoPath;
 }
 
-bool INDIClient::startIndiHub(const std::string& profile, const std::string& mode) {
+bool INDIClient::startIndiHub(const std::string& profile,
+                              const std::string& mode) {
     if (!isServerRunning()) {
         spdlog::warn("Cannot start IndiHub: INDI server not running");
         return false;
     }
 
     if (!indihubAgent_) {
-        indihubAgent_ = std::make_unique<IndiHubAgent>(
-            "", indiHost_, indiPort_);
+        indihubAgent_ =
+            std::make_unique<IndiHubAgent>("", indiHost_, indiPort_);
     }
 
     try {
@@ -461,26 +486,24 @@ void INDIClient::watchDevice(const std::string& deviceName) {
 std::unordered_map<std::string, PropertyValue> INDIClient::getDeviceProperties(
     const std::string& deviceName) const {
     std::unordered_map<std::string, PropertyValue> result;
-    
+
     auto deviceOpt = getDevice(deviceName);
     if (deviceOpt) {
         return deviceOpt->properties;
     }
-    
+
     return result;
 }
 
 bool INDIClient::setNumberProperty(const std::string& device,
                                    const std::string& property,
-                                   const std::string& element,
-                                   double value) {
+                                   const std::string& element, double value) {
     return setProperty(device, property, element, std::to_string(value));
 }
 
 bool INDIClient::setSwitchProperty(const std::string& device,
                                    const std::string& property,
-                                   const std::string& element,
-                                   bool value) {
+                                   const std::string& element, bool value) {
     return setProperty(device, property, element, value ? "On" : "Off");
 }
 

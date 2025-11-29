@@ -18,8 +18,7 @@ Description: ASCOM server client implementation
 
 namespace lithium::client {
 
-ASCOMClient::ASCOMClient(std::string name)
-    : ServerClient(std::move(name)) {
+ASCOMClient::ASCOMClient(std::string name) : ServerClient(std::move(name)) {
     spdlog::info("ASCOMClient created: {}", getName());
 }
 
@@ -34,7 +33,8 @@ bool ASCOMClient::initialize() {
     spdlog::debug("Initializing ASCOMClient");
 
     // Create Alpaca client
-    alpacaClient_ = std::make_unique<ascom::AlpacaClient>(ascomHost_, ascomPort_);
+    alpacaClient_ =
+        std::make_unique<ascom::AlpacaClient>(ascomHost_, ascomPort_);
 
     setState(ClientState::Initialized);
     emitEvent("initialized", "");
@@ -49,7 +49,7 @@ bool ASCOMClient::destroy() {
     }
 
     alpacaClient_.reset();
-    
+
     {
         std::lock_guard<std::mutex> lock(cacheMutex_);
         deviceCache_.clear();
@@ -60,7 +60,8 @@ bool ASCOMClient::destroy() {
     return true;
 }
 
-bool ASCOMClient::connect(const std::string& target, int timeout, int /*maxRetry*/) {
+bool ASCOMClient::connect(const std::string& target, int timeout,
+                          int /*maxRetry*/) {
     spdlog::debug("Connecting to ASCOM Alpaca server");
     setState(ClientState::Connecting);
 
@@ -77,7 +78,8 @@ bool ASCOMClient::connect(const std::string& target, int timeout, int /*maxRetry
 
     // Create or reconfigure Alpaca client
     if (!alpacaClient_) {
-        alpacaClient_ = std::make_unique<ascom::AlpacaClient>(ascomHost_, ascomPort_);
+        alpacaClient_ =
+            std::make_unique<ascom::AlpacaClient>(ascomHost_, ascomPort_);
     } else {
         alpacaClient_->setServer(ascomHost_, ascomPort_);
     }
@@ -96,14 +98,14 @@ bool ASCOMClient::connect(const std::string& target, int timeout, int /*maxRetry
 
     setState(ClientState::Connected);
     emitEvent("connected", ascomHost_ + ":" + std::to_string(ascomPort_));
-    
+
     ServerEvent event;
     event.type = ServerEventType::ServerStarted;
     event.source = "ASCOM";
     event.message = "Connected to Alpaca server";
     event.timestamp = std::chrono::system_clock::now();
     emitServerEvent(event);
-    
+
     return true;
 }
 
@@ -129,26 +131,25 @@ bool ASCOMClient::isConnected() const {
     return alpacaClient_ && alpacaClient_->isConnected();
 }
 
-std::vector<std::string> ASCOMClient::scan() {
-    return discoverServers(5000);
-}
+std::vector<std::string> ASCOMClient::scan() { return discoverServers(5000); }
 
 bool ASCOMClient::startServer() {
     // ASCOM Alpaca servers are typically external processes
     // This would start a local Alpaca server if available
-    spdlog::warn("ASCOMClient::startServer - External server management not implemented");
+    spdlog::warn(
+        "ASCOMClient::startServer - External server management not "
+        "implemented");
     return false;
 }
 
 bool ASCOMClient::stopServer() {
     // ASCOM Alpaca servers are typically external processes
-    spdlog::warn("ASCOMClient::stopServer - External server management not implemented");
+    spdlog::warn(
+        "ASCOMClient::stopServer - External server management not implemented");
     return false;
 }
 
-bool ASCOMClient::isServerRunning() const {
-    return isConnected();
-}
+bool ASCOMClient::isServerRunning() const { return isConnected(); }
 
 bool ASCOMClient::isInstalled() const {
     // Check if we can discover any Alpaca servers
@@ -167,7 +168,8 @@ bool ASCOMClient::stopDriver(const std::string& driverName) {
     return disconnectDevice(driverName);
 }
 
-std::unordered_map<std::string, DriverInfo> ASCOMClient::getRunningDrivers() const {
+std::unordered_map<std::string, DriverInfo> ASCOMClient::getRunningDrivers()
+    const {
     std::unordered_map<std::string, DriverInfo> result;
 
     if (!alpacaClient_) {
@@ -176,7 +178,8 @@ std::unordered_map<std::string, DriverInfo> ASCOMClient::getRunningDrivers() con
 
     std::lock_guard<std::mutex> lock(cacheMutex_);
     for (const auto& desc : deviceCache_) {
-        if (alpacaClient_->isDeviceConnected(desc.deviceType, desc.deviceNumber)) {
+        if (alpacaClient_->isDeviceConnected(desc.deviceType,
+                                             desc.deviceNumber)) {
             auto info = ASCOMDriverInfo::fromDescription(desc);
             info.running = true;
             result[desc.deviceName] = info;
@@ -188,12 +191,12 @@ std::unordered_map<std::string, DriverInfo> ASCOMClient::getRunningDrivers() con
 
 std::vector<DriverInfo> ASCOMClient::getAvailableDrivers() const {
     std::vector<DriverInfo> result;
-    
+
     std::lock_guard<std::mutex> lock(cacheMutex_);
     for (const auto& desc : deviceCache_) {
         result.push_back(ASCOMDriverInfo::fromDescription(desc));
     }
-    
+
     return result;
 }
 
@@ -212,7 +215,8 @@ std::vector<DeviceInfo> ASCOMClient::getDevices() const {
     return result;
 }
 
-std::optional<DeviceInfo> ASCOMClient::getDevice(const std::string& name) const {
+std::optional<DeviceInfo> ASCOMClient::getDevice(
+    const std::string& name) const {
     auto devices = getDevices();
     for (const auto& dev : devices) {
         if (dev.name == name) {
@@ -236,7 +240,7 @@ bool ASCOMClient::connectDevice(const std::string& deviceName) {
 
     auto [deviceType, deviceNumber] = *deviceOpt;
     bool result = alpacaClient_->connectDevice(deviceType, deviceNumber);
-    
+
     if (result) {
         ServerEvent event;
         event.type = ServerEventType::DeviceConnected;
@@ -245,7 +249,7 @@ bool ASCOMClient::connectDevice(const std::string& deviceName) {
         event.timestamp = std::chrono::system_clock::now();
         emitServerEvent(event);
     }
-    
+
     return result;
 }
 
@@ -261,7 +265,7 @@ bool ASCOMClient::disconnectDevice(const std::string& deviceName) {
 
     auto [deviceType, deviceNumber] = *deviceOpt;
     bool result = alpacaClient_->disconnectDevice(deviceType, deviceNumber);
-    
+
     if (result) {
         ServerEvent event;
         event.type = ServerEventType::DeviceDisconnected;
@@ -270,7 +274,7 @@ bool ASCOMClient::disconnectDevice(const std::string& deviceName) {
         event.timestamp = std::chrono::system_clock::now();
         emitServerEvent(event);
     }
-    
+
     return result;
 }
 
@@ -288,16 +292,16 @@ bool ASCOMClient::setProperty(const std::string& device,
     }
 
     auto [deviceType, deviceNumber] = *deviceOpt;
-    
+
     // Use PUT request to set property
     auto response = alpacaClient_->put(deviceType, deviceNumber, property,
-                                        {{property, value}});
+                                       {{property, value}});
     return response.isSuccess();
 }
 
 std::string ASCOMClient::getProperty(const std::string& device,
-                                      const std::string& property,
-                                      const std::string& /*element*/) const {
+                                     const std::string& property,
+                                     const std::string& /*element*/) const {
     if (!alpacaClient_) {
         return "";
     }
@@ -308,7 +312,7 @@ std::string ASCOMClient::getProperty(const std::string& device,
     }
 
     auto [deviceType, deviceNumber] = *deviceOpt;
-    
+
     // Use GET request to get property
     auto response = alpacaClient_->get(deviceType, deviceNumber, property);
     if (response.isSuccess()) {
@@ -323,8 +327,8 @@ std::string ASCOMClient::getProperty(const std::string& device,
     return "";
 }
 
-std::string ASCOMClient::getPropertyState(const std::string& /*device*/,
-                                           const std::string& /*property*/) const {
+std::string ASCOMClient::getPropertyState(
+    const std::string& /*device*/, const std::string& /*property*/) const {
     // ASCOM doesn't have property states like INDI
     // Return "Ok" for connected devices
     return "Ok";
@@ -336,7 +340,7 @@ void ASCOMClient::configureASCOM(const std::string& host, int port) {
 
     serverConfig_.host = host;
     serverConfig_.port = port;
-    
+
     if (alpacaClient_) {
         alpacaClient_->setServer(host, port);
     }
@@ -354,8 +358,8 @@ std::vector<std::string> ASCOMClient::discoverServers(int timeout) {
 }
 
 std::string ASCOMClient::executeAction(const std::string& deviceName,
-                                        const std::string& action,
-                                        const std::string& parameters) {
+                                       const std::string& action,
+                                       const std::string& parameters) {
     if (!alpacaClient_) {
         return "";
     }
@@ -369,7 +373,8 @@ std::string ASCOMClient::executeAction(const std::string& deviceName,
     return alpacaClient_->action(deviceType, deviceNumber, action, parameters);
 }
 
-std::vector<std::string> ASCOMClient::getSupportedActions(const std::string& deviceName) const {
+std::vector<std::string> ASCOMClient::getSupportedActions(
+    const std::string& deviceName) const {
     if (!alpacaClient_) {
         return {};
     }
@@ -383,7 +388,8 @@ std::vector<std::string> ASCOMClient::getSupportedActions(const std::string& dev
     return alpacaClient_->getSupportedActions(deviceType, deviceNumber);
 }
 
-DeviceInfo ASCOMClient::convertToDeviceInfo(const ascom::ASCOMDeviceDescription& desc) const {
+DeviceInfo ASCOMClient::convertToDeviceInfo(
+    const ascom::ASCOMDeviceDescription& desc) const {
     DeviceInfo info;
     info.backend = "ASCOM";
     info.id = desc.uniqueId.empty() ? desc.deviceName : desc.uniqueId;
@@ -391,21 +397,24 @@ DeviceInfo ASCOMClient::convertToDeviceInfo(const ascom::ASCOMDeviceDescription&
     info.displayName = desc.deviceName;
     info.interfaces = deviceTypeToInterface(desc.deviceType);
     info.interfaceString = ascom::deviceTypeToString(desc.deviceType);
-    
+
     if (alpacaClient_) {
-        info.connected = alpacaClient_->isDeviceConnected(desc.deviceType, desc.deviceNumber);
+        info.connected = alpacaClient_->isDeviceConnected(desc.deviceType,
+                                                          desc.deviceNumber);
         if (info.connected) {
-            info.driver = alpacaClient_->getDriverInfo(desc.deviceType, desc.deviceNumber);
-            info.driverVersion = alpacaClient_->getDriverVersion(desc.deviceType, desc.deviceNumber);
+            info.driver = alpacaClient_->getDriverInfo(desc.deviceType,
+                                                       desc.deviceNumber);
+            info.driverVersion = alpacaClient_->getDriverVersion(
+                desc.deviceType, desc.deviceNumber);
             info.health = DeviceHealth::Good;
             info.initialized = true;
         }
     }
-    
+
     info.lastUpdate = std::chrono::system_clock::now();
     info.metadata["deviceNumber"] = std::to_string(desc.deviceNumber);
     info.metadata["deviceType"] = ascom::deviceTypeToString(desc.deviceType);
-    
+
     return info;
 }
 
@@ -420,7 +429,8 @@ std::optional<std::pair<ascom::ASCOMDeviceType, int>> ASCOMClient::findDevice(
     return std::nullopt;
 }
 
-DeviceInterface ASCOMClient::deviceTypeToInterface(ascom::ASCOMDeviceType type) {
+DeviceInterface ASCOMClient::deviceTypeToInterface(
+    ascom::ASCOMDeviceType type) {
     switch (type) {
         case ascom::ASCOMDeviceType::Camera:
             return DeviceInterface::CCD;

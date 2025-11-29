@@ -593,10 +593,12 @@ auto Target::fromJson(const json& data) -> void {
             astroConfig_ = TargetConfig::fromJson(data["astroConfig"]);
         }
         if (data.contains("observability")) {
-            observability_ = ObservabilityWindow::fromJson(data["observability"]);
+            observability_ =
+                ObservabilityWindow::fromJson(data["observability"]);
         }
         if (data.contains("currentAltAz")) {
-            currentAltAz_ = HorizontalCoordinates::fromJson(data["currentAltAz"]);
+            currentAltAz_ =
+                HorizontalCoordinates::fromJson(data["currentAltAz"]);
         }
         if (data.contains("meridianInfo")) {
             meridianInfo_ = MeridianFlipInfo::fromJson(data["meridianInfo"]);
@@ -629,8 +631,8 @@ TargetConfig& Target::getAstroConfigMutable() {
 void Target::setCoordinates(const Coordinates& coords) {
     std::unique_lock lock(astroMutex_);
     astroConfig_.coordinates = coords;
-    spdlog::info("Coordinates set for target {}: RA={:.4f}° Dec={:.4f}°",
-                 name_, coords.ra, coords.dec);
+    spdlog::info("Coordinates set for target {}: RA={:.4f}° Dec={:.4f}°", name_,
+                 coords.ra, coords.dec);
 }
 
 const Coordinates& Target::getCoordinates() const {
@@ -641,11 +643,11 @@ const Coordinates& Target::getCoordinates() const {
 void Target::addExposurePlan(const ExposurePlan& plan) {
     std::unique_lock lock(astroMutex_);
     // Check if filter already exists
-    auto it = std::find_if(
-        astroConfig_.exposurePlans.begin(), astroConfig_.exposurePlans.end(),
-        [&plan](const ExposurePlan& p) {
-            return p.filterName == plan.filterName;
-        });
+    auto it = std::find_if(astroConfig_.exposurePlans.begin(),
+                           astroConfig_.exposurePlans.end(),
+                           [&plan](const ExposurePlan& p) {
+                               return p.filterName == plan.filterName;
+                           });
 
     if (it != astroConfig_.exposurePlans.end()) {
         *it = plan;  // Update existing plan
@@ -660,11 +662,11 @@ void Target::addExposurePlan(const ExposurePlan& plan) {
 
 void Target::removeExposurePlan(const std::string& filterName) {
     std::unique_lock lock(astroMutex_);
-    auto it = std::remove_if(
-        astroConfig_.exposurePlans.begin(), astroConfig_.exposurePlans.end(),
-        [&filterName](const ExposurePlan& p) {
-            return p.filterName == filterName;
-        });
+    auto it = std::remove_if(astroConfig_.exposurePlans.begin(),
+                             astroConfig_.exposurePlans.end(),
+                             [&filterName](const ExposurePlan& p) {
+                                 return p.filterName == filterName;
+                             });
 
     if (it != astroConfig_.exposurePlans.end()) {
         astroConfig_.exposurePlans.erase(it, astroConfig_.exposurePlans.end());
@@ -690,7 +692,8 @@ bool Target::advanceExposurePlan() {
     std::unique_lock lock(astroMutex_);
     // First check if current plan is complete
     if (currentExposurePlanIndex_ < astroConfig_.exposurePlans.size()) {
-        auto& currentPlan = astroConfig_.exposurePlans[currentExposurePlanIndex_];
+        auto& currentPlan =
+            astroConfig_.exposurePlans[currentExposurePlanIndex_];
         if (!currentPlan.isComplete()) {
             return false;  // Current plan not yet complete
         }
@@ -703,10 +706,11 @@ bool Target::advanceExposurePlan() {
         return false;
     }
 
-    spdlog::info("Advanced to exposure plan {} ({}) for target {}",
-                 currentExposurePlanIndex_,
-                 astroConfig_.exposurePlans[currentExposurePlanIndex_].filterName,
-                 name_);
+    spdlog::info(
+        "Advanced to exposure plan {} ({}) for target {}",
+        currentExposurePlanIndex_,
+        astroConfig_.exposurePlans[currentExposurePlanIndex_].filterName,
+        name_);
     return true;
 }
 
@@ -746,8 +750,8 @@ void Target::updateMeridianFlipInfo(const MeridianFlipInfo& info) {
     std::unique_lock lock(astroMutex_);
     meridianInfo_ = info;
     if (info.flipRequired && !info.flipCompleted) {
-        spdlog::info("Meridian flip required for target {} in {}s",
-                     name_, info.secondsToFlip());
+        spdlog::info("Meridian flip required for target {} in {}s", name_,
+                     info.secondsToFlip());
     }
 }
 
@@ -804,7 +808,8 @@ int Target::getPriority() const {
 void Target::setPriority(int priority) {
     std::unique_lock lock(astroMutex_);
     astroConfig_.priority = std::clamp(priority, 1, 10);
-    spdlog::info("Priority set to {} for target {}", astroConfig_.priority, name_);
+    spdlog::info("Priority set to {} for target {}", astroConfig_.priority,
+                 name_);
 }
 
 double Target::getRemainingExposureTime() const {

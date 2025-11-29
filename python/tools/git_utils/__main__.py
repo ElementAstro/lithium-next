@@ -10,8 +10,11 @@ from loguru import logger
 
 from .cli import setup_parser
 from .exceptions import (
-    GitException, GitCommandError, GitRepositoryNotFound,
-    GitBranchError, GitMergeConflict
+    GitException,
+    GitCommandError,
+    GitRepositoryNotFound,
+    GitBranchError,
+    GitMergeConflict,
 )
 from .models import GitResult
 
@@ -26,7 +29,7 @@ def configure_logging():
         sys.stderr,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         level="INFO",
-        colorize=True
+        colorize=True,
     )
 
     # Add a file handler for more detailed logs
@@ -39,7 +42,7 @@ def configure_logging():
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
         level="DEBUG",
         rotation="10 MB",
-        retention="1 week"
+        retention="1 week",
     )
 
 
@@ -63,7 +66,7 @@ def main():
 
     try:
         # Execute the selected function
-        if hasattr(args, 'func'):
+        if hasattr(args, "func"):
             logger.info(f"Executing command: {args.command}")
             result = args.func(args)
 
@@ -77,7 +80,9 @@ def main():
                     sys.exit(0)
                 else:
                     print(
-                        f"Error: {result.error if result.error else result.message}", file=sys.stderr)
+                        f"Error: {result.error if result.error else result.message}",
+                        file=sys.stderr,
+                    )
                     sys.exit(1)
         else:
             logger.debug("No command specified, showing help")

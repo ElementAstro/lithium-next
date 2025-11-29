@@ -53,8 +53,9 @@ struct alignas(32) DateTime {
 #else
         gmtime_r(&time_t_val, &tm_val);
 #endif
-        return {tm_val.tm_year + 1900, tm_val.tm_mon + 1, tm_val.tm_mday,
-                tm_val.tm_hour, tm_val.tm_min, static_cast<double>(tm_val.tm_sec)};
+        return {tm_val.tm_year + 1900, tm_val.tm_mon + 1,
+                tm_val.tm_mday,        tm_val.tm_hour,
+                tm_val.tm_min,         static_cast<double>(tm_val.tm_sec)};
     }
 
     /**
@@ -187,8 +188,8 @@ template <std::floating_point T = double>
  * @return Barycentric Julian Date.
  */
 [[nodiscard]] double calculateBJD(double jd, double ra, double dec,
-                                   double longitude, double latitude,
-                                   double elevation);
+                                  double longitude, double latitude,
+                                  double elevation);
 
 }  // namespace lithium::tools::calculation
 

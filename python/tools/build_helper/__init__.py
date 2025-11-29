@@ -13,8 +13,11 @@ from .builders.bazel import BazelBuilder
 from .builders.meson import MesonBuilder
 from .builders.cmake import CMakeBuilder
 from .core.errors import (
-    BuildSystemError, ConfigurationError, BuildError,
-    TestError, InstallationError
+    BuildSystemError,
+    ConfigurationError,
+    BuildError,
+    TestError,
+    InstallationError,
 )
 from .core.models import BuildStatus, BuildResult, BuildOptions
 from .core.base import BuildHelperBase
@@ -26,7 +29,7 @@ logger.remove()  # Remove default handler
 logger.add(
     sys.stderr,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    colorize=True
+    colorize=True,
 )
 
 # Package metadata
@@ -61,7 +64,7 @@ def get_tool_info() -> dict:
             "clean",
             "get_status",
             "get_last_result",
-            "get_tool_info"
+            "get_tool_info",
         ],
         "requirements": [
             "cmake>=3.20",
@@ -69,7 +72,7 @@ def get_tool_info() -> dict:
             "bazel",
             "python>=3.7",
             "loguru",
-            "pybind11"
+            "pybind11",
         ],
         "capabilities": [
             "multi-build-system-support",
@@ -79,7 +82,7 @@ def get_tool_info() -> dict:
             "environment-variables",
             "custom-generators",
             "documentation-generation",
-            "testing-integration"
+            "testing-integration",
         ],
         "classes": {
             "BuildHelperBase": "Abstract base class for build helpers",
@@ -90,8 +93,8 @@ def get_tool_info() -> dict:
             "BuildConfig": "Configuration management for build systems",
             "BuildResult": "Data class for storing build operation results",
             "BuildStatus": "Enumeration of build status values",
-            "BuildOptions": "Type definition for build options dictionary"
-        }
+            "BuildOptions": "Type definition for build options dictionary",
+        },
     }
 
 
@@ -102,11 +105,22 @@ def get_tool_info() -> dict:
 # Import utilities
 
 __all__ = [
-    'BuildHelperBase', 'BuildStatus', 'BuildResult', 'BuildOptions',
-    'BuildSystemError', 'ConfigurationError', 'BuildError',
-    'TestError', 'InstallationError',
-    'CMakeBuilder', 'MesonBuilder', 'BazelBuilder',
-    'BuilderFactory', 'BuildConfig',
-    'get_tool_info',
-    '__version__', '__author__', '__license__'
+    "BuildHelperBase",
+    "BuildStatus",
+    "BuildResult",
+    "BuildOptions",
+    "BuildSystemError",
+    "ConfigurationError",
+    "BuildError",
+    "TestError",
+    "InstallationError",
+    "CMakeBuilder",
+    "MesonBuilder",
+    "BazelBuilder",
+    "BuilderFactory",
+    "BuildConfig",
+    "get_tool_info",
+    "__version__",
+    "__author__",
+    "__license__",
 ]

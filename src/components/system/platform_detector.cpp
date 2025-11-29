@@ -5,7 +5,8 @@ namespace lithium::system {
 
 PlatformDetector::PlatformDetector() { detectPlatform(); }
 
-PlatformDetector::PlatformDetector(const atom::system::OperatingSystemInfo& info) {
+PlatformDetector::PlatformDetector(
+    const atom::system::OperatingSystemInfo& info) {
     detectPlatform(info);
 }
 
@@ -40,7 +41,8 @@ void PlatformDetector::detectPlatform() {
     detectPlatform(osInfo);
 }
 
-void PlatformDetector::detectPlatform(const atom::system::OperatingSystemInfo& osInfo) {
+void PlatformDetector::detectPlatform(
+    const atom::system::OperatingSystemInfo& osInfo) {
     // Set platform string
     platform_ = osInfo.osName;
 

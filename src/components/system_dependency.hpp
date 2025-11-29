@@ -10,7 +10,7 @@ namespace lithium {
 using DependencyException = system::DependencyException;
 using DependencyErrorCode = system::DependencyErrorCode;
 using DependencyError = system::DependencyError;
-template<typename T>
+template <typename T>
 using DependencyResult = system::DependencyResult<T>;
 using VersionInfo = system::VersionInfo;
 using DependencyInfo = system::DependencyInfo;

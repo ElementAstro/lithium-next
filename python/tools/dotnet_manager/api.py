@@ -34,8 +34,12 @@ def list_installed_dotnets() -> List[str]:
     return [str(version) for version in versions]
 
 
-def download_file(url: str, filename: str, num_threads: int = 4,
-                  expected_checksum: Optional[str] = None) -> bool:
+def download_file(
+    url: str,
+    filename: str,
+    num_threads: int = 4,
+    expected_checksum: Optional[str] = None,
+) -> bool:
     """
     Download a file with optional multi-threading and checksum verification.
 

@@ -38,7 +38,7 @@ class DotNetPyBindAdapter:
             "supported": False,
             "platform": platform.system(),
             "error": f"Operation '{operation}' is only supported on Windows platform",
-            "operation": operation
+            "operation": operation,
         }
 
     @staticmethod
@@ -61,7 +61,9 @@ class DotNetPyBindAdapter:
             return DotNetPyBindAdapter._not_supported_response("check_dotnet_installed")
 
         try:
-            logger.info(f"C++ binding: Checking if .NET Framework {version_key} is installed")
+            logger.info(
+                f"C++ binding: Checking if .NET Framework {version_key} is installed"
+            )
             manager = DotNetManager()
             is_installed = manager.check_installed(version_key)
 
@@ -69,7 +71,7 @@ class DotNetPyBindAdapter:
                 "success": True,
                 "supported": True,
                 "installed": is_installed,
-                "version_key": version_key
+                "version_key": version_key,
             }
         except Exception as e:
             logger.exception(f"Error checking .NET installation for {version_key}: {e}")
@@ -78,7 +80,7 @@ class DotNetPyBindAdapter:
                 "supported": True,
                 "installed": False,
                 "version_key": version_key,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
@@ -98,7 +100,7 @@ class DotNetPyBindAdapter:
             return {
                 **DotNetPyBindAdapter._not_supported_response("list_installed_dotnets"),
                 "versions": [],
-                "count": 0
+                "count": 0,
             }
 
         try:
@@ -113,7 +115,7 @@ class DotNetPyBindAdapter:
                     "name": v.name,
                     "release": v.release,
                     "installer_url": v.installer_url,
-                    "installer_sha256": v.installer_sha256
+                    "installer_sha256": v.installer_sha256,
                 }
                 for v in versions
             ]
@@ -122,7 +124,7 @@ class DotNetPyBindAdapter:
                 "success": True,
                 "supported": True,
                 "versions": versions_list,
-                "count": len(versions_list)
+                "count": len(versions_list),
             }
         except Exception as e:
             logger.exception(f"Error listing installed .NET versions: {e}")
@@ -131,12 +133,13 @@ class DotNetPyBindAdapter:
                 "supported": True,
                 "versions": [],
                 "count": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
-    def download_file(url: str, output_path: str, num_threads: int = 4,
-                     checksum: Optional[str] = None) -> Dict[str, Any]:
+    def download_file(
+        url: str, output_path: str, num_threads: int = 4, checksum: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Download a file with optional multi-threading and checksum verification.
 
@@ -162,22 +165,20 @@ class DotNetPyBindAdapter:
             logger.info(f"C++ binding: Downloading {url} to {output_path}")
             manager = DotNetManager(threads=num_threads)
             output_file = manager.download_file(
-                url,
-                Path(output_path),
-                num_threads=num_threads,
-                checksum=checksum
+                url, Path(output_path), num_threads=num_threads, checksum=checksum
             )
 
             file_size = output_file.stat().st_size if output_file.exists() else 0
-            checksum_verified = (checksum is not None and
-                               manager.verify_checksum(output_file, checksum))
+            checksum_verified = checksum is not None and manager.verify_checksum(
+                output_file, checksum
+            )
 
             return {
                 "success": True,
                 "supported": True,
                 "file_path": str(output_file),
                 "file_size": file_size,
-                "checksum_verified": checksum_verified
+                "checksum_verified": checksum_verified,
             }
         except Exception as e:
             logger.exception(f"Error downloading file from {url}: {e}")
@@ -187,12 +188,13 @@ class DotNetPyBindAdapter:
                 "file_path": output_path,
                 "file_size": 0,
                 "checksum_verified": False,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
-    def verify_checksum(file_path: str, expected_checksum: str,
-                       algorithm: str = "sha256") -> Dict[str, Any]:
+    def verify_checksum(
+        file_path: str, expected_checksum: str, algorithm: str = "sha256"
+    ) -> Dict[str, Any]:
         """
         Verify a file's integrity by checking its checksum.
 
@@ -223,7 +225,7 @@ class DotNetPyBindAdapter:
                     "verified": False,
                     "file_path": file_path,
                     "algorithm": algorithm,
-                    "error": f"Unsupported hash algorithm: {algorithm}. Supported: md5, sha1, sha256, sha512"
+                    "error": f"Unsupported hash algorithm: {algorithm}. Supported: md5, sha1, sha256, sha512",
                 }
 
             manager = DotNetManager()
@@ -236,17 +238,19 @@ class DotNetPyBindAdapter:
                     "verified": False,
                     "file_path": file_path,
                     "algorithm": algorithm,
-                    "error": f"File not found: {file_path}"
+                    "error": f"File not found: {file_path}",
                 }
 
-            is_verified = manager.verify_checksum(file_path_obj, expected_checksum, hash_algo)
+            is_verified = manager.verify_checksum(
+                file_path_obj, expected_checksum, hash_algo
+            )
 
             return {
                 "success": True,
                 "supported": True,
                 "verified": is_verified,
                 "file_path": file_path,
-                "algorithm": algorithm
+                "algorithm": algorithm,
             }
         except Exception as e:
             logger.exception(f"Error verifying checksum for {file_path}: {e}")
@@ -256,7 +260,7 @@ class DotNetPyBindAdapter:
                 "verified": False,
                 "file_path": file_path,
                 "algorithm": algorithm,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
@@ -289,7 +293,7 @@ class DotNetPyBindAdapter:
                 "supported": True,
                 "installer_path": installer_path,
                 "process_started": result,
-                "quiet_mode": quiet
+                "quiet_mode": quiet,
             }
         except Exception as e:
             logger.exception(f"Error installing software from {installer_path}: {e}")
@@ -299,7 +303,7 @@ class DotNetPyBindAdapter:
                 "installer_path": installer_path,
                 "process_started": False,
                 "quiet_mode": quiet,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
@@ -324,7 +328,9 @@ class DotNetPyBindAdapter:
             return DotNetPyBindAdapter._not_supported_response("uninstall_dotnet")
 
         try:
-            logger.info(f"C++ binding: Attempting to uninstall .NET Framework {version_key}")
+            logger.info(
+                f"C++ binding: Attempting to uninstall .NET Framework {version_key}"
+            )
             manager = DotNetManager()
             result = manager.uninstall_dotnet(version_key)
 
@@ -332,7 +338,7 @@ class DotNetPyBindAdapter:
                 "success": result,
                 "supported": True,
                 "version_key": version_key,
-                "uninstall_attempted": result
+                "uninstall_attempted": result,
             }
         except Exception as e:
             logger.exception(f"Error uninstalling .NET Framework {version_key}: {e}")
@@ -341,7 +347,7 @@ class DotNetPyBindAdapter:
                 "supported": True,
                 "version_key": version_key,
                 "uninstall_attempted": False,
-                "error": str(e)
+                "error": str(e),
             }
 
     @staticmethod
@@ -359,13 +365,17 @@ class DotNetPyBindAdapter:
         """
         if not DotNetPyBindAdapter._is_windows():
             return {
-                **DotNetPyBindAdapter._not_supported_response("get_installed_versions_info"),
+                **DotNetPyBindAdapter._not_supported_response(
+                    "get_installed_versions_info"
+                ),
                 "versions_info": [],
-                "total_count": 0
+                "total_count": 0,
             }
 
         try:
-            logger.info("C++ binding: Getting detailed installed .NET versions information")
+            logger.info(
+                "C++ binding: Getting detailed installed .NET versions information"
+            )
             manager = DotNetManager()
             versions = manager.list_installed_versions()
 
@@ -377,7 +387,7 @@ class DotNetPyBindAdapter:
                     "installer_url": v.installer_url,
                     "has_installer_url": bool(v.installer_url),
                     "has_checksum": bool(v.installer_sha256),
-                    "installed": manager.check_installed(v.key)
+                    "installed": manager.check_installed(v.key),
                 }
                 for v in versions
             ]
@@ -386,7 +396,7 @@ class DotNetPyBindAdapter:
                 "success": True,
                 "supported": True,
                 "versions_info": versions_info,
-                "total_count": len(versions_info)
+                "total_count": len(versions_info),
             }
         except Exception as e:
             logger.exception(f"Error getting installed versions information: {e}")
@@ -395,5 +405,5 @@ class DotNetPyBindAdapter:
                 "supported": True,
                 "versions_info": [],
                 "total_count": 0,
-                "error": str(e)
+                "error": str(e),
             }

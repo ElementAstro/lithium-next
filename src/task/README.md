@@ -211,7 +211,7 @@ and utilities are provided by `api_adapter.hpp`:
 #include "task/api_adapter.hpp"
 
 // Use API data types
-lithium::task::api::ApiResponse response = 
+lithium::task::api::ApiResponse response =
     lithium::task::api::ApiResponse::success(data, "Operation completed");
 
 // Create WebSocket events

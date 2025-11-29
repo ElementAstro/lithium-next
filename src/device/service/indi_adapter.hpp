@@ -42,14 +42,7 @@ using json = nlohmann::json;
 /**
  * @brief INDI property types
  */
-enum class INDIPropertyType {
-    NUMBER,
-    SWITCH,
-    TEXT,
-    LIGHT,
-    BLOB,
-    UNKNOWN
-};
+enum class INDIPropertyType { NUMBER, SWITCH, TEXT, LIGHT, BLOB, UNKNOWN };
 
 /**
  * @brief INDI property state
@@ -261,16 +254,16 @@ public:
      */
     virtual auto setNumberProperty(const std::string& deviceName,
                                    const std::string& propertyName,
-                                   const std::string& elementName,
-                                   double value) -> bool = 0;
+                                   const std::string& elementName, double value)
+        -> bool = 0;
 
     /**
      * @brief Set switch property
      */
     virtual auto setSwitchProperty(const std::string& deviceName,
                                    const std::string& propertyName,
-                                   const std::string& elementName,
-                                   bool value) -> bool = 0;
+                                   const std::string& elementName, bool value)
+        -> bool = 0;
 
     /**
      * @brief Set text property
@@ -296,7 +289,8 @@ public:
     virtual auto waitForPropertyState(
         const std::string& deviceName, const std::string& propertyName,
         INDIPropertyState targetState,
-        std::chrono::milliseconds timeout = std::chrono::seconds(30)) -> bool = 0;
+        std::chrono::milliseconds timeout = std::chrono::seconds(30))
+        -> bool = 0;
 
     /**
      * @brief Get server info
@@ -316,13 +310,14 @@ public:
      * @brief Construct adapter with existing client
      * @param client Shared pointer to INDIClient
      */
-    explicit INDIClientAdapter(std::shared_ptr<lithium::client::INDIClient> client);
-    
+    explicit INDIClientAdapter(
+        std::shared_ptr<lithium::client::INDIClient> client);
+
     /**
      * @brief Construct adapter (creates internal client)
      */
     INDIClientAdapter();
-    
+
     ~INDIClientAdapter() override;
 
     auto connectServer(const std::string& host, int port) -> bool override;
@@ -342,13 +337,13 @@ public:
 
     auto setNumberProperty(const std::string& deviceName,
                            const std::string& propertyName,
-                           const std::string& elementName,
-                           double value) -> bool override;
+                           const std::string& elementName, double value)
+        -> bool override;
 
     auto setSwitchProperty(const std::string& deviceName,
                            const std::string& propertyName,
-                           const std::string& elementName,
-                           bool value) -> bool override;
+                           const std::string& elementName, bool value)
+        -> bool override;
 
     auto setTextProperty(const std::string& deviceName,
                          const std::string& propertyName,
@@ -375,8 +370,9 @@ public:
 
 private:
     // Convert client DeviceInfo to adapter INDIDeviceInfo
-    INDIDeviceInfo convertDeviceInfo(const lithium::client::DeviceInfo& info) const;
-    
+    INDIDeviceInfo convertDeviceInfo(
+        const lithium::client::DeviceInfo& info) const;
+
     // Convert client PropertyValue to adapter INDIPropertyValue
     INDIPropertyValue convertPropertyValue(
         const lithium::client::PropertyValue& prop) const;
@@ -403,8 +399,7 @@ public:
         host_ = host;
         port_ = port;
         serverConnected_ = true;
-        LOG_INFO( "INDIAdapter: Connected to server %s:%d", host.c_str(),
-              port);
+        LOG_INFO("INDIAdapter: Connected to server %s:%d", host.c_str(), port);
         return true;
     }
 
@@ -412,7 +407,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         serverConnected_ = false;
         devices_.clear();
-        LOG_INFO( "INDIAdapter: Disconnected from server");
+        LOG_INFO("INDIAdapter: Disconnected from server");
         return true;
     }
 
@@ -476,8 +471,8 @@ public:
 
     auto setNumberProperty(const std::string& deviceName,
                            const std::string& propertyName,
-                           const std::string& elementName,
-                           double value) -> bool override {
+                           const std::string& elementName, double value)
+        -> bool override {
         (void)deviceName;
         (void)propertyName;
         (void)elementName;
@@ -487,8 +482,8 @@ public:
 
     auto setSwitchProperty(const std::string& deviceName,
                            const std::string& propertyName,
-                           const std::string& elementName,
-                           bool value) -> bool override {
+                           const std::string& elementName, bool value)
+        -> bool override {
         (void)deviceName;
         (void)propertyName;
         (void)elementName;
@@ -566,16 +561,17 @@ public:
     static auto createDefaultAdapter() -> std::shared_ptr<INDIAdapter> {
         return std::make_shared<DefaultINDIAdapter>();
     }
-    
+
     /**
      * @brief Create real adapter with new INDI client
      */
     static auto createAdapter() -> std::shared_ptr<INDIAdapter>;
-    
+
     /**
      * @brief Create adapter with existing INDI client
      */
-    static auto createAdapter(std::shared_ptr<lithium::client::INDIClient> client)
+    static auto createAdapter(
+        std::shared_ptr<lithium::client::INDIClient> client)
         -> std::shared_ptr<INDIAdapter>;
 };
 

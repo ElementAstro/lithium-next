@@ -45,13 +45,18 @@ class HotspotPyBindAdapter:
             return {
                 "success": False,
                 "supported": False,
-                "error": "Hotspot functionality is only supported on Linux systems"
+                "error": "Hotspot functionality is only supported on Linux systems",
             }
         return {"success": True, "supported": True}
 
     @staticmethod
-    def start(name: str = "MyHotspot", password: str = None, interface: str = "wlan0",
-              channel: int = 11, **kwargs) -> Dict[str, Any]:
+    def start(
+        name: str = "MyHotspot",
+        password: str = None,
+        interface: str = "wlan0",
+        channel: int = 11,
+        **kwargs,
+    ) -> Dict[str, Any]:
         """
         Start a WiFi hotspot with the specified configuration.
 
@@ -77,13 +82,17 @@ class HotspotPyBindAdapter:
                 password=password,
                 interface=interface,
                 channel=channel,
-                **kwargs
+                **kwargs,
             )
             return {
                 "success": success,
                 "supported": True,
-                "message": f"Hotspot '{name}' started successfully" if success else "Failed to start hotspot",
-                "running": success
+                "message": (
+                    f"Hotspot '{name}' started successfully"
+                    if success
+                    else "Failed to start hotspot"
+                ),
+                "running": success,
             }
         except Exception as e:
             logger.exception(f"Error in start: {e}")
@@ -91,7 +100,7 @@ class HotspotPyBindAdapter:
                 "success": False,
                 "supported": True,
                 "error": str(e),
-                "running": False
+                "running": False,
             }
 
     @staticmethod
@@ -113,16 +122,16 @@ class HotspotPyBindAdapter:
             return {
                 "success": success,
                 "supported": True,
-                "message": "Hotspot stopped successfully" if success else "Failed to stop hotspot",
-                "running": False if success else True
+                "message": (
+                    "Hotspot stopped successfully"
+                    if success
+                    else "Failed to stop hotspot"
+                ),
+                "running": False if success else True,
             }
         except Exception as e:
             logger.exception(f"Error in stop: {e}")
-            return {
-                "success": False,
-                "supported": True,
-                "error": str(e)
-            }
+            return {"success": False, "supported": True, "error": str(e)}
 
     @staticmethod
     def get_status() -> Dict[str, Any]:
@@ -141,11 +150,7 @@ class HotspotPyBindAdapter:
         try:
             manager = HotspotManager()
             status = manager.get_status()
-            return {
-                "success": True,
-                "supported": True,
-                "data": status
-            }
+            return {"success": True, "supported": True, "data": status}
         except Exception as e:
             logger.exception(f"Error in get_status: {e}")
             return {
@@ -159,8 +164,8 @@ class HotspotPyBindAdapter:
                     "ssid": None,
                     "clients": [],
                     "uptime": None,
-                    "ip_address": None
-                }
+                    "ip_address": None,
+                },
             }
 
     @staticmethod
@@ -183,7 +188,7 @@ class HotspotPyBindAdapter:
                 "success": True,
                 "supported": True,
                 "clients": clients,
-                "count": len(clients)
+                "count": len(clients),
             }
         except Exception as e:
             logger.exception(f"Error in get_clients: {e}")
@@ -192,13 +197,17 @@ class HotspotPyBindAdapter:
                 "supported": True,
                 "error": str(e),
                 "clients": [],
-                "count": 0
+                "count": 0,
             }
 
     @staticmethod
-    async def start_async(name: str = "MyHotspot", password: str = None,
-                          interface: str = "wlan0", channel: int = 11,
-                          **kwargs) -> Dict[str, Any]:
+    async def start_async(
+        name: str = "MyHotspot",
+        password: str = None,
+        interface: str = "wlan0",
+        channel: int = 11,
+        **kwargs,
+    ) -> Dict[str, Any]:
         """
         Start a WiFi hotspot asynchronously with the specified configuration.
 
@@ -228,14 +237,18 @@ class HotspotPyBindAdapter:
                     password=password,
                     interface=interface,
                     channel=channel,
-                    **kwargs
-                )
+                    **kwargs,
+                ),
             )
             return {
                 "success": success,
                 "supported": True,
-                "message": f"Hotspot '{name}' started successfully" if success else "Failed to start hotspot",
-                "running": success
+                "message": (
+                    f"Hotspot '{name}' started successfully"
+                    if success
+                    else "Failed to start hotspot"
+                ),
+                "running": success,
             }
         except Exception as e:
             logger.exception(f"Error in start_async: {e}")
@@ -243,7 +256,7 @@ class HotspotPyBindAdapter:
                 "success": False,
                 "supported": True,
                 "error": str(e),
-                "running": False
+                "running": False,
             }
 
     @staticmethod
@@ -267,16 +280,16 @@ class HotspotPyBindAdapter:
             return {
                 "success": success,
                 "supported": True,
-                "message": "Hotspot stopped successfully" if success else "Failed to stop hotspot",
-                "running": False if success else True
+                "message": (
+                    "Hotspot stopped successfully"
+                    if success
+                    else "Failed to stop hotspot"
+                ),
+                "running": False if success else True,
             }
         except Exception as e:
             logger.exception(f"Error in stop_async: {e}")
-            return {
-                "success": False,
-                "supported": True,
-                "error": str(e)
-            }
+            return {"success": False, "supported": True, "error": str(e)}
 
     @staticmethod
     async def get_status_async() -> Dict[str, Any]:
@@ -297,11 +310,7 @@ class HotspotPyBindAdapter:
             # Run blocking operation in executor to avoid blocking event loop
             loop = asyncio.get_event_loop()
             status = await loop.run_in_executor(None, manager.get_status)
-            return {
-                "success": True,
-                "supported": True,
-                "data": status
-            }
+            return {"success": True, "supported": True, "data": status}
         except Exception as e:
             logger.exception(f"Error in get_status_async: {e}")
             return {
@@ -315,8 +324,8 @@ class HotspotPyBindAdapter:
                     "ssid": None,
                     "clients": [],
                     "uptime": None,
-                    "ip_address": None
-                }
+                    "ip_address": None,
+                },
             }
 
     @staticmethod
@@ -341,7 +350,7 @@ class HotspotPyBindAdapter:
                 "success": True,
                 "supported": True,
                 "clients": clients,
-                "count": len(clients)
+                "count": len(clients),
             }
         except Exception as e:
             logger.exception(f"Error in get_clients_async: {e}")
@@ -350,7 +359,7 @@ class HotspotPyBindAdapter:
                 "supported": True,
                 "error": str(e),
                 "clients": [],
-                "count": 0
+                "count": 0,
             }
 
     @staticmethod
@@ -362,15 +371,9 @@ class HotspotPyBindAdapter:
             Dict containing tool information and configuration
         """
         from . import get_tool_info as module_get_tool_info
+
         try:
-            return {
-                "success": True,
-                "data": module_get_tool_info()
-            }
+            return {"success": True, "data": module_get_tool_info()}
         except Exception as e:
             logger.exception(f"Error in get_tool_info: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "data": {}
-            }
+            return {"success": False, "error": str(e), "data": {}}

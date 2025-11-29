@@ -10,35 +10,36 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include "../command/config_ws.hpp"
+#include "../utils/response.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "config/config.hpp"
 #include "constant/constant.hpp"
 #include "controller.hpp"
 #include "utils/format.hpp"
-#include "../utils/response.hpp"
-#include "../command/config_ws.hpp"
 
 namespace lithium::server::controller {
+
 using ResponseBuilder = utils::ResponseBuilder;
-}
 
 class ConfigController : public Controller {
 private:
     static std::weak_ptr<lithium::ConfigManager> mConfigManager;
-    static std::unique_ptr<lithium::server::config::ConfigWebSocketService> mConfigWsService;
+    static std::unique_ptr<lithium::server::config::ConfigWebSocketService>
+        mConfigWsService;
 
     static crow::response handleConfigAction(
-        const crow::json::rvalue& body, const std::string& command,
+        const nlohmann::json& body, const std::string& command,
         std::function<bool(std::shared_ptr<lithium::ConfigManager>)> func) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("Handling config action: {}", command);
 
         if (command != "reloadConfig" &&
-            (!body["path"] || std::string(body["path"].s()).empty())) {
+            (!body["path"] || body["path"].get<std::string>().empty())) {
             spdlog::warn(
                 "The 'path' parameter is missing or empty for command: {}",
                 command);
-            return ResponseBuilder::badRequest("The 'path' parameter is required and cannot be empty.");
+            return ResponseBuilder::badRequest(
+                "The 'path' parameter is required and cannot be empty.");
         }
 
         try {
@@ -46,7 +47,8 @@ private:
             if (!configManager) {
                 spdlog::error("ConfigManager instance is null. Command: {}",
                               command);
-                return ResponseBuilder::internalError("ConfigManager instance is null.");
+                return ResponseBuilder::internalError(
+                    "ConfigManager instance is null.");
             }
 
             spdlog::info("Executing function for command: {}", command);
@@ -55,19 +57,22 @@ private:
                 spdlog::info("Command {} executed successfully.", command);
                 nlohmann::json responseData;
                 if (command != "reloadConfig") {
-                    responseData["path"] = std::string(body["path"].s());
+                    responseData["path"] = body["path"].get<std::string>();
                 }
                 spdlog::info("Config action {} completed.", command);
                 return ResponseBuilder::success(responseData);
             } else {
                 spdlog::warn("Command {} failed to execute.", command);
                 spdlog::info("Config action {} completed.", command);
-                return ResponseBuilder::notFound("The specified path could not be found or the operation failed.");
+                return ResponseBuilder::notFound(
+                    "The specified path could not be found or the operation "
+                    "failed.");
             }
         } catch (const std::exception& e) {
             spdlog::error("Exception occurred while executing command {}: {}",
                           command, e.what());
-            return ResponseBuilder::internalError(std::string("Exception occurred - ") + e.what());
+            return ResponseBuilder::internalError(
+                std::string("Exception occurred - ") + e.what());
         }
     }
 
@@ -84,8 +89,8 @@ public:
             wsConfig.enableFiltering = true;
             wsConfig.maxClients = 100;
             wsConfig.includeTimestamp = true;
-            mConfigWsService = std::make_unique<lithium::server::config::ConfigWebSocketService>(
-                app, wsConfig);
+            mConfigWsService = std::make_unique<
+                lithium::server::config::ConfigWebSocketService>(app, wsConfig);
             mConfigWsService->start();
             spdlog::info("Config WebSocket service started");
         }
@@ -303,11 +308,10 @@ public:
     }
 
     void getConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("getConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("getConfig request body: {}", req.body);
-        std::string path = body["path"].s();
+        std::string path = body["path"].get<std::string>();
 
         auto configManager = mConfigManager.lock();
         if (!configManager) {
@@ -318,12 +322,11 @@ public:
         try {
             spdlog::info("Retrieving config for path: {}", path);
             if (auto tmp = configManager->get(path)) {
-                spdlog::info("Config retrieved successfully for path: {}", path);
-                nlohmann::json responseData = {
-                    {"path", path},
-                    {"value", tmp.value().dump()},
-                    {"type", "string"}
-                };
+                spdlog::info("Config retrieved successfully for path: {}",
+                             path);
+                nlohmann::json responseData = {{"path", path},
+                                               {"value", tmp.value().dump()},
+                                               {"type", "string"}};
                 res = ResponseBuilder::success(responseData);
             } else {
                 spdlog::warn("Config not found for path: {}", path);
@@ -337,12 +340,11 @@ public:
     }
 
     void setConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("setConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("setConfig request body: {}", req.body);
-        std::string path = body["path"].s();
-        std::string value = body["value"].s();
+        std::string path = body["path"].get<std::string>();
+        std::string value = body["value"].get<std::string>();
         if (value.empty()) {
             spdlog::warn("Missing 'value' parameter in setConfig.");
             res = ResponseBuilder::missingField("value");
@@ -365,9 +367,9 @@ public:
 
     void deleteConfig(const crow::request& req, crow::response& res) {
         spdlog::info("deleteConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("deleteConfig request body: {}", req.body);
-        std::string path = body["path"].s();
+        std::string path = body["path"].get<std::string>();
         res = handleConfigAction(body, "deleteConfig", [&](auto configManager) {
             spdlog::info("Deleting config for path: {}", path);
             bool result = configManager->remove(path);
@@ -383,9 +385,9 @@ public:
 
     void loadConfig(const crow::request& req, crow::response& res) {
         spdlog::info("loadConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("loadConfig request body: {}", req.body);
-        std::string path = body["path"].s();
+        std::string path = body["path"].get<std::string>();
         res = handleConfigAction(body, "loadConfig", [&](auto configManager) {
             spdlog::info("Loading config from file: {}", path);
             bool result = configManager->loadFromFile(path);
@@ -403,7 +405,7 @@ public:
                       crow::response& res) {
         spdlog::info("reloadConfig called.");
         res = handleConfigAction(
-            crow::json::rvalue{}, "reloadConfig", [&](auto configManager) {
+            nlohmann::json{}, "reloadConfig", [&](auto configManager) {
                 spdlog::info("Reloading config from default file.");
                 bool result = configManager->loadFromFile("config/config.json");
                 if (result) {
@@ -419,9 +421,9 @@ public:
 
     void saveConfig(const crow::request& req, crow::response& res) {
         spdlog::info("saveConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("saveConfig request body: {}", req.body);
-        std::string path = body["path"].s();
+        std::string path = body["path"].get<std::string>();
         res = handleConfigAction(body, "saveConfig", [&](auto configManager) {
             spdlog::info("Saving config to file: {}", path);
             bool result = configManager->save(path);
@@ -436,12 +438,11 @@ public:
     }
 
     void appendConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("appendConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("appendConfig request body: {}", req.body);
-        std::string path = body["path"].s();
-        std::string value = body["value"].s();
+        std::string path = body["path"].get<std::string>();
+        std::string value = body["value"].get<std::string>();
         if (value.empty()) {
             spdlog::warn("Missing 'value' parameter in appendConfig.");
             res = ResponseBuilder::missingField("value");
@@ -464,9 +465,9 @@ public:
 
     void hasConfig(const crow::request& req, crow::response& res) {
         spdlog::info("hasConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("hasConfig request body: {}", req.body);
-        std::string path = body["path"].s();
+        std::string path = body["path"].get<std::string>();
         res = handleConfigAction(body, "hasConfig", [&](auto configManager) {
             spdlog::info("Checking existence of config at path: {}", path);
             bool exists = configManager->has(path);
@@ -480,36 +481,50 @@ public:
     void listConfigKeys([[maybe_unused]] const crow::request& req,
                         crow::response& res) {
         spdlog::info("listConfigKeys called.");
-        res = handleConfigAction(
-            crow::json::rvalue{}, "listConfigKeys", [&](auto configManager) {
-                spdlog::info("Listing all config keys.");
-                auto keys = configManager->getKeys();
-                spdlog::info("Retrieved {} config keys.", keys.size());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["keys"] = keys;
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto configManager = mConfigManager.lock();
+            if (!configManager) {
+                res = ResponseBuilder::internalError(
+                    "ConfigManager not available");
+                return;
+            }
+            spdlog::info("Listing all config keys.");
+            auto keys = configManager->getKeys();
+            spdlog::info("Retrieved {} config keys.", keys.size());
+            nlohmann::json keysData = nlohmann::json::array();
+            for (const auto& key : keys) {
+                keysData.push_back(key);
+            }
+            nlohmann::json responseData = {{"keys", keysData}};
+            res = ResponseBuilder::success(responseData);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::internalError(e.what());
+        }
         spdlog::info("listConfigKeys completed.");
     }
 
     void listConfigPaths([[maybe_unused]] const crow::request& req,
                          crow::response& res) {
         spdlog::info("listConfigPaths called.");
-        res = handleConfigAction(
-            crow::json::rvalue{}, "listConfigPaths", [&](auto configManager) {
-                spdlog::info("Listing all config paths.");
-                auto paths = configManager->listPaths();
-                spdlog::info("Retrieved {} config paths.", paths.size());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["paths"] = paths;
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto configManager = mConfigManager.lock();
+            if (!configManager) {
+                res = ResponseBuilder::internalError(
+                    "ConfigManager not available");
+                return;
+            }
+            spdlog::info("Listing all config paths.");
+            auto paths = configManager->listPaths();
+            spdlog::info("Retrieved {} config paths.", paths.size());
+            nlohmann::json pathsData = nlohmann::json::array();
+            for (const auto& path : paths) {
+                pathsData.push_back(path);
+            }
+            nlohmann::json responseData = {{"paths", pathsData}};
+            res = ResponseBuilder::success(responseData);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::internalError(e.what());
+        }
         spdlog::info("listConfigPaths completed.");
     }
 
@@ -517,7 +532,7 @@ public:
                     crow::response& res) {
         spdlog::info("tidyConfig called.");
         res = handleConfigAction(
-            crow::json::rvalue{}, "tidyConfig", [&](auto configManager) {
+            nlohmann::json{}, "tidyConfig", [&](auto configManager) {
                 spdlog::info("Tidying config.");
                 configManager->tidy();
                 spdlog::info("Config tidied successfully.");
@@ -530,7 +545,7 @@ public:
                      crow::response& res) {
         spdlog::info("clearConfig called.");
         res = handleConfigAction(
-            crow::json::rvalue{}, "clearConfig", [&](auto configManager) {
+            nlohmann::json{}, "clearConfig", [&](auto configManager) {
                 spdlog::info("Clearing all config.");
                 configManager->clear();
                 spdlog::info("All config cleared successfully.");
@@ -540,11 +555,10 @@ public:
     }
 
     void mergeConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("mergeConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
         spdlog::info("mergeConfig request body: {}", req.body);
-        std::string value = body["value"].s();
+        std::string value = body["value"].get<std::string>();
         if (value.empty()) {
             spdlog::warn("Missing 'value' parameter in mergeConfig.");
             res = ResponseBuilder::missingField("value");
@@ -565,10 +579,9 @@ public:
     // ========================================================================
 
     void validateConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("validateConfig called.");
-        auto body = crow::json::load(req.body);
-        std::string path = body["path"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string path = body["path"].get<std::string>();
 
         auto configManager = mConfigManager.lock();
         if (!configManager) {
@@ -587,12 +600,10 @@ public:
                 warnings.push_back(warn);
             }
 
-            nlohmann::json responseData = {
-                {"valid", result.isValid},
-                {"path", path},
-                {"errors", errors},
-                {"warnings", warnings}
-            };
+            nlohmann::json responseData = {{"valid", result.isValid},
+                                           {"path", path},
+                                           {"errors", errors},
+                                           {"warnings", warnings}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -601,7 +612,6 @@ public:
 
     void validateAllConfig([[maybe_unused]] const crow::request& req,
                            crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("validateAllConfig called.");
 
         auto configManager = mConfigManager.lock();
@@ -621,11 +631,9 @@ public:
                 warnings.push_back(warn);
             }
 
-            nlohmann::json responseData = {
-                {"valid", result.isValid},
-                {"errors", errors},
-                {"warnings", warnings}
-            };
+            nlohmann::json responseData = {{"valid", result.isValid},
+                                           {"errors", errors},
+                                           {"warnings", warnings}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -633,14 +641,14 @@ public:
     }
 
     void setSchema(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("setSchema called.");
-        auto body = crow::json::load(req.body);
-        std::string path = body["path"].s();
-        std::string schema = body["schema"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string path = body["path"].get<std::string>();
+        std::string schema = body["schema"].get<std::string>();
 
         if (path.empty() || schema.empty()) {
-            res = ResponseBuilder::badRequest("Missing path or schema parameter");
+            res =
+                ResponseBuilder::badRequest("Missing path or schema parameter");
             return;
         }
 
@@ -651,23 +659,25 @@ public:
         }
 
         try {
-            bool success = configManager->setSchema(path, nlohmann::json::parse(schema));
+            bool success =
+                configManager->setSchema(path, nlohmann::json::parse(schema));
             nlohmann::json responseData = {{"path", path}};
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::badRequest("Failed to set schema");
+            res = success ? ResponseBuilder::success(responseData)
+                          : ResponseBuilder::badRequest("Failed to set schema");
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
     }
 
     void loadSchema(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("loadSchema called.");
-        auto body = crow::json::load(req.body);
-        std::string path = body["path"].s();
-        std::string filePath = body["file_path"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string path = body["path"].get<std::string>();
+        std::string filePath = body["file_path"].get<std::string>();
 
         if (path.empty() || filePath.empty()) {
-            res = ResponseBuilder::badRequest("Missing path or file_path parameter");
+            res = ResponseBuilder::badRequest(
+                "Missing path or file_path parameter");
             return;
         }
 
@@ -679,11 +689,11 @@ public:
 
         try {
             bool success = configManager->loadSchema(path, filePath);
-            nlohmann::json responseData = {
-                {"path", path},
-                {"file_path", filePath}
-            };
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::badRequest("Failed to load schema");
+            nlohmann::json responseData = {{"path", path},
+                                           {"file_path", filePath}};
+            res = success
+                      ? ResponseBuilder::success(responseData)
+                      : ResponseBuilder::badRequest("Failed to load schema");
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
@@ -694,10 +704,9 @@ public:
     // ========================================================================
 
     void enableAutoReload(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("enableAutoReload called.");
-        auto body = crow::json::load(req.body);
-        std::string path = body["path"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string path = body["path"].get<std::string>();
 
         if (path.empty()) {
             res = ResponseBuilder::missingField("path");
@@ -712,21 +721,20 @@ public:
 
         try {
             bool success = configManager->enableAutoReload(path);
-            nlohmann::json responseData = {
-                {"path", path},
-                {"watching", success}
-            };
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::badRequest("Failed to enable auto reload");
+            nlohmann::json responseData = {{"path", path},
+                                           {"watching", success}};
+            res = success ? ResponseBuilder::success(responseData)
+                          : ResponseBuilder::badRequest(
+                                "Failed to enable auto reload");
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
     }
 
     void disableAutoReload(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("disableAutoReload called.");
-        auto body = crow::json::load(req.body);
-        std::string path = body["path"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string path = body["path"].get<std::string>();
 
         if (path.empty()) {
             res = ResponseBuilder::missingField("path");
@@ -741,21 +749,19 @@ public:
 
         try {
             bool success = configManager->disableAutoReload(path);
-            nlohmann::json responseData = {
-                {"path", path},
-                {"watching", false}
-            };
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::badRequest("Failed to disable auto reload");
+            nlohmann::json responseData = {{"path", path}, {"watching", false}};
+            res = success ? ResponseBuilder::success(responseData)
+                          : ResponseBuilder::badRequest(
+                                "Failed to disable auto reload");
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
     }
 
     void getWatchStatus(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("getWatchStatus called.");
-        auto body = crow::json::load(req.body);
-        std::string path = body["path"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string path = body["path"].get<std::string>();
 
         if (path.empty()) {
             res = ResponseBuilder::missingField("path");
@@ -770,10 +776,8 @@ public:
 
         try {
             bool watching = configManager->isAutoReloadEnabled(path);
-            nlohmann::json responseData = {
-                {"path", path},
-                {"watching", watching}
-            };
+            nlohmann::json responseData = {{"path", path},
+                                           {"watching", watching}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -786,7 +790,6 @@ public:
 
     void getMetrics([[maybe_unused]] const crow::request& req,
                     crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("getMetrics called.");
 
         auto configManager = mConfigManager.lock();
@@ -807,8 +810,7 @@ public:
                 {"files_saved", metrics.files_saved},
                 {"auto_reloads", metrics.auto_reloads},
                 {"average_access_time_ms", metrics.average_access_time_ms},
-                {"average_save_time_ms", metrics.average_save_time_ms}
-            };
+                {"average_save_time_ms", metrics.average_save_time_ms}};
             res = ResponseBuilder::success(metricsData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -817,7 +819,6 @@ public:
 
     void resetMetrics([[maybe_unused]] const crow::request& req,
                       crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("resetMetrics called.");
 
         auto configManager = mConfigManager.lock();
@@ -829,8 +830,7 @@ public:
         try {
             configManager->resetMetrics();
             nlohmann::json responseData = {
-                {"message", "Metrics reset successfully"}
-            };
+                {"message", "Metrics reset successfully"}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -839,7 +839,6 @@ public:
 
     void getCacheStats([[maybe_unused]] const crow::request& req,
                        crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("getCacheStats called.");
 
         auto configManager = mConfigManager.lock();
@@ -856,8 +855,7 @@ public:
                 {"evictions", stats.evictions.load()},
                 {"expirations", stats.expirations.load()},
                 {"current_size", stats.currentSize.load()},
-                {"hit_ratio", stats.getHitRatio()}
-            };
+                {"hit_ratio", stats.getHitRatio()}};
             res = ResponseBuilder::success(cacheData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -870,7 +868,6 @@ public:
 
     void createSnapshot([[maybe_unused]] const crow::request& req,
                         crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("createSnapshot called.");
 
         auto configManager = mConfigManager.lock();
@@ -881,9 +878,7 @@ public:
 
         try {
             std::string snapshotId = configManager->createSnapshot();
-            nlohmann::json responseData = {
-                {"snapshot_id", snapshotId}
-            };
+            nlohmann::json responseData = {{"snapshot_id", snapshotId}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -891,10 +886,9 @@ public:
     }
 
     void restoreSnapshot(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("restoreSnapshot called.");
-        auto body = crow::json::load(req.body);
-        std::string snapshotId = body["snapshot_id"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string snapshotId = body["snapshot_id"].get<std::string>();
 
         if (snapshotId.empty()) {
             res = ResponseBuilder::missingField("snapshot_id");
@@ -909,10 +903,9 @@ public:
 
         try {
             bool success = configManager->restoreSnapshot(snapshotId);
-            nlohmann::json responseData = {
-                {"snapshot_id", snapshotId}
-            };
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::notFound("Snapshot " + snapshotId);
+            nlohmann::json responseData = {{"snapshot_id", snapshotId}};
+            res = success ? ResponseBuilder::success(responseData)
+                          : ResponseBuilder::notFound("Snapshot " + snapshotId);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
@@ -920,7 +913,6 @@ public:
 
     void listSnapshots([[maybe_unused]] const crow::request& req,
                        crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("listSnapshots called.");
 
         auto configManager = mConfigManager.lock();
@@ -935,10 +927,8 @@ public:
             for (const auto& id : snapshots) {
                 snapshotList.push_back(id);
             }
-            nlohmann::json responseData = {
-                {"snapshots", snapshotList},
-                {"count", snapshots.size()}
-            };
+            nlohmann::json responseData = {{"snapshots", snapshotList},
+                                           {"count", snapshots.size()}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -946,10 +936,9 @@ public:
     }
 
     void deleteSnapshot(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("deleteSnapshot called.");
-        auto body = crow::json::load(req.body);
-        std::string snapshotId = body["snapshot_id"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string snapshotId = body["snapshot_id"].get<std::string>();
 
         if (snapshotId.empty()) {
             res = ResponseBuilder::missingField("snapshot_id");
@@ -964,10 +953,9 @@ public:
 
         try {
             bool success = configManager->deleteSnapshot(snapshotId);
-            nlohmann::json responseData = {
-                {"snapshot_id", snapshotId}
-            };
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::notFound("Snapshot " + snapshotId);
+            nlohmann::json responseData = {{"snapshot_id", snapshotId}};
+            res = success ? ResponseBuilder::success(responseData)
+                          : ResponseBuilder::notFound("Snapshot " + snapshotId);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
@@ -978,10 +966,10 @@ public:
     // ========================================================================
 
     void exportConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("exportConfig called.");
-        auto body = crow::json::load(req.body);
-        std::string formatStr = body["format"] ? body["format"].s() : "json";
+        auto body = nlohmann::json::parse(req.body);
+        std::string formatStr =
+            body["format"] ? body["format"].get<std::string>() : "json";
 
         auto configManager = mConfigManager.lock();
         if (!configManager) {
@@ -999,10 +987,8 @@ public:
             }
 
             std::string exported = configManager->exportAs(format);
-            nlohmann::json responseData = {
-                {"format", formatStr},
-                {"data", exported}
-            };
+            nlohmann::json responseData = {{"format", formatStr},
+                                           {"data", exported}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -1010,11 +996,11 @@ public:
     }
 
     void importConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("importConfig called.");
-        auto body = crow::json::load(req.body);
-        std::string data = body["data"].s();
-        std::string formatStr = body["format"] ? body["format"].s() : "json";
+        auto body = nlohmann::json::parse(req.body);
+        std::string data = body["data"].get<std::string>();
+        std::string formatStr =
+            body["format"] ? body["format"].get<std::string>() : "json";
 
         if (data.empty()) {
             res = ResponseBuilder::missingField("data");
@@ -1035,20 +1021,19 @@ public:
             }
 
             bool success = configManager->importFrom(data, format);
-            nlohmann::json responseData = {
-                {"format", formatStr}
-            };
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::badRequest("Failed to import config");
+            nlohmann::json responseData = {{"format", formatStr}};
+            res = success
+                      ? ResponseBuilder::success(responseData)
+                      : ResponseBuilder::badRequest("Failed to import config");
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
     }
 
     void diffConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("diffConfig called.");
-        auto body = crow::json::load(req.body);
-        std::string otherConfig = body["config"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string otherConfig = body["config"].get<std::string>();
 
         if (otherConfig.empty()) {
             res = ResponseBuilder::missingField("config");
@@ -1062,10 +1047,9 @@ public:
         }
 
         try {
-            auto diffResult = configManager->diff(nlohmann::json::parse(otherConfig));
-            nlohmann::json responseData = {
-                {"diff", diffResult}
-            };
+            auto diffResult =
+                configManager->diff(nlohmann::json::parse(otherConfig));
+            nlohmann::json responseData = {{"diff", diffResult}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -1073,10 +1057,9 @@ public:
     }
 
     void applyPatch(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("applyPatch called.");
-        auto body = crow::json::load(req.body);
-        std::string patch = body["patch"].s();
+        auto body = nlohmann::json::parse(req.body);
+        std::string patch = body["patch"].get<std::string>();
 
         if (patch.empty()) {
             res = ResponseBuilder::missingField("patch");
@@ -1090,9 +1073,12 @@ public:
         }
 
         try {
-            bool success = configManager->applyPatch(nlohmann::json::parse(patch));
+            bool success =
+                configManager->applyPatch(nlohmann::json::parse(patch));
             nlohmann::json responseData = {};
-            res = success ? ResponseBuilder::success(responseData) : ResponseBuilder::badRequest("Failed to apply patch");
+            res = success
+                      ? ResponseBuilder::success(responseData)
+                      : ResponseBuilder::badRequest("Failed to apply patch");
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
         }
@@ -1100,7 +1086,6 @@ public:
 
     void flattenConfig([[maybe_unused]] const crow::request& req,
                        crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("flattenConfig called.");
 
         auto configManager = mConfigManager.lock();
@@ -1115,10 +1100,8 @@ public:
             for (const auto& [key, value] : flattened) {
                 flatData[key] = value;
             }
-            nlohmann::json responseData = {
-                {"data", flatData},
-                {"count", flattened.size()}
-            };
+            nlohmann::json responseData = {{"data", flatData},
+                                           {"count", flattened.size()}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -1130,9 +1113,8 @@ public:
     // ========================================================================
 
     void batchGetConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("batchGetConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
 
         if (!body["paths"]) {
             res = ResponseBuilder::missingField("paths");
@@ -1148,7 +1130,7 @@ public:
         try {
             nlohmann::json results;
             for (size_t i = 0; i < body["paths"].size(); ++i) {
-                std::string path = body["paths"][i].s();
+                std::string path = body["paths"][i].get<std::string>();
                 auto value = configManager->get(path);
                 if (value) {
                     results[path] = *value;
@@ -1156,9 +1138,7 @@ public:
                     results[path] = nullptr;
                 }
             }
-            nlohmann::json responseData = {
-                {"results", results}
-            };
+            nlohmann::json responseData = {{"results", results}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -1166,9 +1146,8 @@ public:
     }
 
     void batchSetConfig(const crow::request& req, crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("batchSetConfig called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
 
         if (!body["items"]) {
             res = ResponseBuilder::missingField("items");
@@ -1187,10 +1166,12 @@ public:
             nlohmann::json results;
 
             for (size_t i = 0; i < body["items"].size(); ++i) {
-                std::string path = body["items"][i]["path"].s();
-                std::string value = body["items"][i]["value"].s();
+                std::string path = body["items"][i]["path"].get<std::string>();
+                std::string value =
+                    body["items"][i]["value"].get<std::string>();
 
-                bool success = configManager->set(path, nlohmann::json::parse(value));
+                bool success =
+                    configManager->set(path, nlohmann::json::parse(value));
                 results[path] = success;
                 if (success) {
                     ++successCount;
@@ -1199,11 +1180,9 @@ public:
                 }
             }
 
-            nlohmann::json responseData = {
-                {"results", results},
-                {"success_count", successCount},
-                {"fail_count", failCount}
-            };
+            nlohmann::json responseData = {{"results", results},
+                                           {"success_count", successCount},
+                                           {"fail_count", failCount}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -1216,19 +1195,17 @@ public:
 
     void getWsStats([[maybe_unused]] const crow::request& req,
                     crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("getWsStats called.");
 
         if (!mConfigWsService) {
-            res = ResponseBuilder::serviceUnavailable("WebSocket service not available");
+            res = ResponseBuilder::serviceUnavailable(
+                "WebSocket service not available");
             return;
         }
 
         try {
             auto stats = mConfigWsService->getStatistics();
-            nlohmann::json responseData = {
-                {"websocket", stats}
-            };
+            nlohmann::json responseData = {{"websocket", stats}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -1237,34 +1214,42 @@ public:
 
     void broadcastConfigNotification(const crow::request& req,
                                      crow::response& res) {
-        using lithium::server::controller::ResponseBuilder;
         spdlog::info("broadcastConfigNotification called.");
-        auto body = crow::json::load(req.body);
+        auto body = nlohmann::json::parse(req.body);
 
         if (!mConfigWsService) {
-            res = ResponseBuilder::serviceUnavailable("WebSocket service not available");
+            res = ResponseBuilder::serviceUnavailable(
+                "WebSocket service not available");
             return;
         }
 
-        std::string type = body["type"] ? body["type"].s() : "value_changed";
-        std::string path = body["path"] ? body["path"].s() : "";
-        std::string message = body["message"] ? body["message"].s() : "";
+        std::string type =
+            body["type"] ? body["type"].get<std::string>() : "value_changed";
+        std::string path = body["path"] ? body["path"].get<std::string>() : "";
+        std::string message =
+            body["message"] ? body["message"].get<std::string>() : "";
 
         try {
-            lithium::server::config::ConfigWebSocketService::NotificationType notifType =
-                lithium::server::config::ConfigWebSocketService::NotificationType::VALUE_CHANGED;
+            lithium::server::config::ConfigWebSocketService::NotificationType
+                notifType = lithium::server::config::ConfigWebSocketService::
+                    NotificationType::VALUE_CHANGED;
 
             // Map string type to enum
             if (type == "value_removed") {
-                notifType = lithium::server::config::ConfigWebSocketService::NotificationType::VALUE_REMOVED;
+                notifType = lithium::server::config::ConfigWebSocketService::
+                    NotificationType::VALUE_REMOVED;
             } else if (type == "file_loaded") {
-                notifType = lithium::server::config::ConfigWebSocketService::NotificationType::FILE_LOADED;
+                notifType = lithium::server::config::ConfigWebSocketService::
+                    NotificationType::FILE_LOADED;
             } else if (type == "file_saved") {
-                notifType = lithium::server::config::ConfigWebSocketService::NotificationType::FILE_SAVED;
+                notifType = lithium::server::config::ConfigWebSocketService::
+                    NotificationType::FILE_SAVED;
             } else if (type == "config_cleared") {
-                notifType = lithium::server::config::ConfigWebSocketService::NotificationType::CONFIG_CLEARED;
+                notifType = lithium::server::config::ConfigWebSocketService::
+                    NotificationType::CONFIG_CLEARED;
             } else if (type == "config_merged") {
-                notifType = lithium::server::config::ConfigWebSocketService::NotificationType::CONFIG_MERGED;
+                notifType = lithium::server::config::ConfigWebSocketService::
+                    NotificationType::CONFIG_MERGED;
             }
 
             nlohmann::json data;
@@ -1278,8 +1263,7 @@ public:
                 {"message", "Notification broadcast sent"},
                 {"type", type},
                 {"path", path},
-                {"clients", mConfigWsService->getClientCount()}
-            };
+                {"clients", mConfigWsService->getClientCount()}};
             res = ResponseBuilder::success(responseData);
         } catch (const std::exception& e) {
             res = ResponseBuilder::internalError(e.what());
@@ -1288,4 +1272,7 @@ public:
 };
 
 inline std::weak_ptr<lithium::ConfigManager> ConfigController::mConfigManager;
-inline std::unique_ptr<lithium::server::config::ConfigWebSocketService> ConfigController::mConfigWsService;
+inline std::unique_ptr<lithium::server::config::ConfigWebSocketService>
+    ConfigController::mConfigWsService;
+
+}  // namespace lithium::server::controller

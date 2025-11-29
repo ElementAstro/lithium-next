@@ -1,36 +1,34 @@
 #ifndef LITHIUM_SERVER_MAIN_SERVER_HPP
 #define LITHIUM_SERVER_MAIN_SERVER_HPP
 
-#include "app.hpp"
-#include <memory>
-#include <vector>
-#include <chrono>
-#include <thread>
 #include <asio/io_context.hpp>
+#include <chrono>
+#include <memory>
+#include <thread>
+#include <vector>
+#include "app.hpp"
 
-#include "atom/log/spdlog_logger.hpp"
 #include "atom/async/message_bus.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
-#include "middleware/auth.hpp"
-#include "websocket.hpp"
-#include "eventloop.hpp"
 #include "command.hpp"
+#include "eventloop.hpp"
+#include "middleware/auth.hpp"
 #include "task_manager.hpp"
+#include "websocket.hpp"
 
 // Controllers
-#include "controller/controller.hpp"
 #include "controller/camera.hpp"
-#include "controller/mount.hpp"
-#include "controller/focuser.hpp"
-#include "controller/filterwheel.hpp"
-#include "controller/dome.hpp"
-#include "controller/guider.hpp"
-#include "controller/switch.hpp"
-#include "controller/system.hpp"
-#include "controller/filesystem.hpp"
-#include "controller/sky.hpp"
 #include "controller/components.hpp"
 #include "controller/config.hpp"
+#include "controller/controller.hpp"
+#include "controller/dome.hpp"
+#include "controller/filesystem.hpp"
+#include "controller/filterwheel.hpp"
+#include "controller/focuser.hpp"
+#include "controller/guider.hpp"
+#include "controller/logging.hpp"
+#include "controller/mount.hpp"
 #include "controller/python.hpp"
 #include "controller/script.hpp"
 #include "controller/search.hpp"
@@ -38,6 +36,13 @@
 #include "controller/sequencer/management.hpp"
 #include "controller/sequencer/target.hpp"
 #include "controller/sequencer/task.hpp"
+#include "controller/sky.hpp"
+#include "controller/switch.hpp"
+#include "controller/system.hpp"
+
+// Logging system
+#include "logging/logging_manager.hpp"
+#include "websocket/log_stream.hpp"
 
 // Sequencer core
 #include "task/sequencer.hpp"
@@ -46,7 +51,7 @@ namespace lithium::server {
 
 /**
  * @brief Main server application class
- * 
+ *
  * Integrates all controllers, middleware, WebSocket support, and event handling
  * to provide a complete astronomical equipment control REST API server.
  */
@@ -64,19 +69,23 @@ public:
         std::vector<std::string> api_keys;
         bool enable_cors = true;
         bool enable_logging = true;
+
+        // Logging configuration
+        logging::LoggingConfig logging_config;
     };
 
     /**
      * @brief Construct main server with configuration
      */
-    explicit MainServer(const Config& config) 
+    explicit MainServer(const Config& config)
         : config_(config),
           app_(),
           event_loop_(std::make_shared<app::EventLoop>(config.thread_count)),
-          exposure_sequence_(std::make_shared<lithium::task::ExposureSequence>()),
+          exposure_sequence_(
+              std::make_shared<lithium::task::ExposureSequence>()),
           task_manager_(std::make_shared<TaskManager>(event_loop_)) {
-        
-        LOG_INFO( "Initializing Lithium Server v1.0.0");
+        LOG_INFO("Initializing Lithium Server v1.0.0");
+        initializeLogging();
         initializeMiddleware();
         initializeControllers();
         initializeWebSocket();
@@ -86,16 +95,16 @@ public:
      * @brief Start the server
      */
     void start() {
-        LOG_INFO( "Starting server on port {}", config_.port);
-        
+        LOG_INFO("Starting server on port {}", config_.port);
+
         // EventLoop already starts worker threads in its constructor,
         // so we don't call run() here to avoid blocking.
 
         // Start MessageBus io_context in background thread
         message_bus_thread_ = std::thread([this]() {
-            LOG_INFO( "MessageBus io_context running");
+            LOG_INFO("MessageBus io_context running");
             message_bus_io_.run();
-            LOG_INFO( "MessageBus io_context stopped");
+            LOG_INFO("MessageBus io_context stopped");
         });
 
         // Start WebSocket server if initialized
@@ -104,21 +113,22 @@ public:
         }
 
         // Configure Crow app
-        app_.port(config_.port)
-            .multithreaded()
-            .run();
+        app_.port(config_.port).multithreaded().run();
     }
 
     /**
      * @brief Stop the server gracefully
      */
     void stop() {
-        LOG_INFO( "Stopping server...");
-        
+        LOG_INFO("Stopping server...");
+
+        // Stop log streaming first
+        LogStreamManager::getInstance().shutdown();
+
         if (websocket_server_) {
             websocket_server_->stop();
         }
-        
+
         // Stop MessageBus io_context and join thread
         message_bus_io_.stop();
         if (message_bus_thread_.joinable()) {
@@ -127,30 +137,29 @@ public:
 
         event_loop_->stop();
         app_.stop();
-        
-        LOG_INFO( "Server stopped");
+
+        // Shutdown logging last to capture all shutdown messages
+        logging::LoggingManager::getInstance().shutdown();
+
+        LOG_INFO("Server stopped");
     }
 
     /**
      * @brief Get the HTTP application instance
      */
-    ServerApp& getApp() {
-        return app_;
-    }
+    ServerApp& getApp() { return app_; }
 
     /**
      * @brief Get the event loop
      */
-    std::shared_ptr<app::EventLoop> getEventLoop() {
-        return event_loop_;
-    }
+    std::shared_ptr<app::EventLoop> getEventLoop() { return event_loop_; }
 
     /**
      * @brief Add an API key for authentication
      */
     void addApiKey(const std::string& key) {
         middleware::ApiKeyAuth::addApiKey(key);
-        LOG_INFO( "API key added");
+        LOG_INFO("API key added");
     }
 
     /**
@@ -158,7 +167,7 @@ public:
      */
     void revokeApiKey(const std::string& key) {
         middleware::ApiKeyAuth::revokeApiKey(key);
-        LOG_INFO( "API key revoked");
+        LOG_INFO("API key revoked");
     }
 
 private:
@@ -173,11 +182,50 @@ private:
     std::thread message_bus_thread_;
 
     /**
+     * @brief Initialize logging system
+     */
+    void initializeLogging() {
+        LOG_INFO("Initializing logging system...");
+
+        // Setup default logging configuration if not provided
+        logging::LoggingConfig log_config = config_.logging_config;
+
+        // Add default sinks if none configured
+        if (log_config.sinks.empty()) {
+            // Console sink
+            logging::SinkConfig console_sink;
+            console_sink.name = "console";
+            console_sink.type = "console";
+            console_sink.level = spdlog::level::info;
+            log_config.sinks.push_back(console_sink);
+
+            // Rotating file sink
+            logging::SinkConfig file_sink;
+            file_sink.name = "file";
+            file_sink.type = "rotating_file";
+            file_sink.level = spdlog::level::debug;
+            file_sink.file_path = "logs/lithium-server.log";
+            file_sink.max_file_size = 10 * 1024 * 1024;  // 10MB
+            file_sink.max_files = 5;
+            log_config.sinks.push_back(file_sink);
+        }
+
+        // Initialize logging manager
+        logging::LoggingManager::getInstance().initialize(log_config);
+
+        // Initialize log stream manager for WebSocket streaming
+        LogStreamManager::getInstance().initialize();
+
+        LOG_INFO("Logging system initialized with {} sinks",
+                 log_config.sinks.size());
+    }
+
+    /**
      * @brief Initialize middleware components
      */
     void initializeMiddleware() {
-        LOG_INFO( "Initializing middleware...");
-        
+        LOG_INFO("Initializing middleware...");
+
         // Add default API keys from config
         for (const auto& key : config_.api_keys) {
             middleware::ApiKeyAuth::addApiKey(key);
@@ -185,15 +233,15 @@ private:
 
         // CORS is handled by middleware in individual routes
         // Authentication is handled by ApiKeyAuth middleware
-        
-        LOG_INFO( "Middleware initialized");
+
+        LOG_INFO("Middleware initialized");
     }
 
     /**
      * @brief Initialize all controllers and register their routes
      */
     void initializeControllers() {
-        LOG_INFO( "Initializing controllers...");
+        LOG_INFO("Initializing controllers...");
 
         // Inject shared ExposureSequence instance into sequencer controllers
         SequenceExecutionController::setExposureSequence(exposure_sequence_);
@@ -205,18 +253,18 @@ private:
 
         // Register root endpoint
         CROW_ROUTE(app_, "/")
-            ([]() {
-                return crow::response(200, R"({
+        ([]() {
+            return crow::response(200, R"({
                     "status": "success",
                     "message": "Lithium Astronomical Equipment Control API v1.0.0",
                     "documentation": "/api/v1/docs"
                 })");
-            });
+        });
 
         // API version info endpoint
         CROW_ROUTE(app_, "/api/v1")
-            ([]() {
-                return crow::response(200, R"({
+        ([]() {
+            return crow::response(200, R"({
                     "status": "success",
                     "version": "1.0.0",
                     "endpoints": {
@@ -230,46 +278,67 @@ private:
                         "sky": "/api/v1/sky"
                     }
                 })");
-            });
+        });
 
         // Create and register controllers
-        controllers_.push_back(std::make_unique<CameraController>());
-        controllers_.push_back(std::make_unique<MountController>());
-        controllers_.push_back(std::make_unique<FocuserController>());
-        controllers_.push_back(std::make_unique<FilterWheelController>());
-        controllers_.push_back(std::make_unique<controller::SystemController>());
-        controllers_.push_back(std::make_unique<controller::FilesystemController>());
+        // All controllers are now in lithium::server::controller namespace
+        controllers_.push_back(
+            std::make_unique<controller::CameraController>());
+        controllers_.push_back(std::make_unique<controller::MountController>());
+        controllers_.push_back(
+            std::make_unique<controller::FocuserController>());
+        controllers_.push_back(
+            std::make_unique<controller::FilterWheelController>());
+        controllers_.push_back(
+            std::make_unique<controller::SystemController>());
+        controllers_.push_back(
+            std::make_unique<controller::FilesystemController>());
         controllers_.push_back(std::make_unique<controller::SkyController>());
         controllers_.push_back(std::make_unique<controller::DomeController>());
-        controllers_.push_back(std::make_unique<GuiderController>());
-        controllers_.push_back(std::make_unique<SwitchController>());
-        controllers_.push_back(std::make_unique<ModuleController>());
-        controllers_.push_back(std::make_unique<ConfigController>());
-        controllers_.push_back(std::make_unique<PythonController>());
-        controllers_.push_back(std::make_unique<ScriptController>());
-        controllers_.push_back(std::make_unique<SearchController>());
-        controllers_.push_back(std::make_unique<SequenceExecutionController>());
-        controllers_.push_back(std::make_unique<SequenceManagementController>());
-        controllers_.push_back(std::make_unique<TargetController>());
-        controllers_.push_back(std::make_unique<TaskManagementController>());
+        controllers_.push_back(
+            std::make_unique<controller::GuiderController>());
+        controllers_.push_back(
+            std::make_unique<controller::SwitchController>());
+        controllers_.push_back(
+            std::make_unique<controller::ModuleController>());
+        controllers_.push_back(
+            std::make_unique<controller::ConfigController>());
+        controllers_.push_back(
+            std::make_unique<controller::PythonController>());
+        controllers_.push_back(
+            std::make_unique<controller::ScriptController>());
+        controllers_.push_back(
+            std::make_unique<controller::SearchController>());
+        controllers_.push_back(
+            std::make_unique<controller::SequenceExecutionController>());
+        controllers_.push_back(
+            std::make_unique<controller::SequenceManagementController>());
+        controllers_.push_back(
+            std::make_unique<controller::TargetController>());
+        controllers_.push_back(
+            std::make_unique<controller::TaskManagementController>());
+        controllers_.push_back(
+            std::make_unique<controller::LoggingController>());
 
         // Register all controller routes
         for (auto& controller : controllers_) {
             controller->registerRoutes(app_);
         }
 
-        LOG_INFO( "Controllers initialized: {} controllers registered", controllers_.size());
+        LOG_INFO("Controllers initialized: {} controllers registered",
+                 controllers_.size());
     }
 
     /**
      * @brief Initialize WebSocket server
      */
     void initializeWebSocket() {
-        LOG_INFO( "Initializing WebSocket server...");
-        
+        LOG_INFO("Initializing WebSocket server...");
+
         // Create message bus for inter-component communication
-        auto message_bus = atom::async::MessageBus::createShared(message_bus_io_);
-        
+        auto message_bus =
+            atom::async::MessageBus::createShared(message_bus_io_);
+
         // Create command dispatcher bound to the shared EventLoop
         app::CommandDispatcher::Config dispatcher_config;
         dispatcher_config.maxHistorySize = 100;
@@ -293,7 +362,7 @@ private:
         websocket_server_ = std::make_shared<WebSocketServer>(
             app_, message_bus, command_dispatcher, ws_config);
 
-        LOG_INFO( "WebSocket server initialized at /api/v1/ws");
+        LOG_INFO("WebSocket server initialized at /api/v1/ws");
 
         // Connect TaskManager status updates to WebSocket events
         if (task_manager_ && websocket_server_) {
@@ -337,8 +406,7 @@ private:
                         task["error"] = info.error;
                     }
 
-                    task["cancelRequested"] =
-                        info.cancelRequested.load();
+                    task["cancelRequested"] = info.cancelRequested.load();
 
                     auto toMs = [](auto tp) {
                         return std::chrono::duration_cast<

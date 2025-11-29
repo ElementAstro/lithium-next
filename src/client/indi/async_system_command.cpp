@@ -15,11 +15,11 @@
 
 AsyncSystemCommand::AsyncSystemCommand(const std::string& cmd)
     : cmd_(cmd), pid_(0), running_(false), last_exit_status_(0) {
-    LOG_INFO( "AsyncSystemCommand created with command: {}", cmd);
+    LOG_INFO("AsyncSystemCommand created with command: {}", cmd);
 }
 
 AsyncSystemCommand::~AsyncSystemCommand() {
-    LOG_INFO( "AsyncSystemCommand destructor called");
+    LOG_INFO("AsyncSystemCommand destructor called");
     terminate();
 }
 
@@ -37,12 +37,12 @@ void AsyncSystemCommand::run() {
     std::lock_guard lock(mutex_);
 
     if (running_) {
-        LOG_WARN( "Command already running");
+        LOG_WARN("Command already running");
         return;
     }
 
     if (!isCommandValid()) {
-        LOG_ERROR( "Command not available: {}", cmd_);
+        LOG_ERROR("Command not available: {}", cmd_);
         return;
     }
 
@@ -54,9 +54,9 @@ void AsyncSystemCommand::run() {
     if (pid > 0) {
         pid_ = pid;
         running_ = true;
-        LOG_INFO( "Started command with PID {}", pid_.load());
+        LOG_INFO("Started command with PID {}", pid_.load());
     } else {
-        LOG_ERROR( "Failed to start command");
+        LOG_ERROR("Failed to start command");
     }
 }
 
@@ -64,28 +64,28 @@ void AsyncSystemCommand::terminate() {
     std::lock_guard lock(mutex_);
 
     if (!running_) {
-        LOG_INFO( "No running command to terminate");
+        LOG_INFO("No running command to terminate");
         return;
     }
 
     pid_t pid = pid_.load();
     if (pid <= 0) {
         running_ = false;
-        LOG_WARN( "Invalid PID: {}", pid);
+        LOG_WARN("Invalid PID: {}", pid);
         return;
     }
 
 #ifdef _WIN32
     HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
     if (hProcess == NULL) {
-        LOG_ERROR( "OpenProcess failed: {}", GetLastError());
+        LOG_ERROR("OpenProcess failed: {}", GetLastError());
         return;
     }
 
     if (!TerminateProcess(hProcess, 0)) {
-        LOG_ERROR( "TerminateProcess failed: {}", GetLastError());
+        LOG_ERROR("TerminateProcess failed: {}", GetLastError());
     } else {
-        LOG_INFO( "Process {} terminated", pid);
+        LOG_INFO("Process {} terminated", pid);
     }
 
     CloseHandle(hProcess);
@@ -94,10 +94,9 @@ void AsyncSystemCommand::terminate() {
     if (kill(-pid, SIGTERM) == 0) {
         int status;
         waitpid(pid, &status, 0);
-        LOG_INFO( "Process {} terminated", pid);
+        LOG_INFO("Process {} terminated", pid);
     } else {
-        LOG_ERROR( "Failed to terminate process {}: {}", pid,
-              strerror(errno));
+        LOG_ERROR("Failed to terminate process {}: {}", pid, strerror(errno));
     }
 #endif
 
@@ -109,46 +108,46 @@ bool AsyncSystemCommand::isRunning() const {
     std::lock_guard lock(mutex_);
 
     if (!running_) {
-        LOG_INFO( "No running command");
+        LOG_INFO("No running command");
         return false;
     }
 
     pid_t pid = pid_.load();
     if (pid <= 0) {
-        LOG_WARN( "Invalid PID: {}", pid);
+        LOG_WARN("Invalid PID: {}", pid);
         return false;
     }
 
 #ifdef _WIN32
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
     if (hProcess == NULL) {
-        LOG_ERROR( "OpenProcess failed: {}", GetLastError());
+        LOG_ERROR("OpenProcess failed: {}", GetLastError());
         return false;
     }
 
     DWORD exitCode;
     if (!GetExitCodeProcess(hProcess, &exitCode)) {
-        LOG_ERROR( "GetExitCodeProcess failed: {}", GetLastError());
+        LOG_ERROR("GetExitCodeProcess failed: {}", GetLastError());
         CloseHandle(hProcess);
         return false;
     }
 
     CloseHandle(hProcess);
     if (exitCode == STILL_ACTIVE) {
-        LOG_INFO( "Process {} is still running", pid);
+        LOG_INFO("Process {} is still running", pid);
         return true;
     }
 #else
     // Check if process exists
     if (kill(pid, 0) == 0) {
-        LOG_INFO( "Process {} is still running", pid);
+        LOG_INFO("Process {} is still running", pid);
         return true;
     }
 #endif
 
     // Process no longer exists
     const_cast<AsyncSystemCommand*>(this)->running_ = false;
-    LOG_INFO( "Process {} is no longer running", pid);
+    LOG_INFO("Process {} is no longer running", pid);
     return false;
 }
 

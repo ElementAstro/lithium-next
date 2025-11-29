@@ -11,21 +11,22 @@
 #include <vector>
 
 #include "connector.hpp"
-#include "server_manager.hpp"
 #include "fifo_channel.hpp"
+#include "server_manager.hpp"
 
 /**
  * @brief Callback for driver events
  */
-using DriverEventCallback = std::function<void(const std::string& driver, bool started)>;
+using DriverEventCallback =
+    std::function<void(const std::string& driver, bool started)>;
 
 /**
  * @class INDIConnector
  * @brief A class to manage the connection and interaction with an INDI server.
  *
- * This class provides functionality to start and stop the INDI server, manage drivers,
- * and set or get properties of INDI devices.
- * 
+ * This class provides functionality to start and stop the INDI server, manage
+ * drivers, and set or get properties of INDI devices.
+ *
  * Enhanced features:
  * - Configurable server startup via INDIServerConfig
  * - Reliable FIFO communication via FifoChannel
@@ -38,20 +39,23 @@ public:
      * @brief Constructs an INDIConnector with the given parameters.
      * @param hst The hostname of the INDI server (default is "localhost").
      * @param prt The port number of the INDI server (default is 7624).
-     * @param cfg The path to the INDI configuration files (default is an empty string).
-     * @param dta The path to the INDI data files (default is "/usr/share/indi").
+     * @param cfg The path to the INDI configuration files (default is an empty
+     * string).
+     * @param dta The path to the INDI data files (default is
+     * "/usr/share/indi").
      * @param fif The path to the INDI FIFO file (default is "/tmp/indi.fifo").
      */
-    INDIConnector(const std::string& hst = "localhost", int prt = 7624, 
+    INDIConnector(const std::string& hst = "localhost", int prt = 7624,
                   const std::string& cfg = "",
-                  const std::string& dta = "/usr/share/indi", 
+                  const std::string& dta = "/usr/share/indi",
                   const std::string& fif = "/tmp/indi.fifo");
 
     /**
      * @brief Constructs an INDIConnector with server configuration.
      * @param config Server configuration
      */
-    explicit INDIConnector(const lithium::client::indi::INDIServerConfig& config);
+    explicit INDIConnector(
+        const lithium::client::indi::INDIServerConfig& config);
 
     /**
      * @brief Destructor for INDIConnector.
@@ -94,13 +98,15 @@ public:
      * @brief Get server state
      * @return Current server state
      */
-    [[nodiscard]] auto getServerState() const -> lithium::client::indi::ServerState;
+    [[nodiscard]] auto getServerState() const
+        -> lithium::client::indi::ServerState;
 
     /**
      * @brief Get server uptime
      * @return Uptime in seconds or nullopt if not running
      */
-    [[nodiscard]] auto getServerUptime() const -> std::optional<std::chrono::seconds>;
+    [[nodiscard]] auto getServerUptime() const
+        -> std::optional<std::chrono::seconds>;
 
     /**
      * @brief Get last server error
@@ -115,13 +121,15 @@ public:
      * @param config New configuration
      * @return true if set successfully
      */
-    auto setServerConfig(const lithium::client::indi::INDIServerConfig& config) -> bool;
+    auto setServerConfig(const lithium::client::indi::INDIServerConfig& config)
+        -> bool;
 
     /**
      * @brief Get current server configuration
      * @return Configuration reference
      */
-    [[nodiscard]] auto getServerConfig() const -> const lithium::client::indi::INDIServerConfig&;
+    [[nodiscard]] auto getServerConfig() const
+        -> const lithium::client::indi::INDIServerConfig&;
 
     /**
      * @brief Set FIFO channel configuration
@@ -133,24 +141,29 @@ public:
 
     /**
      * @brief Starts an INDI driver.
-     * @param driver A shared pointer to the INDIDeviceContainer representing the driver.
+     * @param driver A shared pointer to the INDIDeviceContainer representing
+     * the driver.
      * @return True if the driver was started successfully, false otherwise.
      */
-    auto startDriver(const std::shared_ptr<class INDIDeviceContainer>& driver) -> bool override;
+    auto startDriver(const std::shared_ptr<class INDIDeviceContainer>& driver)
+        -> bool override;
 
     /**
      * @brief Stops an INDI driver.
-     * @param driver A shared pointer to the INDIDeviceContainer representing the driver.
+     * @param driver A shared pointer to the INDIDeviceContainer representing
+     * the driver.
      * @return True if the driver was stopped successfully, false otherwise.
      */
-    auto stopDriver(const std::shared_ptr<class INDIDeviceContainer>& driver) -> bool override;
+    auto stopDriver(const std::shared_ptr<class INDIDeviceContainer>& driver)
+        -> bool override;
 
     /**
      * @brief Restart a driver
      * @param driver Driver to restart
      * @return true if restarted successfully
      */
-    auto restartDriver(const std::shared_ptr<class INDIDeviceContainer>& driver) -> bool;
+    auto restartDriver(const std::shared_ptr<class INDIDeviceContainer>& driver)
+        -> bool;
 
     /**
      * @brief Start driver by binary name
@@ -158,8 +171,8 @@ public:
      * @param skeleton Optional skeleton file
      * @return true if started successfully
      */
-    auto startDriverByName(const std::string& binary, 
-                          const std::string& skeleton = "") -> bool;
+    auto startDriverByName(const std::string& binary,
+                           const std::string& skeleton = "") -> bool;
 
     /**
      * @brief Stop driver by binary name
@@ -173,7 +186,8 @@ public:
      * @param driverLabel Driver label
      * @return true if running
      */
-    [[nodiscard]] auto isDriverRunning(const std::string& driverLabel) const -> bool;
+    [[nodiscard]] auto isDriverRunning(const std::string& driverLabel) const
+        -> bool;
 
     // ==================== Property Access ====================
 
@@ -185,8 +199,9 @@ public:
      * @param value The value to set.
      * @return True if the property was set successfully, false otherwise.
      */
-    auto setProp(const std::string& dev, const std::string& prop, 
-                 const std::string& element, const std::string& value) -> bool override;
+    auto setProp(const std::string& dev, const std::string& prop,
+                 const std::string& element, const std::string& value)
+        -> bool override;
 
     /**
      * @brief Gets a property of an INDI device.
@@ -195,7 +210,7 @@ public:
      * @param element The name of the element.
      * @return The value of the property.
      */
-    auto getProp(const std::string& dev, const std::string& prop, 
+    auto getProp(const std::string& dev, const std::string& prop,
                  const std::string& element) -> std::string override;
 
     /**
@@ -204,21 +219,26 @@ public:
      * @param prop The name of the property.
      * @return The state of the property.
      */
-    auto getState(const std::string& dev, const std::string& prop) -> std::string override;
+    auto getState(const std::string& dev, const std::string& prop)
+        -> std::string override;
 
     // ==================== Device/Driver Queries ====================
 
     /**
      * @brief Gets a list of running INDI drivers.
-     * @return An unordered map where the key is the driver label and the value is a shared pointer to the INDIDeviceContainer.
+     * @return An unordered map where the key is the driver label and the value
+     * is a shared pointer to the INDIDeviceContainer.
      */
-    auto getRunningDrivers() -> std::unordered_map<std::string, std::shared_ptr<class INDIDeviceContainer>> override;
+    auto getRunningDrivers() -> std::unordered_map<
+        std::string, std::shared_ptr<class INDIDeviceContainer>> override;
 
     /**
      * @brief Gets a list of INDI devices.
-     * @return A vector of unordered maps, each representing a device with its properties.
+     * @return A vector of unordered maps, each representing a device with its
+     * properties.
      */
-    auto getDevices() -> std::vector<std::unordered_map<std::string, std::string>> override;
+    auto getDevices()
+        -> std::vector<std::unordered_map<std::string, std::string>> override;
 
     /**
      * @brief Get count of running drivers
@@ -232,7 +252,8 @@ public:
      * @brief Set callback for server state changes
      * @param callback Callback function
      */
-    void setServerEventCallback(lithium::client::indi::ServerEventCallback callback);
+    void setServerEventCallback(
+        lithium::client::indi::ServerEventCallback callback);
 
     /**
      * @brief Set callback for driver events
@@ -298,9 +319,11 @@ private:
     mutable std::mutex driverMutex_;
 
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::shared_ptr<INDIDeviceContainer>> running_drivers_;
+    emhash8::HashMap<std::string, std::shared_ptr<INDIDeviceContainer>>
+        running_drivers_;
 #else
-    std::unordered_map<std::string, std::shared_ptr<INDIDeviceContainer>> running_drivers_; ///< A list of running drivers.
+    std::unordered_map<std::string, std::shared_ptr<INDIDeviceContainer>>
+        running_drivers_;  ///< A list of running drivers.
 #endif
 };
 

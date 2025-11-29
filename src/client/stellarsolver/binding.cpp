@@ -10,7 +10,7 @@ using namespace lithium::client;
 namespace py = pybind11;
 
 PYBIND11_MODULE(ssbindings, m) {
-    LOG_INFO( "Initializing ssbindings module");
+    LOG_INFO("Initializing ssbindings module");
 
     py::class_<FitsImageStatistic>(m, "FitsImageStatistic")
         .def(py::init<>())
@@ -60,5 +60,5 @@ PYBIND11_MODULE(ssbindings, m) {
         .def("pixel_to_wcs", &SS::pixelToWCS)
         .def("wcs_to_pixel", &SS::wcsToPixel)
 
-            LOG_INFO( "ssbindings module initialized successfully");
+            LOG_INFO("ssbindings module initialized successfully");
 }

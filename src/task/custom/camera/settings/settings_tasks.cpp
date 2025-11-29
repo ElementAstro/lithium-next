@@ -15,11 +15,15 @@ namespace lithium::task::camera {
 void CameraSettingsTask::setupParameters() {
     addParamDefinition("gain", "integer", false, nullptr, "Camera gain");
     addParamDefinition("offset", "integer", false, nullptr, "Camera offset");
-    addParamDefinition("binning", "object", false, nullptr, "Binning configuration");
+    addParamDefinition("binning", "object", false, nullptr,
+                       "Binning configuration");
     addParamDefinition("cooling", "boolean", false, nullptr, "Enable cooling");
-    addParamDefinition("target_temp", "number", false, nullptr, "Target temperature");
-    addParamDefinition("fan_speed", "integer", false, nullptr, "Fan speed (0-100)");
-    addParamDefinition("usb_bandwidth", "integer", false, nullptr, "USB bandwidth limit");
+    addParamDefinition("target_temp", "number", false, nullptr,
+                       "Target temperature");
+    addParamDefinition("fan_speed", "integer", false, nullptr,
+                       "Fan speed (0-100)");
+    addParamDefinition("usb_bandwidth", "integer", false, nullptr,
+                       "USB bandwidth limit");
 }
 
 void CameraSettingsTask::validateParams(const json& params) {
@@ -57,7 +61,8 @@ void CameraSettingsTask::executeImpl(const json& params) {
 
     if (params.contains("binning")) {
         BinningConfig binning = params["binning"].get<BinningConfig>();
-        logProgress("Setting binning: " + std::to_string(binning.x) + "x" + std::to_string(binning.y));
+        logProgress("Setting binning: " + std::to_string(binning.x) + "x" +
+                    std::to_string(binning.y));
     }
 
     if (params.contains("cooling") && params["cooling"].get<bool>()) {
@@ -81,12 +86,17 @@ void CameraSettingsTask::executeImpl(const json& params) {
 // ============================================================================
 
 void CameraPreviewTask::setupParameters() {
-    addParamDefinition("exposure", "number", false, 1.0, "Preview exposure time");
-    addParamDefinition("binning", "object", false, json{{"x", 2}, {"y", 2}}, "Preview binning");
-    addParamDefinition("stretch", "boolean", false, true, "Auto-stretch preview");
+    addParamDefinition("exposure", "number", false, 1.0,
+                       "Preview exposure time");
+    addParamDefinition("binning", "object", false, json{{"x", 2}, {"y", 2}},
+                       "Preview binning");
+    addParamDefinition("stretch", "boolean", false, true,
+                       "Auto-stretch preview");
     addParamDefinition("crosshair", "boolean", false, true, "Show crosshair");
-    addParamDefinition("loop", "boolean", false, false, "Continuous preview mode");
-    addParamDefinition("loop_count", "integer", false, 0, "Number of loops (0=infinite)");
+    addParamDefinition("loop", "boolean", false, false,
+                       "Continuous preview mode");
+    addParamDefinition("loop_count", "integer", false, 0,
+                       "Number of loops (0=infinite)");
 }
 
 void CameraPreviewTask::validateParams(const json& params) {
@@ -119,7 +129,8 @@ void CameraPreviewTask::executeImpl(const json& params) {
 
         count++;
 
-        if (!infinite && count >= iterations) break;
+        if (!infinite && count >= iterations)
+            break;
     }
 
     logProgress("Preview complete");

@@ -14,5 +14,6 @@ Description: Component Manager (Legacy compatibility - empty implementation)
 
 #include "manager.hpp"
 
-// This file is now empty as all implementation has been moved to the manager/ subdirectory.
-// The new manager.hpp file includes the proper headers for backward compatibility.
+// This file is now empty as all implementation has been moved to the manager/
+// subdirectory. The new manager.hpp file includes the proper headers for
+// backward compatibility.

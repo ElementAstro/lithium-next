@@ -48,8 +48,8 @@ auto loadImage(const std::string& filename, int flags) -> cv::Mat {
 }
 
 auto loadImages(const std::string& folder,
-                const std::vector<std::string>& filenames,
-                int flags) -> std::vector<std::pair<std::string, cv::Mat>> {
+                const std::vector<std::string>& filenames, int flags)
+    -> std::vector<std::pair<std::string, cv::Mat>> {
     LOG_F(INFO, "Starting batch image loading from folder: {}", folder);
     LOG_F(INFO, "Target files count: {}",
           filenames.empty() ? "all" : std::to_string(filenames.size()));
@@ -170,8 +170,8 @@ auto saveImage(const std::string& filename, const cv::Mat& image) -> bool {
     return false;
 }
 
-auto saveMatTo8BitJpg(const cv::Mat& image,
-                      const std::string& output_path) -> bool {
+auto saveMatTo8BitJpg(const cv::Mat& image, const std::string& output_path)
+    -> bool {
     LOG_F(INFO, "Starting 8-bit JPG conversion for image {}x{}", image.cols,
           image.rows);
 
@@ -230,8 +230,8 @@ auto saveMatTo8BitJpg(const cv::Mat& image,
     }
 }
 
-auto saveMatTo16BitPng(const cv::Mat& image,
-                       const std::string& output_path) -> bool {
+auto saveMatTo16BitPng(const cv::Mat& image, const std::string& output_path)
+    -> bool {
     LOG_F(INFO, "Starting 16-bit PNG conversion for image {}x{}", image.cols,
           image.rows);
 
@@ -279,8 +279,8 @@ auto saveMatTo16BitPng(const cv::Mat& image,
     }
 }
 
-auto saveMatToFits(const cv::Mat& image,
-                   const std::string& output_path) -> bool {
+auto saveMatToFits(const cv::Mat& image, const std::string& output_path)
+    -> bool {
     LOG_F(INFO, "Starting FITS conversion for image {}x{}", image.cols,
           image.rows);
 

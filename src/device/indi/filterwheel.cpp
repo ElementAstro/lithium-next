@@ -34,12 +34,12 @@ auto INDIFilterwheel::isConnected() const -> bool {
 auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
                               int maxRetry) -> bool {
     if (isConnected_.load()) {
-        LOG_ERROR( "{} is already connected.", deviceName_);
+        LOG_ERROR("{} is already connected.", deviceName_);
         return false;
     }
 
     deviceName_ = deviceName;
-    LOG_INFO( "Connecting to {}...", deviceName_);
+    LOG_INFO("Connecting to {}...", deviceName_);
     // Max: need to get initial parameters and then register corresponding
     // callback functions
     watchDevice(deviceName_.c_str(), [this](INDI::BaseDevice device) {
@@ -49,7 +49,7 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
         device.watchProperty(
             "CONNECTION",
             [this](INDI::Property) {
-                LOG_INFO( "Connecting to {}...", deviceName_);
+                LOG_INFO("Connecting to {}...", deviceName_);
                 connectDevice(name_.c_str());
             },
             INDI::BaseDevice::WATCH_NEW);
@@ -59,9 +59,9 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 isConnected_ = property[0].getState() == ISS_ON;
                 if (isConnected_.load()) {
-                    LOG_INFO( "{} is connected.", deviceName_);
+                    LOG_INFO("{} is connected.", deviceName_);
                 } else {
-                    LOG_INFO( "{} is disconnected.", deviceName_);
+                    LOG_INFO("{} is disconnected.", deviceName_);
                 }
             },
             INDI::BaseDevice::WATCH_UPDATE);
@@ -71,16 +71,16 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyText &property) {
                 if (property.isValid()) {
                     const auto *driverName = property[0].getText();
-                    LOG_INFO( "Driver name: {}", driverName);
+                    LOG_INFO("Driver name: {}", driverName);
 
                     const auto *driverExec = property[1].getText();
-                    LOG_INFO( "Driver executable: {}", driverExec);
+                    LOG_INFO("Driver executable: {}", driverExec);
                     driverExec_ = driverExec;
                     const auto *driverVersion = property[2].getText();
-                    LOG_INFO( "Driver version: {}", driverVersion);
+                    LOG_INFO("Driver version: {}", driverVersion);
                     driverVersion_ = driverVersion;
                     const auto *driverInterface = property[3].getText();
-                    LOG_INFO( "Driver interface: {}", driverInterface);
+                    LOG_INFO("Driver interface: {}", driverInterface);
                     driverInterface_ = driverInterface;
                 }
             },
@@ -91,7 +91,7 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     isDebug_.store(property[0].getState() == ISS_ON);
-                    LOG_INFO( "Debug is {}", isDebug_.load() ? "ON" : "OFF");
+                    LOG_INFO("Debug is {}", isDebug_.load() ? "ON" : "OFF");
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -104,9 +104,9 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
                     auto period = property[0].getValue();
-                    LOG_INFO( "Current polling period: {}", period);
+                    LOG_INFO("Current polling period: {}", period);
                     if (period != currentPollingPeriod_.load()) {
-                        LOG_INFO( "Polling period change to: {}", period);
+                        LOG_INFO("Polling period change to: {}", period);
                         currentPollingPeriod_ = period;
                     }
                 }
@@ -118,8 +118,8 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     deviceAutoSearch_ = property[0].getState() == ISS_ON;
-                    LOG_INFO( "Auto search is {}",
-                          deviceAutoSearch_ ? "ON" : "OFF");
+                    LOG_INFO("Auto search is {}",
+                             deviceAutoSearch_ ? "ON" : "OFF");
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -129,8 +129,8 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
                     devicePortScan_ = property[0].getState() == ISS_ON;
-                    LOG_INFO( "Device port scan is {}",
-                          devicePortScan_ ? "On" : "Off");
+                    LOG_INFO("Device port scan is {}",
+                             devicePortScan_ ? "On" : "Off");
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -139,15 +139,13 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             "FILTER_SLOT",
             [this](const INDI::PropertyNumber &property) {
                 if (property.isValid()) {
-                    LOG_INFO( "Current filter slot: {}",
-                          property[0].getValue());
+                    LOG_INFO("Current filter slot: {}", property[0].getValue());
                     currentSlot_ = property[0].getValue();
                     maxSlot_ = property[0].getMax();
                     minSlot_ = property[0].getMin();
                     currentSlotName_ =
                         slotNames_[static_cast<int>(property[0].getValue())];
-                    LOG_INFO( "Current filter slot name: {}",
-                          currentSlotName_);
+                    LOG_INFO("Current filter slot name: {}", currentSlotName_);
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -158,7 +156,7 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     slotNames_.clear();
                     for (const auto &filter : property) {
-                        LOG_INFO( "Filter name: {}", filter.getText());
+                        LOG_INFO("Filter name: {}", filter.getText());
                         slotNames_.emplace_back(filter.getText());
                     }
                 }
@@ -188,7 +186,7 @@ auto INDIFilterwheel::getPosition()
     -> std::optional<std::tuple<double, double, double>> {
     INDI::PropertyNumber property = device_.getProperty("FILTER_SLOT");
     if (!property.isValid()) {
-        LOG_ERROR( "Unable to find FILTER_SLOT property...");
+        LOG_ERROR("Unable to find FILTER_SLOT property...");
         return std::nullopt;
     }
     return std::make_tuple(property[0].getValue(), property[0].getMin(),
@@ -198,7 +196,7 @@ auto INDIFilterwheel::getPosition()
 auto INDIFilterwheel::setPosition(int position) -> bool {
     INDI::PropertyNumber property = device_.getProperty("FILTER_SLOT");
     if (!property.isValid()) {
-        LOG_ERROR( "Unable to find FILTER_SLOT property...");
+        LOG_ERROR("Unable to find FILTER_SLOT property...");
         return false;
     }
     property[0].value = position;
@@ -213,7 +211,7 @@ auto INDIFilterwheel::setPosition(int position) -> bool {
         }
     }
     if (t.elapsed() > timeout) {
-        LOG_ERROR( "setPosition | ERROR : timeout ");
+        LOG_ERROR("setPosition | ERROR : timeout ");
         return false;
     }
     return true;
@@ -222,7 +220,7 @@ auto INDIFilterwheel::setPosition(int position) -> bool {
 auto INDIFilterwheel::getSlotName() -> std::optional<std::string> {
     INDI::PropertyText property = device_.getProperty("FILTER_NAME");
     if (!property.isValid()) {
-        LOG_ERROR( "Unable to find FILTER_NAME property...");
+        LOG_ERROR("Unable to find FILTER_NAME property...");
         return std::nullopt;
     }
     return property[0].getText();
@@ -231,7 +229,7 @@ auto INDIFilterwheel::getSlotName() -> std::optional<std::string> {
 auto INDIFilterwheel::setSlotName(std::string_view name) -> bool {
     INDI::PropertyText property = device_.getProperty("FILTER_NAME");
     if (!property.isValid()) {
-        LOG_ERROR( "Unable to find FILTER_NAME property...");
+        LOG_ERROR("Unable to find FILTER_NAME property...");
         return false;
     }
     property[0].setText(std::string(name).c_str());
@@ -240,7 +238,7 @@ auto INDIFilterwheel::setSlotName(std::string_view name) -> bool {
 }
 
 ATOM_MODULE(filterwheel_indi, [](Component &component) {
-    LOG_INFO( "Registering filterwheel_indi module...");
+    LOG_INFO("Registering filterwheel_indi module...");
     component.def("connect", &INDIFilterwheel::connect, "device",
                   "Connect to a filterwheel device.");
     component.def("disconnect", &INDIFilterwheel::disconnect, "device",
@@ -275,5 +273,5 @@ ATOM_MODULE(filterwheel_indi, [](Component &component) {
     component.defType<INDIFilterwheel>("filterwheel_indi", "device",
                                        "Define a new filterwheel instance.");
 
-    LOG_INFO( "Registered filterwheel_indi module.");
+    LOG_INFO("Registered filterwheel_indi module.");
 });

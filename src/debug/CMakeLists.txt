@@ -9,6 +9,9 @@
 # License: GPL3
 # ============================================================================
 
+# Add terminal subdirectory first
+add_subdirectory(terminal)
+
 lithium_component_begin(lithium_debug 1.0.0)
 
 # ============================================================================
@@ -19,6 +22,7 @@ set(PROJECT_SOURCES
     check.cpp
     suggestion.cpp
     terminal.cpp
+    $<TARGET_OBJECTS:lithium_debug_terminal_obj>
 )
 
 # ============================================================================

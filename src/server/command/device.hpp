@@ -5,9 +5,9 @@
 // Each device has its own header/implementation pair.
 
 #include "camera.hpp"
-#include "mount.hpp"
-#include "focuser.hpp"
-#include "filterwheel.hpp"
 #include "dome.hpp"
+#include "filterwheel.hpp"
+#include "focuser.hpp"
+#include "mount.hpp"
 
 #endif  // LITHIUM_SERVER_COMMAND_DEVICE_HPP

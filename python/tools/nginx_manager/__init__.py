@@ -19,7 +19,7 @@ from .core import (
     ConfigError,
     InstallationError,
     OperationError,
-    NginxPaths
+    NginxPaths,
 )
 from .manager import NginxManager
 from .bindings import NginxManagerBindings, NginxPyBindAdapter
@@ -35,17 +35,17 @@ __description__ = "Comprehensive Nginx server management tool with installation,
 setup_logging()
 
 __all__ = [
-    'NginxManager',
-    'NginxManagerBindings',
-    'NginxPyBindAdapter',
-    'NginxError',
-    'ConfigError',
-    'InstallationError',
-    'OperationError',
-    'OperatingSystem',
-    'NginxPaths',
-    'setup_logging',
-    'get_tool_info'
+    "NginxManager",
+    "NginxManagerBindings",
+    "NginxPyBindAdapter",
+    "NginxError",
+    "ConfigError",
+    "InstallationError",
+    "OperationError",
+    "OperatingSystem",
+    "NginxPaths",
+    "setup_logging",
+    "get_tool_info",
 ]
 
 
@@ -57,7 +57,7 @@ def _check_platform_support() -> bool:
         True if platform is Linux or macOS, False otherwise
     """
     system = platform.system().lower()
-    return system in ('linux', 'darwin')
+    return system in ("linux", "darwin")
 
 
 def get_tool_info() -> dict:
@@ -97,12 +97,9 @@ def get_tool_info() -> dict:
             "analyze_logs",
             "generate_ssl_cert",
             "configure_ssl",
-            "health_check"
+            "health_check",
         ],
-        "requirements": [
-            "loguru>=0.7.0",
-            "pybind11>=2.6.0"
-        ],
+        "requirements": ["loguru>=0.7.0", "pybind11>=2.6.0"],
         "capabilities": [
             "nginx_installation",
             "service_management",
@@ -112,7 +109,7 @@ def get_tool_info() -> dict:
             "log_analysis",
             "health_monitoring",
             "configuration_backup_restore",
-            "cross_platform_support"
+            "cross_platform_support",
         ],
         "classes": {
             "NginxManager": "Main class for Nginx operations",
@@ -123,6 +120,6 @@ def get_tool_info() -> dict:
             "ConfigError": "Configuration-related exceptions",
             "InstallationError": "Installation-related exceptions",
             "OperationError": "Operation-related exceptions",
-            "NginxPaths": "Dataclass containing Nginx installation paths"
-        }
+            "NginxPaths": "Dataclass containing Nginx installation paths",
+        },
     }

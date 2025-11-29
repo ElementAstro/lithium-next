@@ -35,9 +35,9 @@ using json = nlohmann::json;
  * can be observed, along with any horizon offset adjustments.
  */
 struct AltitudeConstraints {
-    double minAltitude{15.0};     ///< Minimum altitude to observe (degrees)
-    double maxAltitude{85.0};     ///< Maximum altitude to observe (degrees)
-    double horizonOffset{0.0};    ///< Additional horizon offset (degrees)
+    double minAltitude{15.0};   ///< Minimum altitude to observe (degrees)
+    double maxAltitude{85.0};   ///< Maximum altitude to observe (degrees)
+    double horizonOffset{0.0};  ///< Additional horizon offset (degrees)
 
     // ========================================================================
     // Constructors
@@ -83,8 +83,7 @@ struct AltitudeConstraints {
     }
 
     [[nodiscard]] static AltitudeConstraints fromJson(const json& j) {
-        return {j.value("minAltitude", 15.0),
-                j.value("maxAltitude", 85.0),
+        return {j.value("minAltitude", 15.0), j.value("maxAltitude", 85.0),
                 j.value("horizonOffset", 0.0)};
     }
 
@@ -115,13 +114,13 @@ struct AltitudeConstraints {
  * information about circumpolar status and maximum altitude.
  */
 struct ObservabilityWindow {
-    std::chrono::system_clock::time_point riseTime;     ///< Time when target rises
+    std::chrono::system_clock::time_point riseTime;  ///< Time when target rises
     std::chrono::system_clock::time_point transitTime;  ///< Time at meridian
-    std::chrono::system_clock::time_point setTime;      ///< Time when target sets
-    double maxAltitude{0.0};      ///< Maximum altitude during window (degrees)
-    double transitAzimuth{0.0};   ///< Azimuth at transit (degrees)
-    bool isCircumpolar{false};    ///< True if target never sets
-    bool neverRises{false};       ///< True if target never rises
+    std::chrono::system_clock::time_point setTime;  ///< Time when target sets
+    double maxAltitude{0.0};     ///< Maximum altitude during window (degrees)
+    double transitAzimuth{0.0};  ///< Azimuth at transit (degrees)
+    bool isCircumpolar{false};   ///< True if target never sets
+    bool neverRises{false};      ///< True if target never rises
 
     // ========================================================================
     // Constructors
@@ -138,8 +137,10 @@ struct ObservabilityWindow {
      * @return true if target is above horizon now.
      */
     [[nodiscard]] bool isObservableNow() const {
-        if (neverRises) return false;
-        if (isCircumpolar) return true;
+        if (neverRises)
+            return false;
+        if (isCircumpolar)
+            return true;
         auto now = std::chrono::system_clock::now();
         return now >= riseTime && now <= setTime;
     }
@@ -149,11 +150,15 @@ struct ObservabilityWindow {
      * @return Seconds until target sets, or 0 if not observable.
      */
     [[nodiscard]] int64_t remainingSeconds() const {
-        if (neverRises) return 0;
-        if (isCircumpolar) return 86400;  // 24 hours
+        if (neverRises)
+            return 0;
+        if (isCircumpolar)
+            return 86400;  // 24 hours
         auto now = std::chrono::system_clock::now();
-        if (now > setTime) return 0;
-        if (now < riseTime) return 0;
+        if (now > setTime)
+            return 0;
+        if (now < riseTime)
+            return 0;
         return std::chrono::duration_cast<std::chrono::seconds>(setTime - now)
             .count();
     }
@@ -163,9 +168,12 @@ struct ObservabilityWindow {
      * @return Total seconds target is observable.
      */
     [[nodiscard]] int64_t totalDurationSeconds() const {
-        if (neverRises) return 0;
-        if (isCircumpolar) return 86400;
-        return std::chrono::duration_cast<std::chrono::seconds>(setTime - riseTime)
+        if (neverRises)
+            return 0;
+        if (isCircumpolar)
+            return 86400;
+        return std::chrono::duration_cast<std::chrono::seconds>(setTime -
+                                                                riseTime)
             .count();
     }
 
@@ -188,8 +196,8 @@ struct ObservabilityWindow {
      */
     [[nodiscard]] int64_t secondsToMeridian() const {
         auto now = std::chrono::system_clock::now();
-        return std::chrono::duration_cast<std::chrono::seconds>(
-                   transitTime - now)
+        return std::chrono::duration_cast<std::chrono::seconds>(transitTime -
+                                                                now)
             .count();
     }
 
@@ -205,8 +213,7 @@ struct ObservabilityWindow {
             {"maxAltitude", maxAltitude},
             {"transitAzimuth", transitAzimuth},
             {"isCircumpolar", isCircumpolar},
-            {"neverRises", neverRises}
-        };
+            {"neverRises", neverRises}};
     }
 
     [[nodiscard]] static ObservabilityWindow fromJson(const json& j) {
@@ -261,7 +268,8 @@ struct TimeConstraints {
      * @return true if within time window or constraints disabled.
      */
     [[nodiscard]] bool isWithinWindow() const {
-        if (!enabled) return true;
+        if (!enabled)
+            return true;
         auto now = std::chrono::system_clock::now();
         return now >= startTime && now <= endTime;
     }
@@ -273,7 +281,8 @@ struct TimeConstraints {
      */
     [[nodiscard]] bool isWithinWindow(
         std::chrono::system_clock::time_point time) const {
-        if (!enabled) return true;
+        if (!enabled)
+            return true;
         return time >= startTime && time <= endTime;
     }
 
@@ -282,11 +291,9 @@ struct TimeConstraints {
     // ========================================================================
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"startTime", std::chrono::system_clock::to_time_t(startTime)},
-            {"endTime", std::chrono::system_clock::to_time_t(endTime)},
-            {"enabled", enabled}
-        };
+        return {{"startTime", std::chrono::system_clock::to_time_t(startTime)},
+                {"endTime", std::chrono::system_clock::to_time_t(endTime)},
+                {"enabled", enabled}};
     }
 
     [[nodiscard]] static TimeConstraints fromJson(const json& j) {

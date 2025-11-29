@@ -320,9 +320,8 @@ TEST_F(ElfParserTest, FindNonExistentSection) {
 
 TEST_F(ElfParserTest, FindSymbolWithPredicate) {
     EXPECT_TRUE(parser->parse());
-    auto symbol = parser->findSymbol([](const lithium::Symbol& s) {
-        return s.size > 0;
-    });
+    auto symbol =
+        parser->findSymbol([](const lithium::Symbol& s) { return s.size > 0; });
     // May or may not find a symbol
     EXPECT_TRUE(symbol.has_value() || !symbol.has_value());
 }
@@ -345,11 +344,8 @@ protected:
         // Try to find a real ELF file on the system
         // Common system libraries
         std::vector<std::string> candidates = {
-            "/lib/x86_64-linux-gnu/libc.so.6",
-            "/lib64/libc.so.6",
-            "/usr/lib/libc.so.6",
-            "/lib/libc.so.6"
-        };
+            "/lib/x86_64-linux-gnu/libc.so.6", "/lib64/libc.so.6",
+            "/usr/lib/libc.so.6", "/lib/libc.so.6"};
 
         for (const auto& path : candidates) {
             if (std::filesystem::exists(path)) {
@@ -360,9 +356,7 @@ protected:
         }
     }
 
-    void TearDown() override {
-        parser.reset();
-    }
+    void TearDown() override { parser.reset(); }
 
     bool hasRealElf() const {
         return !realElfPath.empty() && std::filesystem::exists(realElfPath);

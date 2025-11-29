@@ -21,7 +21,8 @@ namespace lithium::client {
 GuiderClient::GuiderClient(std::string name)
     : ClientBase(std::move(name), ClientType::Guider) {
     setCapabilities(ClientCapability::Connect | ClientCapability::Configure |
-                    ClientCapability::AsyncOperation | ClientCapability::StatusQuery |
+                    ClientCapability::AsyncOperation |
+                    ClientCapability::StatusQuery |
                     ClientCapability::EventCallback);
     spdlog::debug("GuiderClient created: {}", getName());
 }

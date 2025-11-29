@@ -49,9 +49,13 @@ using tools::astronomy::ExposurePlan;
  */
 class TargetAcquisitionTask : public TaskBase {
 public:
-    TargetAcquisitionTask() : TaskBase("TargetAcquisition") { setupParameters(); }
+    TargetAcquisitionTask() : TaskBase("TargetAcquisition") {
+        setupParameters();
+    }
     TargetAcquisitionTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "TargetAcquisition"; }
     static std::string getStaticTaskTypeName() { return "TargetAcquisition"; }
@@ -95,7 +99,9 @@ class ExposureSequenceTask : public TaskBase {
 public:
     ExposureSequenceTask() : TaskBase("ExposureSequence") { setupParameters(); }
     ExposureSequenceTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "ExposureSequence"; }
     static std::string getStaticTaskTypeName() { return "ExposureSequence"; }
@@ -107,11 +113,12 @@ private:
     void setupParameters();
     bool executeExposurePlan(const ExposurePlan& plan, const json& params);
     bool changeFilter(const std::string& filterName);
-    bool takeSingleExposure(double exposureTime, int binning, int gain, int offset);
+    bool takeSingleExposure(double exposureTime, int binning, int gain,
+                            int offset);
     bool performDither(double pixels);
     bool checkAndRefocus(const json& params);
     bool handleMeridianFlip(const json& params);
-    
+
     double lastFocusTemp_{0.0};
     std::chrono::steady_clock::time_point lastFocusTime_;
 };
@@ -144,7 +151,9 @@ class SessionTask : public TaskBase {
 public:
     SessionTask() : TaskBase("Session") { setupParameters(); }
     SessionTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Session"; }
     static std::string getStaticTaskTypeName() { return "Session"; }
@@ -186,7 +195,9 @@ class SafetyCheckTask : public TaskBase {
 public:
     SafetyCheckTask() : TaskBase("SafetyCheck") { setupParameters(); }
     SafetyCheckTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "SafetyCheck"; }
     static std::string getStaticTaskTypeName() { return "SafetyCheck"; }
@@ -225,7 +236,9 @@ class MeridianFlipTask : public TaskBase {
 public:
     MeridianFlipTask() : TaskBase("MeridianFlip") { setupParameters(); }
     MeridianFlipTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "MeridianFlip"; }
     static std::string getStaticTaskTypeName() { return "MeridianFlip"; }
@@ -260,7 +273,9 @@ class DitherTask : public TaskBase {
 public:
     DitherTask() : TaskBase("Dither") { setupParameters(); }
     DitherTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Dither"; }
     static std::string getStaticTaskTypeName() { return "Dither"; }
@@ -284,7 +299,8 @@ private:
  * Waits for specified conditions or duration.
  *
  * Parameters:
- * - wait_type: Type of wait (duration, time, altitude, sunset, astronomical_twilight)
+ * - wait_type: Type of wait (duration, time, altitude, sunset,
+ * astronomical_twilight)
  * - duration: Wait duration in seconds (for duration type)
  * - target_time: Target time as timestamp (for time type)
  * - target_altitude: Target altitude for object (for altitude type)
@@ -294,7 +310,9 @@ class WaitTask : public TaskBase {
 public:
     WaitTask() : TaskBase("Wait") { setupParameters(); }
     WaitTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Wait"; }
     static std::string getStaticTaskTypeName() { return "Wait"; }
@@ -331,7 +349,9 @@ class CalibrationFrameTask : public TaskBase {
 public:
     CalibrationFrameTask() : TaskBase("CalibrationFrame") { setupParameters(); }
     CalibrationFrameTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "CalibrationFrame"; }
     static std::string getStaticTaskTypeName() { return "CalibrationFrame"; }
@@ -342,7 +362,8 @@ protected:
 private:
     void setupParameters();
     bool captureDarks(int count, double exposure, int binning);
-    bool captureFlats(int count, const std::string& filter, int binning, int targetADU);
+    bool captureFlats(int count, const std::string& filter, int binning,
+                      int targetADU);
     bool captureBias(int count, int binning);
     double calculateFlatExposure(const std::string& filter, int targetADU);
 };

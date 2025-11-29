@@ -5,15 +5,13 @@ class Base64Test : public ::testing::Test {
 protected:
     void SetUp() override {
         // Standard test vectors from RFC 4648
-        testVectors = {
-            {"", ""},
-            {"f", "Zg=="},
-            {"fo", "Zm8="},
-            {"foo", "Zm9v"},
-            {"foob", "Zm9vYg=="},
-            {"fooba", "Zm9vYmE="},
-            {"foobar", "Zm9vYmFy"}
-        };
+        testVectors = {{"", ""},
+                       {"f", "Zg=="},
+                       {"fo", "Zm8="},
+                       {"foo", "Zm9v"},
+                       {"foob", "Zm9vYg=="},
+                       {"fooba", "Zm9vYmE="},
+                       {"foobar", "Zm9vYmFy"}};
 
         // Binary data for testing
         binaryData = {0x00, 0xFF, 0x80, 0x01};
@@ -43,25 +41,23 @@ TEST_F(Base64Test, EncodeStandardString) {
 // RFC 4648 Test Vectors
 TEST_F(Base64Test, EncodeRFCTestVectors) {
     for (const auto& [input, expected] : testVectors) {
-        EXPECT_EQ(base64Encode(reinterpret_cast<const unsigned char*>(input.c_str()),
-                              input.length()),
-                  expected);
+        EXPECT_EQ(
+            base64Encode(reinterpret_cast<const unsigned char*>(input.c_str()),
+                         input.length()),
+            expected);
     }
 }
 
 // Binary Data Tests
 TEST_F(Base64Test, EncodeBinaryData) {
-    EXPECT_EQ(base64Encode(binaryData.data(), binaryData.size()), binaryEncoded);
+    EXPECT_EQ(base64Encode(binaryData.data(), binaryData.size()),
+              binaryEncoded);
 }
 
 // Basic Decoding Tests
-TEST_F(Base64Test, DecodeEmptyString) {
-    EXPECT_EQ(base64Decode(""), "");
-}
+TEST_F(Base64Test, DecodeEmptyString) { EXPECT_EQ(base64Decode(""), ""); }
 
-TEST_F(Base64Test, DecodeSingleChar) {
-    EXPECT_EQ(base64Decode("Zg=="), "f");
-}
+TEST_F(Base64Test, DecodeSingleChar) { EXPECT_EQ(base64Decode("Zg=="), "f"); }
 
 TEST_F(Base64Test, DecodeStandardString) {
     EXPECT_EQ(base64Decode("SGVsbG8sIFdvcmxkIQ=="), "Hello, World!");
@@ -76,9 +72,9 @@ TEST_F(Base64Test, DecodeRFCTestVectors) {
 
 // Padding Tests
 TEST_F(Base64Test, HandlePadding) {
-    EXPECT_EQ(base64Decode("YQ=="), "a");     // 1 byte, 2 padding chars
-    EXPECT_EQ(base64Decode("YWI="), "ab");    // 2 bytes, 1 padding char
-    EXPECT_EQ(base64Decode("YWJj"), "abc");   // 3 bytes, no padding
+    EXPECT_EQ(base64Decode("YQ=="), "a");    // 1 byte, 2 padding chars
+    EXPECT_EQ(base64Decode("YWI="), "ab");   // 2 bytes, 1 padding char
+    EXPECT_EQ(base64Decode("YWJj"), "abc");  // 3 bytes, no padding
 }
 
 // Special Characters Tests
@@ -113,17 +109,17 @@ TEST_F(Base64Test, HandleInvalidCharacters) {
 }
 
 TEST_F(Base64Test, HandleMalformedInput) {
-    EXPECT_EQ(base64Decode("Zg="), "f");          // Missing padding
-    EXPECT_EQ(base64Decode("Zg==="), "f");        // Extra padding
-    EXPECT_EQ(base64Decode("Z"), "");             // Incomplete input
+    EXPECT_EQ(base64Decode("Zg="), "f");    // Missing padding
+    EXPECT_EQ(base64Decode("Zg==="), "f");  // Extra padding
+    EXPECT_EQ(base64Decode("Z"), "");       // Incomplete input
 }
 
 // Edge Cases
 TEST_F(Base64Test, HandleLongStrings) {
     std::string longInput(1000, 'X');
-    std::string encoded = base64Encode(
-        reinterpret_cast<const unsigned char*>(longInput.c_str()),
-        longInput.length());
+    std::string encoded =
+        base64Encode(reinterpret_cast<const unsigned char*>(longInput.c_str()),
+                     longInput.length());
     std::string decoded = base64Decode(encoded);
     EXPECT_EQ(decoded, longInput);
 }

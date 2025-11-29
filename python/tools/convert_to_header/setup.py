@@ -11,13 +11,13 @@ setup(
         "loguru>=0.6.0",
     ],
     extras_require={
-        'yaml': ['PyYAML>=6.0'],
-        'pybind': ['pybind11>=2.10.0'],
-        'progress': ['tqdm>=4.64.0'],
+        "yaml": ["PyYAML>=6.0"],
+        "pybind": ["pybind11>=2.10.0"],
+        "progress": ["tqdm>=4.64.0"],
     },
     entry_points={
-        'console_scripts': [
-            'convert_to_header=convert_to_header.cli:main',
+        "console_scripts": [
+            "convert_to_header=convert_to_header.cli:main",
         ],
     },
     author="Max Qian",
@@ -34,5 +34,5 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Topic :: Software Development :: Code Generators",
     ],
-    python_requires='>=3.9',
+    python_requires=">=3.9",
 )

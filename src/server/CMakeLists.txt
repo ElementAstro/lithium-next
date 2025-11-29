@@ -20,15 +20,19 @@ set(PROJECT_SOURCES
     eventloop.cpp
     rate_limiter.cpp
     websocket.cpp
+    websocket/log_stream.cpp
     command/camera.cpp
     command/mount.cpp
     command/focuser.cpp
     command/filterwheel.cpp
-    command/device_commands.cpp
-    command/camera_commands.cpp
-    command/mount_commands.cpp
-    command/focuser_commands.cpp
-    command/filterwheel_commands.cpp
+    command/device.cpp
+    command/dome.cpp
+    command/guider.cpp
+    command/solver.cpp
+    command/telescope.cpp
+    command/config_ws.cpp
+    command/indi_server.cpp
+    command/gpio.cpp
 )
 
 # ============================================================================
@@ -38,7 +42,8 @@ set(PROJECT_SOURCES
 set(PROJECT_LIBRARIES
     atom
     lithium_config
-    loguru
+    lithium_logging
+    spdlog::spdlog
     yaml-cpp
     ${CMAKE_THREAD_LIBS_INIT}
 )

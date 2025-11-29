@@ -1,50 +1,53 @@
-#include "dependency_system.hpp"
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
+#include "dependency_system.hpp"
 
 int main() {
     try {
         using namespace lithium::system;
-        
+
         // 使用新的命名空间，传入配置文件路径
         DependencyManager manager("./config/package_managers.json");
-        
+
         std::cout << "=== System Dependency Manager Test ===" << std::endl;
-        std::cout << "Current platform: " << manager.getCurrentPlatform() << std::endl;
-        
+        std::cout << "Current platform: " << manager.getCurrentPlatform()
+                  << std::endl;
+
         // 获取可用的包管理器
         auto pkgManagers = manager.getPackageManagers();
-        std::cout << "\nAvailable package managers: " << pkgManagers.size() << std::endl;
+        std::cout << "\nAvailable package managers: " << pkgManagers.size()
+                  << std::endl;
         for (const auto& pm : pkgManagers) {
             std::cout << "  - " << pm.name << std::endl;
         }
-        
+
         // 检查一些常见依赖是否已安装
         std::cout << "\n=== Checking Common Dependencies ===" << std::endl;
         std::vector<std::string> commonDeps = {"cmake", "git", "python3"};
-        
+
         for (const auto& depName : commonDeps) {
             bool installed = manager.isDependencyInstalled(depName);
-            std::cout << depName << ": " << (installed ? "INSTALLED" : "NOT INSTALLED");
-            
+            std::cout << depName << ": "
+                      << (installed ? "INSTALLED" : "NOT INSTALLED");
+
             if (installed) {
                 auto version = manager.getInstalledVersion(depName);
                 if (version) {
-                    std::cout << " (v" << version->major << "." 
+                    std::cout << " (v" << version->major << "."
                               << version->minor << "." << version->patch << ")";
                 }
             }
             std::cout << std::endl;
         }
-        
+
         // 添加一个依赖
         std::cout << "\n=== Adding Managed Dependency ===" << std::endl;
         DependencyInfo dep;
         dep.name = "cmake";
         dep.version = {3, 20, 0, ""};
-        
+
         // 根据平台选择包管理器
 #if defined(_WIN32)
         dep.packageManager = "choco";
@@ -53,7 +56,7 @@ int main() {
 #else
         dep.packageManager = "apt";
 #endif
-        
+
         manager.addDependency(dep);
         DependencyInfo gitDep;
         gitDep.name = "git";
@@ -94,10 +97,12 @@ int main() {
 
         // 验证版本兼容性
         std::cout << "\n=== Version Compatibility Check ===" << std::endl;
-        auto compatResult = manager.checkVersionCompatibility("cmake", "3.10.0");
+        auto compatResult =
+            manager.checkVersionCompatibility("cmake", "3.10.0");
         if (compatResult.value) {
-            std::cout << "cmake >= 3.10.0: " 
-                      << (*compatResult.value ? "COMPATIBLE" : "INCOMPATIBLE") << std::endl;
+            std::cout << "cmake >= 3.10.0: "
+                      << (*compatResult.value ? "COMPATIBLE" : "INCOMPATIBLE")
+                      << std::endl;
         }
 
         // 搜索依赖示例

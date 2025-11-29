@@ -99,8 +99,8 @@ public:
      * @brief Set INDI-specific dome property
      */
     auto setINDIProperty(const std::string& deviceId,
-                         const std::string& propertyName,
-                         const json& value) -> json;
+                         const std::string& propertyName, const json& value)
+        -> json;
 
     /**
      * @brief Set dome slaved to mount

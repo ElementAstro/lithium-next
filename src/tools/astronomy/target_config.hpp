@@ -43,16 +43,16 @@ struct TargetConfig {
     // Basic Information
     // ========================================================================
 
-    std::string catalogName;        ///< Catalog name (e.g., "M31", "NGC 7000")
-    std::string commonName;         ///< Common name (e.g., "Andromeda Galaxy")
-    std::string objectType;         ///< Object type (galaxy, nebula, cluster...)
+    std::string catalogName;  ///< Catalog name (e.g., "M31", "NGC 7000")
+    std::string commonName;   ///< Common name (e.g., "Andromeda Galaxy")
+    std::string objectType;   ///< Object type (galaxy, nebula, cluster...)
 
     // ========================================================================
     // Coordinates and Orientation
     // ========================================================================
 
-    Coordinates coordinates;        ///< Target coordinates
-    double rotation{0.0};           ///< Camera rotation angle (degrees)
+    Coordinates coordinates;  ///< Target coordinates
+    double rotation{0.0};     ///< Camera rotation angle (degrees)
 
     // ========================================================================
     // Observation Constraints
@@ -60,14 +60,14 @@ struct TargetConfig {
 
     AltitudeConstraints altConstraints;  ///< Altitude constraints
     double minMoonSeparation{30.0};      ///< Minimum moon separation (degrees)
-    bool avoidMeridianFlip{false};       ///< Avoid meridian flip during exposure
+    bool avoidMeridianFlip{false};  ///< Avoid meridian flip during exposure
 
     // ========================================================================
     // Meridian Flip Settings
     // ========================================================================
 
-    double meridianFlipOffset{0.0};      ///< Minutes past meridian before flip
-    bool autoMeridianFlip{true};         ///< Allow automatic meridian flip
+    double meridianFlipOffset{0.0};  ///< Minutes past meridian before flip
+    bool autoMeridianFlip{true};     ///< Allow automatic meridian flip
 
     // ========================================================================
     // Exposure Plans
@@ -81,22 +81,22 @@ struct TargetConfig {
 
     std::chrono::system_clock::time_point startTime;  ///< Earliest start time
     std::chrono::system_clock::time_point endTime;    ///< Latest end time
-    bool useTimeConstraints{false};    ///< Whether to use time constraints
+    bool useTimeConstraints{false};  ///< Whether to use time constraints
 
     // ========================================================================
     // Priority
     // ========================================================================
 
-    int priority{5};                   ///< Target priority (1-10, higher=more important)
+    int priority{5};  ///< Target priority (1-10, higher=more important)
 
     // ========================================================================
     // Acquisition Settings
     // ========================================================================
 
-    bool slewRequired{true};           ///< Whether slew is needed
-    bool centeringRequired{true};      ///< Whether plate solve centering is needed
-    bool guidingRequired{true};        ///< Whether guiding is needed
-    bool focusRequired{true};          ///< Whether focus check is needed
+    bool slewRequired{true};       ///< Whether slew is needed
+    bool centeringRequired{true};  ///< Whether plate solve centering is needed
+    bool guidingRequired{true};    ///< Whether guiding is needed
+    bool focusRequired{true};      ///< Whether focus check is needed
 
     // ========================================================================
     // Focus Settings
@@ -104,7 +104,8 @@ struct TargetConfig {
 
     bool autoFocusOnStart{true};          ///< Auto focus when target starts
     bool autoFocusOnFilterChange{false};  ///< Auto focus on filter change
-    double focusTempThreshold{1.0};       ///< Temperature change threshold for refocus
+    double focusTempThreshold{
+        1.0};  ///< Temperature change threshold for refocus
 
     // ========================================================================
     // Constructors
@@ -151,7 +152,8 @@ struct TargetConfig {
             totalPlanned += plan.count;
             totalCompleted += plan.completedCount;
         }
-        if (totalPlanned == 0) return 100.0;
+        if (totalPlanned == 0)
+            return 100.0;
         return (totalCompleted / totalPlanned) * 100.0;
     }
 
@@ -160,9 +162,11 @@ struct TargetConfig {
      * @return true if all plans are complete.
      */
     [[nodiscard]] bool isComplete() const noexcept {
-        if (exposurePlans.empty()) return true;
+        if (exposurePlans.empty())
+            return true;
         for (const auto& plan : exposurePlans) {
-            if (!plan.isComplete()) return false;
+            if (!plan.isComplete())
+                return false;
         }
         return true;
     }
@@ -210,9 +214,9 @@ struct TargetConfig {
      */
     bool removeExposurePlan(const std::string& filterName) {
         auto it = std::find_if(exposurePlans.begin(), exposurePlans.end(),
-            [&filterName](const ExposurePlan& p) {
-                return p.filterName == filterName;
-            });
+                               [&filterName](const ExposurePlan& p) {
+                                   return p.filterName == filterName;
+                               });
         if (it != exposurePlans.end()) {
             exposurePlans.erase(it);
             return true;
@@ -227,9 +231,9 @@ struct TargetConfig {
      */
     [[nodiscard]] ExposurePlan* getExposurePlan(const std::string& filterName) {
         auto it = std::find_if(exposurePlans.begin(), exposurePlans.end(),
-            [&filterName](const ExposurePlan& p) {
-                return p.filterName == filterName;
-            });
+                               [&filterName](const ExposurePlan& p) {
+                                   return p.filterName == filterName;
+                               });
         return it != exposurePlans.end() ? &(*it) : nullptr;
     }
 
@@ -251,8 +255,7 @@ struct TargetConfig {
      * @return true if all required fields are valid.
      */
     [[nodiscard]] bool isValid() const noexcept {
-        return coordinates.isValid() &&
-               altConstraints.areConstraintsValid() &&
+        return coordinates.isValid() && altConstraints.areConstraintsValid() &&
                priority >= 1 && priority <= 10;
     }
 
@@ -266,30 +269,28 @@ struct TargetConfig {
             plansJson.push_back(plan.toJson());
         }
 
-        return {
-            {"catalogName", catalogName},
-            {"commonName", commonName},
-            {"objectType", objectType},
-            {"coordinates", coordinates.toJson()},
-            {"rotation", rotation},
-            {"altConstraints", altConstraints.toJson()},
-            {"minMoonSeparation", minMoonSeparation},
-            {"avoidMeridianFlip", avoidMeridianFlip},
-            {"meridianFlipOffset", meridianFlipOffset},
-            {"autoMeridianFlip", autoMeridianFlip},
-            {"exposurePlans", plansJson},
-            {"startTime", std::chrono::system_clock::to_time_t(startTime)},
-            {"endTime", std::chrono::system_clock::to_time_t(endTime)},
-            {"useTimeConstraints", useTimeConstraints},
-            {"priority", priority},
-            {"slewRequired", slewRequired},
-            {"centeringRequired", centeringRequired},
-            {"guidingRequired", guidingRequired},
-            {"focusRequired", focusRequired},
-            {"autoFocusOnStart", autoFocusOnStart},
-            {"autoFocusOnFilterChange", autoFocusOnFilterChange},
-            {"focusTempThreshold", focusTempThreshold}
-        };
+        return {{"catalogName", catalogName},
+                {"commonName", commonName},
+                {"objectType", objectType},
+                {"coordinates", coordinates.toJson()},
+                {"rotation", rotation},
+                {"altConstraints", altConstraints.toJson()},
+                {"minMoonSeparation", minMoonSeparation},
+                {"avoidMeridianFlip", avoidMeridianFlip},
+                {"meridianFlipOffset", meridianFlipOffset},
+                {"autoMeridianFlip", autoMeridianFlip},
+                {"exposurePlans", plansJson},
+                {"startTime", std::chrono::system_clock::to_time_t(startTime)},
+                {"endTime", std::chrono::system_clock::to_time_t(endTime)},
+                {"useTimeConstraints", useTimeConstraints},
+                {"priority", priority},
+                {"slewRequired", slewRequired},
+                {"centeringRequired", centeringRequired},
+                {"guidingRequired", guidingRequired},
+                {"focusRequired", focusRequired},
+                {"autoFocusOnStart", autoFocusOnStart},
+                {"autoFocusOnFilterChange", autoFocusOnFilterChange},
+                {"focusTempThreshold", focusTempThreshold}};
     }
 
     [[nodiscard]] static TargetConfig fromJson(const json& j) {
@@ -305,7 +306,8 @@ struct TargetConfig {
         cfg.rotation = j.value("rotation", 0.0);
 
         if (j.contains("altConstraints")) {
-            cfg.altConstraints = AltitudeConstraints::fromJson(j["altConstraints"]);
+            cfg.altConstraints =
+                AltitudeConstraints::fromJson(j["altConstraints"]);
         }
 
         cfg.minMoonSeparation = j.value("minMoonSeparation", 30.0);

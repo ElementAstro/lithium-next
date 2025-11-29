@@ -69,8 +69,8 @@ public:
     [[nodiscard]] auto getISO() -> std::optional<int> override;
 
     // 帧设置
-    auto setResolution(int posX, int posY, int width,
-                       int height) -> bool override;
+    auto setResolution(int posX, int posY, int width, int height)
+        -> bool override;
     [[nodiscard]] auto getResolution()
         -> std::optional<AtomCameraFrame::Resolution> override;
     auto setBinning(int horizontal, int vertical) -> bool override;

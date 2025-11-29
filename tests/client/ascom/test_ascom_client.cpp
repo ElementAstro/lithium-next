@@ -12,11 +12,11 @@ Description: Tests for ASCOM client implementation
 
 *************************************************/
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "client/ascom/ascom_client.hpp"
 #include "client/ascom/alpaca_client.hpp"
+#include "client/ascom/ascom_client.hpp"
 #include "client/ascom/ascom_types.hpp"
 
 using namespace lithium::client;
@@ -62,11 +62,11 @@ TEST_F(ASCOMClientTest, DestroyClient) {
 
 TEST_F(ASCOMClientTest, ConnectWithTarget) {
     client_->initialize();
-    
+
     // This will attempt to connect to an Alpaca server
     // May fail if no server is running
     bool result = client_->connect("localhost:11111");
-    
+
     if (result) {
         EXPECT_EQ(client_->getState(), ClientState::Connected);
         EXPECT_TRUE(client_->isConnected());
@@ -76,7 +76,7 @@ TEST_F(ASCOMClientTest, ConnectWithTarget) {
 TEST_F(ASCOMClientTest, DisconnectClient) {
     client_->initialize();
     client_->connect("localhost:11111");
-    
+
     bool result = client_->disconnect();
     EXPECT_TRUE(result);
     EXPECT_FALSE(client_->isConnected());
@@ -86,7 +86,7 @@ TEST_F(ASCOMClientTest, DisconnectClient) {
 
 TEST_F(ASCOMClientTest, ConfigureASCOM) {
     client_->configureASCOM("192.168.1.100", 11112);
-    
+
     auto config = client_->getServerConfig();
     EXPECT_EQ(config.host, "192.168.1.100");
     EXPECT_EQ(config.port, 11112);
@@ -100,7 +100,7 @@ TEST_F(ASCOMClientTest, DeviceTypeConversion) {
     EXPECT_EQ(deviceTypeToString(ASCOMDeviceType::Focuser), "focuser");
     EXPECT_EQ(deviceTypeToString(ASCOMDeviceType::FilterWheel), "filterwheel");
     EXPECT_EQ(deviceTypeToString(ASCOMDeviceType::Dome), "dome");
-    
+
     EXPECT_EQ(stringToDeviceType("camera"), ASCOMDeviceType::Camera);
     EXPECT_EQ(stringToDeviceType("telescope"), ASCOMDeviceType::Telescope);
     EXPECT_EQ(stringToDeviceType("unknown"), ASCOMDeviceType::Unknown);
@@ -113,14 +113,14 @@ TEST_F(ASCOMClientTest, AlpacaResponseSerialization) {
     response.errorNumber = 0;
     response.errorMessage = "";
     response.value = 42.5;
-    
+
     auto json = response.toJson();
-    
+
     EXPECT_EQ(json["ClientTransactionID"], 1);
     EXPECT_EQ(json["ServerTransactionID"], 100);
     EXPECT_EQ(json["ErrorNumber"], 0);
     EXPECT_DOUBLE_EQ(json["Value"], 42.5);
-    
+
     auto restored = AlpacaResponse::fromJson(json);
     EXPECT_EQ(restored.clientTransactionId, 1);
     EXPECT_TRUE(restored.isSuccess());
@@ -130,7 +130,7 @@ TEST_F(ASCOMClientTest, AlpacaResponseError) {
     AlpacaResponse response;
     response.errorNumber = ASCOMErrorCode::NotConnected;
     response.errorMessage = "Device not connected";
-    
+
     EXPECT_FALSE(response.isSuccess());
     EXPECT_EQ(response.errorNumber, 0x407);
 }
@@ -141,13 +141,13 @@ TEST_F(ASCOMClientTest, DeviceDescriptionSerialization) {
     desc.deviceType = ASCOMDeviceType::Focuser;
     desc.deviceNumber = 0;
     desc.uniqueId = "12345-abcde";
-    
+
     auto json = desc.toJson();
-    
+
     EXPECT_EQ(json["DeviceName"], "Simulator Focuser");
     EXPECT_EQ(json["DeviceType"], "focuser");
     EXPECT_EQ(json["DeviceNumber"], 0);
-    
+
     auto restored = ASCOMDeviceDescription::fromJson(json);
     EXPECT_EQ(restored.deviceName, desc.deviceName);
     EXPECT_EQ(restored.deviceType, ASCOMDeviceType::Focuser);
@@ -159,18 +159,18 @@ TEST_F(ASCOMClientTest, AlpacaServerInfoSerialization) {
     info.manufacturer = "Test Manufacturer";
     info.manufacturerVersion = "1.0.0";
     info.location = "Test Location";
-    
+
     ASCOMDeviceDescription dev1;
     dev1.deviceName = "Camera 1";
     dev1.deviceType = ASCOMDeviceType::Camera;
     dev1.deviceNumber = 0;
     info.devices.push_back(dev1);
-    
+
     auto json = info.toJson();
-    
+
     EXPECT_EQ(json["ServerName"], "Test Alpaca Server");
     EXPECT_EQ(json["Devices"].size(), 1);
-    
+
     auto restored = AlpacaServerInfo::fromJson(json);
     EXPECT_EQ(restored.serverName, info.serverName);
     EXPECT_EQ(restored.devices.size(), 1);
@@ -184,9 +184,9 @@ TEST_F(ASCOMClientTest, ASCOMDriverInfoFromDescription) {
     desc.deviceType = ASCOMDeviceType::Camera;
     desc.deviceNumber = 0;
     desc.uniqueId = "cam-001";
-    
+
     auto info = ASCOMDriverInfo::fromDescription(desc);
-    
+
     EXPECT_EQ(info.name, "Simulator Camera");
     EXPECT_EQ(info.deviceType, ASCOMDeviceType::Camera);
     EXPECT_EQ(info.backend, "ASCOM");
@@ -229,7 +229,7 @@ TEST_F(AlpacaClientTest, TransactionIdIncrement) {
 TEST_F(AlpacaClientTest, DiscoverServers) {
     // This is a static method that performs network discovery
     auto servers = AlpacaClient::discoverServers(1000);
-    
+
     // Should at least return localhost as default
     EXPECT_FALSE(servers.empty());
 }

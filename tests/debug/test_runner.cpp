@@ -1,5 +1,5 @@
-#include "unified_tests.hpp"
 #include <gtest/gtest.h>
+#include "unified_tests.hpp"
 
 namespace lithium::debug::tests {
 
@@ -207,17 +207,13 @@ TEST_F(ErrorHandlingTest, ResultType) {
 }
 
 // Integration tests
-TEST_F(IntegrationTestSuite, FullWorkflow) {
-    TestFullWorkflow();
-}
+TEST_F(IntegrationTestSuite, FullWorkflow) { TestFullWorkflow(); }
 
 TEST_F(IntegrationTestSuite, ComponentInteraction) {
     TestComponentInteraction();
 }
 
-TEST_F(IntegrationTestSuite, ErrorPropagation) {
-    TestErrorPropagation();
-}
+TEST_F(IntegrationTestSuite, ErrorPropagation) { TestErrorPropagation(); }
 
 TEST_F(IntegrationTestSuite, ConcurrentOperations) {
     TestConcurrentOperations();
@@ -236,87 +232,95 @@ TEST_F(PerformanceBenchmarks, DISABLED_CommandChecking) {
     BenchmarkCommandChecking();
 }
 
-TEST_F(PerformanceBenchmarks, DISABLED_MemoryUsage) {
-    BenchmarkMemoryUsage();
-}
+TEST_F(PerformanceBenchmarks, DISABLED_MemoryUsage) { BenchmarkMemoryUsage(); }
 
 // Stress tests (marked as disabled by default)
 class StressTestSuite : public StressTests {
 public:
     void TestMassiveComponentRegistration() {
         ASSERT_TRUE(manager_->initialize().has_value());
-        
+
         const int numComponents = 10000;
         std::vector<std::shared_ptr<MockDebugComponent>> components;
-        
+
         for (int i = 0; i < numComponents; ++i) {
             auto component = std::make_shared<MockDebugComponent>();
             EXPECT_CALL(*component, getName())
-                .WillRepeatedly(::testing::Return(std::format("StressComponent{}", i)));
+                .WillRepeatedly(
+                    ::testing::Return(std::format("StressComponent{}", i)));
             EXPECT_CALL(*component, initialize())
                 .WillOnce(::testing::Return(Result<void>{}));
             EXPECT_CALL(*component, shutdown())
                 .WillOnce(::testing::Return(Result<void>{}));
-                
+
             components.push_back(component);
             auto result = manager_->registerComponent(component);
-            ASSERT_TRUE(result.has_value()) << std::format("Failed to register component {}", i);
+            ASSERT_TRUE(result.has_value())
+                << std::format("Failed to register component {}", i);
         }
-        
+
         // Verify all components are registered
         auto allComponents = manager_->getAllComponents();
-        EXPECT_EQ(allComponents.size(), numComponents) << "All components should be registered";
-        
-        std::cout << std::format("Successfully registered {} components\n", numComponents);
+        EXPECT_EQ(allComponents.size(), numComponents)
+            << "All components should be registered";
+
+        std::cout << std::format("Successfully registered {} components\n",
+                                 numComponents);
     }
-    
+
     void TestHighConcurrency() {
         ASSERT_TRUE(manager_->initialize().has_value());
-        
+
         const int numThreads = 50;
         const int operationsPerThread = 100;
         std::vector<std::thread> threads;
         std::atomic<int> totalOperations{0};
         std::atomic<int> successfulOperations{0};
-        
+
         for (int i = 0; i < numThreads; ++i) {
             threads.emplace_back([&, i]() {
                 for (int j = 0; j < operationsPerThread; ++j) {
                     totalOperations.fetch_add(1, std::memory_order_relaxed);
-                    
+
                     auto component = std::make_shared<MockDebugComponent>();
                     EXPECT_CALL(*component, getName())
-                        .WillRepeatedly(::testing::Return(std::format("ConcurrentComponent{}_{}", i, j)));
+                        .WillRepeatedly(::testing::Return(
+                            std::format("ConcurrentComponent{}_{}", i, j)));
                     EXPECT_CALL(*component, initialize())
                         .WillOnce(::testing::Return(Result<void>{}));
                     EXPECT_CALL(*component, shutdown())
                         .WillOnce(::testing::Return(Result<void>{}));
-                    
+
                     auto regResult = manager_->registerComponent(component);
                     if (regResult.has_value()) {
-                        successfulOperations.fetch_add(1, std::memory_order_relaxed);
-                        
+                        successfulOperations.fetch_add(
+                            1, std::memory_order_relaxed);
+
                         // Small delay to simulate work
-                        std::this_thread::sleep_for(std::chrono::microseconds(10));
-                        
-                        [[maybe_unused]] auto unregResult = manager_->unregisterComponent(component);
+                        std::this_thread::sleep_for(
+                            std::chrono::microseconds(10));
+
+                        [[maybe_unused]] auto unregResult =
+                            manager_->unregisterComponent(component);
                     }
                 }
             });
         }
-        
+
         for (auto& thread : threads) {
             thread.join();
         }
-        
+
         auto total = totalOperations.load();
         auto successful = successfulOperations.load();
         double successRate = static_cast<double>(successful) / total * 100.0;
-        
-        std::cout << std::format("Concurrent operations: {}/{} successful ({:.2f}%)\n", 
-                                successful, total, successRate);
-        
-        EXPECT_GT(successRate, 95.0) << "Success rate should be high under concurrent load";
+
+        std::cout << std::format(
+            "Concurrent operations: {}/{} successful ({:.2f}%)\n", successful,
+            total, successRate);
+
+        EXPECT_GT(successRate, 95.0)
+            << "Success rate should be high under concurrent load";
     }
 };
 
@@ -324,9 +328,7 @@ TEST_F(StressTestSuite, DISABLED_MassiveComponentRegistration) {
     TestMassiveComponentRegistration();
 }
 
-TEST_F(StressTestSuite, DISABLED_HighConcurrency) {
-    TestHighConcurrency();
-}
+TEST_F(StressTestSuite, DISABLED_HighConcurrency) { TestHighConcurrency(); }
 
 // Custom test for async operations
 class AsyncOperationTest : public ::testing::Test {
@@ -336,7 +338,7 @@ protected:
         terminal_ = std::make_unique<OptimizedConsoleTerminal>(manager_);
         checker_ = std::make_unique<OptimizedCommandChecker>(manager_);
     }
-    
+
     void TearDown() override {
         if (terminal_ && terminal_->isActive()) {
             [[maybe_unused]] auto result = terminal_->shutdown();
@@ -348,7 +350,7 @@ protected:
             [[maybe_unused]] auto result = manager_->shutdown();
         }
     }
-    
+
     std::shared_ptr<UnifiedDebugManager> manager_;
     std::unique_ptr<OptimizedConsoleTerminal> terminal_;
     std::unique_ptr<OptimizedCommandChecker> checker_;
@@ -356,78 +358,85 @@ protected:
 
 TEST_F(AsyncOperationTest, AsyncCommandExecution) {
     ASSERT_TRUE(terminal_->initialize().has_value());
-    
+
     // Register an async command with a delay
-    auto regResult = terminal_->registerAsyncCommand("slow_command",
+    auto regResult = terminal_->registerAsyncCommand(
+        "slow_command",
         [](std::span<const std::any> args) -> DebugTask<std::string> {
             co_await std::suspend_for(std::chrono::milliseconds(100));
             co_return "Slow command completed";
         });
     ASSERT_TRUE(regResult.has_value());
-    
+
     // Execute async command
     auto start = std::chrono::steady_clock::now();
     auto task = terminal_->executeCommandAsync("slow_command");
     auto result = task.get();
     auto end = std::chrono::steady_clock::now();
-    
+
     EXPECT_TRUE(result.has_value()) << "Async command should succeed";
     EXPECT_EQ(result.value(), "Slow command completed");
-    
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    EXPECT_GE(duration.count(), 100) << "Should take at least 100ms due to delay";
+
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    EXPECT_GE(duration.count(), 100)
+        << "Should take at least 100ms due to delay";
 }
 
 TEST_F(AsyncOperationTest, AsyncCommandChecking) {
     ASSERT_TRUE(checker_->initialize().has_value());
-    
+
     // Create an async rule with delay
     struct AsyncTestRule {
         using result_type = OptimizedCommandChecker::CheckError;
-        
-        DebugTask<result_type> checkAsync(std::string_view command, size_t line, size_t column) const {
+
+        DebugTask<result_type> checkAsync(std::string_view command, size_t line,
+                                          size_t column) const {
             co_await std::suspend_for(std::chrono::milliseconds(50));
-            
+
             if (command.find("async_test") != std::string_view::npos) {
                 co_return OptimizedCommandChecker::CheckError{
                     .message = "Async test rule triggered",
                     .severity = ErrorSeverity::WARNING,
-                    .ruleName = "async_test_rule"
-                };
+                    .ruleName = "async_test_rule"};
             }
             co_return OptimizedCommandChecker::CheckError{};
         }
-        
-        result_type check(std::string_view command, size_t line, size_t column) const {
+
+        result_type check(std::string_view command, size_t line,
+                          size_t column) const {
             return OptimizedCommandChecker::CheckError{};
         }
-        
+
         std::string_view getName() const { return "async_test_rule"; }
         ErrorSeverity getSeverity() const { return ErrorSeverity::WARNING; }
         bool isEnabled() const { return true; }
     };
-    
-    auto regResult = checker_->registerAsyncRule("async_test_rule", AsyncTestRule{});
+
+    auto regResult =
+        checker_->registerAsyncRule("async_test_rule", AsyncTestRule{});
     ASSERT_TRUE(regResult.has_value());
-    
+
     // Execute async check
     auto start = std::chrono::steady_clock::now();
     auto task = checker_->checkCommandAsync("async_test command");
     auto result = task.get();
     auto end = std::chrono::steady_clock::now();
-    
+
     EXPECT_TRUE(result.has_value()) << "Async check should succeed";
-    
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    EXPECT_GE(duration.count(), 50) << "Should take at least 50ms due to async rule delay";
+
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    EXPECT_GE(duration.count(), 50)
+        << "Should take at least 50ms due to async rule delay";
 }
 
-} // namespace lithium::debug::tests
+}  // namespace lithium::debug::tests
 
 // Main function for running tests
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
-    
+
     // Print information about the test suite
     std::cout << "Lithium Debug System Unified Test Suite\n";
     std::cout << "========================================\n";
@@ -437,8 +446,9 @@ int main(int argc, char** argv) {
     std::cout << "- Enhanced command checker with security analysis\n";
     std::cout << "- Comprehensive error handling and recovery\n";
     std::cout << "- Performance benchmarks and stress tests\n";
-    std::cout << "\nTo run performance benchmarks: --gtest_also_run_disabled_tests\n";
+    std::cout
+        << "\nTo run performance benchmarks: --gtest_also_run_disabled_tests\n";
     std::cout << "To run specific tests: --gtest_filter=TestName\n\n";
-    
+
     return RUN_ALL_TESTS();
 }

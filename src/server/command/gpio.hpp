@@ -24,4 +24,4 @@ auto toggleSwitch(int id) -> json;
 
 }  // namespace lithium::middleware
 
-#endif // LITHIUM_SERVER_MIDDLEWARE_GPIO_HPP
+#endif  // LITHIUM_SERVER_MIDDLEWARE_GPIO_HPP

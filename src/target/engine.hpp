@@ -101,7 +101,7 @@ public:
 
     /**
      * @brief Deserialize a celestial object from JSON data
-     * 
+     *
      * @param j JSON object containing celestial object data
      * @return CelestialObject instance populated with JSON data
      */
@@ -109,50 +109,50 @@ public:
 
     /**
      * @brief Serialize the celestial object to JSON
-     * 
+     *
      * @return JSON object representation of the celestial object
      */
     [[nodiscard]] auto to_json() const -> nlohmann::json;
 
     /**
      * @brief Get the name (identifier) of the celestial object
-     * 
+     *
      * @return The object's primary identifier
      */
     [[nodiscard]] const std::string& getName() const { return Identifier; }
 
     // Object properties
-    std::string ID;                      ///< Unique identifier
-    std::string Identifier;              ///< Primary catalog identifier
-    std::string MIdentifier;             ///< Messier catalog identifier
-    std::string ExtensionName;           ///< Extended name
-    std::string Component;               ///< Component information
-    std::string ClassName;               ///< Classification name
-    std::string AmateurRank;             ///< Observer difficulty ranking
-    std::string ChineseName;             ///< Chinese name of the object
-    std::string Type;                    ///< Object type
-    std::string DuplicateType;           ///< Type including duplicates
-    std::string Morphology;              ///< Morphological classification
-    std::string ConstellationCn;         ///< Constellation name in Chinese
-    std::string ConstellationEn;         ///< Constellation name in English
-    std::string RAJ2000;                 ///< Right ascension (J2000) in string format
-    double RADJ2000;                     ///< Right ascension (J2000) in decimal degrees
-    std::string DecJ2000;                ///< Declination (J2000) in string format
-    double DecDJ2000;                    ///< Declination (J2000) in decimal degrees
-    double VisualMagnitudeV;             ///< Visual magnitude (V band)
-    double PhotographicMagnitudeB;       ///< Photographic magnitude (B band)
-    double BMinusV;                      ///< B-V color index
-    double SurfaceBrightness;            ///< Surface brightness in mag/arcmin²
-    double MajorAxis;                    ///< Major axis size in arcmin
-    double MinorAxis;                    ///< Minor axis size in arcmin
-    int PositionAngle;                   ///< Position angle in degrees
-    std::string DetailedDescription;     ///< Detailed object description
-    std::string BriefDescription;        ///< Brief object description
+    std::string ID;               ///< Unique identifier
+    std::string Identifier;       ///< Primary catalog identifier
+    std::string MIdentifier;      ///< Messier catalog identifier
+    std::string ExtensionName;    ///< Extended name
+    std::string Component;        ///< Component information
+    std::string ClassName;        ///< Classification name
+    std::string AmateurRank;      ///< Observer difficulty ranking
+    std::string ChineseName;      ///< Chinese name of the object
+    std::string Type;             ///< Object type
+    std::string DuplicateType;    ///< Type including duplicates
+    std::string Morphology;       ///< Morphological classification
+    std::string ConstellationCn;  ///< Constellation name in Chinese
+    std::string ConstellationEn;  ///< Constellation name in English
+    std::string RAJ2000;          ///< Right ascension (J2000) in string format
+    double RADJ2000;          ///< Right ascension (J2000) in decimal degrees
+    std::string DecJ2000;     ///< Declination (J2000) in string format
+    double DecDJ2000;         ///< Declination (J2000) in decimal degrees
+    double VisualMagnitudeV;  ///< Visual magnitude (V band)
+    double PhotographicMagnitudeB;    ///< Photographic magnitude (B band)
+    double BMinusV;                   ///< B-V color index
+    double SurfaceBrightness;         ///< Surface brightness in mag/arcmin²
+    double MajorAxis;                 ///< Major axis size in arcmin
+    double MinorAxis;                 ///< Minor axis size in arcmin
+    int PositionAngle;                ///< Position angle in degrees
+    std::string DetailedDescription;  ///< Detailed object description
+    std::string BriefDescription;     ///< Brief object description
 };
 
 /**
  * @brief Represents a star object with reference to CelestialObject data
- * 
+ *
  * This class provides additional metadata like alternative names (aliases)
  * and usage statistics (click count) on top of the celestial object data.
  */
@@ -166,7 +166,7 @@ private:
 public:
     /**
      * @brief Constructs a star object with name and aliases
-     * 
+     *
      * @param name Primary name of the star
      * @param aliases Alternative names for the star
      * @param clickCount Usage count, defaults to 0
@@ -181,63 +181,64 @@ public:
 
     /**
      * @brief Get the primary name of the star
-     * 
+     *
      * @return Star's primary name
      */
     [[nodiscard]] const std::string& getName() const;
-    
+
     /**
      * @brief Get all alternative names (aliases) of the star
-     * 
+     *
      * @return Vector of alias strings
      */
     [[nodiscard]] const std::vector<std::string>& getAliases() const;
-    
+
     /**
      * @brief Get the popularity count of the star
-     * 
+     *
      * @return Click count integer
      */
     [[nodiscard]] int getClickCount() const;
 
     /**
      * @brief Set the primary name of the star
-     * 
+     *
      * @param name New primary name
      */
     void setName(const std::string& name);
-    
+
     /**
      * @brief Set all alternative names (aliases) of the star
-     * 
+     *
      * @param aliases New vector of aliases
      */
     void setAliases(const std::vector<std::string>& aliases);
-    
+
     /**
      * @brief Set the popularity count of the star
-     * 
+     *
      * @param clickCount New click count value
      */
     void setClickCount(int clickCount);
 
     /**
      * @brief Associate celestial object data with this star
-     * 
-     * @param celestialObject CelestialObject containing detailed astronomical data
+     *
+     * @param celestialObject CelestialObject containing detailed astronomical
+     * data
      */
     void setCelestialObject(const CelestialObject& celestialObject);
-    
+
     /**
      * @brief Get the associated celestial object data
-     * 
+     *
      * @return CelestialObject with detailed astronomical data
      */
     [[nodiscard]] CelestialObject getCelestialObject() const;
-    
+
     /**
      * @brief Serialize the star object to JSON
-     * 
+     *
      * @return JSON object representation of the star
      */
     [[nodiscard]] nlohmann::json to_json() const;
@@ -316,7 +317,7 @@ private:
 
 /**
  * @brief Search engine for celestial objects
- * 
+ *
  * Provides functionality to search, filter, and recommend celestial objects
  * based on various criteria and user preferences.
  */
@@ -326,7 +327,7 @@ public:
      * @brief Constructor
      */
     SearchEngine();
-    
+
     /**
      * @brief Destructor
      */
@@ -334,14 +335,14 @@ public:
 
     /**
      * @brief Add a star object to the search index
-     * 
+     *
      * @param starObject StarObject to be indexed
      */
     void addStarObject(const StarObject& starObject);
 
     /**
      * @brief Search for a star object by exact name or alias
-     * 
+     *
      * @param query Search query string
      * @return Vector of matching star objects
      */
@@ -350,7 +351,7 @@ public:
 
     /**
      * @brief Perform fuzzy search for star objects
-     * 
+     *
      * @param query Search query string
      * @param tolerance Maximum edit distance for matches
      * @return Vector of matching star objects
@@ -361,7 +362,7 @@ public:
 
     /**
      * @brief Provide auto-completion suggestions for star names
-     * 
+     *
      * @param prefix Prefix to auto-complete
      * @return Vector of name suggestions
      */
@@ -370,7 +371,7 @@ public:
 
     /**
      * @brief Rank search results by popularity (click count)
-     * 
+     *
      * @param results Vector of search results to rank
      * @return Vector of ranked search results
      */
@@ -379,15 +380,15 @@ public:
 
     /**
      * @brief Load star object names and aliases from JSON file
-     * 
+     *
      * @param filename Path to the JSON file
      * @return True if loading was successful
      */
     bool loadFromNameJson(const std::string& filename);
-    
+
     /**
      * @brief Load celestial object data from JSON file
-     * 
+     *
      * @param filename Path to the JSON file
      * @return True if loading was successful
      */
@@ -395,7 +396,7 @@ public:
 
     /**
      * @brief Search for objects with specific filtering criteria
-     * 
+     *
      * @param type Object type filter
      * @param morphology Morphological classification filter
      * @param minMagnitude Minimum visual magnitude
@@ -410,48 +411,48 @@ public:
 
     /**
      * @brief Initialize the recommendation engine with a model
-     * 
+     *
      * @param modelFilename Path to the model file
      * @return True if initialization was successful
      */
     bool initializeRecommendationEngine(const std::string& modelFilename);
-    
+
     /**
      * @brief Add a user rating for a celestial object
-     * 
+     *
      * @param user User identifier
      * @param item Item (star) identifier
      * @param rating User rating value
      */
     void addUserRating(const std::string& user, const std::string& item,
                        double rating);
-    
+
     /**
      * @brief Get recommended items for a user
-     * 
+     *
      * @param user User identifier
      * @param topN Number of recommendations to return
      * @return Vector of recommended items with scores
      */
     std::vector<std::pair<std::string, double>> recommendItems(
         const std::string& user, int topN = 5) const;
-    
+
     /**
      * @brief Save the recommendation model to file
-     * 
+     *
      * @param filename Path to save the model
      * @return True if saving was successful
      */
     bool saveRecommendationModel(const std::string& filename) const;
-    
+
     /**
      * @brief Load a recommendation model from file
-     * 
+     *
      * @param filename Path to the model file
      * @return True if loading was successful
      */
     bool loadRecommendationModel(const std::string& filename);
-    
+
     /**
      * @brief Train the recommendation engine on current data
      */
@@ -459,7 +460,7 @@ public:
 
     /**
      * @brief Load data from CSV file
-     * 
+     *
      * @param filename Path to the CSV file
      * @param requiredFields List of required field names
      * @param dialect CSV dialect specifications
@@ -470,12 +471,14 @@ public:
                      Dialect dialect = Dialect());
 
     /**
-     * @brief Get hybrid recommendations combining content-based and collaborative filtering
-     * 
+     * @brief Get hybrid recommendations combining content-based and
+     * collaborative filtering
+     *
      * @param user User identifier
      * @param topN Number of recommendations to return
      * @param contentWeight Weight for content-based recommendations
-     * @param collaborativeWeight Weight for collaborative filtering recommendations
+     * @param collaborativeWeight Weight for collaborative filtering
+     * recommendations
      * @return Vector of recommended items with scores
      */
     auto getHybridRecommendations(const std::string& user, int topN = 5,
@@ -485,7 +488,7 @@ public:
 
     /**
      * @brief Export data to CSV file
-     * 
+     *
      * @param filename Path to the output CSV file
      * @param fields List of fields to export
      * @param dialect CSV dialect specifications
@@ -497,14 +500,14 @@ public:
 
     /**
      * @brief Process ratings from a CSV file in batch
-     * 
+     *
      * @param csvFilename Path to the CSV file with ratings
      */
     void batchProcessRatings(const std::string& csvFilename);
-    
+
     /**
      * @brief Update star objects from a CSV file in batch
-     * 
+     *
      * @param csvFilename Path to the CSV file with star object data
      */
     void batchUpdateStarObjects(const std::string& csvFilename);
@@ -513,17 +516,17 @@ public:
      * @brief Clear the search results cache
      */
     void clearCache();
-    
+
     /**
      * @brief Set the cache size
-     * 
+     *
      * @param size New cache size
      */
     void setCacheSize(size_t size);
-    
+
     /**
      * @brief Get cache statistics
-     * 
+     *
      * @return String with cache statistics
      */
     [[nodiscard]] auto getCacheStats() const -> std::string;
@@ -535,14 +538,14 @@ public:
 
     /**
      * @brief Get recommendation engine statistics
-     * 
+     *
      * @return String with recommendation engine stats
      */
     [[nodiscard]] auto getRecommendationEngineStats() const -> std::string;
 
     /**
      * @brief Add implicit feedback (view, click) for a user-item pair
-     * 
+     *
      * @param user User identifier
      * @param item Item identifier
      */
@@ -550,7 +553,7 @@ public:
 
     /**
      * @brief Export recommendation data to CSV
-     * 
+     *
      * @param filename Path to output CSV file
      * @return True if export was successful
      */
@@ -558,7 +561,7 @@ public:
 
     /**
      * @brief Import recommendation data from CSV
-     * 
+     *
      * @param filename Path to input CSV file
      * @return True if import was successful
      */

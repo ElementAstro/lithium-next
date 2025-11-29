@@ -208,13 +208,12 @@ public:
 };
 
 DomeService::DomeService()
-    : BaseDeviceService("DomeService"),
-      impl_(std::make_unique<Impl>()) {}
+    : BaseDeviceService("DomeService"), impl_(std::make_unique<Impl>()) {}
 
 DomeService::~DomeService() = default;
 
 auto DomeService::list() -> json {
-    LOG_INFO( "DomeService::list: Listing all available domes");
+    LOG_INFO("DomeService::list: Listing all available domes");
     json response;
     response["status"] = "success";
     json list = json::array();
@@ -228,7 +227,7 @@ auto DomeService::list() -> json {
 }
 
 auto DomeService::getStatus(const std::string& deviceId) -> json {
-    LOG_INFO( "DomeService::getStatus: %s", deviceId.c_str());
+    LOG_INFO("DomeService::getStatus: %s", deviceId.c_str());
     json response;
 
     if (deviceId != "dom-001") {
@@ -309,8 +308,8 @@ auto DomeService::getStatus(const std::string& deviceId) -> json {
 }
 
 auto DomeService::connect(const std::string& deviceId, bool connected) -> json {
-    LOG_INFO( "DomeService::connect: %s %s", deviceId.c_str(),
-          connected ? "connect" : "disconnect");
+    LOG_INFO("DomeService::connect: %s %s", deviceId.c_str(),
+             connected ? "connect" : "disconnect");
     json response;
     if (deviceId != "dom-001") {
         response["status"] = "error";
@@ -319,20 +318,22 @@ auto DomeService::connect(const std::string& deviceId, bool connected) -> json {
         return response;
     }
 
-    bool success =
-        connected ? impl_->mockDome->connect("") : impl_->mockDome->disconnect();
+    bool success = connected ? impl_->mockDome->connect("")
+                             : impl_->mockDome->disconnect();
     if (success) {
         response["status"] = "success";
-        response["message"] = connected ? "Dome connected" : "Dome disconnected";
+        response["message"] =
+            connected ? "Dome connected" : "Dome disconnected";
     } else {
         response["status"] = "error";
-        response["error"] = {{"code", "connection_failed"}, {"message", "Failed"}};
+        response["error"] = {{"code", "connection_failed"},
+                             {"message", "Failed"}};
     }
     return response;
 }
 
 auto DomeService::slew(const std::string& deviceId, double azimuth) -> json {
-    LOG_INFO( "DomeService::slew: %s to %f", deviceId.c_str(), azimuth);
+    LOG_INFO("DomeService::slew: %s to %f", deviceId.c_str(), azimuth);
     json response;
     if (deviceId != "dom-001") {
         response["status"] = "error";
@@ -353,14 +354,16 @@ auto DomeService::slew(const std::string& deviceId, double azimuth) -> json {
         response["message"] = "Slewing initiated";
     } else {
         response["status"] = "error";
-        response["error"] = {{"code", "slew_failed"}, {"message", "Slew failed"}};
+        response["error"] = {{"code", "slew_failed"},
+                             {"message", "Slew failed"}};
     }
     return response;
 }
 
-auto DomeService::shutterControl(const std::string& deviceId, bool open) -> json {
-    LOG_INFO( "DomeService::shutterControl: %s %s", deviceId.c_str(),
-          open ? "open" : "close");
+auto DomeService::shutterControl(const std::string& deviceId, bool open)
+    -> json {
+    LOG_INFO("DomeService::shutterControl: %s %s", deviceId.c_str(),
+             open ? "open" : "close");
     json response;
     if (deviceId != "dom-001") {
         response["status"] = "error";
@@ -390,7 +393,7 @@ auto DomeService::shutterControl(const std::string& deviceId, bool open) -> json
 }
 
 auto DomeService::park(const std::string& deviceId) -> json {
-    LOG_INFO( "DomeService::park: %s", deviceId.c_str());
+    LOG_INFO("DomeService::park: %s", deviceId.c_str());
     json response;
     if (deviceId != "dom-001") {
         response["status"] = "error";
@@ -411,13 +414,14 @@ auto DomeService::park(const std::string& deviceId) -> json {
         response["message"] = "Parking initiated";
     } else {
         response["status"] = "error";
-        response["error"] = {{"code", "park_failed"}, {"message", "Park failed"}};
+        response["error"] = {{"code", "park_failed"},
+                             {"message", "Park failed"}};
     }
     return response;
 }
 
 auto DomeService::unpark(const std::string& deviceId) -> json {
-    LOG_INFO( "DomeService::unpark: %s", deviceId.c_str());
+    LOG_INFO("DomeService::unpark: %s", deviceId.c_str());
     json response;
     if (deviceId != "dom-001") {
         response["status"] = "error";
@@ -445,7 +449,7 @@ auto DomeService::unpark(const std::string& deviceId) -> json {
 }
 
 auto DomeService::home(const std::string& deviceId) -> json {
-    LOG_INFO( "DomeService::home: %s", deviceId.c_str());
+    LOG_INFO("DomeService::home: %s", deviceId.c_str());
     json response;
     if (deviceId != "dom-001") {
         response["status"] = "error";
@@ -466,13 +470,14 @@ auto DomeService::home(const std::string& deviceId) -> json {
         response["message"] = "Homing initiated";
     } else {
         response["status"] = "error";
-        response["error"] = {{"code", "home_failed"}, {"message", "Home failed"}};
+        response["error"] = {{"code", "home_failed"},
+                             {"message", "Home failed"}};
     }
     return response;
 }
 
 auto DomeService::stop(const std::string& deviceId) -> json {
-    LOG_INFO( "DomeService::stop: %s", deviceId.c_str());
+    LOG_INFO("DomeService::stop: %s", deviceId.c_str());
     json response;
     if (deviceId != "dom-001") {
         response["status"] = "error";
@@ -506,11 +511,13 @@ auto DomeService::getCapabilities(const std::string& deviceId) -> json {
 
 auto DomeService::getINDIProperties(const std::string& deviceId) -> json {
     if (deviceId != "dom-001") {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND, "Device not found");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND,
+                                 "Device not found");
     }
 
     if (!impl_->mockDome->isConnected()) {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED, "Dome not connected");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED,
+                                 "Dome not connected");
     }
 
     json data;
@@ -521,10 +528,7 @@ auto DomeService::getINDIProperties(const std::string& deviceId) -> json {
 
     // Azimuth
     if (auto az = impl_->mockDome->getAzimuth()) {
-        properties["ABS_DOME_POSITION"] = {
-            {"value", *az},
-            {"type", "number"}
-        };
+        properties["ABS_DOME_POSITION"] = {{"value", *az}, {"type", "number"}};
     }
 
     // Shutter status
@@ -546,23 +550,16 @@ auto DomeService::getINDIProperties(const std::string& deviceId) -> json {
             default:
                 break;
         }
-        properties["DOME_SHUTTER"] = {
-            {"value", status},
-            {"type", "text"}
-        };
+        properties["DOME_SHUTTER"] = {{"value", status}, {"type", "text"}};
     }
 
     // Park status
-    properties["DOME_PARK"] = {
-        {"value", impl_->mockDome->isParked()},
-        {"type", "switch"}
-    };
+    properties["DOME_PARK"] = {{"value", impl_->mockDome->isParked()},
+                               {"type", "switch"}};
 
     // Slaved status
-    properties["DOME_AUTOSYNC"] = {
-        {"value", impl_->mockDome->isSlaved()},
-        {"type", "switch"}
-    };
+    properties["DOME_AUTOSYNC"] = {{"value", impl_->mockDome->isSlaved()},
+                                   {"type", "switch"}};
 
     data["properties"] = properties;
     return makeSuccessResponse(data);
@@ -572,11 +569,13 @@ auto DomeService::setINDIProperty(const std::string& deviceId,
                                   const std::string& propertyName,
                                   const json& value) -> json {
     if (deviceId != "dom-001") {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND, "Device not found");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND,
+                                 "Device not found");
     }
 
     if (!impl_->mockDome->isConnected()) {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED, "Dome not connected");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED,
+                                 "Dome not connected");
     }
 
     bool success = false;
@@ -599,8 +598,9 @@ auto DomeService::setINDIProperty(const std::string& deviceId,
     } else if (propertyName == "DOME_AUTOSYNC" && value.is_boolean()) {
         success = impl_->mockDome->setSlaved(value.get<bool>());
     } else {
-        return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                 "Unknown or invalid property: " + propertyName);
+        return makeErrorResponse(
+            ErrorCode::INVALID_FIELD_VALUE,
+            "Unknown or invalid property: " + propertyName);
     }
 
     if (success) {
@@ -612,28 +612,34 @@ auto DomeService::setINDIProperty(const std::string& deviceId,
 
 auto DomeService::setSlaved(const std::string& deviceId, bool slaved) -> json {
     if (deviceId != "dom-001") {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND, "Device not found");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND,
+                                 "Device not found");
     }
 
     if (!impl_->mockDome->isConnected()) {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED, "Dome not connected");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED,
+                                 "Dome not connected");
     }
 
     if (impl_->mockDome->setSlaved(slaved)) {
         json data;
         data["slaved"] = slaved;
-        return makeSuccessResponse(data, slaved ? "Dome slaved to mount" : "Dome unslaved");
+        return makeSuccessResponse(
+            data, slaved ? "Dome slaved to mount" : "Dome unslaved");
     }
-    return makeErrorResponse(ErrorCode::OPERATION_FAILED, "Failed to set slaved status");
+    return makeErrorResponse(ErrorCode::OPERATION_FAILED,
+                             "Failed to set slaved status");
 }
 
 auto DomeService::getSlaved(const std::string& deviceId) -> json {
     if (deviceId != "dom-001") {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND, "Device not found");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND,
+                                 "Device not found");
     }
 
     if (!impl_->mockDome->isConnected()) {
-        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED, "Dome not connected");
+        return makeErrorResponse(ErrorCode::DEVICE_NOT_CONNECTED,
+                                 "Dome not connected");
     }
 
     json data;

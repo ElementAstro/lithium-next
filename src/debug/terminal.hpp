@@ -9,6 +9,17 @@
 #include <string>
 #include <vector>
 
+// Include new terminal components
+#include "terminal/types.hpp"
+
+namespace lithium::debug::terminal {
+class ConsoleRenderer;
+class InputController;
+class HistoryManager;
+class CommandExecutor;
+class TuiManager;
+}  // namespace lithium::debug::terminal
+
 namespace lithium::debug {
 class CommandChecker;
 struct CommandCheckerErrorProxy {
@@ -133,17 +144,20 @@ public:
 
     // --- Unified Debugging Integration ---
     /**
-     * @brief Load the full debug configuration (checker + suggestion) from a JSON file.
+     * @brief Load the full debug configuration (checker + suggestion) from a
+     * JSON file.
      */
     void loadDebugConfig(const std::string& configPath);
 
     /**
-     * @brief Save the full debug configuration (checker + suggestion) to a JSON file.
+     * @brief Save the full debug configuration (checker + suggestion) to a JSON
+     * file.
      */
     void saveDebugConfig(const std::string& configPath) const;
 
     /**
-     * @brief Export the current debug state (rules, suggestion config, history, stats) as JSON.
+     * @brief Export the current debug state (rules, suggestion config, history,
+     * stats) as JSON.
      */
     std::string exportDebugStateJson() const;
 
@@ -155,7 +169,11 @@ public:
     /**
      * @brief Add a command check rule at runtime.
      */
-    void addCommandCheckRule(const std::string& name, std::function<std::optional<CommandCheckerErrorProxy::Error>(const std::string&, size_t)> check);
+    void addCommandCheckRule(
+        const std::string& name,
+        std::function<std::optional<CommandCheckerErrorProxy::Error>(
+            const std::string&, size_t)>
+            check);
 
     /**
      * @brief Remove a command check rule by name at runtime.
@@ -186,6 +204,70 @@ public:
      * @brief Print a unified debug report (errors + suggestions + stats).
      */
     void printDebugReport(const std::string& input, bool useColor = true) const;
+
+    // =========================================================================
+    // New Terminal Component Access
+    // =========================================================================
+
+    /**
+     * @brief Enable TUI mode (requires ncurses)
+     */
+    void enableTuiMode(bool enable);
+
+    /**
+     * @brief Check if TUI mode is available
+     */
+    [[nodiscard]] bool isTuiAvailable() const;
+
+    /**
+     * @brief Get the command executor
+     */
+    [[nodiscard]] terminal::CommandExecutor* getExecutor();
+
+    /**
+     * @brief Get the console renderer
+     */
+    [[nodiscard]] terminal::ConsoleRenderer* getRenderer();
+
+    /**
+     * @brief Get the TUI manager
+     */
+    [[nodiscard]] terminal::TuiManager* getTuiManager();
+
+    /**
+     * @brief Set terminal theme
+     */
+    void setTheme(const std::string& themeName);
+
+    /**
+     * @brief Print styled success message
+     */
+    void printSuccess(const std::string& message);
+
+    /**
+     * @brief Print styled error message
+     */
+    void printError(const std::string& message);
+
+    /**
+     * @brief Print styled warning message
+     */
+    void printWarning(const std::string& message);
+
+    /**
+     * @brief Print styled info message
+     */
+    void printInfo(const std::string& message);
+
+    /**
+     * @brief Clear the terminal screen
+     */
+    void clearScreen();
+
+    /**
+     * @brief Show a progress bar
+     */
+    void showProgress(float progress, const std::string& label = "");
 
 private:
     /**

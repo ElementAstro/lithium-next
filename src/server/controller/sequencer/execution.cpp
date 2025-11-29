@@ -7,4 +7,5 @@
 #include "execution.hpp"
 
 // Static member definition
-std::weak_ptr<lithium::task::ExposureSequence> SequenceExecutionController::mExposureSequence;
+std::weak_ptr<lithium::task::ExposureSequence>
+    SequenceExecutionController::mExposureSequence;

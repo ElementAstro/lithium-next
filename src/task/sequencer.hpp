@@ -21,13 +21,13 @@ using namespace lithium::database;
 /**
  * @enum SequenceState
  * @brief Represents the current state of a sequence.
-     */
+ */
 enum class SequenceState { Idle, Running, Paused, Stopping, Stopped };
 
 /**
  * @class SequenceModel
  * @brief Database model for sequence storage and retrieval.
-     */
+ */
 class SequenceModel {
 public:
     static std::string tableName() { return "sequences"; }
@@ -54,7 +54,7 @@ public:
 /**
  * @class ExposureSequence
  * @brief Manages and executes a sequence of targets with tasks.
-     */
+ */
 class ExposureSequence {
 public:
     // Callback function type definitions
@@ -64,9 +64,9 @@ public:
     using ErrorCallback = std::function<void(const std::string& targetName,
                                              const std::exception& e)>;
     using ProgressCallback = std::function<void(const json& progress)>;
-    using TaskCallback = std::function<void(const std::string& targetName,
-                                            const std::string& taskName,
-                                            const json& taskInfo)>;
+    using TaskCallback =
+        std::function<void(const std::string& targetName,
+                           const std::string& taskName, const json& taskInfo)>;
 
     /**
      * @brief Constructor that initializes database and task generator.
@@ -201,7 +201,7 @@ public:
     /**
      * @brief Sets the callback for progress updates.
      * @param callback The callback function receiving progress JSON.
-     * 
+     *
      * Progress JSON format:
      * {
      *   "sequenceId": "uuid",
@@ -620,7 +620,8 @@ public:
      * @brief Gets estimated completion time for sequence.
      * @return Estimated completion timestamp.
      */
-    [[nodiscard]] std::chrono::system_clock::time_point getEstimatedCompletionTime() const;
+    [[nodiscard]] std::chrono::system_clock::time_point
+    getEstimatedCompletionTime() const;
 
     /**
      * @brief Checks if sequence can complete before dawn.
@@ -661,9 +662,10 @@ private:
     TaskCallback onTaskEnd_;            ///< Called when a task ends
 
     // Current execution tracking
-    std::string currentTargetName_;     ///< Name of currently executing target
-    std::string currentTaskName_;       ///< Name of currently executing task
-    std::chrono::steady_clock::time_point executionStartTime_;  ///< When execution started
+    std::string currentTargetName_;  ///< Name of currently executing target
+    std::string currentTaskName_;    ///< Name of currently executing task
+    std::chrono::steady_clock::time_point
+        executionStartTime_;  ///< When execution started
 
     SchedulingStrategy schedulingStrategy_{
         SchedulingStrategy::FIFO};  ///< Current scheduling strategy
@@ -721,8 +723,7 @@ private:
      * @param taskInfo Additional task information.
      */
     void notifyTaskStart(const std::string& targetName,
-                         const std::string& taskName,
-                         const json& taskInfo);
+                         const std::string& taskName, const json& taskInfo);
 
     /**
      * @brief Notifies that a task has ended.
@@ -731,8 +732,7 @@ private:
      * @param taskInfo Task result information.
      */
     void notifyTaskEnd(const std::string& targetName,
-                       const std::string& taskName,
-                       const json& taskInfo);
+                       const std::string& taskName, const json& taskInfo);
 
     /**
      * @brief Builds progress JSON object.
@@ -814,16 +814,19 @@ private:
         taskGenerator_;  ///< Task generator for processing macros
 
     // Execution strategy and monitoring
-    ExecutionStrategy executionStrategy_{ExecutionStrategy::Sequential};  ///< Current execution strategy
-    size_t concurrencyLimit_{4};  ///< Maximum concurrent tasks
-    bool monitoringEnabled_{false};  ///< Monitoring flag
+    ExecutionStrategy executionStrategy_{
+        ExecutionStrategy::Sequential};     ///< Current execution strategy
+    size_t concurrencyLimit_{4};            ///< Maximum concurrent tasks
+    bool monitoringEnabled_{false};         ///< Monitoring flag
     bool scriptIntegrationEnabled_{false};  ///< Script integration flag
-    bool performanceOptimizationEnabled_{false};  ///< Performance optimization flag
-    
+    bool performanceOptimizationEnabled_{
+        false};  ///< Performance optimization flag
+
     struct ResourceLimits {
         double maxCpuUsage{80.0};  ///< Maximum CPU usage percentage
-        size_t maxMemoryUsage{1024 * 1024 * 1024};  ///< Maximum memory usage (1GB default)
-    } resourceLimits_;  ///< Resource limits
+        size_t maxMemoryUsage{1024 * 1024 *
+                              1024};  ///< Maximum memory usage (1GB default)
+    } resourceLimits_;                ///< Resource limits
 
     // Helper methods
 
@@ -888,7 +891,6 @@ private:
     // Astronomical scheduling data
     ObserverLocation observerLocation_;  ///< Observer's geographic location
     double minimumAltitude_{15.0};       ///< Minimum target altitude (degrees)
-
 };
 
 }  // namespace lithium::task

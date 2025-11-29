@@ -91,23 +91,23 @@ message(STATUS "  ├─ Client lib: lithium_client_stellarsolver configured")
 find_package(pybind11 QUIET)
 if(pybind11_FOUND)
     pybind11_add_module(ssbindings MODULE binding.cpp)
-    
+
     target_include_directories(ssbindings PRIVATE
         ${pybind11_INCLUDE_DIRS}
         ${Qt${QT_VERSION_MAJOR}Core_INCLUDE_DIRS}
         ${STELLARSOLVER_INCLUDE_DIRS}
     )
-    
+
     target_link_libraries(ssbindings PRIVATE
         ${PROJECT_NAME}
         Qt${QT_VERSION_MAJOR}::Core
         stellarsolver
     )
-    
+
     set_target_properties(ssbindings PROPERTIES
         AUTOMOC ON
         FOLDER "Client/Solvers/Bindings"
     )
-    
+
     message(STATUS "    └─ Python bindings: ssbindings configured")
 endif()

@@ -59,16 +59,26 @@ class CompilerManager:
                         supports_pch=True,
                         supports_modules=(version >= "11.0"),
                         supported_cpp_versions={
-                            CppVersion.CPP98, CppVersion.CPP03, CppVersion.CPP11,
-                            CppVersion.CPP14, CppVersion.CPP17, CppVersion.CPP20
-                        } | ({CppVersion.CPP23} if version >= "11.0" else set()),
-                        supported_sanitizers={"address",
-                                              "thread", "undefined", "leak"},
+                            CppVersion.CPP98,
+                            CppVersion.CPP03,
+                            CppVersion.CPP11,
+                            CppVersion.CPP14,
+                            CppVersion.CPP17,
+                            CppVersion.CPP20,
+                        }
+                        | ({CppVersion.CPP23} if version >= "11.0" else set()),
+                        supported_sanitizers={"address", "thread", "undefined", "leak"},
                         supported_optimizations={
-                            "-O0", "-O1", "-O2", "-O3", "-Ofast", "-Os", "-Og"},
-                        feature_flags={"lto": "-flto",
-                                       "coverage": "--coverage"}
-                    )
+                            "-O0",
+                            "-O1",
+                            "-O2",
+                            "-O3",
+                            "-Ofast",
+                            "-Os",
+                            "-Og",
+                        },
+                        feature_flags={"lto": "-flto", "coverage": "--coverage"},
+                    ),
                 )
                 self.compilers["GCC"] = compiler
                 if not self.default_compiler:
@@ -77,8 +87,7 @@ class CompilerManager:
                 pass
 
         # Detect Clang
-        clang_path = self._find_command(
-            "clang++") or self._find_command("clang")
+        clang_path = self._find_command("clang++") or self._find_command("clang")
         if clang_path:
             version = self._get_compiler_version(clang_path)
             try:
@@ -103,16 +112,32 @@ class CompilerManager:
                         supports_pch=True,
                         supports_modules=(version >= "16.0"),
                         supported_cpp_versions={
-                            CppVersion.CPP98, CppVersion.CPP03, CppVersion.CPP11,
-                            CppVersion.CPP14, CppVersion.CPP17, CppVersion.CPP20
-                        } | ({CppVersion.CPP23} if version >= "15.0" else set()),
+                            CppVersion.CPP98,
+                            CppVersion.CPP03,
+                            CppVersion.CPP11,
+                            CppVersion.CPP14,
+                            CppVersion.CPP17,
+                            CppVersion.CPP20,
+                        }
+                        | ({CppVersion.CPP23} if version >= "15.0" else set()),
                         supported_sanitizers={
-                            "address", "thread", "undefined", "memory", "dataflow"},
+                            "address",
+                            "thread",
+                            "undefined",
+                            "memory",
+                            "dataflow",
+                        },
                         supported_optimizations={
-                            "-O0", "-O1", "-O2", "-O3", "-Ofast", "-Os", "-Oz"},
-                        feature_flags={"lto": "-flto",
-                                       "coverage": "--coverage"}
-                    )
+                            "-O0",
+                            "-O1",
+                            "-O2",
+                            "-O3",
+                            "-Ofast",
+                            "-Os",
+                            "-Oz",
+                        },
+                        feature_flags={"lto": "-flto", "coverage": "--coverage"},
+                    ),
                 )
                 self.compilers["Clang"] = compiler
                 if not self.default_compiler:
@@ -148,15 +173,16 @@ class CompilerManager:
                             # Visual Studio 2019 16.10+
                             supports_modules=(version >= "19.29"),
                             supported_cpp_versions={
-                                CppVersion.CPP11, CppVersion.CPP14,
-                                CppVersion.CPP17, CppVersion.CPP20
-                            } | ({CppVersion.CPP23} if version >= "19.35" else set()),
+                                CppVersion.CPP11,
+                                CppVersion.CPP14,
+                                CppVersion.CPP17,
+                                CppVersion.CPP20,
+                            }
+                            | ({CppVersion.CPP23} if version >= "19.35" else set()),
                             supported_sanitizers={"address"},
-                            supported_optimizations={
-                                "/O1", "/O2", "/Ox", "/Od"},
-                            feature_flags={"lto": "/GL",
-                                           "whole_program": "/GL"}
-                        )
+                            supported_optimizations={"/O1", "/O2", "/Ox", "/Od"},
+                            feature_flags={"lto": "/GL", "whole_program": "/GL"},
+                        ),
                     )
                     self.compilers["MSVC"] = compiler
                     if not self.default_compiler:
@@ -181,14 +207,14 @@ class CompilerManager:
                 # Return first available
                 return next(iter(self.compilers.values()))
             else:
-                raise CompilerNotFoundError(
-                    "No compilers detected on the system")
+                raise CompilerNotFoundError("No compilers detected on the system")
 
         if name in self.compilers:
             return self.compilers[name]
         else:
             raise CompilerNotFoundError(
-                f"Compiler '{name}' not found. Available compilers: {', '.join(self.compilers.keys())}")
+                f"Compiler '{name}' not found. Available compilers: {', '.join(self.compilers.keys())}"
+            )
 
     def _find_command(self, command: str) -> Optional[str]:
         """Find a command in the system path."""
@@ -207,17 +233,28 @@ class CompilerManager:
             # Use vswhere.exe if available
             vswhere = os.path.join(
                 os.environ.get("ProgramFiles(x86)", ""),
-                "Microsoft Visual Studio", "Installer", "vswhere.exe"
+                "Microsoft Visual Studio",
+                "Installer",
+                "vswhere.exe",
             )
 
             if os.path.exists(vswhere):
                 result = subprocess.run(
-                    [vswhere, "-latest", "-products", "*", "-requires",
-                     "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
-                     "-property", "installationPath", "-format", "value"],
+                    [
+                        vswhere,
+                        "-latest",
+                        "-products",
+                        "*",
+                        "-requires",
+                        "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                        "-property",
+                        "installationPath",
+                        "-format",
+                        "value",
+                    ],
                     capture_output=True,
                     text=True,
-                    check=False
+                    check=False,
                 )
 
                 if result.returncode == 0 and result.stdout.strip():
@@ -231,7 +268,13 @@ class CompilerManager:
                             latest = sorted(versions)[-1]  # Get latest version
                             for arch in ["x64", "x86"]:
                                 candidate = os.path.join(
-                                    cl_path, latest, "bin", "Host" + arch, arch, "cl.exe")
+                                    cl_path,
+                                    latest,
+                                    "bin",
+                                    "Host" + arch,
+                                    arch,
+                                    "cl.exe",
+                                )
                                 if os.path.exists(candidate):
                                     return candidate
 
@@ -242,19 +285,27 @@ class CompilerManager:
         try:
             if "cl" in os.path.basename(compiler_path).lower():
                 # MSVC
-                result = subprocess.run([compiler_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                        universal_newlines=True)
-                match = re.search(r'Version\s+(\d+\.\d+\.\d+)', result.stderr)
+                result = subprocess.run(
+                    [compiler_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                )
+                match = re.search(r"Version\s+(\d+\.\d+\.\d+)", result.stderr)
                 if match:
                     return match.group(1)
                 return "unknown"
             else:
                 # GCC or Clang
-                result = subprocess.run([compiler_path, "--version"], stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE, universal_newlines=True)
+                result = subprocess.run(
+                    [compiler_path, "--version"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                )
                 first_line = result.stdout.splitlines()[0]
                 # Extract version number
-                match = re.search(r'(\d+\.\d+\.\d+)', first_line)
+                match = re.search(r"(\d+\.\d+\.\d+)", first_line)
                 if match:
                     return match.group(1)
                 return "unknown"

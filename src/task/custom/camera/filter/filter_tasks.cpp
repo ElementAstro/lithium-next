@@ -4,8 +4,8 @@
  */
 
 #include "filter_tasks.hpp"
-#include "../exposure/exposure_tasks.hpp"
 #include <thread>
+#include "../exposure/exposure_tasks.hpp"
 
 namespace lithium::task::camera {
 
@@ -14,13 +14,17 @@ namespace lithium::task::camera {
 // ============================================================================
 
 void FilterSequenceTask::setupParameters() {
-    addParamDefinition("filters", "array", true, nullptr, "List of filter names");
-    addParamDefinition("exposures_per_filter", "integer", false, 10, "Exposures per filter");
+    addParamDefinition("filters", "array", true, nullptr,
+                       "List of filter names");
+    addParamDefinition("exposures_per_filter", "integer", false, 10,
+                       "Exposures per filter");
     addParamDefinition("exposure", "number", true, nullptr, "Exposure time");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
     addParamDefinition("dither", "boolean", false, false, "Enable dithering");
-    addParamDefinition("dither_every", "integer", false, 1, "Dither every N frames");
+    addParamDefinition("dither_every", "integer", false, 1,
+                       "Dither every N frames");
 }
 
 void FilterSequenceTask::validateParams(const json& params) {
@@ -46,24 +50,26 @@ void FilterSequenceTask::executeImpl(const json& params) {
     int totalFrames = filters.size() * countPerFilter;
     int frameCount = 0;
 
-    logProgress("Starting filter sequence with " + std::to_string(filters.size()) + " filters");
+    logProgress("Starting filter sequence with " +
+                std::to_string(filters.size()) + " filters");
 
     for (const auto& filter : filters) {
         logProgress("Switching to filter: " + filter);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));  // Filter change time
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(500));  // Filter change time
 
         for (int i = 0; i < countPerFilter; ++i) {
             double progress = static_cast<double>(frameCount) / totalFrames;
-            logProgress("Filter " + filter + " frame " + std::to_string(i + 1) + "/" +
-                       std::to_string(countPerFilter), progress);
+            logProgress("Filter " + filter + " frame " + std::to_string(i + 1) +
+                            "/" + std::to_string(countPerFilter),
+                        progress);
 
             json exposureParams = {
                 {"exposure", exposure},
                 {"type", "light"},
                 {"filter", filter},
                 {"gain", params.value("gain", 100)},
-                {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-            };
+                {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
             TakeExposureTask frameExposure;
             frameExposure.execute(exposureParams);
@@ -77,7 +83,9 @@ void FilterSequenceTask::executeImpl(const json& params) {
         }
     }
 
-    logProgress("Filter sequence complete: " + std::to_string(totalFrames) + " frames", 1.0);
+    logProgress(
+        "Filter sequence complete: " + std::to_string(totalFrames) + " frames",
+        1.0);
 }
 
 // ============================================================================
@@ -85,15 +93,20 @@ void FilterSequenceTask::executeImpl(const json& params) {
 // ============================================================================
 
 void RGBSequenceTask::setupParameters() {
-    addParamDefinition("r_exposure", "number", true, nullptr, "Red filter exposure");
-    addParamDefinition("g_exposure", "number", true, nullptr, "Green filter exposure");
-    addParamDefinition("b_exposure", "number", true, nullptr, "Blue filter exposure");
+    addParamDefinition("r_exposure", "number", true, nullptr,
+                       "Red filter exposure");
+    addParamDefinition("g_exposure", "number", true, nullptr,
+                       "Green filter exposure");
+    addParamDefinition("b_exposure", "number", true, nullptr,
+                       "Blue filter exposure");
     addParamDefinition("r_count", "integer", false, 10, "Red frame count");
     addParamDefinition("g_count", "integer", false, 10, "Green frame count");
     addParamDefinition("b_count", "integer", false, 10, "Blue frame count");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
-    addParamDefinition("interleave", "boolean", false, false, "Interleave RGB frames");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
+    addParamDefinition("interleave", "boolean", false, false,
+                       "Interleave RGB frames");
 }
 
 void RGBSequenceTask::validateParams(const json& params) {
@@ -122,23 +135,29 @@ void RGBSequenceTask::executeImpl(const json& params) {
         int maxCount = std::max({rCount, gCount, bCount});
         for (int i = 0; i < maxCount; ++i) {
             double progress = static_cast<double>(i) / maxCount;
-            
+
             if (i < rCount) {
                 logProgress("R frame " + std::to_string(i + 1), progress);
-                json rParams = {{"exposure", rExp}, {"type", "light"}, {"filter", "R"},
-                               {"gain", params.value("gain", 100)}};
+                json rParams = {{"exposure", rExp},
+                                {"type", "light"},
+                                {"filter", "R"},
+                                {"gain", params.value("gain", 100)}};
                 TakeExposureTask rExposure;
                 rExposure.execute(rParams);
             }
             if (i < gCount) {
-                json gParams = {{"exposure", gExp}, {"type", "light"}, {"filter", "G"},
-                               {"gain", params.value("gain", 100)}};
+                json gParams = {{"exposure", gExp},
+                                {"type", "light"},
+                                {"filter", "G"},
+                                {"gain", params.value("gain", 100)}};
                 TakeExposureTask gExposure;
                 gExposure.execute(gParams);
             }
             if (i < bCount) {
-                json bParams = {{"exposure", bExp}, {"type", "light"}, {"filter", "B"},
-                               {"gain", params.value("gain", 100)}};
+                json bParams = {{"exposure", bExp},
+                                {"type", "light"},
+                                {"filter", "B"},
+                                {"gain", params.value("gain", 100)}};
                 TakeExposureTask bExposure;
                 bExposure.execute(bParams);
             }
@@ -150,8 +169,7 @@ void RGBSequenceTask::executeImpl(const json& params) {
             {"exposures_per_filter", rCount},
             {"exposure", rExp},
             {"gain", params.value("gain", 100)},
-            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-        };
+            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
         FilterSequenceTask seqTask;
         seqTask.execute(filterParams);
@@ -165,15 +183,20 @@ void RGBSequenceTask::executeImpl(const json& params) {
 // ============================================================================
 
 void NarrowbandSequenceTask::setupParameters() {
-    addParamDefinition("ha_exposure", "number", false, 300.0, "Ha filter exposure");
-    addParamDefinition("oiii_exposure", "number", false, 300.0, "OIII filter exposure");
-    addParamDefinition("sii_exposure", "number", false, 300.0, "SII filter exposure");
+    addParamDefinition("ha_exposure", "number", false, 300.0,
+                       "Ha filter exposure");
+    addParamDefinition("oiii_exposure", "number", false, 300.0,
+                       "OIII filter exposure");
+    addParamDefinition("sii_exposure", "number", false, 300.0,
+                       "SII filter exposure");
     addParamDefinition("ha_count", "integer", false, 20, "Ha frame count");
     addParamDefinition("oiii_count", "integer", false, 20, "OIII frame count");
     addParamDefinition("sii_count", "integer", false, 20, "SII frame count");
-    addParamDefinition("palette", "string", false, "sho", "Color palette (sho/hoo/hos)");
+    addParamDefinition("palette", "string", false, "sho",
+                       "Color palette (sho/hoo/hos)");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
     addParamDefinition("dither", "boolean", false, true, "Enable dithering");
 }
 
@@ -203,11 +226,15 @@ void NarrowbandSequenceTask::executeImpl(const json& params) {
     std::vector<std::tuple<std::string, double, int>> sequence;
 
     if (palette == "sho" || palette == "hubble") {
-        sequence = {{"SII", siiExp, siiCount}, {"Ha", haExp, haCount}, {"OIII", oiiiExp, oiiiCount}};
+        sequence = {{"SII", siiExp, siiCount},
+                    {"Ha", haExp, haCount},
+                    {"OIII", oiiiExp, oiiiCount}};
     } else if (palette == "hoo") {
         sequence = {{"Ha", haExp, haCount}, {"OIII", oiiiExp, oiiiCount}};
     } else if (palette == "hos") {
-        sequence = {{"Ha", haExp, haCount}, {"OIII", oiiiExp, oiiiCount}, {"SII", siiExp, siiCount}};
+        sequence = {{"Ha", haExp, haCount},
+                    {"OIII", oiiiExp, oiiiCount},
+                    {"SII", siiExp, siiCount}};
     }
 
     int totalFrames = 0;
@@ -217,7 +244,8 @@ void NarrowbandSequenceTask::executeImpl(const json& params) {
 
     int framesDone = 0;
     for (const auto& [filter, exposure, count] : sequence) {
-        logProgress("Acquiring " + std::to_string(count) + " " + filter + " frames");
+        logProgress("Acquiring " + std::to_string(count) + " " + filter +
+                    " frames");
 
         json filterParams = {
             {"exposure", exposure},
@@ -225,17 +253,19 @@ void NarrowbandSequenceTask::executeImpl(const json& params) {
             {"type", "light"},
             {"filter", filter},
             {"gain", params.value("gain", 100)},
-            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-        };
+            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
         TakeManyExposureTask manyExposure;
         manyExposure.execute(filterParams);
 
         framesDone += count;
-        logProgress("Completed " + filter, static_cast<double>(framesDone) / totalFrames);
+        logProgress("Completed " + filter,
+                    static_cast<double>(framesDone) / totalFrames);
     }
 
-    logProgress("Narrowband sequence complete: " + std::to_string(totalFrames) + " frames", 1.0);
+    logProgress("Narrowband sequence complete: " + std::to_string(totalFrames) +
+                    " frames",
+                1.0);
 }
 
 }  // namespace lithium::task::camera

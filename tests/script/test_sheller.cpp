@@ -1,19 +1,15 @@
 #include <gtest/gtest.h>
-#include "script/sheller.hpp"
-#include <thread>
 #include <chrono>
+#include <thread>
+#include "script/sheller.hpp"
 
 using namespace lithium;
 
 class ScriptManagerTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        manager = std::make_unique<ScriptManager>();
-    }
+    void SetUp() override { manager = std::make_unique<ScriptManager>(); }
 
-    void TearDown() override {
-        manager.reset();
-    }
+    void TearDown() override { manager.reset(); }
 
     std::unique_ptr<ScriptManager> manager;
 };
@@ -26,7 +22,8 @@ TEST_F(ScriptManagerTest, BasicScriptRegistration) {
 }
 
 TEST_F(ScriptManagerTest, PowerShellScriptRegistration) {
-    EXPECT_NO_THROW(manager->registerPowerShellScript("ps_test", "Write-Host 'hello'"));
+    EXPECT_NO_THROW(
+        manager->registerPowerShellScript("ps_test", "Write-Host 'hello'"));
     auto scripts = manager->getAllScripts();
     EXPECT_EQ(scripts.size(), 1);
     EXPECT_TRUE(scripts.contains("ps_test"));
@@ -84,10 +81,9 @@ TEST_F(ScriptManagerTest, ConcurrentExecution) {
     manager->registerScript("script1", "echo 'one'");
     manager->registerScript("script2", "echo 'two'");
 
-    std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> scripts = {
-        {"script1", {}},
-        {"script2", {}}
-    };
+    std::vector<
+        std::pair<std::string, std::unordered_map<std::string, std::string>>>
+        scripts = {{"script1", {}}, {"script2", {}}};
 
     auto results = manager->runScriptsConcurrently(scripts);
     EXPECT_EQ(results.size(), 2);
@@ -155,10 +151,9 @@ TEST_F(ScriptManagerTest, SequentialExecution) {
     manager->registerScript("script1", "echo 'first'");
     manager->registerScript("script2", "echo 'second'");
 
-    std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> scripts = {
-        {"script1", {}},
-        {"script2", {}}
-    };
+    std::vector<
+        std::pair<std::string, std::unordered_map<std::string, std::string>>>
+        scripts = {{"script1", {}}, {"script2", {}}};
 
     auto results = manager->runScriptsSequentially(scripts);
     EXPECT_EQ(results.size(), 2);

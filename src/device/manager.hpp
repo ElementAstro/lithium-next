@@ -38,14 +38,14 @@ using json = nlohmann::json;
  * @brief Device metadata for enhanced device management
  */
 struct DeviceMetadata {
-    std::string deviceId;           // Unique device identifier
-    std::string displayName;        // Human-readable name
-    std::string driverName;         // Driver/backend name (e.g., "INDI", "ASCOM")
-    std::string driverVersion;      // Driver version
-    std::string connectionString;   // Connection parameters
-    int priority = 0;               // Device priority (higher = preferred)
-    bool autoConnect = false;       // Auto-connect on startup
-    json customProperties;          // Additional device-specific properties
+    std::string deviceId;       // Unique device identifier
+    std::string displayName;    // Human-readable name
+    std::string driverName;     // Driver/backend name (e.g., "INDI", "ASCOM")
+    std::string driverVersion;  // Driver version
+    std::string connectionString;  // Connection parameters
+    int priority = 0;              // Device priority (higher = preferred)
+    bool autoConnect = false;      // Auto-connect on startup
+    json customProperties;         // Additional device-specific properties
 
     auto toJson() const -> json {
         json j;
@@ -114,9 +114,9 @@ enum class DeviceEventType {
 /**
  * @brief Device event callback type
  */
-using DeviceEventCallback = std::function<void(
-    DeviceEventType event, const std::string& deviceType,
-    const std::string& deviceName, const json& data)>;
+using DeviceEventCallback =
+    std::function<void(DeviceEventType event, const std::string& deviceType,
+                       const std::string& deviceName, const json& data)>;
 
 /**
  * @brief Enhanced device manager with INDI integration support

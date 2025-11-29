@@ -1,10 +1,10 @@
 #ifndef LITHIUM_SERVER_CONTROLLER_SKY_HPP
 #define LITHIUM_SERVER_CONTROLLER_SKY_HPP
 
-#include "controller.hpp"
 #include "../utils/response.hpp"
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
+#include "controller.hpp"
 #include "server/command/solver.hpp"
 
 namespace lithium::server::controller {
@@ -12,37 +12,34 @@ using ResponseBuilder = utils::ResponseBuilder;
 
 /**
  * @brief Sky Atlas and Astronomical Utilities Controller
- * 
- * Handles celestial object search, name resolution, and plate solving operations.
+ *
+ * Handles celestial object search, name resolution, and plate solving
+ * operations.
  */
 class SkyController : public Controller {
 public:
     void registerRoutes(lithium::server::ServerApp& app) override {
         // Resolve Object Name
         CROW_ROUTE(app, "/api/v1/sky/resolve")
-            .methods("GET"_method)
-            ([this](const crow::request& req) {
+            .methods("GET"_method)([this](const crow::request& req) {
                 return this->resolveObjectName(req);
             });
 
         // Basic Sky Object Search
         CROW_ROUTE(app, "/api/v1/sky/search")
-            .methods("GET"_method)
-            ([this](const crow::request& req) {
+            .methods("GET"_method)([this](const crow::request& req) {
                 return this->searchObjects(req);
             });
 
         // Advanced Sky Object Search
         CROW_ROUTE(app, "/api/v1/sky/search/advanced")
-            .methods("POST"_method)
-            ([this](const crow::request& req) {
+            .methods("POST"_method)([this](const crow::request& req) {
                 return this->advancedSearch(req);
             });
 
         // Plate Solve Image
         CROW_ROUTE(app, "/api/v1/plate-solve")
-            .methods("POST"_method)
-            ([this](const crow::request& req) {
+            .methods("POST"_method)([this](const crow::request& req) {
                 return this->plateSolve(req);
             });
     }
@@ -57,11 +54,9 @@ private:
         std::string name = name_param;
 
         // Simulate object resolution
-        nlohmann::json data = {
-            {"name", "Andromeda Galaxy"},
-            {"ra", "00:42:44.3"},
-            {"dec", "+41:16:09"}
-        };
+        nlohmann::json data = {{"name", "Andromeda Galaxy"},
+                               {"ra", "00:42:44.3"},
+                               {"dec", "+41:16:09"}};
 
         return ResponseBuilder::success(data);
     }
@@ -74,24 +69,21 @@ private:
         }
 
         nlohmann::json data = {
-            {"results", nlohmann::json::array({
-                {
-                    {"id", "M31"},
-                    {"name", "Andromeda Galaxy"},
-                    {"alternateNames", nlohmann::json::array({"NGC 224"})},
-                    {"type", "Galaxy"},
-                    {"ra", "00:42:44.3"},
-                    {"dec", "+41:16:09"},
-                    {"magnitude", 3.4},
-                    {"constellation", "Andromeda"},
-                    {"catalog", "messier"}
-                }
-            })},
+            {"results",
+             nlohmann::json::array(
+                 {{{"id", "M31"},
+                   {"name", "Andromeda Galaxy"},
+                   {"alternateNames", nlohmann::json::array({"NGC 224"})},
+                   {"type", "Galaxy"},
+                   {"ra", "00:42:44.3"},
+                   {"dec", "+41:16:09"},
+                   {"magnitude", 3.4},
+                   {"constellation", "Andromeda"},
+                   {"catalog", "messier"}}})},
             {"totalResults", 1},
             {"limit", limit},
             {"offset", 0},
-            {"hasMore", false}
-        };
+            {"hasMore", false}};
 
         return ResponseBuilder::success(data);
     }
@@ -106,8 +98,8 @@ private:
                 {"limit", 100},
                 {"offset", 0},
                 {"hasMore", false},
-                {"appliedFilters", filters.value("filters", nlohmann::json::object())}
-            };
+                {"appliedFilters",
+                 filters.value("filters", nlohmann::json::object())}};
 
             return ResponseBuilder::success(data);
         } catch (const nlohmann::json::exception& e) {
@@ -129,7 +121,8 @@ private:
             double scale = body.value("scale", 0.0);
             double radius = body.value("radius", 180.0);
 
-            auto result = lithium::middleware::solveImage(filePath, ra, dec, scale, radius);
+            auto result = lithium::middleware::solveImage(filePath, ra, dec,
+                                                          scale, radius);
 
             // Assuming solveImage returns standard JSON structure
             if (result["status"] == "success") {
@@ -137,7 +130,7 @@ private:
             } else {
                 std::string msg = result.value("message", "Solving failed");
                 if (result.contains("error")) {
-                     msg = result["error"].value("message", msg);
+                    msg = result["error"].value("message", msg);
                 }
                 return ResponseBuilder::internalError(msg);
             }

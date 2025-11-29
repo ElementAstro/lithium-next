@@ -17,49 +17,47 @@ SS::SS(const FITSImage::Statistic& stat, py::buffer buffer, py::object callback,
     LOG_SCOPE_FUNCTION(INFO);
 
     py::buffer_info info = buffer.request();
-    LOG_INFO( "Buffer requested with format: {}, size: {}, dimensions: {}",
-          info.format, info.size, info.ndim);
+    LOG_INFO("Buffer requested with format: {}, size: {}, dimensions: {}",
+             info.format, info.size, info.ndim);
 
     if (info.format != py::format_descriptor<uint8_t>::format()) {
-        LOG_ERROR( "Buffer must be of type uint8_t, but got type: {}",
-              info.format);
+        LOG_ERROR("Buffer must be of type uint8_t, but got type: {}",
+                  info.format);
         throw std::runtime_error("Buffer must be of type uint8_t");
     }
 
     bufferData_.resize(info.size);
-    LOG_INFO( "Resized bufferData_ to size: {}", info.size);
+    LOG_INFO("Resized bufferData_ to size: {}", info.size);
 
     memcpy(bufferData_.data(), info.ptr, info.size);
-    LOG_INFO( "Copied buffer data to bufferData_");
+    LOG_INFO("Copied buffer data to bufferData_");
 
     int argc = 0;
     char** argv = nullptr;
     app = new QCoreApplication(argc, argv);
-    LOG_INFO( "QCoreApplication created");
+    LOG_INFO("QCoreApplication created");
 
     solver = new StellarSolver(stat, bufferData_.data(), this);
-    LOG_INFO(
-          "StellarSolver created with provided statistic and buffer data");
+    LOG_INFO("StellarSolver created with provided statistic and buffer data");
 
     solver->setLogLevel(SSolver::LOG_ALL);
-    LOG_INFO( "StellarSolver log level set to LOG_ALL");
+    LOG_INFO("StellarSolver log level set to LOG_ALL");
 
     connect(solver, &StellarSolver::logOutput, this, &SS::onLogOutput);
     LOG_INFO(
-          "Connected StellarSolver logOutput signal to SS::onLogOutput slot");
+        "Connected StellarSolver logOutput signal to SS::onLogOutput slot");
 
     connect(solver, &StellarSolver::finished, this, &SS::onFinished);
-    LOG_INFO(
-          "Connected StellarSolver finished signal to SS::onFinished slot");
+    LOG_INFO("Connected StellarSolver finished signal to SS::onFinished slot");
 
-    LOG_INFO( "SS object created successfully");
+    LOG_INFO("SS object created successfully");
 }
 
 SS::~SS() {
     LOG_SCOPE_FUNCTION(INFO);
     delete solver;
     delete app;
-    LOG_INFO( "SS object destroyed");
+    LOG_INFO("SS object destroyed");
 }
 
 bool SS::loadNewImageBuffer(const FITSImage::Statistic& stats,
@@ -67,7 +65,7 @@ bool SS::loadNewImageBuffer(const FITSImage::Statistic& stats,
     LOG_SCOPE_FUNCTION(INFO);
     py::buffer_info info = buffer.request();
     if (info.format != py::format_descriptor<uint8_t>::format()) {
-        LOG_ERROR( "Buffer must be of type uint8_t");
+        LOG_ERROR("Buffer must be of type uint8_t");
         return false;
     }
 
@@ -75,40 +73,40 @@ bool SS::loadNewImageBuffer(const FITSImage::Statistic& stats,
     memcpy(bufferData_.data(), info.ptr, info.size);
 
     bool result = solver->loadNewImageBuffer(stats, bufferData_.data());
-    LOG_INFO( "Loaded new image buffer: {}", result);
+    LOG_INFO("Loaded new image buffer: {}", result);
     return result;
 }
 
 bool SS::extract(bool calculateHFR, QRect frame) {
     LOG_SCOPE_FUNCTION(INFO);
     bool result = solver->extract(calculateHFR, frame);
-    LOG_INFO( "Extraction result: {}", result);
+    LOG_INFO("Extraction result: {}", result);
     return result;
 }
 
 bool SS::solve() {
     LOG_SCOPE_FUNCTION(INFO);
     bool result = solver->solve();
-    LOG_INFO( "Solve result: {}", result);
+    LOG_INFO("Solve result: {}", result);
     return result;
 }
 
 void SS::start() {
     LOG_SCOPE_FUNCTION(INFO);
     solver->start();
-    LOG_INFO( "Solver started");
+    LOG_INFO("Solver started");
 }
 
 void SS::abort() {
     LOG_SCOPE_FUNCTION(INFO);
     solver->abort();
-    LOG_INFO( "Solver aborted");
+    LOG_INFO("Solver aborted");
 }
 
 void SS::abortAndWait() {
     LOG_SCOPE_FUNCTION(INFO);
     solver->abortAndWait();
-    LOG_INFO( "Solver aborted and waiting");
+    LOG_INFO("Solver aborted and waiting");
 }
 
 void SS::setParameterProfile(SSolver::Parameters::ParametersProfile profile) {
@@ -121,40 +119,40 @@ void SS::setSearchScale(double fovLow, double fovHigh,
                         const QString& scaleUnits) {
     LOG_SCOPE_FUNCTION(INFO);
     solver->setSearchScale(fovLow, fovHigh, scaleUnits);
-    LOG_INFO( "Set search scale to {} - {} {}", fovLow, fovHigh,
-          scaleUnits.toStdString());
+    LOG_INFO("Set search scale to {} - {} {}", fovLow, fovHigh,
+             scaleUnits.toStdString());
 }
 
 void SS::setSearchScale(double fovLow, double fovHigh,
                         SSolver::ScaleUnits units) {
     LOG_SCOPE_FUNCTION(INFO);
     solver->setSearchScale(fovLow, fovHigh, units);
-    LOG_INFO( "Set search scale to {} - {}", fovLow, fovHigh);
+    LOG_INFO("Set search scale to {} - {}", fovLow, fovHigh);
 }
 
 void SS::setSearchPositionRaDec(double ra, double dec) {
     LOG_SCOPE_FUNCTION(INFO);
     solver->setSearchPositionRaDec(ra, dec);
-    LOG_INFO( "Set search position RA: {}, Dec: {}", ra, dec);
+    LOG_INFO("Set search position RA: {}, Dec: {}", ra, dec);
 }
 
 void SS::setSearchPositionInDegrees(double ra, double dec) {
     LOG_SCOPE_FUNCTION(INFO);
     solver->setSearchPositionInDegrees(ra, dec);
-    LOG_INFO( "Set search position (degrees) RA: {}, Dec: {}", ra, dec);
+    LOG_INFO("Set search position (degrees) RA: {}, Dec: {}", ra, dec);
 }
 
 void SS::setUseSubframe(QRect frame) {
     LOG_SCOPE_FUNCTION(INFO);
     solver->setUseSubframe(frame);
-    LOG_INFO( "Set subframe: x={}, y={}, width={}, height={}", frame.x(),
-          frame.y(), frame.width(), frame.height());
+    LOG_INFO("Set subframe: x={}, y={}, width={}, height={}", frame.x(),
+             frame.y(), frame.width(), frame.height());
 }
 
 bool SS::isRunning() const {
     LOG_SCOPE_FUNCTION(INFO);
     bool running = solver->isRunning();
-    LOG_INFO( "Solver is running: {}", running);
+    LOG_INFO("Solver is running: {}", running);
     return running;
 }
 
@@ -165,14 +163,14 @@ QString SS::decString(double dec) { return StellarSolver::decString(dec); }
 bool SS::pixelToWCS(const QPointF& pixelPoint, FITSImage::wcs_point& skyPoint) {
     LOG_SCOPE_FUNCTION(INFO);
     bool result = solver->pixelToWCS(pixelPoint, skyPoint);
-    LOG_INFO( "Pixel to WCS: {}", result);
+    LOG_INFO("Pixel to WCS: {}", result);
     return result;
 }
 
 bool SS::wcsToPixel(const FITSImage::wcs_point& skyPoint, QPointF& pixelPoint) {
     LOG_SCOPE_FUNCTION(INFO);
     bool result = solver->wcsToPixel(skyPoint, pixelPoint);
-    LOG_INFO( "WCS to pixel: {}", result);
+    LOG_INFO("WCS to pixel: {}", result);
     return result;
 }
 
@@ -180,14 +178,14 @@ void SS::onLogOutput(const QString& text) {
     LOG_SCOPE_FUNCTION(INFO);
     py::gil_scoped_acquire acquire;
     callback_(text.toStdString());
-    LOG_INFO( "Log output: {}", text.toStdString());
+    LOG_INFO("Log output: {}", text.toStdString());
 }
 
 void SS::onFinished() {
     LOG_SCOPE_FUNCTION(INFO);
     py::gil_scoped_acquire acquire;
     callback_("Solver finished");
-    LOG_INFO( "Solver finished");
+    LOG_INFO("Solver finished");
 }
 
 // Helper function to create a star object
@@ -200,9 +198,8 @@ py::dict SS::createObjectFromStar(const FITSImage::Star& star) {
     obj["flux"] = star.flux;
     obj["ra"] = star.ra;
     obj["dec"] = star.dec;
-    LOG_INFO(
-          "Created star object: x={}, y={}, hfr={}, flux={}, ra={}, dec={}",
-          star.x, star.y, star.HFR, star.flux, star.ra, star.dec);
+    LOG_INFO("Created star object: x={}, y={}, hfr={}, flux={}, ra={}, dec={}",
+             star.x, star.y, star.HFR, star.flux, star.ra, star.dec);
     return obj;
 }
 
@@ -215,88 +212,88 @@ auto loadFits(const QString& fileName) -> LoadFitsResult {
     long naxes[3] = {0, 0, 0};
 
     // Open FITS file
-    LOG_INFO( "Opening FITS file: {}", fileName.toStdString());
+    LOG_INFO("Opening FITS file: {}", fileName.toStdString());
     if (fits_open_diskfile(&fptr, fileName.toLocal8Bit(), READONLY, &status)) {
-        LOG_ERROR( "Error opening FITS file: {}", fileName.toStdString());
+        LOG_ERROR("Error opening FITS file: {}", fileName.toStdString());
         return result;
     }
-    LOG_INFO( "FITS file opened successfully");
+    LOG_INFO("FITS file opened successfully");
 
     // Set file size
     result.imageStats.size = QFile(fileName).size();
-    LOG_INFO( "File size: {} bytes", result.imageStats.size);
+    LOG_INFO("File size: {} bytes", result.imageStats.size);
 
     // Move to image HDU
-    LOG_INFO( "Moving to image HDU");
+    LOG_INFO("Moving to image HDU");
     if (fits_movabs_hdu(fptr, 1, IMAGE_HDU, &status)) {
-        LOG_ERROR( "Could not locate image HDU");
+        LOG_ERROR("Could not locate image HDU");
         fits_close_file(fptr, &status);
         return result;
     }
-    LOG_INFO( "Located image HDU");
+    LOG_INFO("Located image HDU");
 
     // Get image parameters
     int fitsBitPix = 0;
-    LOG_INFO( "Getting image parameters");
+    LOG_INFO("Getting image parameters");
     if (fits_get_img_param(fptr, 3, &fitsBitPix, &(result.imageStats.ndim),
                            naxes, &status)) {
-        LOG_ERROR( "FITS file error: could not get image parameters");
+        LOG_ERROR("FITS file error: could not get image parameters");
         fits_close_file(fptr, &status);
         return result;
     }
-    LOG_INFO( "Image parameters retrieved: ndim={}, naxes=[{}, {}, {}]",
-          result.imageStats.ndim, naxes[0], naxes[1], naxes[2]);
+    LOG_INFO("Image parameters retrieved: ndim={}, naxes=[{}, {}, {}]",
+             result.imageStats.ndim, naxes[0], naxes[1], naxes[2]);
 
     // Validate dimensions
     if (result.imageStats.ndim < 2) {
-        LOG_ERROR( "1D FITS images are not supported");
+        LOG_ERROR("1D FITS images are not supported");
         fits_close_file(fptr, &status);
         return result;
     }
 
     // Set data type and bytes per pixel
-    LOG_INFO( "Setting data type and bytes per pixel");
+    LOG_INFO("Setting data type and bytes per pixel");
     switch (fitsBitPix) {
         case BYTE_IMG:
             result.imageStats.dataType = 11;  // SEP_TBYTE
             result.imageStats.bytesPerPixel = sizeof(uint8_t);
-            LOG_INFO( "Data type: BYTE_IMG, Bytes per pixel: {}",
-                  sizeof(uint8_t));
+            LOG_INFO("Data type: BYTE_IMG, Bytes per pixel: {}",
+                     sizeof(uint8_t));
             break;
         case SHORT_IMG:
         case USHORT_IMG:
             result.imageStats.dataType = TUSHORT;
             result.imageStats.bytesPerPixel = sizeof(uint16_t);
-            LOG_INFO( "Data type: SHORT_IMG/USHORT_IMG, Bytes per pixel: {}",
-                  sizeof(uint16_t));
+            LOG_INFO("Data type: SHORT_IMG/USHORT_IMG, Bytes per pixel: {}",
+                     sizeof(uint16_t));
             break;
         case LONG_IMG:
         case ULONG_IMG:
             result.imageStats.dataType = TULONG;
             result.imageStats.bytesPerPixel = sizeof(uint32_t);
-            LOG_INFO( "Data type: LONG_IMG/ULONG_IMG, Bytes per pixel: {}",
-                  sizeof(uint32_t));
+            LOG_INFO("Data type: LONG_IMG/ULONG_IMG, Bytes per pixel: {}",
+                     sizeof(uint32_t));
             break;
         case FLOAT_IMG:
             result.imageStats.dataType = TFLOAT;
             result.imageStats.bytesPerPixel = sizeof(float);
-            LOG_INFO( "Data type: FLOAT_IMG, Bytes per pixel: {}",
-                  sizeof(float));
+            LOG_INFO("Data type: FLOAT_IMG, Bytes per pixel: {}",
+                     sizeof(float));
             break;
         case LONGLONG_IMG:
             result.imageStats.dataType = TLONGLONG;
             result.imageStats.bytesPerPixel = sizeof(int64_t);
-            LOG_INFO( "Data type: LONGLONG_IMG, Bytes per pixel: {}",
-                  sizeof(int64_t));
+            LOG_INFO("Data type: LONGLONG_IMG, Bytes per pixel: {}",
+                     sizeof(int64_t));
             break;
         case DOUBLE_IMG:
             result.imageStats.dataType = TDOUBLE;
             result.imageStats.bytesPerPixel = sizeof(double);
-            LOG_INFO( "Data type: DOUBLE_IMG, Bytes per pixel: {}",
-                  sizeof(double));
+            LOG_INFO("Data type: DOUBLE_IMG, Bytes per pixel: {}",
+                     sizeof(double));
             break;
         default:
-            LOG_ERROR( "Unsupported bit depth: {}", fitsBitPix);
+            LOG_ERROR("Unsupported bit depth: {}", fitsBitPix);
             fits_close_file(fptr, &status);
             return result;
     }
@@ -305,7 +302,7 @@ auto loadFits(const QString& fileName) -> LoadFitsResult {
     if (result.imageStats.ndim < 3)
         naxes[2] = 1;
     if (naxes[0] == 0 || naxes[1] == 0) {
-        LOG_ERROR( "Invalid dimensions: {}x{}", naxes[0], naxes[1]);
+        LOG_ERROR("Invalid dimensions: {}x{}", naxes[0], naxes[1]);
         fits_close_file(fptr, &status);
         return result;
     }
@@ -316,51 +313,51 @@ auto loadFits(const QString& fileName) -> LoadFitsResult {
     result.imageStats.samples_per_channel =
         result.imageStats.width * result.imageStats.height;
 
-    LOG_INFO( "Image dimensions set: width={}, height={}, channels={}",
-          result.imageStats.width, result.imageStats.height,
-          result.imageStats.channels);
+    LOG_INFO("Image dimensions set: width={}, height={}, channels={}",
+             result.imageStats.width, result.imageStats.height,
+             result.imageStats.channels);
 
     // Allocate buffer
     const uint32_t bufferSize =
         result.imageStats.samples_per_channel * result.imageStats.channels *
         static_cast<uint32_t>(result.imageStats.bytesPerPixel);
 
-    LOG_INFO( "Allocating buffer of size: {} bytes", bufferSize);
+    LOG_INFO("Allocating buffer of size: {} bytes", bufferSize);
     try {
         result.imageBuffer = new uint8_t[bufferSize];
     } catch (const std::bad_alloc& e) {
-        LOG_ERROR( "Memory allocation failed for {} bytes: {}", bufferSize,
-              e.what());
+        LOG_ERROR("Memory allocation failed for {} bytes: {}", bufferSize,
+                  e.what());
         fits_close_file(fptr, &status);
         return result;
     }
-    LOG_INFO( "Buffer allocated successfully");
+    LOG_INFO("Buffer allocated successfully");
 
     // Read image data
     const long NELEMENTS =
         result.imageStats.samples_per_channel * result.imageStats.channels;
-    LOG_INFO( "Reading image data, NELEMENTS={}", NELEMENTS);
+    LOG_INFO("Reading image data, NELEMENTS={}", NELEMENTS);
     if (fits_read_img(fptr, static_cast<uint16_t>(result.imageStats.dataType),
                       1, NELEMENTS, nullptr, result.imageBuffer, &anynullptr,
                       &status)) {
-        LOG_ERROR( "Error reading image data");
+        LOG_ERROR("Error reading image data");
         delete[] result.imageBuffer;
         fits_close_file(fptr, &status);
         return result;
     }
-    LOG_INFO( "Image data read successfully");
+    LOG_INFO("Image data read successfully");
 
     fits_close_file(fptr, &status);
     result.success = true;
-    LOG_INFO( "Successfully loaded FITS image: {}x{}x{}",
-          result.imageStats.width, result.imageStats.height,
-          result.imageStats.channels);
+    LOG_INFO("Successfully loaded FITS image: {}x{}x{}",
+             result.imageStats.width, result.imageStats.height,
+             result.imageStats.channels);
 
     return result;
 }
 
-auto SS::findStarsByStellarSolver(bool AllStars,
-                                  bool runHFR) -> QList<FITSImage::Star> {
+auto SS::findStarsByStellarSolver(bool AllStars, bool runHFR)
+    -> QList<FITSImage::Star> {
     LoadFitsResult result;
 
     QList<FITSImage::Star> stars;
@@ -368,7 +365,7 @@ auto SS::findStarsByStellarSolver(bool AllStars,
     result = loadFits("/dev/shm/ccd_simulator.fits");
 
     if (!result.success) {
-        LOG_ERROR( "Error in loading FITS file");
+        LOG_ERROR("Error in loading FITS file");
         return stars;
     }
 
@@ -380,8 +377,8 @@ auto SS::findStarsByStellarSolver(bool AllStars,
 
 auto SS::findStarsByStellarSolver(bool AllStars,
                                   const FITSImage::Statistic& imagestats,
-                                  const uint8_t* imageBuffer,
-                                  bool runHFR) -> QList<FITSImage::Star> {
+                                  const uint8_t* imageBuffer, bool runHFR)
+    -> QList<FITSImage::Star> {
     StellarSolver solver(imagestats, imageBuffer);
     // 配置solver参数
     SSolver::Parameters parameters;
@@ -460,19 +457,19 @@ auto SS::findStarsByStellarSolver(bool AllStars,
     // 进行星点检测
     bool success = solver.extract(runHFR);
     if (!success) {
-        LOG_ERROR( "Star extraction failed.");
+        LOG_ERROR("Star extraction failed.");
     }
-    LOG_INFO( "success extract: {}", success);
+    LOG_INFO("success extract: {}", success);
 
     QList<FITSImage::Star> stars;
 
     stars = solver.getStarList();
 
     // 输出检测到的星点信息
-    LOG_INFO( "Detected stars: {}", stars.size());
+    LOG_INFO("Detected stars: {}", stars.size());
     for (const auto& star : stars) {
-        LOG_INFO( "Star: x={}, y={}, HFR={}, flux={}, ra={}, dec={}", star.x,
-              star.y, star.HFR, star.flux, star.ra, star.dec);
+        LOG_INFO("Star: x={}, y={}, HFR={}, flux={}, ra={}, dec={}", star.x,
+                 star.y, star.HFR, star.flux, star.ra, star.dec);
     }
 
     return stars;

@@ -47,10 +47,8 @@ public:
      * @return Generated file path
      */
     static std::filesystem::path generateOutputPath(
-        const std::filesystem::path& basePath,
-        const std::string& taskName,
-        const json& params,
-        int sequence = 0);
+        const std::filesystem::path& basePath, const std::string& taskName,
+        const json& params, int sequence = 0);
 
     /**
      * @brief Parse image filename to extract metadata
@@ -65,8 +63,7 @@ public:
      * @param pattern Optional pattern string to use
      * @return Reference to ImagePatternParser
      */
-    static ImagePatternParser& getParser(
-        const std::string& pattern = "");
+    static ImagePatternParser& getParser(const std::string& pattern = "");
 
     /**
      * @brief Set default pattern for image parsing
@@ -90,10 +87,8 @@ public:
      * @param timeout Timeout in milliseconds
      * @return Execution result as JSON
      */
-    static json executeScript(
-        const std::filesystem::path& scriptPath,
-        const json& params,
-        int timeout = 30000);
+    static json executeScript(const std::filesystem::path& scriptPath,
+                              const json& params, int timeout = 30000);
 
     /**
      * @brief Validate script parameters
@@ -101,9 +96,7 @@ public:
      * @param schema Parameter schema
      * @return True if valid
      */
-    static bool validateScriptParams(
-        const json& params,
-        const json& schema);
+    static bool validateScriptParams(const json& params, const json& schema);
 
     /**
      * @brief Convert task output to script input format
@@ -124,9 +117,8 @@ public:
      * @param timeout Timeout in milliseconds
      * @return True if device is ready
      */
-    static bool waitForDevice(
-        const std::string& deviceName,
-        int timeout = 10000);
+    static bool waitForDevice(const std::string& deviceName,
+                              int timeout = 10000);
 
     /**
      * @brief Check if device is connected
@@ -141,9 +133,8 @@ public:
      * @param propertyName Name of the property
      * @return Property value as JSON
      */
-    static json getDeviceProperty(
-        const std::string& deviceName,
-        const std::string& propertyName);
+    static json getDeviceProperty(const std::string& deviceName,
+                                  const std::string& propertyName);
 
     /**
      * @brief Set device property
@@ -152,10 +143,9 @@ public:
      * @param value Property value
      * @return True if successful
      */
-    static bool setDeviceProperty(
-        const std::string& deviceName,
-        const std::string& propertyName,
-        const json& value);
+    static bool setDeviceProperty(const std::string& deviceName,
+                                  const std::string& propertyName,
+                                  const json& value);
 };
 
 /**
@@ -179,8 +169,7 @@ public:
      * @return True if all required parameters exist
      */
     static bool validateRequiredParams(
-        const json& params,
-        const std::vector<std::string>& required);
+        const json& params, const std::vector<std::string>& required);
 
     /**
      * @brief Validate parameter against schema
@@ -188,9 +177,7 @@ public:
      * @param schema JSON schema for parameter
      * @return True if valid
      */
-    static bool validateAgainstSchema(
-        const json& param,
-        const json& schema);
+    static bool validateAgainstSchema(const json& param, const json& schema);
 
     /**
      * @brief Get validation error message
@@ -245,9 +232,8 @@ public:
      * @param requiredMB Required space in megabytes
      * @return True if sufficient space
      */
-    static bool checkDiskSpace(
-        const std::filesystem::path& path,
-        size_t requiredMB);
+    static bool checkDiskSpace(const std::filesystem::path& path,
+                               size_t requiredMB);
 
     /**
      * @brief Check if sufficient memory is available
@@ -264,8 +250,8 @@ public:
      * @param compression Whether compression is used
      * @return Estimated size in bytes
      */
-    static size_t estimateImageSize(
-        int width, int height, int bitDepth, bool compression = false);
+    static size_t estimateImageSize(int width, int height, int bitDepth,
+                                    bool compression = false);
 };
 
 }  // namespace integration

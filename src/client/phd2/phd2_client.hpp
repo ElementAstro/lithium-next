@@ -229,7 +229,8 @@ public:
      * @param name Parameter name
      * @param value Parameter value
      */
-    void setAlgoParam(const std::string& axis, const std::string& name, double value);
+    void setAlgoParam(const std::string& axis, const std::string& name,
+                      double value);
 
     /**
      * @brief Check if guide output is enabled
@@ -290,8 +291,9 @@ public:
      * @param exposureMs Exposure time
      * @param subframe Optional subframe
      */
-    void captureSingleFrame(std::optional<int> exposureMs = std::nullopt,
-                            std::optional<std::array<int, 4>> subframe = std::nullopt);
+    void captureSingleFrame(
+        std::optional<int> exposureMs = std::nullopt,
+        std::optional<std::array<int, 4>> subframe = std::nullopt);
 
     /**
      * @brief Get search region size

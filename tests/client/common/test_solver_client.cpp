@@ -12,8 +12,8 @@ Description: Tests for solver client base class
 
 *************************************************/
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "client/common/solver_client.hpp"
 
@@ -39,7 +39,8 @@ public:
         return true;
     }
 
-    bool connect(const std::string& target, int /*timeout*/, int /*maxRetry*/) override {
+    bool connect(const std::string& target, int /*timeout*/,
+                 int /*maxRetry*/) override {
         if (connectResult_) {
             setState(ClientState::Connected);
             solverPath_ = target;
@@ -57,16 +58,12 @@ public:
         return getState() == ClientState::Connected;
     }
 
-    std::vector<std::string> scan() override {
-        return scanResults_;
-    }
+    std::vector<std::string> scan() override { return scanResults_; }
 
-    PlateSolveResult solve(
-        const std::string& imageFilePath,
-        const std::optional<Coordinates>& initialCoordinates,
-        double fovW, double fovH,
-        int imageWidth, int imageHeight) override {
-
+    PlateSolveResult solve(const std::string& imageFilePath,
+                           const std::optional<Coordinates>& initialCoordinates,
+                           double fovW, double fovH, int imageWidth,
+                           int imageHeight) override {
         lastImagePath_ = imageFilePath;
         lastCoordinates_ = initialCoordinates;
         lastFovW_ = fovW;
@@ -78,7 +75,8 @@ public:
 
         // Simulate solve time
         if (solveDelayMs_ > 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(solveDelayMs_));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(solveDelayMs_));
         }
 
         if (abortRequested_.load()) {
@@ -96,12 +94,18 @@ public:
     // Test helpers
     void setInitializeResult(bool result) { initializeResult_ = result; }
     void setConnectResult(bool result) { connectResult_ = result; }
-    void setScanResults(std::vector<std::string> results) { scanResults_ = std::move(results); }
-    void setSolveResult(const PlateSolveResult& result) { solveResult_ = result; }
+    void setScanResults(std::vector<std::string> results) {
+        scanResults_ = std::move(results);
+    }
+    void setSolveResult(const PlateSolveResult& result) {
+        solveResult_ = result;
+    }
     void setSolveDelay(int ms) { solveDelayMs_ = ms; }
 
     std::string getLastImagePath() const { return lastImagePath_; }
-    std::optional<Coordinates> getLastCoordinates() const { return lastCoordinates_; }
+    std::optional<Coordinates> getLastCoordinates() const {
+        return lastCoordinates_;
+    }
     double getLastFovW() const { return lastFovW_; }
     double getLastFovH() const { return lastFovH_; }
     int getLastImageWidth() const { return lastImageWidth_; }
@@ -244,7 +248,8 @@ TEST_F(SolverClientTest, Solve) {
     solver_->setSolveResult(expectedResult);
 
     Coordinates hint{180.0, 45.0};
-    auto result = solver_->solve("/path/to/image.fits", hint, 2.0, 1.5, 1920, 1080);
+    auto result =
+        solver_->solve("/path/to/image.fits", hint, 2.0, 1.5, 1920, 1080);
 
     EXPECT_TRUE(result.success);
     EXPECT_DOUBLE_EQ(result.coordinates.ra, 180.5);
@@ -268,7 +273,8 @@ TEST_F(SolverClientTest, SolveWithoutHint) {
     expectedResult.success = true;
     solver_->setSolveResult(expectedResult);
 
-    auto result = solver_->solve("/path/to/image.fits", std::nullopt, 2.0, 1.5, 1920, 1080);
+    auto result = solver_->solve("/path/to/image.fits", std::nullopt, 2.0, 1.5,
+                                 1920, 1080);
 
     EXPECT_TRUE(result.success);
     EXPECT_FALSE(solver_->getLastCoordinates().has_value());
@@ -284,7 +290,8 @@ TEST_F(SolverClientTest, SolveAsync) {
     solver_->setSolveResult(expectedResult);
     solver_->setSolveDelay(50);  // 50ms delay
 
-    auto future = solver_->solveAsync("/path/to/image.fits", std::nullopt, 2.0, 1.5, 1920, 1080);
+    auto future = solver_->solveAsync("/path/to/image.fits", std::nullopt, 2.0,
+                                      1.5, 1920, 1080);
 
     // Should be solving
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -301,7 +308,8 @@ TEST_F(SolverClientTest, Abort) {
     solver_->connect("/usr/bin/solver");
     solver_->setSolveDelay(500);  // Long delay
 
-    auto future = solver_->solveAsync("/path/to/image.fits", std::nullopt, 2.0, 1.5, 1920, 1080);
+    auto future = solver_->solveAsync("/path/to/image.fits", std::nullopt, 2.0,
+                                      1.5, 1920, 1080);
 
     // Wait a bit then abort
     std::this_thread::sleep_for(std::chrono::milliseconds(50));

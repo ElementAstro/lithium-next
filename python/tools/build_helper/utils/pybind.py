@@ -43,7 +43,7 @@ def create_python_module() -> Dict[str, Any]:
         "BuildConfig": BuildConfig,
         "BuildResult": BuildResult,
         "BuildStatus": BuildStatus,
-        "__version__": __version__
+        "__version__": __version__,
     }
 
 
@@ -58,10 +58,7 @@ class BuildHelperPyBindAdapter:
 
     @staticmethod
     def configure(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Configure a build system (synchronous).
@@ -75,8 +72,7 @@ class BuildHelperPyBindAdapter:
         Returns:
             Dict containing success status, output, error message, and execution time.
         """
-        logger.info(
-            f"C++ binding: Configuring {builder_type} in {build_dir}")
+        logger.info(f"C++ binding: Configuring {builder_type} in {build_dir}")
         try:
             from ..utils.factory import BuilderFactory
 
@@ -84,7 +80,7 @@ class BuildHelperPyBindAdapter:
                 builder_type=builder_type,
                 source_dir=source_dir,
                 build_dir=build_dir,
-                **kwargs
+                **kwargs,
             )
 
             result = builder.configure()
@@ -94,7 +90,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in configure: {e}")
@@ -103,16 +99,12 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
     def build(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        target: str = "",
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, target: str = "", **kwargs
     ) -> Dict[str, Any]:
         """
         Build the project (synchronous).
@@ -127,8 +119,7 @@ class BuildHelperPyBindAdapter:
         Returns:
             Dict containing success status, output, error message, and execution time.
         """
-        logger.info(
-            f"C++ binding: Building {builder_type} project in {build_dir}")
+        logger.info(f"C++ binding: Building {builder_type} project in {build_dir}")
         try:
             from ..utils.factory import BuilderFactory
 
@@ -136,7 +127,7 @@ class BuildHelperPyBindAdapter:
                 builder_type=builder_type,
                 source_dir=source_dir,
                 build_dir=build_dir,
-                **kwargs
+                **kwargs,
             )
 
             result = builder.build(target=target)
@@ -146,7 +137,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in build: {e}")
@@ -155,15 +146,12 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
     def install(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Install the project (synchronous).
@@ -177,8 +165,7 @@ class BuildHelperPyBindAdapter:
         Returns:
             Dict containing success status, output, error message, and execution time.
         """
-        logger.info(
-            f"C++ binding: Installing {builder_type} project from {build_dir}")
+        logger.info(f"C++ binding: Installing {builder_type} project from {build_dir}")
         try:
             from ..utils.factory import BuilderFactory
 
@@ -186,7 +173,7 @@ class BuildHelperPyBindAdapter:
                 builder_type=builder_type,
                 source_dir=source_dir,
                 build_dir=build_dir,
-                **kwargs
+                **kwargs,
             )
 
             result = builder.install()
@@ -196,7 +183,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in install: {e}")
@@ -205,15 +192,12 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
     def test(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Run tests (synchronous).
@@ -227,8 +211,7 @@ class BuildHelperPyBindAdapter:
         Returns:
             Dict containing success status, output, error message, and execution time.
         """
-        logger.info(
-            f"C++ binding: Testing {builder_type} project in {build_dir}")
+        logger.info(f"C++ binding: Testing {builder_type} project in {build_dir}")
         try:
             from ..utils.factory import BuilderFactory
 
@@ -236,7 +219,7 @@ class BuildHelperPyBindAdapter:
                 builder_type=builder_type,
                 source_dir=source_dir,
                 build_dir=build_dir,
-                **kwargs
+                **kwargs,
             )
 
             result = builder.test()
@@ -246,7 +229,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in test: {e}")
@@ -255,15 +238,12 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
     def configure_async(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Configure a build system (asynchronous).
@@ -277,8 +257,7 @@ class BuildHelperPyBindAdapter:
         Returns:
             Dict containing success status, output, error message, and execution time.
         """
-        logger.info(
-            f"C++ binding: Async configuring {builder_type} in {build_dir}")
+        logger.info(f"C++ binding: Async configuring {builder_type} in {build_dir}")
         try:
             from ..utils.factory import BuilderFactory
 
@@ -287,7 +266,7 @@ class BuildHelperPyBindAdapter:
                     builder_type=builder_type,
                     source_dir=source_dir,
                     build_dir=build_dir,
-                    **kwargs
+                    **kwargs,
                 )
                 # Note: configure may not have async version, use sync
                 return builder.configure()
@@ -305,7 +284,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in configure_async: {e}")
@@ -314,16 +293,12 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
     def build_async(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        target: str = "",
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, target: str = "", **kwargs
     ) -> Dict[str, Any]:
         """
         Build the project (asynchronous).
@@ -339,7 +314,8 @@ class BuildHelperPyBindAdapter:
             Dict containing success status, output, error message, and execution time.
         """
         logger.info(
-            f"C++ binding: Async building {builder_type} project in {build_dir}")
+            f"C++ binding: Async building {builder_type} project in {build_dir}"
+        )
         try:
             from ..utils.factory import BuilderFactory
 
@@ -348,10 +324,10 @@ class BuildHelperPyBindAdapter:
                     builder_type=builder_type,
                     source_dir=source_dir,
                     build_dir=build_dir,
-                    **kwargs
+                    **kwargs,
                 )
                 # Check if builder has async build method
-                if hasattr(builder, 'build_async'):
+                if hasattr(builder, "build_async"):
                     return await builder.build_async(target=target)
                 else:
                     return builder.build(target=target)
@@ -369,7 +345,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in build_async: {e}")
@@ -378,15 +354,12 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
     def install_async(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Install the project (asynchronous).
@@ -401,7 +374,8 @@ class BuildHelperPyBindAdapter:
             Dict containing success status, output, error message, and execution time.
         """
         logger.info(
-            f"C++ binding: Async installing {builder_type} project from {build_dir}")
+            f"C++ binding: Async installing {builder_type} project from {build_dir}"
+        )
         try:
             from ..utils.factory import BuilderFactory
 
@@ -410,7 +384,7 @@ class BuildHelperPyBindAdapter:
                     builder_type=builder_type,
                     source_dir=source_dir,
                     build_dir=build_dir,
-                    **kwargs
+                    **kwargs,
                 )
                 # Note: install may not have async version, use sync
                 return builder.install()
@@ -428,7 +402,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in install_async: {e}")
@@ -437,15 +411,12 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
     def test_async(
-        builder_type: str,
-        source_dir: str,
-        build_dir: str,
-        **kwargs
+        builder_type: str, source_dir: str, build_dir: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Run tests (asynchronous).
@@ -459,8 +430,7 @@ class BuildHelperPyBindAdapter:
         Returns:
             Dict containing success status, output, error message, and execution time.
         """
-        logger.info(
-            f"C++ binding: Async testing {builder_type} project in {build_dir}")
+        logger.info(f"C++ binding: Async testing {builder_type} project in {build_dir}")
         try:
             from ..utils.factory import BuilderFactory
 
@@ -469,10 +439,10 @@ class BuildHelperPyBindAdapter:
                     builder_type=builder_type,
                     source_dir=source_dir,
                     build_dir=build_dir,
-                    **kwargs
+                    **kwargs,
                 )
                 # Check if builder has async test method
-                if hasattr(builder, 'test_async'):
+                if hasattr(builder, "test_async"):
                     return await builder.test_async()
                 else:
                     return builder.test()
@@ -490,7 +460,7 @@ class BuildHelperPyBindAdapter:
                 "output": result.output,
                 "error": result.error,
                 "exit_code": result.exit_code,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
             }
         except Exception as e:
             logger.exception(f"Error in test_async: {e}")
@@ -499,7 +469,7 @@ class BuildHelperPyBindAdapter:
                 "output": "",
                 "error": str(e),
                 "exit_code": 1,
-                "execution_time": 0.0
+                "execution_time": 0.0,
             }
 
     @staticmethod
@@ -521,14 +491,14 @@ class BuildHelperPyBindAdapter:
             builder_map = {
                 "cmake": "CMakeBuilder",
                 "meson": "MesonBuilder",
-                "bazel": "BazelBuilder"
+                "bazel": "BazelBuilder",
             }
 
             if builder_type not in builder_map:
                 return {
                     "success": False,
                     "error": f"Unknown builder type: {builder_type}",
-                    "supported_builders": list(builder_map.keys())
+                    "supported_builders": list(builder_map.keys()),
                 }
 
             tool_info = get_tool_info()
@@ -539,15 +509,13 @@ class BuildHelperPyBindAdapter:
                 "builder_type": builder_type,
                 "builder_class": builder_name,
                 "description": tool_info["classes"].get(
-                    builder_name, "Build system implementation"),
-                "supported_builders": list(builder_map.keys())
+                    builder_name, "Build system implementation"
+                ),
+                "supported_builders": list(builder_map.keys()),
             }
         except Exception as e:
             logger.exception(f"Error in get_builder_info: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def get_supported_builders() -> List[str]:
@@ -575,10 +543,7 @@ class BuildHelperPyBindAdapter:
             return get_tool_info()
         except Exception as e:
             logger.exception(f"Error in get_module_info: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
 
 # If the script is being loaded by pybind11, expose the module components

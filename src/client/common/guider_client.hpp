@@ -51,11 +51,11 @@ struct GuideStar {
  * @brief Guide statistics
  */
 struct GuideStats {
-    double rmsRA{0.0};       // arcsec
-    double rmsDec{0.0};      // arcsec
-    double rmsTotal{0.0};    // arcsec
-    double peakRA{0.0};      // arcsec
-    double peakDec{0.0};     // arcsec
+    double rmsRA{0.0};     // arcsec
+    double rmsDec{0.0};    // arcsec
+    double rmsTotal{0.0};  // arcsec
+    double peakRA{0.0};    // arcsec
+    double peakDec{0.0};   // arcsec
     int sampleCount{0};
     double snr{0.0};
 };
@@ -64,17 +64,17 @@ struct GuideStats {
  * @brief Settle parameters for guiding operations
  */
 struct SettleParams {
-    double pixels{1.5};      // Max error in pixels
-    double time{10.0};       // Settle time in seconds
-    double timeout{60.0};    // Timeout in seconds
+    double pixels{1.5};    // Max error in pixels
+    double time{10.0};     // Settle time in seconds
+    double timeout{60.0};  // Timeout in seconds
 };
 
 /**
  * @brief Dither parameters
  */
 struct DitherParams {
-    double amount{5.0};      // Dither amount in pixels
-    bool raOnly{false};      // Only dither in RA
+    double amount{5.0};  // Dither amount in pixels
+    bool raOnly{false};  // Only dither in RA
     SettleParams settle;
 };
 
@@ -83,10 +83,10 @@ struct DitherParams {
  */
 struct CalibrationData {
     bool calibrated{false};
-    double raRate{0.0};      // arcsec/sec
-    double decRate{0.0};     // arcsec/sec
-    double raAngle{0.0};     // degrees
-    double decAngle{0.0};    // degrees
+    double raRate{0.0};    // arcsec/sec
+    double decRate{0.0};   // arcsec/sec
+    double raAngle{0.0};   // degrees
+    double decAngle{0.0};  // degrees
     bool decFlipped{false};
     std::string timestamp;
 };
@@ -234,17 +234,13 @@ public:
      * @brief Check if guiding
      * @return true if actively guiding
      */
-    bool isGuiding() const {
-        return getGuiderState() == GuiderState::Guiding;
-    }
+    bool isGuiding() const { return getGuiderState() == GuiderState::Guiding; }
 
     /**
      * @brief Check if paused
      * @return true if paused
      */
-    bool isPaused() const {
-        return getGuiderState() == GuiderState::Paused;
-    }
+    bool isPaused() const { return getGuiderState() == GuiderState::Paused; }
 
     /**
      * @brief Get guide statistics

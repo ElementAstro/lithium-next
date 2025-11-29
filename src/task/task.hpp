@@ -34,16 +34,16 @@ enum class TaskStatus {
  * @brief Represents the type of error that occurred during task execution.
  */
 enum class TaskErrorType {
-    None,              ///< No error has occurred.
-    Timeout,           ///< Task execution timed out.
-    InvalidParameter,  ///< Task parameters were invalid.
-    DeviceError,       ///< An error occurred with a device.
-    SystemError,       ///< A system error occurred.
-    ExecutionFailed,   ///< Task execution failed.
-    Cancelled,         ///< Task was cancelled.
-    DependencyFailed,  ///< A dependency task failed.
-    ResourceUnavailable, ///< Required resource is unavailable.
-    Unknown            ///< An unknown error occurred.
+    None,                 ///< No error has occurred.
+    Timeout,              ///< Task execution timed out.
+    InvalidParameter,     ///< Task parameters were invalid.
+    DeviceError,          ///< An error occurred with a device.
+    SystemError,          ///< A system error occurred.
+    ExecutionFailed,      ///< Task execution failed.
+    Cancelled,            ///< Task was cancelled.
+    DependencyFailed,     ///< A dependency task failed.
+    ResourceUnavailable,  ///< Required resource is unavailable.
+    Unknown               ///< An unknown error occurred.
 };
 
 /**
@@ -376,21 +376,21 @@ public:
      * @brief Gets the creation time of the task.
      * @return The creation time.
      */
-    [[nodiscard]] auto getCreationTime() const 
+    [[nodiscard]] auto getCreationTime() const
         -> std::chrono::system_clock::time_point;
 
     /**
      * @brief Gets the start time of the task execution.
      * @return The start time, or nullopt if not started.
      */
-    [[nodiscard]] auto getStartTime() const 
+    [[nodiscard]] auto getStartTime() const
         -> std::optional<std::chrono::system_clock::time_point>;
 
     /**
      * @brief Gets the end time of the task execution.
      * @return The end time, or nullopt if not finished.
      */
-    [[nodiscard]] auto getEndTime() const 
+    [[nodiscard]] auto getEndTime() const
         -> std::optional<std::chrono::system_clock::time_point>;
 
 protected:
@@ -407,7 +407,8 @@ protected:
 private:
     std::string name_;  ///< The name of the task.
     std::string uuid_;  ///< The unique identifier of the task.
-    std::string taskType_;  ///< The task type identifier for factory-based creation.
+    std::string
+        taskType_;  ///< The task type identifier for factory-based creation.
     std::function<void(const json&)>
         action_;  ///< The action to be performed by the task.
     std::chrono::seconds timeout_{0};  ///< The timeout duration for the task.
@@ -432,9 +433,12 @@ private:
     std::vector<std::unique_ptr<Task>> postTasks_;  ///< Post-tasks list
     ExceptionCallback exceptionCallback_;  ///< Exception handler callback
     std::atomic<bool> cancelled_{false};   ///< Whether the task was cancelled
-    std::chrono::system_clock::time_point creationTime_;  ///< Task creation time
-    std::optional<std::chrono::system_clock::time_point> startTime_;  ///< Execution start time
-    std::optional<std::chrono::system_clock::time_point> endTime_;    ///< Execution end time
+    std::chrono::system_clock::time_point
+        creationTime_;  ///< Task creation time
+    std::optional<std::chrono::system_clock::time_point>
+        startTime_;  ///< Execution start time
+    std::optional<std::chrono::system_clock::time_point>
+        endTime_;  ///< Execution end time
 
     /**
      * @brief Validates a parameter value against its type.

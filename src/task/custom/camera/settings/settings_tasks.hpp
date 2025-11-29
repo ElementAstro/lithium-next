@@ -15,9 +15,13 @@ namespace lithium::task::camera {
  */
 class CameraSettingsTask : public CameraTaskBase {
 public:
-    CameraSettingsTask() : CameraTaskBase("CameraSettings") { setupParameters(); }
+    CameraSettingsTask() : CameraTaskBase("CameraSettings") {
+        setupParameters();
+    }
     CameraSettingsTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "CameraSettings"; }
     static std::string getTaskTypeName() { return "CameraSettings"; }
@@ -37,7 +41,9 @@ class CameraPreviewTask : public CameraTaskBase {
 public:
     CameraPreviewTask() : CameraTaskBase("CameraPreview") { setupParameters(); }
     CameraPreviewTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "CameraPreview"; }
     static std::string getTaskTypeName() { return "CameraPreview"; }

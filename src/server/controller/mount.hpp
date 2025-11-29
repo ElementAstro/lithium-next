@@ -9,35 +9,21 @@
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "server/command/mount.hpp"
+#include "server/utils/response.hpp"
+
+namespace lithium::server::controller {
+
+using ResponseBuilder = utils::ResponseBuilder;
 
 class MountController : public Controller {
 private:
-    static auto makeJsonResponse(const nlohmann::json &body, int code)
-        -> crow::response {
-        crow::response res(code);
-        res.set_header("Content-Type", "application/json");
-        res.write(body.dump());
-        return res;
-    }
-
-    static auto makeDeviceNotFound(const std::string &deviceId)
-        -> nlohmann::json {
-        return {
-            {"status", "error"},
-            {"error",
-             {{"code", "device_not_found"},
-              {"message", "Mount not found"},
-              {"details", {{"deviceId", deviceId}}}}}
-        };
-    }
-
-    static auto isValidDeviceId(const std::string &deviceId) -> bool {
+    static auto isValidDeviceId(const std::string& deviceId) -> bool {
         // Currently only a single primary mount is supported.
         return deviceId == "mnt-001";
     }
 
 public:
-    void registerRoutes(lithium::server::ServerApp &app) override {
+    void registerRoutes(lithium::server::ServerApp& app) override {
         CROW_ROUTE(app, "/api/v1/mounts")
             .methods("GET"_method)(&MountController::listMountsRoute, this);
 
@@ -55,7 +41,7 @@ public:
 
         CROW_ROUTE(app, "/api/v1/mounts/<string>/position")
             .methods("POST"_method)(&MountController::setMountPositionRoute,
-                                      this);
+                                    this);
 
         CROW_ROUTE(app, "/api/v1/mounts/<string>/pulse-guide")
             .methods("POST"_method)(&MountController::pulseGuideRoute, this);
@@ -82,29 +68,27 @@ public:
             .methods("POST"_method)(&MountController::meridianFlipRoute, this);
     }
 
-    void listMountsRoute(const crow::request &req, crow::response &res) {
+    void listMountsRoute(const crow::request& req, crow::response& res) {
         (void)req;
         auto body = lithium::middleware::listMounts();
-        res = makeJsonResponse(body, 200);
+        res = ResponseBuilder::success(body);
     }
 
-    void getMountStatusRoute(const crow::request &req, crow::response &res,
-                             const std::string &deviceId) {
+    void getMountStatusRoute(const crow::request& req, crow::response& res,
+                             const std::string& deviceId) {
         (void)req;
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
         auto body = lithium::middleware::getMountStatus(deviceId);
-        res = makeJsonResponse(body, 200);
+        res = ResponseBuilder::success(body);
     }
 
-    void connectMountRoute(const crow::request &req, crow::response &res,
-                           const std::string &deviceId) {
+    void connectMountRoute(const crow::request& req, crow::response& res,
+                           const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
@@ -113,21 +97,17 @@ public:
             bool connected = body.value("connected", true);
             auto result =
                 lithium::middleware::connectMount(deviceId, connected);
-            res = makeJsonResponse(result, 200);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            res = ResponseBuilder::success(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void slewMountRoute(const crow::request &req, crow::response &res,
-                        const std::string &deviceId) {
+    void slewMountRoute(const crow::request& req, crow::response& res,
+                        const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
@@ -136,67 +116,54 @@ public:
             std::string ra = body.value("ra", "");
             std::string dec = body.value("dec", "");
             auto result = lithium::middleware::slewMount(deviceId, ra, dec);
-            res = makeJsonResponse(result, 202);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            res = ResponseBuilder::accepted(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void setTrackingRoute(const crow::request &req, crow::response &res,
-                          const std::string &deviceId) {
+    void setTrackingRoute(const crow::request& req, crow::response& res,
+                          const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
         try {
             auto body = nlohmann::json::parse(req.body);
             bool tracking = body.value("tracking", true);
-            auto result =
-                lithium::middleware::setTracking(deviceId, tracking);
-            res = makeJsonResponse(result, 200);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            auto result = lithium::middleware::setTracking(deviceId, tracking);
+            res = ResponseBuilder::success(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void setMountPositionRoute(const crow::request &req, crow::response &res,
-                               const std::string &deviceId) {
+    void setMountPositionRoute(const crow::request& req, crow::response& res,
+                               const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
         try {
             auto body = nlohmann::json::parse(req.body);
             std::string command = body.value("command", "");
-            auto result = lithium::middleware::setMountPosition(deviceId,
-                                                                 command);
-            res = makeJsonResponse(result, 202);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            auto result =
+                lithium::middleware::setMountPosition(deviceId, command);
+            res = ResponseBuilder::accepted(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void pulseGuideRoute(const crow::request &req, crow::response &res,
-                         const std::string &deviceId) {
+    void pulseGuideRoute(const crow::request& req, crow::response& res,
+                         const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
@@ -204,23 +171,19 @@ public:
             auto body = nlohmann::json::parse(req.body);
             std::string direction = body.value("direction", "");
             int duration = body.value("duration", 0);
-            auto result = lithium::middleware::pulseGuide(deviceId, direction,
-                                                           duration);
-            res = makeJsonResponse(result, 202);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            auto result =
+                lithium::middleware::pulseGuide(deviceId, direction, duration);
+            res = ResponseBuilder::accepted(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void syncMountRoute(const crow::request &req, crow::response &res,
-                        const std::string &deviceId) {
+    void syncMountRoute(const crow::request& req, crow::response& res,
+                        const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
@@ -229,34 +192,28 @@ public:
             std::string ra = body.value("ra", "");
             std::string dec = body.value("dec", "");
             auto result = lithium::middleware::syncMount(deviceId, ra, dec);
-            res = makeJsonResponse(result, 200);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            res = ResponseBuilder::success(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void capabilitiesRoute(const crow::request &req, crow::response &res,
-                           const std::string &deviceId) {
+    void capabilitiesRoute(const crow::request& req, crow::response& res,
+                           const std::string& deviceId) {
         (void)req;
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
-        auto result =
-            lithium::middleware::getMountCapabilities(deviceId);
-        res = makeJsonResponse(result, 200);
+        auto result = lithium::middleware::getMountCapabilities(deviceId);
+        res = ResponseBuilder::success(result);
     }
 
-    void guideRatesRoute(const crow::request &req, crow::response &res,
-                         const std::string &deviceId) {
+    void guideRatesRoute(const crow::request& req, crow::response& res,
+                         const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
@@ -264,76 +221,67 @@ public:
             auto body = nlohmann::json::parse(req.body);
             double raRate = body.value("raRate", 0.5);
             double decRate = body.value("decRate", 0.5);
-            auto result = lithium::middleware::setGuideRates(deviceId, raRate,
-                                                             decRate);
-            res = makeJsonResponse(result, 200);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            auto result =
+                lithium::middleware::setGuideRates(deviceId, raRate, decRate);
+            res = ResponseBuilder::success(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void trackingRateRoute(const crow::request &req, crow::response &res,
-                           const std::string &deviceId) {
+    void trackingRateRoute(const crow::request& req, crow::response& res,
+                           const std::string& deviceId) {
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
 
         try {
             auto body = nlohmann::json::parse(req.body);
             std::string rate = body.value("rate", "Sidereal");
-            auto result =
-                lithium::middleware::setTrackingRate(deviceId, rate);
-            res = makeJsonResponse(result, 200);
-        } catch (const std::exception &e) {
-            nlohmann::json err = {{"status", "error"},
-                                  {"error",
-                                   {{"code", "invalid_json"},
-                                    {"message", e.what()}}}};
-            res = makeJsonResponse(err, 400);
+            auto result = lithium::middleware::setTrackingRate(deviceId, rate);
+            res = ResponseBuilder::success(result);
+        } catch (const std::exception& e) {
+            res = ResponseBuilder::badRequest(std::string("Invalid JSON: ") +
+                                              e.what());
         }
     }
 
-    void stopRoute(const crow::request &req, crow::response &res,
-                   const std::string &deviceId) {
+    void stopRoute(const crow::request& req, crow::response& res,
+                   const std::string& deviceId) {
         (void)req;
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
         auto result = lithium::middleware::stopMount(deviceId);
-        res = makeJsonResponse(result, 200);
+        res = ResponseBuilder::success(result);
     }
 
-    void pierSideRoute(const crow::request &req, crow::response &res,
-                       const std::string &deviceId) {
+    void pierSideRoute(const crow::request& req, crow::response& res,
+                       const std::string& deviceId) {
         (void)req;
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
         auto result = lithium::middleware::getPierSide(deviceId);
-        res = makeJsonResponse(result, 200);
+        res = ResponseBuilder::success(result);
     }
 
-    void meridianFlipRoute(const crow::request &req, crow::response &res,
-                           const std::string &deviceId) {
+    void meridianFlipRoute(const crow::request& req, crow::response& res,
+                           const std::string& deviceId) {
         (void)req;
         if (!isValidDeviceId(deviceId)) {
-            auto err = makeDeviceNotFound(deviceId);
-            res = makeJsonResponse(err, 404);
+            res = ResponseBuilder::deviceNotFound(deviceId, "Mount");
             return;
         }
         auto result = lithium::middleware::performMeridianFlip(deviceId);
-        res = makeJsonResponse(result, 202);
+        res = ResponseBuilder::accepted(result);
     }
 };
+
+}  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_MOUNT_HPP

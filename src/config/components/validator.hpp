@@ -292,9 +292,9 @@ public:
      * @param path Configuration path being validated
      * @param result Validation result (for AFTER_VALIDATE/VALIDATION_ERROR)
      */
-    using ValidationHook = std::function<void(ValidationEvent event,
-                                              std::string_view path,
-                                              const ValidationResult& result)>;
+    using ValidationHook =
+        std::function<void(ValidationEvent event, std::string_view path,
+                           const ValidationResult& result)>;
 
     /**
      * @brief Register a validation event hook
@@ -333,8 +333,7 @@ public:
      * @return Vector of validation results
      */
     [[nodiscard]] std::vector<ValidationResult> validateBatch(
-        const std::vector<json>& dataList,
-        std::string_view path = "") const;
+        const std::vector<json>& dataList, std::string_view path = "") const;
 
 private:
     struct Impl;

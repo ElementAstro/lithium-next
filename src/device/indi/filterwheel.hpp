@@ -22,8 +22,8 @@ public:
 
     auto isConnected() const -> bool override;
 
-    auto connect(const std::string &deviceName, int timeout,
-                 int maxRetry) -> bool override;
+    auto connect(const std::string &deviceName, int timeout, int maxRetry)
+        -> bool override;
 
     auto disconnect() -> bool override;
 

@@ -12,6 +12,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium-next VERSION 1.0.0 LANGUAGES C CXX)
 
+# Disable C++20 modules scanning globally (required for MinGW Makefiles with cpptrace)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 # ============================================================================
 # CMake Module Path and Core Includes
 # ============================================================================

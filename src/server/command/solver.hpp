@@ -1,8 +1,8 @@
 #ifndef LITHIUM_SERVER_COMMAND_SOLVER_HPP
 #define LITHIUM_SERVER_COMMAND_SOLVER_HPP
 
-#include "atom/type/json.hpp"
 #include <string>
+#include "atom/type/json.hpp"
 
 namespace lithium::middleware {
 
@@ -16,10 +16,8 @@ using json = nlohmann::json;
  * @param scaleHint Approximate pixel scale (arcsec/pixel) - optional, default 0
  * @param radiusHint Search radius (degrees) - optional, default 180 (blind)
  */
-auto solveImage(const std::string& filePath, 
-                double raHint = 0.0, 
-                double decHint = 0.0, 
-                double scaleHint = 0.0, 
+auto solveImage(const std::string& filePath, double raHint = 0.0,
+                double decHint = 0.0, double scaleHint = 0.0,
                 double radiusHint = 180.0) -> json;
 
 /**
@@ -29,4 +27,17 @@ auto blindSolve(const std::string& filePath) -> json;
 
 }  // namespace lithium::middleware
 
-#endif // LITHIUM_SERVER_COMMAND_SOLVER_HPP
+// Command registration for WebSocket dispatcher
+namespace lithium::app {
+
+class CommandDispatcher;
+
+/**
+ * @brief Register solver commands with the WebSocket command dispatcher
+ * @param dispatcher The command dispatcher instance
+ */
+void registerSolver(std::shared_ptr<CommandDispatcher> dispatcher);
+
+}  // namespace lithium::app
+
+#endif  // LITHIUM_SERVER_COMMAND_SOLVER_HPP

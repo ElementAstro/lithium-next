@@ -138,7 +138,8 @@ public:
     [[nodiscard]] auto getResourceUsage() const -> std::string;
     [[nodiscard]] auto getCrashReason() const -> std::string;
     [[nodiscard]] auto getBacktrace(uint64_t threadId) const -> std::string;
-    [[nodiscard]] auto getRegistersSnapshot(uint64_t threadId) const -> std::string;
+    [[nodiscard]] auto getRegistersSnapshot(uint64_t threadId) const
+        -> std::string;
     [[nodiscard]] auto getMemoryMap() const -> std::string;
     [[nodiscard]] auto findMemoryLeaks() const -> std::string;
     [[nodiscard]] auto analyzeLockContention() const -> std::string;

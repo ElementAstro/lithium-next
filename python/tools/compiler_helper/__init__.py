@@ -41,7 +41,7 @@ import sys
 from loguru import logger
 
 # Module metadata
-__version__ = '0.1.0'
+__version__ = "0.1.0"
 __author__ = "Max Qian"
 __license__ = "GPL-3.0-or-later"
 
@@ -50,7 +50,7 @@ logger.remove()  # Remove default handler
 logger.add(
     sys.stderr,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level="INFO"
+    level="INFO",
 )
 
 
@@ -111,7 +111,7 @@ def get_tool_info() -> dict:
             "CompilerManager": "Compiler detection and management on the system",
             "BuildManager": "High-level project building and incremental compilation",
             "CompilerHelperPyBindAdapter": "Simplified pybind11 interface for C++ integration",
-        }
+        },
     }
 
 
@@ -120,30 +120,26 @@ def get_tool_info() -> dict:
 
 __all__ = [
     # Core types
-    'CppVersion',
-    'CompilerType',
-    'CompilationResult',
-    'CompileOptions',
-    'LinkOptions',
-    'CompilationError',
-    'CompilerNotFoundError',
-
+    "CppVersion",
+    "CompilerType",
+    "CompilationResult",
+    "CompileOptions",
+    "LinkOptions",
+    "CompilationError",
+    "CompilerNotFoundError",
     # Classes
-    'Compiler',
-    'CompilerManager',
-    'BuildManager',
-    'CompilerHelperPyBindAdapter',
-
+    "Compiler",
+    "CompilerManager",
+    "BuildManager",
+    "CompilerHelperPyBindAdapter",
     # API functions
-    'get_compiler',
-    'compile_file',
-    'build_project',
-    'load_json',
-    'save_json',
-    'get_tool_info',
-
+    "get_compiler",
+    "compile_file",
+    "build_project",
+    "load_json",
+    "save_json",
+    "get_tool_info",
     # Instances
-    'compiler_manager',
-
-    'main'
+    "compiler_manager",
+    "main",
 ]

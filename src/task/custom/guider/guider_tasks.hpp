@@ -28,7 +28,9 @@ class StartGuidingTask : public TaskBase {
 public:
     StartGuidingTask() : TaskBase("StartGuiding") { setupParameters(); }
     StartGuidingTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "StartGuiding"; }
     static std::string getStaticTaskTypeName() { return "StartGuiding"; }
@@ -49,7 +51,9 @@ class StopGuidingTask : public TaskBase {
 public:
     StopGuidingTask() : TaskBase("StopGuiding") { setupParameters(); }
     StopGuidingTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "StopGuiding"; }
     static std::string getStaticTaskTypeName() { return "StopGuiding"; }
@@ -68,7 +72,9 @@ class PauseGuidingTask : public TaskBase {
 public:
     PauseGuidingTask() : TaskBase("PauseGuiding") { setupParameters(); }
     PauseGuidingTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "PauseGuiding"; }
     static std::string getStaticTaskTypeName() { return "PauseGuiding"; }
@@ -87,7 +93,9 @@ class ResumeGuidingTask : public TaskBase {
 public:
     ResumeGuidingTask() : TaskBase("ResumeGuiding") { setupParameters(); }
     ResumeGuidingTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "ResumeGuiding"; }
     static std::string getStaticTaskTypeName() { return "ResumeGuiding"; }
@@ -109,7 +117,9 @@ class DitherTask : public TaskBase {
 public:
     DitherTask() : TaskBase("Dither") { setupParameters(); }
     DitherTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Dither"; }
     static std::string getStaticTaskTypeName() { return "Dither"; }
@@ -131,12 +141,18 @@ private:
  */
 class GuidedExposureSequenceTask : public TaskBase {
 public:
-    GuidedExposureSequenceTask() : TaskBase("GuidedExposureSequence") { setupParameters(); }
+    GuidedExposureSequenceTask() : TaskBase("GuidedExposureSequence") {
+        setupParameters();
+    }
     GuidedExposureSequenceTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "GuidedExposureSequence"; }
-    static std::string getStaticTaskTypeName() { return "GuidedExposureSequence"; }
+    static std::string getStaticTaskTypeName() {
+        return "GuidedExposureSequence";
+    }
 
 protected:
     void executeImpl(const json& params) override;
@@ -153,7 +169,9 @@ class CalibrateGuiderTask : public TaskBase {
 public:
     CalibrateGuiderTask() : TaskBase("CalibrateGuider") { setupParameters(); }
     CalibrateGuiderTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "CalibrateGuider"; }
     static std::string getStaticTaskTypeName() { return "CalibrateGuider"; }

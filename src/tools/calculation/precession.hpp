@@ -65,8 +65,8 @@ struct EquatorialCoords {
     double T = centuriesSinceJ2000(jd);
 
     // Mean longitude of ascending node of Moon's orbit
-    double omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T +
-                   T * T * T / 450000.0;
+    double omega =
+        125.04452 - 1934.136261 * T + 0.0020708 * T * T + T * T * T / 450000.0;
 
     // Mean longitude of Sun and Moon
     double L_sun = 280.4665 + 36000.7698 * T;
@@ -111,8 +111,8 @@ struct EquatorialCoords {
                      dpsi -
                  std::cos(ra) * std::tan(dec) * deps;
 
-    double ddec = std::sin(obliquity) * std::cos(ra) * dpsi +
-                  std::sin(ra) * deps;
+    double ddec =
+        std::sin(obliquity) * std::cos(ra) * dpsi + std::sin(ra) * deps;
 
     // Apply corrections
     double newRA = toDegrees(ra + sign * toRadians(dra)) / HOURS_TO_DEG;
@@ -146,10 +146,11 @@ struct EquatorialCoords {
     constexpr double kappa = 20.49552 / 3600.0;
 
     // Calculate corrections
-    double dra = -kappa * (std::cos(ra) * std::cos(toRadians(L)) *
-                               std::cos(toRadians(pi_lon)) +
-                           std::sin(ra) * std::sin(toRadians(L))) /
-                 std::cos(dec);
+    double dra =
+        -kappa *
+        (std::cos(ra) * std::cos(toRadians(L)) * std::cos(toRadians(pi_lon)) +
+         std::sin(ra) * std::sin(toRadians(L))) /
+        std::cos(dec);
 
     double ddec = -kappa * std::sin(toRadians(pi_lon)) *
                   (std::sin(dec) * std::cos(toRadians(L)) -
@@ -203,8 +204,7 @@ struct EquatorialCoords {
     double newRA = std::atan2(A, B) + z;
     double newDec = std::asin(std::clamp(C, -1.0, 1.0));
 
-    return {normalizeRA(toDegrees(newRA) / HOURS_TO_DEG),
-            toDegrees(newDec)};
+    return {normalizeRA(toDegrees(newRA) / HOURS_TO_DEG), toDegrees(newDec)};
 }
 
 /**
@@ -229,7 +229,8 @@ template <std::floating_point T>
               t;
 
     // Convert to radians
-    constexpr T ARCSEC_TO_RAD = static_cast<T>(DEG_TO_RAD) / static_cast<T>(3600.0);
+    constexpr T ARCSEC_TO_RAD =
+        static_cast<T>(DEG_TO_RAD) / static_cast<T>(3600.0);
     zeta *= ARCSEC_TO_RAD;
     z *= ARCSEC_TO_RAD;
     theta *= ARCSEC_TO_RAD;
@@ -243,13 +244,11 @@ template <std::floating_point T>
     T sinZ = std::sin(z);
 
     // Build precession matrix
-    return {{
-        {cosZeta * cosTheta * cosZ - sinZeta * sinZ,
-         -cosZeta * cosTheta * sinZ - sinZeta * cosZ, -cosZeta * sinTheta},
-        {sinZeta * cosTheta * cosZ + cosZeta * sinZ,
-         -sinZeta * cosTheta * sinZ + cosZeta * cosZ, -sinZeta * sinTheta},
-        {sinTheta * cosZ, -sinTheta * sinZ, cosTheta}
-    }};
+    return {{{cosZeta * cosTheta * cosZ - sinZeta * sinZ,
+              -cosZeta * cosTheta * sinZ - sinZeta * cosZ, -cosZeta * sinTheta},
+             {sinZeta * cosTheta * cosZ + cosZeta * sinZ,
+              -sinZeta * cosTheta * sinZ + cosZeta * cosZ, -sinZeta * sinTheta},
+             {sinTheta * cosZ, -sinTheta * sinZ, cosTheta}}};
 }
 
 // ============================================================================

@@ -36,8 +36,8 @@ auto loadImage(const std::string& filename, int flags = 1) -> cv::Mat;
  * it will not be included in the vector.
  */
 auto loadImages(const std::string& folder,
-                const std::vector<std::string>& filenames = {},
-                int flags = 1) -> std::vector<std::pair<std::string, cv::Mat>>;
+                const std::vector<std::string>& filenames = {}, int flags = 1)
+    -> std::vector<std::pair<std::string, cv::Mat>>;
 
 /**
  * @brief Save an image to a file.
@@ -57,9 +57,9 @@ auto saveImage(const std::string& filename, const cv::Mat& image) -> bool;
  * @return bool True if the image is successfully converted and saved, false
  * otherwise.
  */
-auto saveMatTo8BitJpg(
-    const cv::Mat& image,
-    const std::string& output_path = "/dev/shm/MatTo8BitJPG.jpg") -> bool;
+auto saveMatTo8BitJpg(const cv::Mat& image, const std::string& output_path =
+                                                "/dev/shm/MatTo8BitJPG.jpg")
+    -> bool;
 
 /**
  * @brief Convert a cv::Mat image to a 16-bit PNG and save it to a file.
@@ -70,9 +70,9 @@ auto saveMatTo8BitJpg(
  * @return bool True if the image is successfully converted and saved, false
  * otherwise.
  */
-auto saveMatTo16BitPng(
-    const cv::Mat& image,
-    const std::string& output_path = "/dev/shm/MatTo16BitPNG.png") -> bool;
+auto saveMatTo16BitPng(const cv::Mat& image, const std::string& output_path =
+                                                 "/dev/shm/MatTo16BitPNG.png")
+    -> bool;
 
 /**
  * @brief Convert a cv::Mat image to a FITS file and save it.
@@ -83,7 +83,8 @@ auto saveMatTo16BitPng(
  * @return bool True if the image is successfully converted and saved, false
  * otherwise.
  */
-auto saveMatToFits(const cv::Mat& image, const std::string& output_path =
-                                             "/dev/shm/MatToFITS.fits") -> bool;
+auto saveMatToFits(const cv::Mat& image,
+                   const std::string& output_path = "/dev/shm/MatToFITS.fits")
+    -> bool;
 
 #endif

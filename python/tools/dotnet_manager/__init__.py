@@ -16,7 +16,7 @@ from .api import (
     list_installed_dotnets,
     download_file,
     install_software,
-    uninstall_dotnet
+    uninstall_dotnet,
 )
 
 __version__ = "2.0"
@@ -52,14 +52,9 @@ def get_tool_info() -> dict:
             "download_file",
             "install_software",
             "uninstall_dotnet",
-            "get_tool_info"
+            "get_tool_info",
         ],
-        "requirements": [
-            "requests",
-            "tqdm",
-            "loguru",
-            "Windows OS"
-        ],
+        "requirements": ["requests", "tqdm", "loguru", "Windows OS"],
         "capabilities": [
             "Detect installed .NET Framework versions via registry",
             "List all installed .NET Framework versions",
@@ -67,13 +62,13 @@ def get_tool_info() -> dict:
             "Verify file integrity with SHA256/SHA1/MD5 checksums",
             "Execute installers silently or with UI",
             "Attempt to uninstall .NET Framework versions",
-            "Support for .NET Framework 4.5+ versions"
+            "Support for .NET Framework 4.5+ versions",
         ],
         "classes": {
             "DotNetManager": "Core manager class for .NET Framework operations",
             "DotNetVersion": "Data class representing a .NET Framework version",
-            "HashAlgorithm": "Enum for supported hash algorithms (MD5, SHA1, SHA256, SHA512)"
-        }
+            "HashAlgorithm": "Enum for supported hash algorithms (MD5, SHA1, SHA256, SHA512)",
+        },
     }
 
 
@@ -86,5 +81,5 @@ __all__ = [
     "download_file",
     "install_software",
     "uninstall_dotnet",
-    "get_tool_info"
+    "get_tool_info",
 ]

@@ -23,7 +23,7 @@ from .models import (
     BandType,
     HotspotConfig,
     CommandResult,
-    ConnectedClient
+    ConnectedClient,
 )
 
 from .command_utils import run_command, run_command_async
@@ -72,21 +72,16 @@ def get_tool_info() -> dict:
             "set",
             "save_config",
             "load_config",
-            "monitor_clients"
+            "monitor_clients",
         ],
-        "requirements": [
-            "NetworkManager",
-            "nmcli",
-            "iw",
-            "arp"
-        ],
+        "requirements": ["NetworkManager", "nmcli", "iw", "arp"],
         "capabilities": [
             "hotspot_creation",
             "client_monitoring",
             "configuration_persistence",
             "dynamic_channel_selection",
             "multi_band_support",
-            "wpa_wpa2_wpa3_support"
+            "wpa_wpa2_wpa3_support",
         ],
         "classes": {
             "HotspotManager": "Main interface for managing WiFi hotspots",
@@ -95,8 +90,8 @@ def get_tool_info() -> dict:
             "EncryptionType": "Enum for supported encryption algorithms",
             "BandType": "Enum for WiFi frequency bands",
             "CommandResult": "Result object from command execution",
-            "ConnectedClient": "Information about a connected client"
-        }
+            "ConnectedClient": "Information about a connected client",
+        },
     }
 
 
@@ -118,14 +113,14 @@ def create_pybind11_module():
 
 
 __all__ = [
-    'HotspotManager',
-    'HotspotConfig',
-    'AuthenticationType',
-    'EncryptionType',
-    'BandType',
-    'CommandResult',
-    'ConnectedClient',
-    'create_pybind11_module',
-    'get_tool_info',
-    'logger'
+    "HotspotManager",
+    "HotspotConfig",
+    "AuthenticationType",
+    "EncryptionType",
+    "BandType",
+    "CommandResult",
+    "ConnectedClient",
+    "create_pybind11_module",
+    "get_tool_info",
+    "logger",
 ]

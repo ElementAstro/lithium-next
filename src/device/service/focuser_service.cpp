@@ -43,7 +43,7 @@ FocuserService::FocuserService()
 FocuserService::~FocuserService() = default;
 
 auto FocuserService::list() -> json {
-    LOG_INFO( "FocuserService::list: Listing all available focusers");
+    LOG_INFO("FocuserService::list: Listing all available focusers");
     json response;
     response["status"] = "success";
 
@@ -59,23 +59,23 @@ auto FocuserService::list() -> json {
             info["isConnected"] = focuser->isConnected();
             focuserList.push_back(info);
         } catch (...) {
-            LOG_WARN( "FocuserService::list: Main focuser not available");
+            LOG_WARN("FocuserService::list: Main focuser not available");
         }
 
         response["data"] = focuserList;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::list: Exception: %s", e.what());
+        LOG_ERROR("FocuserService::list: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FocuserService::list: Completed");
+    LOG_INFO("FocuserService::list: Completed");
     return response;
 }
 
 auto FocuserService::getStatus(const std::string& deviceId) -> json {
-    LOG_INFO( "FocuserService::getStatus: Getting status for focuser: %s",
-          deviceId.c_str());
+    LOG_INFO("FocuserService::getStatus: Getting status for focuser: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -111,18 +111,19 @@ auto FocuserService::getStatus(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = data;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::getStatus: Exception: %s", e.what());
+        LOG_ERROR("FocuserService::getStatus: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FocuserService::getStatus: Completed");
+    LOG_INFO("FocuserService::getStatus: Completed");
     return response;
 }
 
-auto FocuserService::connect(const std::string& deviceId, bool connected) -> json {
-    LOG_INFO( "FocuserService::connect: %s focuser: %s",
-          connected ? "Connecting" : "Disconnecting", deviceId.c_str());
+auto FocuserService::connect(const std::string& deviceId, bool connected)
+    -> json {
+    LOG_INFO("FocuserService::connect: %s focuser: %s",
+             connected ? "Connecting" : "Disconnecting", deviceId.c_str());
     json response;
 
     try {
@@ -141,18 +142,18 @@ auto FocuserService::connect(const std::string& deviceId, bool connected) -> jso
                                  {"message", "Connection operation failed."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::connect: Exception: %s", e.what());
+        LOG_ERROR("FocuserService::connect: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FocuserService::connect: Completed");
+    LOG_INFO("FocuserService::connect: Completed");
     return response;
 }
 
-auto FocuserService::move(const std::string& deviceId,
-                          const json& moveRequest) -> json {
-    LOG_INFO( "FocuserService::move: Moving focuser: %s", deviceId.c_str());
+auto FocuserService::move(const std::string& deviceId, const json& moveRequest)
+    -> json {
+    LOG_INFO("FocuserService::move: Moving focuser: %s", deviceId.c_str());
     json response;
 
     try {
@@ -220,19 +221,20 @@ auto FocuserService::move(const std::string& deviceId,
                                  {"message", "Focuser move command failed."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::move: Exception: %s", e.what());
+        LOG_ERROR("FocuserService::move: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FocuserService::move: Completed");
+    LOG_INFO("FocuserService::move: Completed");
     return response;
 }
 
 auto FocuserService::updateSettings(const std::string& deviceId,
                                     const json& settings) -> json {
-    LOG_INFO( "FocuserService::updateSettings: Updating settings for focuser: %s",
-          deviceId.c_str());
+    LOG_INFO(
+        "FocuserService::updateSettings: Updating settings for focuser: %s",
+        deviceId.c_str());
     json response;
 
     try {
@@ -248,17 +250,17 @@ auto FocuserService::updateSettings(const std::string& deviceId,
             response["message"] = "No focuser settings were changed.";
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::updateSettings: Exception: %s", e.what());
+        LOG_ERROR("FocuserService::updateSettings: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FocuserService::updateSettings: Completed");
+    LOG_INFO("FocuserService::updateSettings: Completed");
     return response;
 }
 
 auto FocuserService::halt(const std::string& deviceId) -> json {
-    LOG_INFO( "FocuserService::halt: Halting focuser: %s", deviceId.c_str());
+    LOG_INFO("FocuserService::halt: Halting focuser: %s", deviceId.c_str());
     json response;
 
     try {
@@ -282,19 +284,19 @@ auto FocuserService::halt(const std::string& deviceId) -> json {
                                  {"message", "Failed to halt focuser."}};
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::halt: Exception: %s", e.what());
+        LOG_ERROR("FocuserService::halt: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FocuserService::halt: Completed");
+    LOG_INFO("FocuserService::halt: Completed");
     return response;
 }
 
 auto FocuserService::getCapabilities(const std::string& deviceId) -> json {
     LOG_INFO(
-          "FocuserService::getCapabilities: Getting capabilities for focuser: %s",
-          deviceId.c_str());
+        "FocuserService::getCapabilities: Getting capabilities for focuser: %s",
+        deviceId.c_str());
     json response;
 
     try {
@@ -331,21 +333,20 @@ auto FocuserService::getCapabilities(const std::string& deviceId) -> json {
         response["status"] = "success";
         response["data"] = caps;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::getCapabilities: Exception: %s",
-              e.what());
+        LOG_ERROR("FocuserService::getCapabilities: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
 
-    LOG_INFO( "FocuserService::getCapabilities: Completed");
+    LOG_INFO("FocuserService::getCapabilities: Completed");
     return response;
 }
 
 auto FocuserService::startAutofocus(const std::string& deviceId,
                                     const json& autofocusRequest) -> json {
     LOG_INFO(
-          "FocuserService::startAutofocus: Autofocus request for focuser: %s",
-          deviceId.c_str());
+        "FocuserService::startAutofocus: Autofocus request for focuser: %s",
+        deviceId.c_str());
     json response;
 
     try {
@@ -403,7 +404,7 @@ auto FocuserService::startAutofocus(const std::string& deviceId,
         data["estimatedTime"] = 0;
         response["data"] = std::move(data);
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::startAutofocus: Exception: %s", e.what());
+        LOG_ERROR("FocuserService::startAutofocus: Exception: %s", e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
@@ -412,10 +413,11 @@ auto FocuserService::startAutofocus(const std::string& deviceId,
 }
 
 auto FocuserService::getAutofocusStatus(const std::string& deviceId,
-                                        const std::string& autofocusId) -> json {
+                                        const std::string& autofocusId)
+    -> json {
     (void)deviceId;
-    LOG_INFO( "FocuserService::getAutofocusStatus: for focuser: %s",
-          deviceId.c_str());
+    LOG_INFO("FocuserService::getAutofocusStatus: for focuser: %s",
+             deviceId.c_str());
     json response;
 
     try {
@@ -431,8 +433,8 @@ auto FocuserService::getAutofocusStatus(const std::string& deviceId,
         response["status"] = "success";
         response["data"] = it->second;
     } catch (const std::exception& e) {
-        LOG_ERROR( "FocuserService::getAutofocusStatus: Exception: %s",
-              e.what());
+        LOG_ERROR("FocuserService::getAutofocusStatus: Exception: %s",
+                  e.what());
         response["status"] = "error";
         response["error"] = {{"code", "internal_error"}, {"message", e.what()}};
     }
@@ -443,141 +445,137 @@ auto FocuserService::getAutofocusStatus(const std::string& deviceId,
 // ========== INDI-specific operations ==========
 
 auto FocuserService::getINDIProperties(const std::string& deviceId) -> json {
-    return withConnectedDevice(deviceId, "getINDIProperties",
-                               [this](auto focuser) -> json {
-        json data;
-        data["driverName"] = "INDI Focuser";
-        data["driverVersion"] = "1.0";
+    return withConnectedDevice(
+        deviceId, "getINDIProperties", [this](auto focuser) -> json {
+            json data;
+            data["driverName"] = "INDI Focuser";
+            data["driverVersion"] = "1.0";
 
-        json properties = json::object();
+            json properties = json::object();
 
-        // Position
-        if (auto pos = focuser->getPosition()) {
-            properties["ABS_FOCUS_POSITION"] = {
-                {"value", *pos},
-                {"type", "number"}
-            };
-        }
+            // Position
+            if (auto pos = focuser->getPosition()) {
+                properties["ABS_FOCUS_POSITION"] = {{"value", *pos},
+                                                    {"type", "number"}};
+            }
 
-        // Max limit
-        if (auto maxLimit = focuser->getMaxLimit()) {
-            properties["FOCUS_MAX"] = {
-                {"value", *maxLimit},
-                {"type", "number"}
-            };
-        }
+            // Max limit
+            if (auto maxLimit = focuser->getMaxLimit()) {
+                properties["FOCUS_MAX"] = {{"value", *maxLimit},
+                                           {"type", "number"}};
+            }
 
-        // Speed
-        if (auto speed = focuser->getSpeed()) {
-            properties["FOCUS_SPEED"] = {
-                {"value", *speed},
-                {"type", "number"}
-            };
-        }
+            // Speed
+            if (auto speed = focuser->getSpeed()) {
+                properties["FOCUS_SPEED"] = {{"value", *speed},
+                                             {"type", "number"}};
+            }
 
-        // Temperature
-        if (auto temp = focuser->getExternalTemperature()) {
-            properties["FOCUS_TEMPERATURE"] = {
-                {"value", *temp},
-                {"type", "number"}
-            };
-        }
+            // Temperature
+            if (auto temp = focuser->getExternalTemperature()) {
+                properties["FOCUS_TEMPERATURE"] = {{"value", *temp},
+                                                   {"type", "number"}};
+            }
 
-        // Reverse
-        if (auto reversed = focuser->isReversed()) {
-            properties["FOCUS_REVERSE_MOTION"] = {
-                {"value", *reversed},
-                {"type", "switch"}
-            };
-        }
+            // Reverse
+            if (auto reversed = focuser->isReversed()) {
+                properties["FOCUS_REVERSE_MOTION"] = {{"value", *reversed},
+                                                      {"type", "switch"}};
+            }
 
-        // Backlash
-        properties["FOCUS_BACKLASH_STEPS"] = {
-            {"value", impl_->backlashSteps},
-            {"type", "number"}
-        };
+            // Backlash
+            properties["FOCUS_BACKLASH_STEPS"] = {
+                {"value", impl_->backlashSteps}, {"type", "number"}};
 
-        data["properties"] = properties;
-        return makeSuccessResponse(data);
-    });
+            data["properties"] = properties;
+            return makeSuccessResponse(data);
+        });
 }
 
 auto FocuserService::setINDIProperty(const std::string& deviceId,
                                      const std::string& propertyName,
                                      const json& value) -> json {
-    return withConnectedDevice(deviceId, "setINDIProperty",
-                               [&](auto focuser) -> json {
-        bool success = false;
+    return withConnectedDevice(
+        deviceId, "setINDIProperty", [&](auto focuser) -> json {
+            bool success = false;
 
-        if (propertyName == "ABS_FOCUS_POSITION" && value.is_number_integer()) {
-            success = focuser->moveToPosition(value.get<int>());
-        } else if (propertyName == "FOCUS_MAX" && value.is_number_integer()) {
-            success = focuser->setMaxLimit(value.get<int>());
-        } else if (propertyName == "FOCUS_SPEED" && value.is_number()) {
-            success = focuser->setSpeed(value.get<double>());
-        } else if (propertyName == "FOCUS_REVERSE_MOTION" && value.is_boolean()) {
-            success = focuser->setReversed(value.get<bool>());
-        } else if (propertyName == "FOCUS_BACKLASH_STEPS" && value.is_number_integer()) {
-            impl_->backlashSteps = value.get<int>();
-            success = true;
-        } else {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Unknown or invalid property: " + propertyName);
-        }
+            if (propertyName == "ABS_FOCUS_POSITION" &&
+                value.is_number_integer()) {
+                success = focuser->moveToPosition(value.get<int>());
+            } else if (propertyName == "FOCUS_MAX" &&
+                       value.is_number_integer()) {
+                success = focuser->setMaxLimit(value.get<int>());
+            } else if (propertyName == "FOCUS_SPEED" && value.is_number()) {
+                success = focuser->setSpeed(value.get<double>());
+            } else if (propertyName == "FOCUS_REVERSE_MOTION" &&
+                       value.is_boolean()) {
+                success = focuser->setReversed(value.get<bool>());
+            } else if (propertyName == "FOCUS_BACKLASH_STEPS" &&
+                       value.is_number_integer()) {
+                impl_->backlashSteps = value.get<int>();
+                success = true;
+            } else {
+                return makeErrorResponse(
+                    ErrorCode::INVALID_FIELD_VALUE,
+                    "Unknown or invalid property: " + propertyName);
+            }
 
-        if (success) {
-            return makeSuccessResponse("Property " + propertyName + " updated");
-        }
-        return makeErrorResponse(ErrorCode::OPERATION_FAILED,
-                                 "Failed to set property " + propertyName);
-    });
+            if (success) {
+                return makeSuccessResponse("Property " + propertyName +
+                                           " updated");
+            }
+            return makeErrorResponse(ErrorCode::OPERATION_FAILED,
+                                     "Failed to set property " + propertyName);
+        });
 }
 
-auto FocuserService::syncPosition(const std::string& deviceId, int position) -> json {
-    return withConnectedDevice(deviceId, "syncPosition",
-                               [&](auto focuser) -> json {
-        if (position < 0) {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Position must be non-negative");
-        }
+auto FocuserService::syncPosition(const std::string& deviceId, int position)
+    -> json {
+    return withConnectedDevice(
+        deviceId, "syncPosition", [&](auto focuser) -> json {
+            if (position < 0) {
+                return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
+                                         "Position must be non-negative");
+            }
 
-        if (focuser->syncPosition(position)) {
-            json data;
-            data["position"] = position;
-            return makeSuccessResponse(data, "Position synced");
-        }
-        return makeErrorResponse(ErrorCode::OPERATION_FAILED,
-                                 "Failed to sync position");
-    });
+            if (focuser->syncPosition(position)) {
+                json data;
+                data["position"] = position;
+                return makeSuccessResponse(data, "Position synced");
+            }
+            return makeErrorResponse(ErrorCode::OPERATION_FAILED,
+                                     "Failed to sync position");
+        });
 }
 
 auto FocuserService::getBacklash(const std::string& deviceId) -> json {
     return withConnectedDevice(deviceId, "getBacklash",
                                [this](auto focuser) -> json {
-        (void)focuser;
-        json data;
-        data["steps"] = impl_->backlashSteps;
-        data["enabled"] = impl_->backlashSteps > 0;
-        return makeSuccessResponse(data);
-    });
+                                   (void)focuser;
+                                   json data;
+                                   data["steps"] = impl_->backlashSteps;
+                                   data["enabled"] = impl_->backlashSteps > 0;
+                                   return makeSuccessResponse(data);
+                               });
 }
 
-auto FocuserService::setBacklash(const std::string& deviceId, int steps) -> json {
-    return withConnectedDevice(deviceId, "setBacklash",
-                               [&](auto focuser) -> json {
-        (void)focuser;
-        if (steps < 0) {
-            return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
-                                     "Backlash steps must be non-negative");
-        }
+auto FocuserService::setBacklash(const std::string& deviceId, int steps)
+    -> json {
+    return withConnectedDevice(
+        deviceId, "setBacklash", [&](auto focuser) -> json {
+            (void)focuser;
+            if (steps < 0) {
+                return makeErrorResponse(ErrorCode::INVALID_FIELD_VALUE,
+                                         "Backlash steps must be non-negative");
+            }
 
-        impl_->backlashSteps = steps;
+            impl_->backlashSteps = steps;
 
-        json data;
-        data["steps"] = steps;
-        data["enabled"] = steps > 0;
-        return makeSuccessResponse(data, "Backlash compensation updated");
-    });
+            json data;
+            data["steps"] = steps;
+            data["enabled"] = steps > 0;
+            return makeSuccessResponse(data, "Backlash compensation updated");
+        });
 }
 
 }  // namespace lithium::device

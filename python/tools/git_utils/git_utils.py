@@ -25,7 +25,9 @@ class GitUtils:
     Git operations with enhanced error handling and configuration options.
     """
 
-    def __init__(self, repo_dir: Optional[Union[str, Path]] = None, quiet: bool = False):
+    def __init__(
+        self, repo_dir: Optional[Union[str, Path]] = None, quiet: bool = False
+    ):
         """
         Initialize the GitUtils instance.
 
@@ -49,8 +51,13 @@ class GitUtils:
         self.repo_dir = ensure_path(repo_dir)
         logger.debug(f"Repository directory set to: {self.repo_dir}")
 
-    def run_git_command(self, command: List[str], check_errors: bool = True,
-                        capture_output: bool = True, cwd: Optional[Path] = None) -> GitResult:
+    def run_git_command(
+        self,
+        command: List[str],
+        check_errors: bool = True,
+        capture_output: bool = True,
+        cwd: Optional[Path] = None,
+    ) -> GitResult:
         """
         Run a Git command and return its result.
 
@@ -69,17 +76,15 @@ class GitUtils:
         working_dir = cwd or self.repo_dir
 
         # Log the command being executed
-        cmd_str = ' '.join(command)
+        cmd_str = " ".join(command)
         logger.debug(
-            f"Running git command: {cmd_str} in {working_dir or 'current directory'}")
+            f"Running git command: {cmd_str} in {working_dir or 'current directory'}"
+        )
 
         try:
             # Execute the command
             result = subprocess.run(
-                command,
-                capture_output=capture_output,
-                text=True,
-                cwd=working_dir
+                command, capture_output=capture_output, text=True, cwd=working_dir
             )
 
             success = result.returncode == 0
@@ -88,8 +93,7 @@ class GitUtils:
 
             # Handle command failure
             if not success and check_errors:
-                raise GitCommandError(
-                    command, result.returncode, stderr, stdout)
+                raise GitCommandError(command, result.returncode, stderr, stdout)
 
             # Create result object
             message = stdout if success else stderr
@@ -98,7 +102,7 @@ class GitUtils:
                 message=message,
                 output=stdout,
                 error=stderr,
-                return_code=result.returncode
+                return_code=result.returncode,
             )
 
             # Log result
@@ -116,15 +120,25 @@ class GitUtils:
         except FileNotFoundError:
             error_msg = "Git executable not found. Is Git installed and in PATH?"
             logger.error(error_msg)
-            return GitResult(success=False, message=error_msg, error=error_msg, return_code=127)
+            return GitResult(
+                success=False, message=error_msg, error=error_msg, return_code=127
+            )
         except PermissionError:
-            error_msg = f"Permission denied when executing Git command: {' '.join(command)}"
+            error_msg = (
+                f"Permission denied when executing Git command: {' '.join(command)}"
+            )
             logger.error(error_msg)
-            return GitResult(success=False, message=error_msg, error=error_msg, return_code=126)
+            return GitResult(
+                success=False, message=error_msg, error=error_msg, return_code=126
+            )
 
     # Repository operations
-    def clone_repository(self, repo_url: str, clone_dir: Union[str, Path],
-                         options: Optional[List[str]] = None) -> GitResult:
+    def clone_repository(
+        self,
+        repo_url: str,
+        clone_dir: Union[str, Path],
+        options: Optional[List[str]] = None,
+    ) -> GitResult:
         """
         Clone a Git repository.
 
@@ -146,11 +160,12 @@ class GitUtils:
 
         if target_dir.exists() and any(target_dir.iterdir()):
             logger.warning(
-                f"Cannot clone: Directory {target_dir} already exists and is not empty")
+                f"Cannot clone: Directory {target_dir} already exists and is not empty"
+            )
             return GitResult(
                 success=False,
                 message=f"Directory {target_dir} already exists and is not empty.",
-                error=f"Directory {target_dir} already exists and is not empty."
+                error=f"Directory {target_dir} already exists and is not empty.",
             )
 
         # Create parent directories if they don't exist
@@ -173,8 +188,12 @@ class GitUtils:
         return result
 
     @validate_repository
-    def pull_latest_changes(self, remote: str = "origin", branch: Optional[str] = None,
-                            options: Optional[List[str]] = None) -> GitResult:
+    def pull_latest_changes(
+        self,
+        remote: str = "origin",
+        branch: Optional[str] = None,
+        options: Optional[List[str]] = None,
+    ) -> GitResult:
         """
         Pull the latest changes from the remote repository.
 
@@ -194,7 +213,8 @@ class GitUtils:
             command.append(branch)
 
         logger.info(
-            f"Pulling latest changes from {remote}" + (f"/{branch}" if branch else ""))
+            f"Pulling latest changes from {remote}" + (f"/{branch}" if branch else "")
+        )
 
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
@@ -202,8 +222,13 @@ class GitUtils:
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def fetch_changes(self, remote: str = "origin", refspec: Optional[str] = None,
-                      all_remotes: bool = False, prune: bool = False) -> GitResult:
+    def fetch_changes(
+        self,
+        remote: str = "origin",
+        refspec: Optional[str] = None,
+        all_remotes: bool = False,
+        prune: bool = False,
+    ) -> GitResult:
         """
         Fetch the latest changes from the remote repository without merging.
 
@@ -228,7 +253,8 @@ class GitUtils:
 
         fetch_from = "all remotes" if all_remotes else remote
         logger.info(
-            f"Fetching changes from {fetch_from}" + (f" ({refspec})" if refspec else ""))
+            f"Fetching changes from {fetch_from}" + (f" ({refspec})" if refspec else "")
+        )
 
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
@@ -236,8 +262,13 @@ class GitUtils:
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def push_changes(self, remote: str = "origin", branch: Optional[str] = None,
-                     force: bool = False, tags: bool = False) -> GitResult:
+    def push_changes(
+        self,
+        remote: str = "origin",
+        branch: Optional[str] = None,
+        force: bool = False,
+        tags: bool = False,
+    ) -> GitResult:
         """
         Push the committed changes to the remote repository.
 
@@ -266,9 +297,11 @@ class GitUtils:
             push_info.append("with tags")
         push_info_str = f" ({', '.join(push_info)})" if push_info else ""
 
-        logger.info(f"Pushing changes to {remote}" +
-                    (f"/{branch}" if branch else "") +
-                    push_info_str)
+        logger.info(
+            f"Pushing changes to {remote}"
+            + (f"/{branch}" if branch else "")
+            + push_info_str
+        )
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
         with change_directory(self.repo_dir):
@@ -304,16 +337,16 @@ class GitUtils:
             logger.info(f"Adding changes from {paths} to staging area")
         else:
             command.extend(paths)
-            logger.info(
-                f"Adding changes from {len(paths)} paths to staging area")
+            logger.info(f"Adding changes from {len(paths)} paths to staging area")
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
         with change_directory(self.repo_dir):
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def commit_changes(self, message: str, all_changes: bool = False,
-                       amend: bool = False) -> GitResult:
+    def commit_changes(
+        self, message: str, all_changes: bool = False, amend: bool = False
+    ) -> GitResult:
         """
         Commit the staged changes with a message.
 
@@ -338,15 +371,20 @@ class GitUtils:
         commit_type += " with auto-staging" if all_changes else ""
 
         logger.info(
-            f"{commit_type}: {message[:50]}{'...' if len(message) > 50 else ''}")
+            f"{commit_type}: {message[:50]}{'...' if len(message) > 50 else ''}"
+        )
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
         with change_directory(self.repo_dir):
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def reset_changes(self, target: str = "HEAD", mode: str = "mixed",
-                      paths: Optional[List[str]] = None) -> GitResult:
+    def reset_changes(
+        self,
+        target: str = "HEAD",
+        mode: str = "mixed",
+        paths: Optional[List[str]] = None,
+    ) -> GitResult:
         """
         Reset the repository to a specific state.
 
@@ -374,7 +412,7 @@ class GitUtils:
                 return GitResult(
                     success=False,
                     message=f"Invalid reset mode: {mode}. Use 'soft', 'mixed', or 'hard'.",
-                    error=f"Invalid reset mode: {mode}"
+                    error=f"Invalid reset mode: {mode}",
                 )
 
             command.append(target)
@@ -390,8 +428,9 @@ class GitUtils:
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def stash_changes(self, message: Optional[str] = None,
-                      include_untracked: bool = False) -> GitResult:
+    def stash_changes(
+        self, message: Optional[str] = None, include_untracked: bool = False
+    ) -> GitResult:
         """
         Stash the current changes.
 
@@ -421,8 +460,9 @@ class GitUtils:
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def apply_stash(self, stash_id: str = "stash@{0}", pop: bool = False,
-                    index: bool = False) -> GitResult:
+    def apply_stash(
+        self, stash_id: str = "stash@{0}", pop: bool = False, index: bool = False
+    ) -> GitResult:
         """
         Apply stashed changes.
 
@@ -444,8 +484,7 @@ class GitUtils:
         command.append(stash_id)
 
         action = "Popping" if pop else "Applying"
-        logger.info(f"{action} stash {stash_id}" +
-                    (" with index" if index else ""))
+        logger.info(f"{action} stash {stash_id}" + (" with index" if index else ""))
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
         with change_directory(self.repo_dir):
@@ -469,8 +508,9 @@ class GitUtils:
 
     # Branch operations
     @validate_repository
-    def create_branch(self, branch_name: str, start_point: Optional[str] = None,
-                      checkout: bool = True) -> GitResult:
+    def create_branch(
+        self, branch_name: str, start_point: Optional[str] = None, checkout: bool = True
+    ) -> GitResult:
         """
         Create a new branch.
 
@@ -491,16 +531,19 @@ class GitUtils:
             command.append(start_point)
 
         action = "Creating and checking out" if checkout else "Creating"
-        logger.info(f"{action} branch '{branch_name}'" +
-                    (f" from '{start_point}'" if start_point else ""))
+        logger.info(
+            f"{action} branch '{branch_name}'"
+            + (f" from '{start_point}'" if start_point else "")
+        )
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
         with change_directory(self.repo_dir):
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def switch_branch(self, branch_name: str, create: bool = False,
-                      force: bool = False) -> GitResult:
+    def switch_branch(
+        self, branch_name: str, create: bool = False, force: bool = False
+    ) -> GitResult:
         """
         Switch to an existing branch.
 
@@ -535,8 +578,13 @@ class GitUtils:
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def merge_branch(self, branch_name: str, strategy: Optional[str] = None,
-                     commit_message: Optional[str] = None, no_ff: bool = False) -> GitResult:
+    def merge_branch(
+        self,
+        branch_name: str,
+        strategy: Optional[str] = None,
+        commit_message: Optional[str] = None,
+        no_ff: bool = False,
+    ) -> GitResult:
         """
         Merge a branch into the current branch.
 
@@ -566,22 +614,21 @@ class GitUtils:
         if no_ff:
             merge_options.append("no-ff")
 
-        options_str = " (" + ", ".join(merge_options) + \
-            ")" if merge_options else ""
-        logger.info(
-            f"Merging branch '{branch_name}' into current branch{options_str}")
+        options_str = " (" + ", ".join(merge_options) + ")" if merge_options else ""
+        logger.info(f"Merging branch '{branch_name}' into current branch{options_str}")
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
         with change_directory(self.repo_dir):
             result = self.run_git_command(
-                command, check_errors=False, cwd=self.repo_dir)
+                command, check_errors=False, cwd=self.repo_dir
+            )
 
             # Check for merge conflicts
             if not result.success and "CONFLICT" in result.error:
                 logger.warning(
-                    f"Merge conflicts detected while merging '{branch_name}'")
-                raise GitMergeConflict(
-                    f"Merge conflicts detected: {result.error}")
+                    f"Merge conflicts detected while merging '{branch_name}'"
+                )
+                raise GitMergeConflict(f"Merge conflicts detected: {result.error}")
 
             return result
 
@@ -613,8 +660,9 @@ class GitUtils:
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def delete_branch(self, branch_name: str, force: bool = False,
-                      remote: Optional[str] = None) -> GitResult:
+    def delete_branch(
+        self, branch_name: str, force: bool = False, remote: Optional[str] = None
+    ) -> GitResult:
         """
         Delete a branch.
 
@@ -628,12 +676,12 @@ class GitUtils:
         """
         if remote:
             command = ["git", "push", remote, "--delete", branch_name]
-            logger.info(
-                f"Deleting remote branch '{branch_name}' from '{remote}'")
+            logger.info(f"Deleting remote branch '{branch_name}' from '{remote}'")
         else:
             command = ["git", "branch", "-D" if force else "-d", branch_name]
-            logger.info(f"Deleting local branch '{branch_name}'" +
-                        (" (force)" if force else ""))
+            logger.info(
+                f"Deleting local branch '{branch_name}'" + (" (force)" if force else "")
+            )
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
         with change_directory(self.repo_dir):
@@ -667,8 +715,13 @@ class GitUtils:
 
     # Tag operations
     @validate_repository
-    def create_tag(self, tag_name: str, commit: str = "HEAD",
-                   message: Optional[str] = None, annotated: bool = True) -> GitResult:
+    def create_tag(
+        self,
+        tag_name: str,
+        commit: str = "HEAD",
+        message: Optional[str] = None,
+        annotated: bool = True,
+    ) -> GitResult:
         """
         Create a new tag.
 
@@ -686,7 +739,8 @@ class GitUtils:
         if annotated and message:
             command.extend(["-a", tag_name, "-m", message, commit])
             logger.info(
-                f"Creating annotated tag '{tag_name}' at '{commit}' with message")
+                f"Creating annotated tag '{tag_name}' at '{commit}' with message"
+            )
         else:
             command.append(tag_name)
             command.append(commit)
@@ -784,8 +838,13 @@ class GitUtils:
             return self.run_git_command(command, cwd=self.repo_dir)
 
     @validate_repository
-    def view_log(self, num_entries: Optional[int] = None, oneline: bool = True,
-                 graph: bool = False, all_branches: bool = False) -> GitResult:
+    def view_log(
+        self,
+        num_entries: Optional[int] = None,
+        oneline: bool = True,
+        graph: bool = False,
+        all_branches: bool = False,
+    ) -> GitResult:
         """
         View the commit log.
 
@@ -819,8 +878,7 @@ class GitUtils:
         if num_entries:
             log_options.append(f"limit {num_entries}")
 
-        options_str = " (" + ", ".join(log_options) + \
-            ")" if log_options else ""
+        options_str = " (" + ", ".join(log_options) + ")" if log_options else ""
         logger.info(f"Viewing commit log{options_str}")
         if self.repo_dir is None:
             raise ValueError("Repository directory is not set.")
@@ -829,8 +887,12 @@ class GitUtils:
 
     # Configuration
     @validate_repository
-    def set_user_info(self, name: Optional[str] = None, email: Optional[str] = None,
-                      global_config: bool = False) -> GitResult:
+    def set_user_info(
+        self,
+        name: Optional[str] = None,
+        email: Optional[str] = None,
+        global_config: bool = False,
+    ) -> GitResult:
         """
         Set the user name and email for the repository.
 
@@ -853,8 +915,7 @@ class GitUtils:
             if self.repo_dir is None:
                 raise ValueError("Repository directory is not set.")
             with change_directory(self.repo_dir):
-                results.append(self.run_git_command(
-                    command, cwd=self.repo_dir))
+                results.append(self.run_git_command(command, cwd=self.repo_dir))
 
         if email:
             command = ["git", "config", config_flag, "user.email", email]
@@ -862,15 +923,14 @@ class GitUtils:
             if self.repo_dir is None:
                 raise ValueError("Repository directory is not set.")
             with change_directory(self.repo_dir):
-                results.append(self.run_git_command(
-                    command, cwd=self.repo_dir))
+                results.append(self.run_git_command(command, cwd=self.repo_dir))
 
         if not results:
             logger.warning("No name or email provided to set")
             return GitResult(
                 success=False,
                 message="No name or email provided to set",
-                error="No name or email provided to set"
+                error="No name or email provided to set",
             )
 
         # Return success only if all operations succeeded
@@ -882,14 +942,23 @@ class GitUtils:
 
         return GitResult(
             success=all_success,
-            message="User info set successfully" if all_success else "Failed to set some user info",
+            message=(
+                "User info set successfully"
+                if all_success
+                else "Failed to set some user info"
+            ),
             output="\n".join(result.output for result in results),
-            error="\n".join(result.error for result in results if result.error)
+            error="\n".join(result.error for result in results if result.error),
         )
 
     # Async versions for concurrent operations
-    async def run_git_command_async(self, command: List[str], check_errors: bool = True,
-                                    capture_output: bool = True, cwd: Optional[Path] = None) -> GitResult:
+    async def run_git_command_async(
+        self,
+        command: List[str],
+        check_errors: bool = True,
+        capture_output: bool = True,
+        cwd: Optional[Path] = None,
+    ) -> GitResult:
         """
         Run a Git command asynchronously.
 
@@ -902,11 +971,11 @@ class GitUtils:
         Returns:
             GitResult: Object containing the command's success status and output.
         """
-        working_dir = str(
-            cwd or self.repo_dir) if cwd or self.repo_dir else None
-        cmd_str = ' '.join(command)
+        working_dir = str(cwd or self.repo_dir) if cwd or self.repo_dir else None
+        cmd_str = " ".join(command)
         logger.debug(
-            f"Running async git command: {cmd_str} in {working_dir or 'current directory'}")
+            f"Running async git command: {cmd_str} in {working_dir or 'current directory'}"
+        )
 
         try:
             # Create subprocess
@@ -914,21 +983,20 @@ class GitUtils:
                 *command,
                 stdout=asyncio.subprocess.PIPE if capture_output else None,
                 stderr=asyncio.subprocess.PIPE if capture_output else None,
-                cwd=working_dir
+                cwd=working_dir,
             )
 
             # Wait for completion and get output
             stdout_data, stderr_data = await process.communicate()
 
-            stdout = stdout_data.decode('utf-8').strip() if stdout_data else ""
-            stderr = stderr_data.decode('utf-8').strip() if stderr_data else ""
+            stdout = stdout_data.decode("utf-8").strip() if stdout_data else ""
+            stderr = stderr_data.decode("utf-8").strip() if stderr_data else ""
 
             success = process.returncode == 0
 
             # Handle command failure
             if not success and check_errors:
-                raise GitCommandError(
-                    command, process.returncode, stderr, stdout)
+                raise GitCommandError(command, process.returncode, stderr, stdout)
 
             # Create result object
             message = stdout if success else stderr
@@ -937,7 +1005,7 @@ class GitUtils:
                 message=message,
                 output=stdout,
                 error=stderr,
-                return_code=process.returncode if process.returncode is not None else 1
+                return_code=process.returncode if process.returncode is not None else 1,
             )
 
             # Log result
@@ -954,4 +1022,6 @@ class GitUtils:
         except FileNotFoundError:
             error_msg = "Git executable not found. Is Git installed and in PATH?"
             logger.error(error_msg)
-            return GitResult(success=False, message=error_msg, error=error_msg, return_code=127)
+            return GitResult(
+                success=False, message=error_msg, error=error_msg, return_code=127
+            )

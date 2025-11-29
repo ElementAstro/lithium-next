@@ -8,13 +8,14 @@ namespace lithium::task {
 
 /**
  * @brief Registers all built-in tasks with the TaskFactory
- * 
+ *
  * This function registers all camera, device, config, script, and search
  * tasks with the global TaskFactory instance. Should be called once at
  * application startup.
- * 
+ *
  * Registered task categories:
- * - Camera: TakeExposure, TakeManyExposure, SubframeExposure, CameraSettings, CameraPreview
+ * - Camera: TakeExposure, TakeManyExposure, SubframeExposure, CameraSettings,
+ * CameraPreview
  * - Sequence: SmartExposure, DeepSkySequence, PlanetaryImaging, Timelapse
  * - Calibration: AutoCalibration, ThermalCycle
  * - Focus: AutoFocus, FocusSeries
@@ -31,10 +32,10 @@ void registerBuiltInTasks();
 
 /**
  * @brief Template wrapper for creating task instances
- * 
+ *
  * Creates a task instance using the standard Task constructor pattern.
  * The task is created with the name and config parameters.
- * 
+ *
  * @tparam TaskType The concrete task type (must inherit from Task)
  * @param name The name for the task instance
  * @param config Initial configuration parameters

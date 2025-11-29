@@ -19,13 +19,11 @@
 #include <type_traits>
 #include <vector>
 
-
 #include "atom/error/exception.hpp"
 #include "atom/type/expected.hpp"
 #include "atom/type/json.hpp"
 
 #undef ERROR
-
 
 using json = nlohmann::json;
 

@@ -334,37 +334,37 @@ public:
      * @brief Task definition for task list generation
      */
     struct TaskDefinition {
-        std::string type;           ///< Task type name
-        std::string name;           ///< Task display name
-        json params;                ///< Task parameters
-        int repeatCount = 1;        ///< Number of repetitions
-        std::string condition;      ///< Conditional expression
+        std::string type;                       ///< Task type name
+        std::string name;                       ///< Task display name
+        json params;                            ///< Task parameters
+        int repeatCount = 1;                    ///< Number of repetitions
+        std::string condition;                  ///< Conditional expression
         std::vector<std::string> dependencies;  ///< Task dependencies
-        int priority = 0;           ///< Task priority
-        bool enabled = true;        ///< Task enabled flag
+        int priority = 0;                       ///< Task priority
+        bool enabled = true;                    ///< Task enabled flag
     };
 
     /**
      * @brief Task list generation configuration
      */
     struct TaskListConfig {
-        std::string targetName;              ///< Target name
-        std::vector<TaskDefinition> tasks;   ///< List of task definitions
-        json globalParams;                   ///< Global parameters applied to all tasks
-        bool expandRepeats = true;           ///< Expand repeat tasks
-        bool processConditions = true;       ///< Process conditional tasks
-        bool applyMacros = true;             ///< Apply macro substitution
+        std::string targetName;             ///< Target name
+        std::vector<TaskDefinition> tasks;  ///< List of task definitions
+        json globalParams;          ///< Global parameters applied to all tasks
+        bool expandRepeats = true;  ///< Expand repeat tasks
+        bool processConditions = true;  ///< Process conditional tasks
+        bool applyMacros = true;        ///< Apply macro substitution
     };
 
     /**
      * @brief Task list generation result
      */
     struct TaskListResult {
-        json taskList;                       ///< Generated task list JSON
-        std::vector<std::string> warnings;   ///< Generation warnings
-        std::vector<std::string> errors;     ///< Generation errors
-        size_t totalTasks = 0;               ///< Total number of tasks generated
-        bool success = false;                ///< Generation success flag
+        json taskList;                      ///< Generated task list JSON
+        std::vector<std::string> warnings;  ///< Generation warnings
+        std::vector<std::string> errors;    ///< Generation errors
+        size_t totalTasks = 0;              ///< Total number of tasks generated
+        bool success = false;               ///< Generation success flag
     };
 
     /**

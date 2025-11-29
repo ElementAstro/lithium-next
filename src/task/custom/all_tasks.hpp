@@ -28,11 +28,11 @@
 #include "common/validation.hpp"
 
 // Device-specific task modules
-#include "camera/camera_tasks.hpp"
-#include "focuser/focuser_tasks.hpp"
-#include "filterwheel/filterwheel_tasks.hpp"
-#include "guider/guider_tasks.hpp"
 #include "astrometry/astrometry_tasks.hpp"
+#include "camera/camera_tasks.hpp"
+#include "filterwheel/filterwheel_tasks.hpp"
+#include "focuser/focuser_tasks.hpp"
+#include "guider/guider_tasks.hpp"
 #include "observatory/observatory_tasks.hpp"
 
 namespace lithium::task {

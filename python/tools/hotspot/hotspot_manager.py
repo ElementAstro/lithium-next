@@ -14,7 +14,11 @@ from typing import Optional, List, Dict, Any, Callable
 
 from loguru import logger
 from .models import (
-    HotspotConfig, AuthenticationType, EncryptionType, BandType, ConnectedClient
+    HotspotConfig,
+    AuthenticationType,
+    EncryptionType,
+    BandType,
+    ConnectedClient,
 )
 from .command_utils import run_command, run_command_async
 
@@ -79,7 +83,7 @@ class HotspotManager:
             self.config_dir.mkdir(parents=True, exist_ok=True)
 
             # Write config to file in JSON format
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, "w") as f:
                 json.dump(self.current_config.to_dict(), f, indent=2)
             return True
         except Exception as e:
@@ -94,7 +98,7 @@ class HotspotManager:
             True if the configuration was successfully loaded
         """
         try:
-            with open(self.config_file, 'r') as f:
+            with open(self.config_file, "r") as f:
                 config_dict = json.load(f)
             self.current_config = HotspotConfig.from_dict(config_dict)
             return True
@@ -133,21 +137,31 @@ class HotspotManager:
 
         # Validate configuration
         if self.current_config.authentication != AuthenticationType.NONE:
-            if self.current_config.password is None or len(self.current_config.password) < 8:
-                logger.error(
-                    "Password is required and must be at least 8 characters")
+            if (
+                self.current_config.password is None
+                or len(self.current_config.password) < 8
+            ):
+                logger.error("Password is required and must be at least 8 characters")
                 return False
 
         # Start hotspot with basic parameters
         cmd = [
-            'nmcli', 'dev', 'wifi', 'hotspot',
-            'ifname', self.current_config.interface,
-            'ssid', self.current_config.name
+            "nmcli",
+            "dev",
+            "wifi",
+            "hotspot",
+            "ifname",
+            self.current_config.interface,
+            "ssid",
+            self.current_config.name,
         ]
 
         # Add password if authentication is enabled
-        if self.current_config.authentication != AuthenticationType.NONE and self.current_config.password is not None:
-            cmd.extend(['password', self.current_config.password])
+        if (
+            self.current_config.authentication != AuthenticationType.NONE
+            and self.current_config.password is not None
+        ):
+            cmd.extend(["password", self.current_config.password])
 
         result = run_command(cmd)
 
@@ -171,56 +185,99 @@ class HotspotManager:
         and other parameters that can't be set during the initial hotspot creation.
         """
         # Set authentication method
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless-security.key-mgmt',
-            self.current_config.authentication.value
-        ])
+        run_command(
+            [
+                "nmcli",
+                "connection",
+                "modify",
+                "Hotspot",
+                "802-11-wireless-security.key-mgmt",
+                self.current_config.authentication.value,
+            ]
+        )
 
         # Set encryption for data protection
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless-security.pairwise',
-            self.current_config.encryption.value
-        ])
+        run_command(
+            [
+                "nmcli",
+                "connection",
+                "modify",
+                "Hotspot",
+                "802-11-wireless-security.pairwise",
+                self.current_config.encryption.value,
+            ]
+        )
 
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless-security.group',
-            self.current_config.encryption.value
-        ])
+        run_command(
+            [
+                "nmcli",
+                "connection",
+                "modify",
+                "Hotspot",
+                "802-11-wireless-security.group",
+                self.current_config.encryption.value,
+            ]
+        )
 
         # Set frequency band (2.4GHz, 5GHz, or both)
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.band',
-            self.current_config.band.value
-        ])
+        run_command(
+            [
+                "nmcli",
+                "connection",
+                "modify",
+                "Hotspot",
+                "802-11-wireless.band",
+                self.current_config.band.value,
+            ]
+        )
 
         # Set channel for broadcasting
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.channel',
-            str(self.current_config.channel)
-        ])
+        run_command(
+            [
+                "nmcli",
+                "connection",
+                "modify",
+                "Hotspot",
+                "802-11-wireless.channel",
+                str(self.current_config.channel),
+            ]
+        )
 
         # Set MAC address behavior for consistent identification
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.cloned-mac-address', 'stable'
-        ])
+        run_command(
+            [
+                "nmcli",
+                "connection",
+                "modify",
+                "Hotspot",
+                "802-11-wireless.cloned-mac-address",
+                "stable",
+            ]
+        )
 
-        run_command([
-            'nmcli', 'connection', 'modify', 'Hotspot',
-            '802-11-wireless.mac-address-randomization', 'no'
-        ])
+        run_command(
+            [
+                "nmcli",
+                "connection",
+                "modify",
+                "Hotspot",
+                "802-11-wireless.mac-address-randomization",
+                "no",
+            ]
+        )
 
         # Set hidden network status if configured
         if self.current_config.hidden:
-            run_command([
-                'nmcli', 'connection', 'modify', 'Hotspot',
-                '802-11-wireless.hidden', 'yes'
-            ])
+            run_command(
+                [
+                    "nmcli",
+                    "connection",
+                    "modify",
+                    "Hotspot",
+                    "802-11-wireless.hidden",
+                    "yes",
+                ]
+            )
 
     def stop(self) -> bool:
         """
@@ -229,7 +286,7 @@ class HotspotManager:
         Returns:
             True if the hotspot was successfully stopped
         """
-        result = run_command(['nmcli', 'connection', 'down', 'Hotspot'])
+        result = run_command(["nmcli", "connection", "down", "Hotspot"])
         if result.success:
             logger.info("Hotspot has been stopped")
         return result.success
@@ -250,11 +307,11 @@ class HotspotManager:
             "ssid": None,
             "clients": [],
             "uptime": None,
-            "ip_address": None
+            "ip_address": None,
         }
 
         # Check if hotspot is running by getting device status
-        dev_status = run_command(['nmcli', 'dev', 'status'])
+        dev_status = run_command(["nmcli", "dev", "status"])
         if not dev_status.success:
             return status
 
@@ -270,7 +327,7 @@ class HotspotManager:
             return status
 
         # Get detailed connection information
-        conn_details = run_command(['nmcli', 'connection', 'show', 'Hotspot'])
+        conn_details = run_command(["nmcli", "connection", "show", "Hotspot"])
         if conn_details.success:
             # Extract relevant details from connection info
             for line in conn_details.stdout.splitlines():
@@ -287,10 +344,17 @@ class HotspotManager:
                         status["ip_address"] = ip_info.split("/")[0]
 
         # Get uptime information
-        uptime_cmd = run_command([
-            'nmcli', '-t', '-f', 'GENERAL.STATE-TIMESTAMP',
-            'connection', 'show', 'Hotspot'
-        ])
+        uptime_cmd = run_command(
+            [
+                "nmcli",
+                "-t",
+                "-f",
+                "GENERAL.STATE-TIMESTAMP",
+                "connection",
+                "show",
+                "Hotspot",
+            ]
+        )
         if uptime_cmd.success:
             # Extract timestamp and calculate uptime
             try:
@@ -332,10 +396,12 @@ class HotspotManager:
             if status["clients"]:
                 print(f"\n**Connected clients** ({len(status['clients'])}):")
                 for client in status["clients"]:
-                    hostname = f" ({client.get('hostname')})" if client.get(
-                        'hostname') else ""
+                    hostname = (
+                        f" ({client.get('hostname')})" if client.get("hostname") else ""
+                    )
                     print(
-                        f"- {client['mac_address']} ({client['ip_address']}){hostname}")
+                        f"- {client['mac_address']} ({client['ip_address']}){hostname}"
+                    )
             else:
                 print("\nNo clients connected")
         else:
@@ -348,11 +414,11 @@ class HotspotManager:
         Returns:
             List of dictionaries containing connection information
         """
-        result = run_command(['nmcli', 'connection', 'show', '--active'])
+        result = run_command(["nmcli", "connection", "show", "--active"])
         connections = []
 
         if result.success:
-            lines = result.stdout.strip().split('\n')
+            lines = result.stdout.strip().split("\n")
             if len(lines) > 1:  # Skip the header line
                 for line in lines[1:]:
                     parts = line.split()
@@ -361,7 +427,7 @@ class HotspotManager:
                             "name": parts[0],
                             "uuid": parts[1],
                             "type": parts[2],
-                            "device": parts[3]
+                            "device": parts[3],
                         }
                         connections.append(connection)
 
@@ -412,9 +478,7 @@ class HotspotManager:
 
         # METHOD 1: Use 'iw' command to list stations
         if status["interface"]:
-            iw_cmd = run_command([
-                'iw', 'dev', status["interface"], 'station', 'dump'
-            ])
+            iw_cmd = run_command(["iw", "dev", status["interface"], "station", "dump"])
 
             if iw_cmd.success:
                 # Parse iw output to extract client MAC addresses and connection times
@@ -423,11 +487,13 @@ class HotspotManager:
                     line = line.strip()
                     if line.startswith("Station"):
                         current_mac = line.split()[1]
-                        clients.append({
-                            "mac_address": current_mac,
-                            "ip_address": "Unknown",
-                            "connected_since": None
-                        })
+                        clients.append(
+                            {
+                                "mac_address": current_mac,
+                                "ip_address": "Unknown",
+                                "connected_since": None,
+                            }
+                        )
                     elif "connected time:" in line and current_mac:
                         # Extract connected time in seconds
                         try:
@@ -438,13 +504,14 @@ class HotspotManager:
                                 for client in clients:
                                     if client["mac_address"] == current_mac:
                                         client["connected_since"] = int(
-                                            time.time() - seconds)
+                                            time.time() - seconds
+                                        )
                                         break
                         except (ValueError, IndexError):
                             pass
 
         # METHOD 2: Use the ARP table to match MACs with IP addresses
-        arp_cmd = run_command(['arp', '-n'])
+        arp_cmd = run_command(["arp", "-n"])
         if arp_cmd.success:
             for line in arp_cmd.stdout.splitlines()[1:]:  # Skip header
                 parts = line.split()
@@ -461,7 +528,7 @@ class HotspotManager:
         leases_file = Path("/var/lib/misc/dnsmasq.leases")
         if leases_file.exists():
             try:
-                with open(leases_file, 'r') as f:
+                with open(leases_file, "r") as f:
                     for line in f:
                         parts = line.split()
                         if len(parts) >= 5:
@@ -490,9 +557,9 @@ class HotspotManager:
         interfaces = []
 
         # Get list of interfaces using nmcli
-        result = run_command(['nmcli', 'device', 'status'])
+        result = run_command(["nmcli", "device", "status"])
         if result.success:
-            lines = result.stdout.strip().split('\n')
+            lines = result.stdout.strip().split("\n")
             if len(lines) > 1:  # Skip the header line
                 for line in lines[1:]:
                     parts = line.split()
@@ -501,7 +568,7 @@ class HotspotManager:
                             "name": parts[0],
                             "type": parts[1],
                             "state": parts[2],
-                            "connection": parts[3] if len(parts) > 3 else "Unknown"
+                            "connection": parts[3] if len(parts) > 3 else "Unknown",
                         }
                         interfaces.append(interface)
 
@@ -523,11 +590,11 @@ class HotspotManager:
         channels = []
 
         # Get channel info using iwlist
-        result = run_command(['iwlist', interface, 'channel'])
+        result = run_command(["iwlist", interface, "channel"])
         if result.success:
             # Parse channel list from output
             channel_pattern = re.compile(r"Channel\s+(\d+)\s+:")
-            for line in result.stdout.strip().split('\n'):
+            for line in result.stdout.strip().split("\n"):
                 match = channel_pattern.search(line)
                 if match:
                     channels.append(int(match.group(1)))
@@ -559,7 +626,11 @@ class HotspotManager:
         # Start the hotspot with updated config
         return self.start()
 
-    async def monitor_clients(self, interval: int = 5, callback: Optional[Callable[[List[Dict[str, Any]]], None]] = None) -> None:
+    async def monitor_clients(
+        self,
+        interval: int = 5,
+        callback: Optional[Callable[[List[Dict[str, Any]]], None]] = None,
+    ) -> None:
         """
         Monitor clients connected to the hotspot in real-time.
 
@@ -593,9 +664,14 @@ class HotspotManager:
                     if clients:
                         print(f"\n{len(clients)} clients connected:")
                         for client in clients:
-                            hostname = f" ({client['hostname']})" if 'hostname' in client and client['hostname'] else ""
+                            hostname = (
+                                f" ({client['hostname']})"
+                                if "hostname" in client and client["hostname"]
+                                else ""
+                            )
                             print(
-                                f"- {client['mac_address']} ({client.get('ip_address', 'Unknown IP')}){hostname}")
+                                f"- {client['mac_address']} ({client.get('ip_address', 'Unknown IP')}){hostname}"
+                            )
                     else:
                         print("\nNo clients connected")
 

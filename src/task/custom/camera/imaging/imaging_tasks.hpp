@@ -15,9 +15,13 @@ namespace lithium::task::camera {
  */
 class DeepSkySequenceTask : public CameraTaskBase {
 public:
-    DeepSkySequenceTask() : CameraTaskBase("DeepSkySequence") { setupParameters(); }
+    DeepSkySequenceTask() : CameraTaskBase("DeepSkySequence") {
+        setupParameters();
+    }
     DeepSkySequenceTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "DeepSkySequence"; }
     static std::string getTaskTypeName() { return "DeepSkySequence"; }
@@ -35,9 +39,13 @@ private:
  */
 class PlanetaryImagingTask : public CameraTaskBase {
 public:
-    PlanetaryImagingTask() : CameraTaskBase("PlanetaryImaging") { setupParameters(); }
+    PlanetaryImagingTask() : CameraTaskBase("PlanetaryImaging") {
+        setupParameters();
+    }
     PlanetaryImagingTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "PlanetaryImaging"; }
     static std::string getTaskTypeName() { return "PlanetaryImaging"; }
@@ -57,7 +65,9 @@ class TimelapseTask : public CameraTaskBase {
 public:
     TimelapseTask() : CameraTaskBase("Timelapse") { setupParameters(); }
     TimelapseTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Timelapse"; }
     static std::string getTaskTypeName() { return "Timelapse"; }
@@ -77,7 +87,9 @@ class MosaicTask : public CameraTaskBase {
 public:
     MosaicTask() : CameraTaskBase("Mosaic") { setupParameters(); }
     MosaicTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "Mosaic"; }
     static std::string getTaskTypeName() { return "Mosaic"; }
@@ -88,7 +100,8 @@ protected:
 
 private:
     void setupParameters();
-    void calculatePanelPositions(int rows, int cols, double overlap, double fovWidth, double fovHeight);
+    void calculatePanelPositions(int rows, int cols, double overlap,
+                                 double fovWidth, double fovHeight);
 };
 
 }  // namespace lithium::task::camera

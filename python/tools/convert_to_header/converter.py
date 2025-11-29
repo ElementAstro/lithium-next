@@ -72,7 +72,8 @@ class Converter:
                     return base64.b64encode(data), "base64"
                 case _:
                     logger.warning(
-                        f"Unknown compression type: {self.options.compression}. Using none.")
+                        f"Unknown compression type: {self.options.compression}. Using none."
+                    )
                     return data, "none"
         except Exception as e:
             raise CompressionError(f"Failed to compress data: {str(e)}") from e
@@ -105,10 +106,10 @@ class Converter:
                     return base64.b64decode(data)
                 case _:
                     raise CompressionError(
-                        f"Unknown compression type: {compression_type}")
+                        f"Unknown compression type: {compression_type}"
+                    )
         except Exception as e:
-            raise CompressionError(
-                f"Failed to decompress data: {str(e)}") from e
+            raise CompressionError(f"Failed to decompress data: {str(e)}") from e
 
     def _format_byte(self, byte_value: int, data_format: DataFormat) -> str:
         """
@@ -141,8 +142,7 @@ class Converter:
                 else:
                     return f"0x{byte_value:02X}"  # Non-printable fallback
             case _:
-                logger.warning(
-                    f"Unknown data format: {data_format}. Using hex format.")
+                logger.warning(f"Unknown data format: {data_format}. Using hex format.")
                 return f"0x{byte_value:02X}"
 
     def _generate_checksum(self, data: bytes) -> str:
@@ -168,7 +168,8 @@ class Converter:
                 return f"{zlib.crc32(data) & 0xFFFFFFFF:08x}"
             case _:
                 logger.warning(
-                    f"Unknown checksum algorithm: {self.options.checksum_algorithm}. Using SHA-256.")
+                    f"Unknown checksum algorithm: {self.options.checksum_algorithm}. Using SHA-256."
+                )
                 return hashlib.sha256(data).hexdigest()
 
     def _verify_checksum(self, data: bytes, expected_checksum: str) -> bool:
@@ -237,7 +238,7 @@ class Converter:
 
         # Add values with proper indentation
         for i in range(0, len(formatted_values), values_per_line):
-            chunk = formatted_values[i:i + values_per_line]
+            chunk = formatted_values[i : i + values_per_line]
             line = indent + ", ".join(chunk)
             if i + values_per_line < len(formatted_values):
                 line += ","
@@ -262,10 +263,10 @@ class Converter:
         guard_name = filename.stem.upper()
 
         # Replace non-alphanumeric characters with underscore
-        guard_name = ''.join(c if c.isalnum() else '_' for c in guard_name)
+        guard_name = "".join(c if c.isalnum() else "_" for c in guard_name)
 
         # Ensure it starts with a letter or underscore (required for macro names)
-        if guard_name and not (guard_name[0].isalpha() or guard_name[0] == '_'):
+        if guard_name and not (guard_name[0].isalpha() or guard_name[0] == "_"):
             guard_name = f"_{guard_name}"
 
         return f"{guard_name}_H"
@@ -285,7 +286,7 @@ class Converter:
 
         chunks = []
         for i in range(0, len(data), self.options.split_size):
-            chunks.append(data[i:i + self.options.split_size])
+            chunks.append(data[i : i + self.options.split_size])
 
         return chunks
 
@@ -294,7 +295,7 @@ class Converter:
         data: bytes,
         part_index: int = 0,
         total_parts: int = 1,
-        original_size: int = None
+        original_size: int = None,
     ) -> str:
         """
         Generate the content for a single header file.
@@ -409,7 +410,8 @@ class Converter:
         # Add array declaration
         indent = "    " if in_class else ""
         lines.append(
-            f"{indent}{opts.const_qualifier} {opts.array_type} {array_name}[] = ")
+            f"{indent}{opts.const_qualifier} {opts.array_type} {array_name}[] = "
+        )
 
         # Add array initializer
         for i, line in enumerate(array_initializer):
@@ -422,15 +424,16 @@ class Converter:
         if opts.include_size_var:
             lines.append("")
             lines.append(
-                f"{indent}{opts.const_qualifier} unsigned int {size_name} = sizeof({array_name});")
+                f"{indent}{opts.const_qualifier} unsigned int {size_name} = sizeof({array_name});"
+            )
 
         # Add class methods if in class
         if in_class:
             lines.append("")
             lines.append(
-                f"    const {opts.array_type}* data() const {{ return {array_name}; }}")
-            lines.append(
-                f"    unsigned int size() const {{ return {size_name}; }}")
+                f"    const {opts.array_type}* data() const {{ return {array_name}; }}"
+            )
+            lines.append(f"    unsigned int size() const {{ return {size_name}; }}")
             lines.append("};")
 
         # Add namespace closing if specified
@@ -467,7 +470,7 @@ class Converter:
         info: HeaderInfo = {}  # Explicitly typed as HeaderInfo
 
         # Parse array name and data type
-        array_decl_pattern = r'(\w+)\s+(\w+)\s+(\w+)$$$$'
+        array_decl_pattern = r"(\w+)\s+(\w+)\s+(\w+)$$$$"
         if match := re.search(array_decl_pattern, content):
             info["const_qualifier"] = match.group(1)
             info["array_type"] = match.group(2)
@@ -475,29 +478,31 @@ class Converter:
 
         # Extract compression information
         if "Compression: " in content:
-            for line in content.split('\n'):
+            for line in content.split("\n"):
                 if "Compression: " in line:
-                    if match := re.search(r'Compression:\s*(\w+)', line):
+                    if match := re.search(r"Compression:\s*(\w+)", line):
                         info["compression"] = match.group(1)
 
         # Extract original size if available
         if "Original size: " in content:
-            for line in content.split('\n'):
+            for line in content.split("\n"):
                 if "Original size: " in line:
-                    if match := re.search(r'Original size:\s*(\d+)', line):
+                    if match := re.search(r"Original size:\s*(\d+)", line):
                         info["original_size"] = int(match.group(1))
 
         # Extract checksum if available
         if "Checksum: " in content:
-            for line in content.split('\n'):
+            for line in content.split("\n"):
                 if "Checksum: " in line:
-                    if match := re.search(r'Checksum $(\w+)$:\s*([0-9a-fA-F]+)', line):
+                    if match := re.search(r"Checksum $(\w+)$:\s*([0-9a-fA-F]+)", line):
                         info["checksum_algorithm"] = match.group(1)
                         info["checksum"] = match.group(2)
 
         return info
 
-    def _extract_binary_data_from_header(self, content: str, header_info: HeaderInfo) -> bytes:
+    def _extract_binary_data_from_header(
+        self, content: str, header_info: HeaderInfo
+    ) -> bytes:
         """
         Extract binary data from header file content.
 
@@ -516,20 +521,19 @@ class Converter:
 
         # Find the array initialization
         # This pattern looks for array initialization between braces
-        pattern = rf'{array_name}$$$$\s*=\s*{{([^}}]*)}}'
+        pattern = rf"{array_name}$$$$\s*=\s*{{([^}}]*)}}"
 
         if match := re.search(pattern, content, re.DOTALL):
             array_data_str = match.group(1)
 
             # Remove comments
-            array_data_str = re.sub(
-                r'/\*.*?\*/', '', array_data_str, flags=re.DOTALL)
-            array_data_str = re.sub(
-                r'//.*?$', '', array_data_str, flags=re.MULTILINE)
+            array_data_str = re.sub(r"/\*.*?\*/", "", array_data_str, flags=re.DOTALL)
+            array_data_str = re.sub(r"//.*?$", "", array_data_str, flags=re.MULTILINE)
 
             # Split into individual elements and clean up
-            elements = [elem.strip()
-                        for elem in array_data_str.split(',') if elem.strip()]
+            elements = [
+                elem.strip() for elem in array_data_str.split(",") if elem.strip()
+            ]
 
             # Convert elements to bytes
             binary_data = bytearray()
@@ -544,29 +548,38 @@ class Converter:
                         char_content = elem[1:-1]
                         if len(char_content) == 1:
                             binary_data.append(ord(char_content))
-                        elif len(char_content) == 2 and char_content[0] == '\\':
+                        elif len(char_content) == 2 and char_content[0] == "\\":
                             # Handle escaped char like '\n', '\t', etc.
-                            if char_content[1] in {'n', 't', 'r', '0', '\\', '\'', '\"'}:
-                                char = {'n': '\n', 't': '\t', 'r': '\r', '0': '\0',
-                                        '\\': '\\', '\'': '\'', '\"': '\"'}[char_content[1]]
+                            if char_content[1] in {"n", "t", "r", "0", "\\", "'", '"'}:
+                                char = {
+                                    "n": "\n",
+                                    "t": "\t",
+                                    "r": "\r",
+                                    "0": "\0",
+                                    "\\": "\\",
+                                    "'": "'",
+                                    '"': '"',
+                                }[char_content[1]]
                                 binary_data.append(ord(char))
                             else:
                                 binary_data.append(ord(char_content[1]))
                     else:  # Decimal or other
                         binary_data.append(int(elem))
                 except ValueError as e:
-                    raise FileFormatError(
-                        f"Failed to parse element '{elem}': {str(e)}")
+                    raise FileFormatError(f"Failed to parse element '{elem}': {str(e)}")
 
             return bytes(binary_data)
         else:
             raise FileFormatError(
-                f"Could not find array data for '{array_name}' in header file")
+                f"Could not find array data for '{array_name}' in header file"
+            )
 
-    def to_header(self,
-                  input_file: PathLike,
-                  output_file: Optional[PathLike] = None,
-                  options: Optional[ConversionOptions] = None) -> List[Path]:
+    def to_header(
+        self,
+        input_file: PathLike,
+        output_file: Optional[PathLike] = None,
+        options: Optional[ConversionOptions] = None,
+    ) -> List[Path]:
         """
         Convert a binary file to a C/C++ header file.
 
@@ -602,12 +615,12 @@ class Converter:
 
         # Read the input file
         logger.info(f"Reading input file: {input_path}")
-        with open(input_path, 'rb') as f:
+        with open(input_path, "rb") as f:
             data = f.read()
 
         # Apply start and end offsets
         if opts.start_offset > 0 or opts.end_offset is not None:
-            data = data[opts.start_offset:opts.end_offset]
+            data = data[opts.start_offset : opts.end_offset]
 
         original_size = len(data)
         logger.info(f"Original data size: {original_size} bytes")
@@ -616,8 +629,7 @@ class Converter:
         checksum = None
         if opts.verify_checksum:
             checksum = self._generate_checksum(data)
-            logger.info(
-                f"Generated {opts.checksum_algorithm} checksum: {checksum}")
+            logger.info(f"Generated {opts.checksum_algorithm} checksum: {checksum}")
 
         # Compress data if requested
         if opts.compression != "none":
@@ -625,7 +637,8 @@ class Converter:
             try:
                 data, compression_type = self._compress_data(data)
                 logger.info(
-                    f"Compressed size: {len(data)} bytes ({len(data)/original_size:.1%} of original)")
+                    f"Compressed size: {len(data)} bytes ({len(data)/original_size:.1%} of original)"
+                )
             except CompressionError as e:
                 logger.error(f"Compression failed: {str(e)}")
                 raise
@@ -641,34 +654,35 @@ class Converter:
             # Determine output filename for this chunk
             if total_chunks > 1:
                 chunk_path = output_path.with_name(
-                    f"{output_path.stem}_part_{i}{output_path.suffix}")
+                    f"{output_path.stem}_part_{i}{output_path.suffix}"
+                )
             else:
                 chunk_path = output_path
 
             # Generate header content
-            logger.info(
-                f"Generating header file {i+1}/{total_chunks}: {chunk_path}")
+            logger.info(f"Generating header file {i+1}/{total_chunks}: {chunk_path}")
             content = self._generate_header_file_content(
                 chunk, i, total_chunks, original_size
             )
 
             # Write header file
             try:
-                with open(chunk_path, 'w', encoding='utf-8') as f:
+                with open(chunk_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 output_files.append(chunk_path)
             except IOError as e:
                 logger.error(f"Failed to write header file: {str(e)}")
                 raise
 
-        logger.info(
-            f"Successfully generated {len(output_files)} header file(s)")
+        logger.info(f"Successfully generated {len(output_files)} header file(s)")
         return output_files
 
-    def to_file(self,
-                input_header: PathLike,
-                output_file: Optional[PathLike] = None,
-                options: Optional[ConversionOptions] = None) -> Path:
+    def to_file(
+        self,
+        input_header: PathLike,
+        output_file: Optional[PathLike] = None,
+        options: Optional[ConversionOptions] = None,
+    ) -> Path:
         """
         Convert a C/C++ header file back to a binary file.
 
@@ -692,8 +706,7 @@ class Converter:
         # Convert input and output paths to Path objects
         input_path = Path(input_header)
         if not input_path.exists():
-            raise FileNotFoundError(
-                f"Input header file not found: {input_path}")
+            raise FileNotFoundError(f"Input header file not found: {input_path}")
 
         # Default output file name if not specified
         if output_file is None:
@@ -706,7 +719,7 @@ class Converter:
 
         # Read input header file
         logger.info(f"Reading header file: {input_path}")
-        with open(input_path, 'r', encoding='utf-8') as f:
+        with open(input_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # Extract header info to detect compression and other settings
@@ -730,7 +743,9 @@ class Converter:
         compression_type = header_info.get("compression", "none")
         if compression_type != "none" or opts.compression != "none":
             # Use compression type from header if available, otherwise from options
-            comp_type = compression_type if compression_type != "none" else opts.compression
+            comp_type = (
+                compression_type if compression_type != "none" else opts.compression
+            )
             logger.info(f"Decompressing data using {comp_type}...")
             try:
                 data = self._decompress_data(data, comp_type)
@@ -742,7 +757,8 @@ class Converter:
         # Verify checksum if requested and available
         if opts.verify_checksum and "checksum" in header_info:
             logger.info(
-                f"Verifying {header_info.get('checksum_algorithm', 'checksum')}...")
+                f"Verifying {header_info.get('checksum_algorithm', 'checksum')}..."
+            )
             if not self._verify_checksum(data, header_info["checksum"]):
                 logger.error("Checksum verification failed")
                 raise ChecksumError("Checksum verification failed")
@@ -751,7 +767,7 @@ class Converter:
         # Write output file
         logger.info(f"Writing binary file: {output_path}")
         try:
-            with open(output_path, 'wb') as f:
+            with open(output_path, "wb") as f:
                 f.write(data)
         except IOError as e:
             logger.error(f"Failed to write binary file: {str(e)}")
@@ -778,7 +794,7 @@ class Converter:
         if not header_path.exists():
             raise FileNotFoundError(f"Header file not found: {header_path}")
 
-        with open(header_path, 'r', encoding='utf-8') as f:
+        with open(header_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         return self._extract_header_info(content)
@@ -786,9 +802,7 @@ class Converter:
 
 # Convenience functions for direct use
 def convert_to_header(
-    input_file: PathLike,
-    output_file: Optional[PathLike] = None,
-    **kwargs
+    input_file: PathLike, output_file: Optional[PathLike] = None, **kwargs
 ) -> List[Path]:
     """
     Convert a binary file to a C/C++ header file.
@@ -816,9 +830,7 @@ def convert_to_header(
 
 
 def convert_to_file(
-    input_header: PathLike,
-    output_file: Optional[PathLike] = None,
-    **kwargs
+    input_header: PathLike, output_file: Optional[PathLike] = None, **kwargs
 ) -> Path:
     """
     Convert a C/C++ header file back to a binary file.

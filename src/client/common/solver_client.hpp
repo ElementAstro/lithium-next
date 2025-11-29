@@ -41,11 +41,11 @@ struct Coordinates {
 struct PlateSolveResult {
     bool success{false};
     Coordinates coordinates;
-    double pixelScale{0.0};      // arcsec/pixel
-    double positionAngle{0.0};   // degrees
+    double pixelScale{0.0};     // arcsec/pixel
+    double positionAngle{0.0};  // degrees
     std::optional<bool> flipped;
-    double radius{0.0};          // search radius used
-    double solveTime{0.0};       // seconds
+    double radius{0.0};     // search radius used
+    double solveTime{0.0};  // seconds
     std::string errorMessage;
 
     void clear() {
@@ -115,9 +115,8 @@ public:
      */
     virtual PlateSolveResult solve(
         const std::string& imageFilePath,
-        const std::optional<Coordinates>& initialCoordinates,
-        double fovW, double fovH,
-        int imageWidth, int imageHeight) = 0;
+        const std::optional<Coordinates>& initialCoordinates, double fovW,
+        double fovH, int imageWidth, int imageHeight) = 0;
 
     /**
      * @brief Asynchronously solve an image
@@ -131,9 +130,8 @@ public:
      */
     virtual std::future<PlateSolveResult> solveAsync(
         const std::string& imageFilePath,
-        const std::optional<Coordinates>& initialCoordinates,
-        double fovW, double fovH,
-        int imageWidth, int imageHeight);
+        const std::optional<Coordinates>& initialCoordinates, double fovW,
+        double fovH, int imageWidth, int imageHeight);
 
     /**
      * @brief Abort current solve operation
@@ -172,30 +170,22 @@ protected:
     /**
      * @brief Convert degrees to radians
      */
-    static double toRadians(double degrees) {
-        return degrees * M_PI / 180.0;
-    }
+    static double toRadians(double degrees) { return degrees * M_PI / 180.0; }
 
     /**
      * @brief Convert radians to degrees
      */
-    static double toDegrees(double radians) {
-        return radians * 180.0 / M_PI;
-    }
+    static double toDegrees(double radians) { return radians * 180.0 / M_PI; }
 
     /**
      * @brief Convert arcseconds to degrees
      */
-    static double arcsecToDegree(double arcsec) {
-        return arcsec / 3600.0;
-    }
+    static double arcsecToDegree(double arcsec) { return arcsec / 3600.0; }
 
     /**
      * @brief Convert degrees to arcseconds
      */
-    static double degreeToArcsec(double degrees) {
-        return degrees * 3600.0;
-    }
+    static double degreeToArcsec(double degrees) { return degrees * 3600.0; }
 
     /**
      * @brief Get output path for solved file

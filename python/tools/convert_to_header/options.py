@@ -23,6 +23,7 @@ from .utils import PathLike, DataFormat, CommentStyle, CompressionType, Checksum
 
 class ConversionMode(Enum):
     """Enum representing the conversion mode."""
+
     TO_HEADER = auto()
     TO_FILE = auto()
     INFO = auto()
@@ -31,6 +32,7 @@ class ConversionMode(Enum):
 @dataclass
 class ConversionOptions:
     """Data class for storing conversion options."""
+
     # Content options
     array_name: str = "resource_data"
     size_name: str = "resource_size"
@@ -73,16 +75,17 @@ class ConversionOptions:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, options_dict: Dict[str, Any]) -> 'ConversionOptions':
+    def from_dict(cls, options_dict: Dict[str, Any]) -> "ConversionOptions":
         """Create ConversionOptions from dictionary."""
-        return cls(**{k: v for k, v in options_dict.items()
-                      if k in cls.__dataclass_fields__})
+        return cls(
+            **{k: v for k, v in options_dict.items() if k in cls.__dataclass_fields__}
+        )
 
     @classmethod
-    def from_json(cls, json_file: PathLike) -> 'ConversionOptions':
+    def from_json(cls, json_file: PathLike) -> "ConversionOptions":
         """Load options from JSON file."""
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
+            with open(json_file, "r", encoding="utf-8") as f:
                 options_dict = json.load(f)
             return cls.from_dict(options_dict)
         except Exception as e:
@@ -90,18 +93,21 @@ class ConversionOptions:
             raise
 
     @classmethod
-    def from_yaml(cls, yaml_file: PathLike) -> 'ConversionOptions':
+    def from_yaml(cls, yaml_file: PathLike) -> "ConversionOptions":
         """Load options from YAML file."""
         try:
             import yaml
-            with open(yaml_file, 'r', encoding='utf-8') as f:
+
+            with open(yaml_file, "r", encoding="utf-8") as f:
                 options_dict = yaml.safe_load(f)
             return cls.from_dict(options_dict)
         except ImportError:
             logger.error(
-                "YAML support requires PyYAML. Install with 'pip install pyyaml'")
+                "YAML support requires PyYAML. Install with 'pip install pyyaml'"
+            )
             raise ImportError(
-                "YAML support requires PyYAML. Install with 'pip install pyyaml'")
+                "YAML support requires PyYAML. Install with 'pip install pyyaml'"
+            )
         except Exception as e:
             logger.error(f"Failed to load options from YAML file: {str(e)}")
             raise

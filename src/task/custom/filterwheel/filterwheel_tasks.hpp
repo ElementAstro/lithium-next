@@ -25,7 +25,9 @@ class ChangeFilterTask : public TaskBase {
 public:
     ChangeFilterTask() : TaskBase("ChangeFilter") { setupParameters(); }
     ChangeFilterTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "ChangeFilter"; }
     static std::string getStaticTaskTypeName() { return "ChangeFilter"; }
@@ -47,7 +49,9 @@ class FilterSequenceTask : public TaskBase {
 public:
     FilterSequenceTask() : TaskBase("FilterSequence") { setupParameters(); }
     FilterSequenceTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "FilterSequence"; }
     static std::string getStaticTaskTypeName() { return "FilterSequence"; }
@@ -69,7 +73,9 @@ class RGBSequenceTask : public TaskBase {
 public:
     RGBSequenceTask() : TaskBase("RGBSequence") { setupParameters(); }
     RGBSequenceTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "RGBSequence"; }
     static std::string getStaticTaskTypeName() { return "RGBSequence"; }
@@ -89,9 +95,13 @@ private:
  */
 class NarrowbandSequenceTask : public TaskBase {
 public:
-    NarrowbandSequenceTask() : TaskBase("NarrowbandSequence") { setupParameters(); }
+    NarrowbandSequenceTask() : TaskBase("NarrowbandSequence") {
+        setupParameters();
+    }
     NarrowbandSequenceTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "NarrowbandSequence"; }
     static std::string getStaticTaskTypeName() { return "NarrowbandSequence"; }
@@ -110,7 +120,9 @@ class LRGBSequenceTask : public TaskBase {
 public:
     LRGBSequenceTask() : TaskBase("LRGBSequence") { setupParameters(); }
     LRGBSequenceTask(const std::string& name, const json& config)
-        : TaskBase(name, config) { setupParameters(); }
+        : TaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "LRGBSequence"; }
     static std::string getStaticTaskTypeName() { return "LRGBSequence"; }

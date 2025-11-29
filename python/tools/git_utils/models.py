@@ -7,6 +7,7 @@ from enum import Enum
 @dataclass
 class GitResult:
     """Class to represent the result of a Git operation."""
+
     success: bool
     message: str
     output: str = ""
@@ -20,6 +21,7 @@ class GitResult:
 
 class GitOutputFormat(Enum):
     """Output format options for Git commands."""
+
     DEFAULT = "default"
     JSON = "json"
     PORCELAIN = "porcelain"

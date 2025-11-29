@@ -31,8 +31,8 @@ struct ImageFiles {
 };
 namespace internal {
 inline auto getAllFiles(const std::string& imageSaveBasePath) -> std::string {
-    LOG_INFO( "getAllFiles: Starting file collection from {}",
-          imageSaveBasePath);
+    LOG_INFO("getAllFiles: Starting file collection from {}",
+             imageSaveBasePath);
     try {
         const auto capturePath = fs::path(imageSaveBasePath) / "CaptureImage";
         const auto planPath = fs::path(imageSaveBasePath) / "ScheduleImage";
@@ -40,7 +40,7 @@ inline auto getAllFiles(const std::string& imageSaveBasePath) -> std::string {
         // 验证目录是否存在
         if (!atom::io::isFolderExists(capturePath.string()) ||
             !atom::io::isFolderExists(planPath.string())) {
-            LOG_ERROR( "getAllFiles: Required directories do not exist");
+            LOG_ERROR("getAllFiles: Required directories do not exist");
             return "CaptureImage{}:ScheduleImage{}";
         }
 
@@ -50,8 +50,8 @@ inline auto getAllFiles(const std::string& imageSaveBasePath) -> std::string {
                  atom::io::glob)(capturePath / "*")) {
             if (atom::io::checkPathType(path) ==
                 atom::io::PathType::REGULAR_FILE) {
-                LOG_DEBUG( "getAllFiles: Found capture file: {}",
-                      path.filename().string());
+                LOG_DEBUG("getAllFiles: Found capture file: {}",
+                          path.filename().string());
                 captureString += path.filename().string() + ";";
             }
         }
@@ -61,20 +61,20 @@ inline auto getAllFiles(const std::string& imageSaveBasePath) -> std::string {
                  atom::io::glob)(planPath / "*")) {
             if (atom::io::checkPathType(path) ==
                 atom::io::PathType::DIRECTORY) {
-                LOG_DEBUG( "getAllFiles: Found schedule directory: {}",
-                      path.filename().string());
+                LOG_DEBUG("getAllFiles: Found schedule directory: {}",
+                          path.filename().string());
                 planString += path.filename().string() + ";";
             }
         }
 
         const auto resultString = captureString + "}:" + planString + '}';
-        LOG_INFO( "getAllFiles: Successfully collected files");
-        LOG_DEBUG( "getAllFiles: Result={}", resultString);
+        LOG_INFO("getAllFiles: Successfully collected files");
+        LOG_DEBUG("getAllFiles: Result={}", resultString);
 
         return resultString;
     } catch (const std::exception& e) {
-        LOG_ERROR( "getAllFiles: Error occurred while collecting files: {}",
-              e.what());
+        LOG_ERROR("getAllFiles: Error occurred while collecting files: {}",
+                  e.what());
         return "CaptureImage{}:ScheduleImage{}";
     }
 }
@@ -167,12 +167,12 @@ inline void showAllImageFolder() {
         imageSaveBasePathOpt.value_or("image").get<std::string>();
 
     auto result = internal::getAllFiles(imageSaveBasePath);
-    LOG_INFO( "showAllImageFolder: Result={}", result);
+    LOG_INFO("showAllImageFolder: Result={}", result);
     messageBus->publish("quarcs", "ShowAllImageFolder:{}"_fmt(result));
 }
 
 inline void moveImageToUSB(const std::string& path) {
-    LOG_INFO( "moveImageToUSB: Entering function with path: {}", path);
+    LOG_INFO("moveImageToUSB: Entering function with path: {}", path);
 
     std::shared_ptr<ConfigManager> configManager;
     GET_OR_CREATE_PTR(configManager, ConfigManager, Constants::CONFIG_MANAGER)
@@ -186,8 +186,8 @@ inline void moveImageToUSB(const std::string& path) {
 
     // 验证基础路径
     if (!fs::exists(basePath)) {
-        LOG_ERROR( "moveImageToUSB: Base directory does not exist: {}",
-              basePath);
+        LOG_ERROR("moveImageToUSB: Base directory does not exist: {}",
+                  basePath);
         return;
     }
 
@@ -195,30 +195,29 @@ inline void moveImageToUSB(const std::string& path) {
     std::vector<std::string> folderList;
     for (const auto& entry : fs::directory_iterator(basePath)) {
         if (entry.is_directory() && entry.path().filename() != "CDROM") {
-            LOG_DEBUG( "moveImageToUSB: Found device: {}",
-                  entry.path().string());
+            LOG_DEBUG("moveImageToUSB: Found device: {}",
+                      entry.path().string());
             folderList.push_back(entry.path().string());
         }
     }
 
     if (folderList.empty()) {
-        LOG_ERROR( "moveImageToUSB: No USB device found");
+        LOG_ERROR("moveImageToUSB: No USB device found");
         return;
     }
     if (folderList.size() > 1) {
-        LOG_WARN(
-              "moveImageToUSB: Multiple USB devices found, using first one");
+        LOG_WARN("moveImageToUSB: Multiple USB devices found, using first one");
     }
 
     std::string usbMountPoint = folderList.front();
-    LOG_INFO( "moveImageToUSB: Selected USB mount point: {}", usbMountPoint);
+    LOG_INFO("moveImageToUSB: Selected USB mount point: {}", usbMountPoint);
 
     const std::string PASSWORD = "quarcs";
 
     // 验证USB状态
     if (!fs::exists(usbMountPoint) || !fs::is_directory(usbMountPoint)) {
-        LOG_ERROR( "moveImageToUSB: Invalid USB filesystem or not ready: {}",
-              usbMountPoint);
+        LOG_ERROR("moveImageToUSB: Invalid USB filesystem or not ready: {}",
+                  usbMountPoint);
         return;
     }
 
@@ -226,29 +225,29 @@ inline void moveImageToUSB(const std::string& path) {
     if ((fs::status(usbMountPoint).permissions() & fs::perms::owner_write) !=
         fs::perms::none) {
         LOG_DEBUG(
-              "moveImageToUSB: Attempting to remount filesystem as read-write");
+            "moveImageToUSB: Attempting to remount filesystem as read-write");
         if (!internal::remountReadWrite(usbMountPoint, PASSWORD)) {
             LOG_ERROR(
-                  "moveImageToUSB: Failed to remount filesystem as read-write");
+                "moveImageToUSB: Failed to remount filesystem as read-write");
             return;
         }
-        LOG_INFO( "moveImageToUSB: Filesystem remounted as read-write");
+        LOG_INFO("moveImageToUSB: Filesystem remounted as read-write");
     }
 
     // 检查空间
     long long remainingSpace = internal::getUSBSpace(usbMountPoint);
     if (remainingSpace == -1) {
-        LOG_ERROR( "moveImageToUSB: Failed to get USB space for: {}",
-              usbMountPoint);
+        LOG_ERROR("moveImageToUSB: Failed to get USB space for: {}",
+                  usbMountPoint);
         return;
     }
 
     long long totalSize = internal::getTotalSize(files);
     if (totalSize >= remainingSpace) {
         LOG_ERROR(
-              "moveImageToUSB: Insufficient space on USB drive (need: {}, "
-              "available: {})",
-              totalSize, remainingSpace);
+            "moveImageToUSB: Insufficient space on USB drive (need: {}, "
+            "available: {})",
+            totalSize, remainingSpace);
         return;
     }
 
@@ -259,16 +258,16 @@ inline void moveImageToUSB(const std::string& path) {
     for (const auto& imgPath : files) {
         fs::path sourcePath(imgPath);
         fs::path destinationPath = fs::path(folderPath) / sourcePath.filename();
-        LOG_DEBUG( "moveImageToUSB: Processing file: {} -> {}",
-              sourcePath.string(), destinationPath.string());
+        LOG_DEBUG("moveImageToUSB: Processing file: {} -> {}",
+                  sourcePath.string(), destinationPath.string());
 
         try {
             const auto mkdirCommand =
                 "mkdir -p " + destinationPath.parent_path().string();
             if (!atom::system::executeCommandWithInput(mkdirCommand, PASSWORD)
                      .empty()) {
-                LOG_ERROR( "moveImageToUSB: Failed to create directory: {}",
-                      destinationPath.parent_path().string());
+                LOG_ERROR("moveImageToUSB: Failed to create directory: {}",
+                          destinationPath.parent_path().string());
                 continue;
             }
 
@@ -276,27 +275,26 @@ inline void moveImageToUSB(const std::string& path) {
                 "cp -r " + sourcePath.string() + " " + destinationPath.string();
             if (!atom::system::executeCommandWithInput(cpCommand, PASSWORD)
                      .empty()) {
-                LOG_ERROR( "moveImageToUSB: Failed to copy file: {} to {}",
-                      sourcePath.string(), destinationPath.string());
+                LOG_ERROR("moveImageToUSB: Failed to copy file: {} to {}",
+                          sourcePath.string(), destinationPath.string());
                 continue;
             }
 
-            LOG_INFO( "moveImageToUSB: Successfully copied: {}",
-                  sourcePath.filename().string());
+            LOG_INFO("moveImageToUSB: Successfully copied: {}",
+                     sourcePath.filename().string());
             sumMoveImage++;
         } catch (const std::exception& e) {
-            LOG_ERROR( "moveImageToUSB: Command execution failed: {}",
-                  e.what());
+            LOG_ERROR("moveImageToUSB: Command execution failed: {}", e.what());
             continue;
         }
     }
 
-    LOG_INFO( "moveImageToUSB: Operation completed. Total files moved: {}",
-          sumMoveImage);
+    LOG_INFO("moveImageToUSB: Operation completed. Total files moved: {}",
+             sumMoveImage);
 }
 
 inline void deleteFile(const std::string& path) {
-    LOG_INFO( "deleteFile: Entering function with path={}", path);
+    LOG_INFO("deleteFile: Entering function with path={}", path);
 
     std::shared_ptr<ConfigManager> configManager;
     GET_OR_CREATE_PTR(configManager, ConfigManager, Constants::CONFIG_MANAGER)
@@ -306,11 +304,11 @@ inline void deleteFile(const std::string& path) {
     std::vector<std::string> files = internal::parseString(path, imageBasePath);
 
     for (const auto& file : files) {
-        LOG_DEBUG( "deleteFile: Processing file={}", file);
+        LOG_DEBUG("deleteFile: Processing file={}", file);
 
         auto opt = atom::io::compareFileAndSelfPermissions(file);
         if (!opt) {
-            LOG_ERROR( "deleteFile: Failed to compare file permissions");
+            LOG_ERROR("deleteFile: Failed to compare file permissions");
             continue;
         }
 
@@ -318,55 +316,53 @@ inline void deleteFile(const std::string& path) {
         if (!opt.value()) {
             auto passwordOpt = configManager->get("/quarcs/password");
             if (!passwordOpt) {
-                LOG_ERROR( "deleteFile: Failed to get password from config");
+                LOG_ERROR("deleteFile: Failed to get password from config");
                 continue;
             }
-            LOG_WARN(
-                  "deleteFile: Elevated permissions required for file={}",
-                  file);
+            LOG_WARN("deleteFile: Elevated permissions required for file={}",
+                     file);
             command = "rm -rf {}"_fmt(file);
             auto result = atom::system::executeCommandWithInput(
                 command, passwordOpt.value());
             if (!result.empty()) {
-                LOG_ERROR( "deleteFile: Failed to delete file with sudo: {}",
-                      result);
+                LOG_ERROR("deleteFile: Failed to delete file with sudo: {}",
+                          result);
                 continue;
             }
         } else {
-            LOG_DEBUG(
-                  "deleteFile: User has sufficient permissions for file={}",
-                  file);
+            LOG_DEBUG("deleteFile: User has sufficient permissions for file={}",
+                      file);
             command = "rm -rf {}"_fmt(file);
             auto result = atom::system::executeCommand(command);
             if (!result.empty()) {
-                LOG_ERROR( "deleteFile: Failed to delete file: {}", result);
+                LOG_ERROR("deleteFile: Failed to delete file: {}", result);
                 continue;
             }
         }
 
-        LOG_INFO( "deleteFile: Successfully deleted file={}", file);
+        LOG_INFO("deleteFile: Successfully deleted file={}", file);
     }
 
-    LOG_INFO( "deleteFile: Exiting function");
+    LOG_INFO("deleteFile: Exiting function");
 }
 
 inline void readImageFile(const std::string& message) {
-    LOG_INFO( "Starting readImageFile operation with message: {}", message);
+    LOG_INFO("Starting readImageFile operation with message: {}", message);
     auto imagePath = message;
 
     // 处理路径
     size_t pos = imagePath.find("ReadImageFile:");
     if (pos != std::string::npos) {
-        LOG_DEBUG( "Replacing 'ReadImageFile:' with 'image/' in path");
+        LOG_DEBUG("Replacing 'ReadImageFile:' with 'image/' in path");
         imagePath.replace(pos, 14, "image/");
     }
-    LOG_DEBUG( "Processed image path: {}", imagePath);
+    LOG_DEBUG("Processed image path: {}", imagePath);
 
     imagePath = internal::escapeSpecialChars(imagePath);
-    LOG_DEBUG( "Escaped image path: {}", imagePath);
+    LOG_DEBUG("Escaped image path: {}", imagePath);
 
     // 获取必要组件
-    LOG_DEBUG( "Retrieving required components");
+    LOG_DEBUG("Retrieving required components");
     LITHIUM_GET_REQUIRED_PTR(componentManager, lithium::ComponentManager,
                              Constants::COMPONENT_MANAGER);
     LITHIUM_GET_REQUIRED_PTR(messageBus, atom::async::MessageBus,
@@ -380,52 +376,51 @@ inline void readImageFile(const std::string& message) {
     std::string vueImagePath = configManager->get("/quarcs/image/vueImagePath")
                                    .value_or("image")
                                    .get<std::string>();
-    LOG_DEBUG( "Vue image path from config: {}", vueImagePath);
+    LOG_DEBUG("Vue image path from config: {}", vueImagePath);
 
     // 获取相机信息
     auto camera = std::dynamic_pointer_cast<AtomCamera>(
         deviceManager->getPrimaryDevice("Camera"));
     if (!camera) {
-        LOG_ERROR( "Failed to get primary camera device");
+        LOG_ERROR("Failed to get primary camera device");
         return;
     }
 
     auto cameraBin = camera->getBinning();
     auto isColor = camera->isColor();
     auto processBin = false;
-    LOG_DEBUG( "Camera settings - Binning: {}, IsColor: {}, ProcessBin: {}",
-          cameraBin, isColor, processBin);
+    LOG_DEBUG("Camera settings - Binning: {}, IsColor: {}, ProcessBin: {}",
+              cameraBin, isColor, processBin);
 
     // 检查组件
     if (!componentManager->hasComponent("lithium_image")) {
-        LOG_ERROR( "Component 'lithium_image' not found");
+        LOG_ERROR("Component 'lithium_image' not found");
         return;
     }
-    LOG_DEBUG( "Found lithium_image component");
+    LOG_DEBUG("Found lithium_image component");
 
     try {
-        LOG_INFO( "Attempting to save FITS as PNG");
-        auto component = componentManager->getComponent("lithium_image")
-                            .value()
-                            .lock();
+        LOG_INFO("Attempting to save FITS as PNG");
+        auto component =
+            componentManager->getComponent("lithium_image").value().lock();
         auto result = std::any_cast<int>(
-            component->dispatch("save_fits_as_png", imagePath, isColor, cameraBin,
-                              processBin, vueImagePath));
+            component->dispatch("save_fits_as_png", imagePath, isColor,
+                                cameraBin, processBin, vueImagePath));
 
         if (result == -1) {
-            LOG_ERROR( "Failed to save FITS as PNG - Operation returned -1");
+            LOG_ERROR("Failed to save FITS as PNG - Operation returned -1");
             return;
         }
-        LOG_INFO( "Successfully saved FITS as PNG");
+        LOG_INFO("Successfully saved FITS as PNG");
     } catch (const std::bad_any_cast& e) {
-        LOG_ERROR( "Component cast failed: {}", e.what());
+        LOG_ERROR("Component cast failed: {}", e.what());
         return;
     } catch (const std::exception& e) {
-        LOG_ERROR( "Unexpected error while saving FITS: {}", e.what());
+        LOG_ERROR("Unexpected error while saving FITS: {}", e.what());
         return;
     }
 
-    LOG_INFO( "readImageFile operation completed successfully");
+    LOG_INFO("readImageFile operation completed successfully");
 }
 }  // namespace lithium::middleware
 

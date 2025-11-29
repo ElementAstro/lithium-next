@@ -35,7 +35,7 @@ class NginxPyBindAdapter:
             True for Linux/macOS, False for Windows
         """
         system = platform.system().lower()
-        return system != 'windows'
+        return system != "windows"
 
     @staticmethod
     def _handle_unsupported_platform() -> Dict[str, Any]:
@@ -49,7 +49,7 @@ class NginxPyBindAdapter:
             "success": False,
             "error": "Nginx management is primarily supported on Linux and macOS",
             "platform": platform.system(),
-            "message": "Windows support is limited. Please install Nginx manually."
+            "message": "Windows support is limited. Please install Nginx manually.",
         }
 
     @staticmethod
@@ -62,17 +62,10 @@ class NginxPyBindAdapter:
         """
         try:
             manager = NginxManager(use_colors=False)
-            return {
-                "installed": manager.is_nginx_installed(),
-                "success": True
-            }
+            return {"installed": manager.is_nginx_installed(), "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Error checking installation: {str(e)}")
-            return {
-                "installed": False,
-                "success": False,
-                "error": str(e)
-            }
+            return {"installed": False, "success": False, "error": str(e)}
 
     @staticmethod
     def install() -> Dict[str, Any]:
@@ -92,10 +85,7 @@ class NginxPyBindAdapter:
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Installation failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def start() -> Dict[str, Any]:
@@ -112,10 +102,7 @@ class NginxPyBindAdapter:
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Start failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def stop() -> Dict[str, Any]:
@@ -132,10 +119,7 @@ class NginxPyBindAdapter:
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Stop failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def reload() -> Dict[str, Any]:
@@ -152,10 +136,7 @@ class NginxPyBindAdapter:
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Reload failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def restart() -> Dict[str, Any]:
@@ -172,10 +153,7 @@ class NginxPyBindAdapter:
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Restart failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def check_config() -> Dict[str, Any]:
@@ -189,17 +167,10 @@ class NginxPyBindAdapter:
             manager = NginxManager(use_colors=False)
             valid = manager.check_config()
             logger.info(f"C++ binding: Config check result: {valid}")
-            return {
-                "valid": valid,
-                "success": True
-            }
+            return {"valid": valid, "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Config check failed: {str(e)}")
-            return {
-                "valid": False,
-                "success": False,
-                "error": str(e)
-            }
+            return {"valid": False, "success": False, "error": str(e)}
 
     @staticmethod
     def get_status() -> Dict[str, Any]:
@@ -213,17 +184,10 @@ class NginxPyBindAdapter:
             manager = NginxManager(use_colors=False)
             running = manager.get_status()
             logger.info(f"C++ binding: Nginx status: {running}")
-            return {
-                "running": running,
-                "success": True
-            }
+            return {"running": running, "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Status check failed: {str(e)}")
-            return {
-                "running": False,
-                "success": False,
-                "error": str(e)
-            }
+            return {"running": False, "success": False, "error": str(e)}
 
     @staticmethod
     def get_version() -> Dict[str, Any]:
@@ -237,17 +201,10 @@ class NginxPyBindAdapter:
             manager = NginxManager(use_colors=False)
             version = manager.get_version()
             logger.info(f"C++ binding: Nginx version: {version}")
-            return {
-                "version": version,
-                "success": True
-            }
+            return {"version": version, "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Failed to get version: {str(e)}")
-            return {
-                "version": "",
-                "success": False,
-                "error": str(e)
-            }
+            return {"version": "", "success": False, "error": str(e)}
 
     @staticmethod
     def backup_config(custom_name: str = "") -> Dict[str, Any]:
@@ -266,17 +223,10 @@ class NginxPyBindAdapter:
                 custom_name=custom_name if custom_name else None
             )
             logger.info(f"C++ binding: Configuration backed up to {backup_path}")
-            return {
-                "path": str(backup_path),
-                "success": True
-            }
+            return {"path": str(backup_path), "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Backup failed: {str(e)}")
-            return {
-                "path": "",
-                "success": False,
-                "error": str(e)
-            }
+            return {"path": "", "success": False, "error": str(e)}
 
     @staticmethod
     def restore_config(backup_file: str = "") -> Dict[str, Any]:
@@ -291,17 +241,12 @@ class NginxPyBindAdapter:
         """
         try:
             manager = NginxManager(use_colors=False)
-            manager.restore_config(
-                backup_file=backup_file if backup_file else None
-            )
+            manager.restore_config(backup_file=backup_file if backup_file else None)
             logger.info(f"C++ binding: Configuration restored from {backup_file}")
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Restore failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def list_backups() -> Dict[str, Any]:
@@ -316,21 +261,15 @@ class NginxPyBindAdapter:
             backups = manager.list_backups()
             backup_list = [str(b) for b in backups]
             logger.info(f"C++ binding: Found {len(backup_list)} backup(s)")
-            return {
-                "backups": backup_list,
-                "success": True
-            }
+            return {"backups": backup_list, "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Failed to list backups: {str(e)}")
-            return {
-                "backups": [],
-                "success": False,
-                "error": str(e)
-            }
+            return {"backups": [], "success": False, "error": str(e)}
 
     @staticmethod
-    def create_virtual_host(server_name: str, port: int = 80,
-                           root_dir: str = "", template: str = "basic") -> Dict[str, Any]:
+    def create_virtual_host(
+        server_name: str, port: int = 80, root_dir: str = "", template: str = "basic"
+    ) -> Dict[str, Any]:
         """
         Create a virtual host configuration.
 
@@ -349,20 +288,13 @@ class NginxPyBindAdapter:
                 server_name=server_name,
                 port=port,
                 root_dir=root_dir if root_dir else None,
-                template=template
+                template=template,
             )
             logger.info(f"C++ binding: Virtual host created at {config_path}")
-            return {
-                "path": str(config_path),
-                "success": True
-            }
+            return {"path": str(config_path), "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Virtual host creation failed: {str(e)}")
-            return {
-                "path": "",
-                "success": False,
-                "error": str(e)
-            }
+            return {"path": "", "success": False, "error": str(e)}
 
     @staticmethod
     def enable_virtual_host(server_name: str) -> Dict[str, Any]:
@@ -382,10 +314,7 @@ class NginxPyBindAdapter:
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Failed to enable virtual host: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def disable_virtual_host(server_name: str) -> Dict[str, Any]:
@@ -405,10 +334,7 @@ class NginxPyBindAdapter:
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: Failed to disable virtual host: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def list_virtual_hosts() -> Dict[str, Any]:
@@ -422,20 +348,15 @@ class NginxPyBindAdapter:
             manager = NginxManager(use_colors=False)
             vhosts = manager.list_virtual_hosts()
             logger.info(f"C++ binding: Found {len(vhosts)} virtual host(s)")
-            return {
-                "virtual_hosts": vhosts,
-                "success": True
-            }
+            return {"virtual_hosts": vhosts, "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Failed to list virtual hosts: {str(e)}")
-            return {
-                "virtual_hosts": {},
-                "success": False,
-                "error": str(e)
-            }
+            return {"virtual_hosts": {}, "success": False, "error": str(e)}
 
     @staticmethod
-    def analyze_logs(domain: str = "", lines: int = 100, filter_pattern: str = "") -> Dict[str, Any]:
+    def analyze_logs(
+        domain: str = "", lines: int = 100, filter_pattern: str = ""
+    ) -> Dict[str, Any]:
         """
         Analyze Nginx access logs.
 
@@ -452,23 +373,18 @@ class NginxPyBindAdapter:
             entries = manager.analyze_logs(
                 domain=domain if domain else None,
                 lines=lines,
-                filter_pattern=filter_pattern if filter_pattern else None
+                filter_pattern=filter_pattern if filter_pattern else None,
             )
             logger.info(f"C++ binding: Analyzed {len(entries)} log entries")
-            return {
-                "entries": entries,
-                "success": True
-            }
+            return {"entries": entries, "success": True}
         except Exception as e:
             logger.error(f"C++ binding: Failed to analyze logs: {str(e)}")
-            return {
-                "entries": [],
-                "success": False,
-                "error": str(e)
-            }
+            return {"entries": [], "success": False, "error": str(e)}
 
     @staticmethod
-    def generate_ssl_cert(domain: str, email: str = "", use_letsencrypt: bool = True) -> Dict[str, Any]:
+    def generate_ssl_cert(
+        domain: str, email: str = "", use_letsencrypt: bool = True
+    ) -> Dict[str, Any]:
         """
         Generate SSL certificates for a domain.
 
@@ -485,22 +401,17 @@ class NginxPyBindAdapter:
             cert_path, key_path = manager.generate_ssl_cert(
                 domain=domain,
                 email=email if email else None,
-                use_letsencrypt=use_letsencrypt
+                use_letsencrypt=use_letsencrypt,
             )
             logger.info(f"C++ binding: SSL cert generated for {domain}")
             return {
                 "cert_path": str(cert_path),
                 "key_path": str(key_path),
-                "success": True
+                "success": True,
             }
         except Exception as e:
             logger.error(f"C++ binding: SSL cert generation failed: {str(e)}")
-            return {
-                "cert_path": "",
-                "key_path": "",
-                "success": False,
-                "error": str(e)
-            }
+            return {"cert_path": "", "key_path": "", "success": False, "error": str(e)}
 
     @staticmethod
     def configure_ssl(domain: str, cert_path: str, key_path: str) -> Dict[str, Any]:
@@ -518,18 +429,13 @@ class NginxPyBindAdapter:
         try:
             manager = NginxManager(use_colors=False)
             manager.configure_ssl(
-                domain=domain,
-                cert_path=Path(cert_path),
-                key_path=Path(key_path)
+                domain=domain, cert_path=Path(cert_path), key_path=Path(key_path)
             )
             logger.info(f"C++ binding: SSL configured for {domain}")
             return {"success": True}
         except Exception as e:
             logger.error(f"C++ binding: SSL configuration failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def health_check() -> Dict[str, Any]:
@@ -543,17 +449,10 @@ class NginxPyBindAdapter:
             manager = NginxManager(use_colors=False)
             result = manager.health_check()
             logger.info("C++ binding: Health check completed")
-            return {
-                "success": True,
-                "health": result
-            }
+            return {"success": True, "health": result}
         except Exception as e:
             logger.error(f"C++ binding: Health check failed: {str(e)}")
-            return {
-                "success": False,
-                "health": {},
-                "error": str(e)
-            }
+            return {"success": False, "health": {}, "error": str(e)}
 
 
 class NginxManagerBindings:
@@ -660,15 +559,20 @@ class NginxManagerBindings:
             logger.error(f"Restore failed: {str(e)}")
             return False
 
-    def create_virtual_host(self, server_name: str, port: int = 80,
-                            root_dir: str = "", template: str = 'basic') -> str:
+    def create_virtual_host(
+        self,
+        server_name: str,
+        port: int = 80,
+        root_dir: str = "",
+        template: str = "basic",
+    ) -> str:
         """Create a virtual host configuration."""
         try:
             config_path = self.manager.create_virtual_host(
                 server_name=server_name,
                 port=port,
                 root_dir=root_dir if root_dir else None,
-                template=template
+                template=template,
             )
             return str(config_path)
         except Exception as e:
@@ -709,4 +613,4 @@ class NginxManagerBindings:
             return json.dumps(result)
         except Exception as e:
             logger.error(f"Health check failed: {str(e)}")
-            return "{\"error\": \"Health check failed\"}"
+            return '{"error": "Health check failed"}'

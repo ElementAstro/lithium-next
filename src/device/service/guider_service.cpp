@@ -10,15 +10,14 @@
 
 namespace lithium::device {
 
-GuiderService::GuiderService()
-    : BaseDeviceService("GuiderService") {
-    LOG_INFO( "GuiderService: Initialized");
+GuiderService::GuiderService() : BaseDeviceService("GuiderService") {
+    LOG_INFO("GuiderService: Initialized");
 }
 
 // ==================== Connection ====================
 
-auto GuiderService::connect(const std::string& host, int port,
-                            int timeout) -> json {
+auto GuiderService::connect(const std::string& host, int port, int timeout)
+    -> json {
     return executeWithErrorHandling("connect", [&]() -> json {
         // Create PHD2 client if not exists
         if (!guider_) {
@@ -78,11 +77,12 @@ auto GuiderService::getConnectionStatus() -> json {
 // ==================== Guiding Control ====================
 
 auto GuiderService::startGuiding(double settlePixels, double settleTime,
-                                 double settleTimeout,
-                                 bool recalibrate) -> json {
+                                 double settleTimeout, bool recalibrate)
+    -> json {
     return executeWithErrorHandling("startGuiding", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         lithium::client::SettleParams settle;
         settle.pixels = settlePixels;
@@ -104,7 +104,8 @@ auto GuiderService::startGuiding(double settlePixels, double settleTime,
 auto GuiderService::stopGuiding() -> json {
     return executeWithErrorHandling("stopGuiding", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->stopGuiding();
         return makeSuccessResponse("Guiding stopped");
@@ -114,7 +115,8 @@ auto GuiderService::stopGuiding() -> json {
 auto GuiderService::pause(bool full) -> json {
     return executeWithErrorHandling("pause", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->pause(full);
         return makeSuccessResponse("Guiding paused");
@@ -124,7 +126,8 @@ auto GuiderService::pause(bool full) -> json {
 auto GuiderService::resume() -> json {
     return executeWithErrorHandling("resume", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->resume();
         return makeSuccessResponse("Guiding resumed");
@@ -135,7 +138,8 @@ auto GuiderService::dither(double amount, bool raOnly, double settlePixels,
                            double settleTime, double settleTimeout) -> json {
     return executeWithErrorHandling("dither", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         lithium::client::DitherParams params;
         params.amount = amount;
@@ -156,7 +160,8 @@ auto GuiderService::dither(double amount, bool raOnly, double settlePixels,
 auto GuiderService::loop() -> json {
     return executeWithErrorHandling("loop", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->loop();
         return makeSuccessResponse("Looping started");
@@ -166,7 +171,8 @@ auto GuiderService::loop() -> json {
 auto GuiderService::stopCapture() -> json {
     return executeWithErrorHandling("stopCapture", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->stopGuiding();  // PHD2 uses stopGuiding to stop capture
         return makeSuccessResponse("Capture stopped");
@@ -189,7 +195,8 @@ auto GuiderService::getStatus() -> json {
         data["state"] = guider_->getGuiderStateName();
         data["isGuiding"] = guider_->isGuiding();
         data["isPaused"] = guider_->isPaused();
-        data["isLooping"] = guider_->getGuiderState() == lithium::client::GuiderState::Looping;
+        data["isLooping"] =
+            guider_->getGuiderState() == lithium::client::GuiderState::Looping;
         data["isCalibrated"] = guider_->isCalibrated();
         data["equipmentConnected"] = guider_->getConnected();
         data["pixelScale"] = guider_->getPixelScale();
@@ -217,7 +224,8 @@ auto GuiderService::getStatus() -> json {
 auto GuiderService::getStats() -> json {
     return executeWithErrorHandling("getStats", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         auto stats = guider->getGuideStats();
 
@@ -237,7 +245,8 @@ auto GuiderService::getStats() -> json {
 auto GuiderService::getCurrentStar() -> json {
     return executeWithErrorHandling("getCurrentStar", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         auto star = guider->getCurrentStar();
 
@@ -259,7 +268,8 @@ auto GuiderService::getCurrentStar() -> json {
 auto GuiderService::isCalibrated() -> json {
     return executeWithErrorHandling("isCalibrated", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["calibrated"] = guider->isCalibrated();
@@ -270,7 +280,8 @@ auto GuiderService::isCalibrated() -> json {
 auto GuiderService::clearCalibration(const std::string& which) -> json {
     return executeWithErrorHandling("clearCalibration", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->clearCalibration();  // PHD2Client doesn't take 'which' param
         return makeSuccessResponse("Calibration cleared");
@@ -280,7 +291,8 @@ auto GuiderService::clearCalibration(const std::string& which) -> json {
 auto GuiderService::flipCalibration() -> json {
     return executeWithErrorHandling("flipCalibration", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->flipCalibration();
         return makeSuccessResponse("Calibration flipped");
@@ -290,7 +302,8 @@ auto GuiderService::flipCalibration() -> json {
 auto GuiderService::getCalibrationData() -> json {
     return executeWithErrorHandling("getCalibrationData", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         auto calData = guider->getCalibrationData();
 
@@ -314,7 +327,8 @@ auto GuiderService::findStar(std::optional<int> roiX, std::optional<int> roiY,
                              std::optional<int> roiHeight) -> json {
     return executeWithErrorHandling("findStar", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         std::optional<std::array<int, 4>> roi;
         if (roiX && roiY && roiWidth && roiHeight) {
@@ -337,7 +351,8 @@ auto GuiderService::findStar(std::optional<int> roiX, std::optional<int> roiY,
 auto GuiderService::setLockPosition(double x, double y, bool exact) -> json {
     return executeWithErrorHandling("setLockPosition", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setLockPosition(x, y, exact);
         return makeSuccessResponse("Lock position set");
@@ -347,7 +362,8 @@ auto GuiderService::setLockPosition(double x, double y, bool exact) -> json {
 auto GuiderService::getLockPosition() -> json {
     return executeWithErrorHandling("getLockPosition", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         auto pos = guider->getLockPosition();
 
@@ -369,7 +385,8 @@ auto GuiderService::getLockPosition() -> json {
 auto GuiderService::getExposure() -> json {
     return executeWithErrorHandling("getExposure", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["exposureMs"] = guider->getExposure();
@@ -380,7 +397,8 @@ auto GuiderService::getExposure() -> json {
 auto GuiderService::setExposure(int exposureMs) -> json {
     return executeWithErrorHandling("setExposure", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setExposure(exposureMs);
         return makeSuccessResponse("Exposure set");
@@ -390,7 +408,8 @@ auto GuiderService::setExposure(int exposureMs) -> json {
 auto GuiderService::getExposureDurations() -> json {
     return executeWithErrorHandling("getExposureDurations", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["durations"] = guider->getExposureDurations();
@@ -401,7 +420,8 @@ auto GuiderService::getExposureDurations() -> json {
 auto GuiderService::getCameraFrameSize() -> json {
     return executeWithErrorHandling("getCameraFrameSize", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         auto size = guider->getCameraFrameSize();
         json data;
@@ -414,7 +434,8 @@ auto GuiderService::getCameraFrameSize() -> json {
 auto GuiderService::getCcdTemperature() -> json {
     return executeWithErrorHandling("getCcdTemperature", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["temperature"] = guider->getCcdTemperature();
@@ -425,7 +446,8 @@ auto GuiderService::getCcdTemperature() -> json {
 auto GuiderService::getCoolerStatus() -> json {
     return executeWithErrorHandling("getCoolerStatus", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data = guider->getCoolerStatus();
         return makeSuccessResponse(data);
@@ -435,7 +457,8 @@ auto GuiderService::getCoolerStatus() -> json {
 auto GuiderService::saveImage() -> json {
     return executeWithErrorHandling("saveImage", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["filename"] = guider->saveImage();
@@ -446,7 +469,8 @@ auto GuiderService::saveImage() -> json {
 auto GuiderService::getStarImage(int size) -> json {
     return executeWithErrorHandling("getStarImage", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data = guider->getStarImage(size);
         return makeSuccessResponse(data);
@@ -456,7 +480,8 @@ auto GuiderService::getStarImage(int size) -> json {
 auto GuiderService::captureSingleFrame(std::optional<int> exposureMs) -> json {
     return executeWithErrorHandling("captureSingleFrame", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->captureSingleFrame(exposureMs, std::nullopt);
         return makeSuccessResponse("Frame capture started");
@@ -469,7 +494,8 @@ auto GuiderService::guidePulse(const std::string& direction, int durationMs,
                                bool useAO) -> json {
     return executeWithErrorHandling("guidePulse", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         std::string which = useAO ? "AO" : "Mount";
         guider->guidePulse(durationMs, direction, which);
@@ -482,7 +508,8 @@ auto GuiderService::guidePulse(const std::string& direction, int durationMs,
 auto GuiderService::getDecGuideMode() -> json {
     return executeWithErrorHandling("getDecGuideMode", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["mode"] = guider->getDecGuideMode();
@@ -493,7 +520,8 @@ auto GuiderService::getDecGuideMode() -> json {
 auto GuiderService::setDecGuideMode(const std::string& mode) -> json {
     return executeWithErrorHandling("setDecGuideMode", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setDecGuideMode(mode);
         return makeSuccessResponse("Dec guide mode set");
@@ -504,7 +532,8 @@ auto GuiderService::getAlgoParam(const std::string& axis,
                                  const std::string& name) -> json {
     return executeWithErrorHandling("getAlgoParam", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["axis"] = axis;
@@ -515,10 +544,12 @@ auto GuiderService::getAlgoParam(const std::string& axis,
 }
 
 auto GuiderService::setAlgoParam(const std::string& axis,
-                                 const std::string& name, double value) -> json {
+                                 const std::string& name, double value)
+    -> json {
     return executeWithErrorHandling("setAlgoParam", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setAlgoParam(axis, name, value);
         return makeSuccessResponse("Algorithm parameter set");
@@ -530,7 +561,8 @@ auto GuiderService::setAlgoParam(const std::string& axis,
 auto GuiderService::isEquipmentConnected() -> json {
     return executeWithErrorHandling("isEquipmentConnected", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["connected"] = guider->getConnected();
@@ -541,7 +573,8 @@ auto GuiderService::isEquipmentConnected() -> json {
 auto GuiderService::connectEquipment() -> json {
     return executeWithErrorHandling("connectEquipment", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setConnected(true);
         return makeSuccessResponse("Equipment connected");
@@ -551,7 +584,8 @@ auto GuiderService::connectEquipment() -> json {
 auto GuiderService::disconnectEquipment() -> json {
     return executeWithErrorHandling("disconnectEquipment", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setConnected(false);
         return makeSuccessResponse("Equipment disconnected");
@@ -561,7 +595,8 @@ auto GuiderService::disconnectEquipment() -> json {
 auto GuiderService::getEquipmentInfo() -> json {
     return executeWithErrorHandling("getEquipmentInfo", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data = guider->getCurrentEquipment();
         return makeSuccessResponse(data);
@@ -573,7 +608,8 @@ auto GuiderService::getEquipmentInfo() -> json {
 auto GuiderService::getProfiles() -> json {
     return executeWithErrorHandling("getProfiles", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data = guider->getProfiles();
 
@@ -584,7 +620,8 @@ auto GuiderService::getProfiles() -> json {
 auto GuiderService::getCurrentProfile() -> json {
     return executeWithErrorHandling("getCurrentProfile", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         auto profile = guider->getProfile();
@@ -597,7 +634,8 @@ auto GuiderService::getCurrentProfile() -> json {
 auto GuiderService::setProfile(int profileId) -> json {
     return executeWithErrorHandling("setProfile", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setProfile(profileId);
         return makeSuccessResponse("Profile set");
@@ -609,18 +647,21 @@ auto GuiderService::setProfile(int profileId) -> json {
 auto GuiderService::updateSettings(const json& settings) -> json {
     return executeWithErrorHandling("updateSettings", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         if (settings.contains("exposure")) {
             guider->setExposure(settings["exposure"].get<int>());
         }
 
         if (settings.contains("decGuideMode")) {
-            guider->setDecGuideMode(settings["decGuideMode"].get<std::string>());
+            guider->setDecGuideMode(
+                settings["decGuideMode"].get<std::string>());
         }
 
         if (settings.contains("lockShiftEnabled")) {
-            guider->setLockShiftEnabled(settings["lockShiftEnabled"].get<bool>());
+            guider->setLockShiftEnabled(
+                settings["lockShiftEnabled"].get<bool>());
         }
 
         return makeSuccessResponse("Settings updated");
@@ -632,7 +673,8 @@ auto GuiderService::updateSettings(const json& settings) -> json {
 auto GuiderService::isLockShiftEnabled() -> json {
     return executeWithErrorHandling("isLockShiftEnabled", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         json data;
         data["enabled"] = guider->isLockShiftEnabled();
@@ -643,7 +685,8 @@ auto GuiderService::isLockShiftEnabled() -> json {
 auto GuiderService::setLockShiftEnabled(bool enable) -> json {
     return executeWithErrorHandling("setLockShiftEnabled", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->setLockShiftEnabled(enable);
         return makeSuccessResponse("Lock shift updated");
@@ -655,7 +698,8 @@ auto GuiderService::setLockShiftEnabled(bool enable) -> json {
 auto GuiderService::shutdown() -> json {
     return executeWithErrorHandling("shutdown", [&]() -> json {
         auto [guider, error] = getConnectedGuider();
-        if (error) return *error;
+        if (error)
+            return *error;
 
         guider->shutdown();
         guider_.reset();
@@ -668,8 +712,8 @@ auto GuiderService::shutdown() -> json {
 auto GuiderService::getConnectedGuider()
     -> std::pair<std::shared_ptr<GuiderClient>, std::optional<json>> {
     if (!guider_) {
-        return {nullptr,
-                makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND, "Guider not found")};
+        return {nullptr, makeErrorResponse(ErrorCode::DEVICE_NOT_FOUND,
+                                           "Guider not found")};
     }
 
     if (!guider_->isConnected()) {

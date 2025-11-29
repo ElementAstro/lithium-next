@@ -17,7 +17,8 @@ double calculateBJD(double jd, double ra, double dec, double longitude,
                     double latitude, double elevation) {
     using namespace lithium::tools::astronomy;
 
-    // Convert declination to radians (ra, longitude, latitude reserved for future use)
+    // Convert declination to radians (ra, longitude, latitude reserved for
+    // future use)
     (void)ra;
     (void)longitude;
     (void)latitude;

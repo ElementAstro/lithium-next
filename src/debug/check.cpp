@@ -15,7 +15,7 @@ namespace lithium::debug {
 class CommandChecker::CommandCheckerImpl {
 public:
     std::vector<CheckRule> rules;
-    std::map<std::string, size_t> ruleNameToIndex; // Map for fast rule lookup
+    std::map<std::string, size_t> ruleNameToIndex;  // Map for fast rule lookup
     std::vector<std::string> dangerousCommands{"rm", "mkfs", "dd", "format"};
     size_t maxLineLength{80};
     size_t maxNestingDepth{5};
@@ -33,25 +33,29 @@ public:
         const std::string& name,
         std::function<std::optional<Error>(const std::string&, size_t)> check) {
         // Prevent duplicate rule names
-        if (ruleNameToIndex.count(name)) return;
+        if (ruleNameToIndex.count(name))
+            return;
         rules.push_back({name, std::move(check)});
         ruleNameToIndex[name] = rules.size() - 1;
     }
 
     bool removeRule(const std::string& name) {
         auto it = ruleNameToIndex.find(name);
-        if (it == ruleNameToIndex.end()) return false;
+        if (it == ruleNameToIndex.end())
+            return false;
         size_t idx = it->second;
         rules.erase(rules.begin() + idx);
         ruleNameToIndex.erase(it);
         // Rebuild index map
-        for (size_t i = 0; i < rules.size(); ++i) ruleNameToIndex[rules[i].name] = i;
+        for (size_t i = 0; i < rules.size(); ++i)
+            ruleNameToIndex[rules[i].name] = i;
         return true;
     }
 
     std::vector<std::string> listRules() const {
         std::vector<std::string> names;
-        for (const auto& rule : rules) names.push_back(rule.name);
+        for (const auto& rule : rules)
+            names.push_back(rule.name);
         return names;
     }
 
@@ -449,7 +453,8 @@ void CommandChecker::addRule(
 }
 
 bool CommandChecker::removeRule(const std::string& name) {
-    std::unique_lock lock(ruleMutex_);    return impl_->removeRule(name);
+    std::unique_lock lock(ruleMutex_);
+    return impl_->removeRule(name);
 }
 
 std::vector<std::string> CommandChecker::listRules() const {

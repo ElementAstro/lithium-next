@@ -748,190 +748,199 @@ public:
 
     bool exportToCSV(const std::string& filename,
                      const std::vector<std::string>& fields, Dialect dialect) {
-        try {
-            std::ofstream output(filename);
-            DictWriter writer(output, fields, dialect);
+                try {
+                    std::ofstream output(filename);
+                    DictWriter writer(output, fields, dialect);
 
-            for (const auto& [name, star] : starObjectIndex_) {
-                std::unordered_map<std::string, std::string> row;
-                populateStarObjectRow(star, row);
-                writer.writeRow(row);
-            }
+                    for (const auto& [name, star] : starObjectIndex_) {
+                        std::unordered_map<std::string, std::string> row;
+                        populateStarObjectRow(star, row);
+                        writer.writeRow(row);
+                    }
 
-            spdlog::info("Successfully exported data to {}", filename);
-            return true;
-        } catch (const std::exception& e) {
-            spdlog::error("Error exporting to CSV {}: {}", filename, e.what());
-            return false;
-        }
+                    spdlog::info("Successfully exported data to {}", filename);
+                    return true;
+                } catch (const std::exception& e) {
+                    spdlog::error("Error exporting to CSV {}: {}", filename,
+                                  e.what());
+                    return false;
+                }
     }
 
     void clearCache() {
-        spdlog::info("Clearing query cache");
-        queryCache_.clear();
+                spdlog::info("Clearing query cache");
+                queryCache_.clear();
     }
 
     void setCacheSize(size_t size) {
-        spdlog::info("Resizing query cache to {}", size);
-        queryCache_.resize(size);
+                spdlog::info("Resizing query cache to {}", size);
+                queryCache_.resize(size);
     }
 
     [[nodiscard]] auto getCacheStats() const -> std::string {
-        std::stringstream ss;
-        ss << "Cache Statistics:\n"
-           << "Size: " << queryCache_.size() << "\n"
-           << "Load Factor: " << queryCache_.loadFactor();
-        return ss.str();
+                std::stringstream ss;
+                ss << "Cache Statistics:\n"
+                   << "Size: " << queryCache_.size() << "\n"
+                   << "Load Factor: " << queryCache_.loadFactor();
+                return ss.str();
     }
 
     void optimizeRecommendationEngine() {
-        recommendationEngine_.optimize();
-        spdlog::info("Recommendation engine optimized");
+                recommendationEngine_.optimize();
+                spdlog::info("Recommendation engine optimized");
     }
 
     [[nodiscard]] auto getRecommendationEngineStats() const -> std::string {
-        return recommendationEngine_.getStats();
+                return recommendationEngine_.getStats();
     }
 
     void addImplicitFeedback(const std::string& user, const std::string& item) {
-        recommendationEngine_.addImplicitFeedback(user, item);
+                recommendationEngine_.addImplicitFeedback(user, item);
     }
 
     bool exportRecommendationDataToCSV(const std::string& filename) const {
-        return recommendationEngine_.exportToCSV(filename);
+                return recommendationEngine_.exportToCSV(filename);
     }
 
     bool importRecommendationDataFromCSV(const std::string& filename) {
-        return recommendationEngine_.importFromCSV(filename);
+                return recommendationEngine_.importFromCSV(filename);
     }
 
     void addRatings(const std::vector<std::tuple<std::string, std::string, double>>& ratings) {
-        recommendationEngine_.addRatings(ratings);
+                recommendationEngine_.addRatings(ratings);
     }
 
     bool batchUpdateStarObjects(const std::string& csvFilename) {
-        static const std::vector<std::string> defaultFields = {"name", "aliases",
-                                                               "click_count"};
-        return loadFromCSV(csvFilename, defaultFields, Dialect());
+                static const std::vector<std::string> defaultFields = {
+                    "name", "aliases", "click_count"};
+                return loadFromCSV(csvFilename, defaultFields, Dialect());
     }
 
     void processStarObjectFromCSV(
         const std::unordered_map<std::string, std::string>& row) {
-        std::string name = row.at("name");
-        std::vector<std::string> aliases;
+                std::string name = row.at("name");
+                std::vector<std::string> aliases;
 
-        if (row.count("aliases")) {
-            std::stringstream ss(row.at("aliases"));
-            std::string alias;
-            while (std::getline(ss, alias, ';')) {
-                aliases.push_back(trim(alias));
-            }
-        }
+                if (row.count("aliases")) {
+                    std::stringstream ss(row.at("aliases"));
+                    std::string alias;
+                    while (std::getline(ss, alias, ';')) {
+                        aliases.push_back(trim(alias));
+                    }
+                }
 
-        StarObject star(name, aliases);
+                StarObject star(name, aliases);
 
-        // Set other properties
-        if (row.count("click_count")) {
-            star.setClickCount(std::stoi(row.at("click_count")));
-        }
+                // Set other properties
+                if (row.count("click_count")) {
+                    star.setClickCount(std::stoi(row.at("click_count")));
+                }
 
-        addStarObject(star);
+                addStarObject(star);
     }
 
     // ... (rest of the code remains the same)
 
 void SearchEngine::batchProcessRatings(const std::string& csvFilename) {
-    spdlog::info("Starting batch processing of ratings from {}", csvFilename);
-    try {
-        std::ifstream file(csvFilename);
-        if (!file.is_open()) {
-            spdlog::error("Failed to open ratings file: {}", csvFilename);
-            return;
-        }
+                spdlog::info("Starting batch processing of ratings from {}",
+                             csvFilename);
+                try {
+                    std::ifstream file(csvFilename);
+                    if (!file.is_open()) {
+                        spdlog::error("Failed to open ratings file: {}",
+                                      csvFilename);
+                        return;
+                    }
 
-        std::vector<std::tuple<std::string, std::string, double>> ratings;
-        std::string line;
-        // Skip header line
-        std::getline(file, line);
+                    std::vector<std::tuple<std::string, std::string, double>>
+                        ratings;
+                    std::string line;
+                    // Skip header line
+                    std::getline(file, line);
 
-        while (std::getline(file, line)) {
-            std::stringstream ss(line);
-            std::string user, item, ratingStr;
+                    while (std::getline(file, line)) {
+                        std::stringstream ss(line);
+                        std::string user, item, ratingStr;
 
-            // Assume CSV format: user,item,rating
-            std::getline(ss, user, ',');
-            std::getline(ss, item, ',');
-            std::getline(ss, ratingStr, ',');
+                        // Assume CSV format: user,item,rating
+                        std::getline(ss, user, ',');
+                        std::getline(ss, item, ',');
+                        std::getline(ss, ratingStr, ',');
 
-            try {
-                double rating = std::stod(ratingStr);
-                ratings.emplace_back(user, item, rating);
-                spdlog::debug("Queued rating: {} -> {} = {}", user, item,
-                              rating);
-            } catch (const std::exception& e) {
-                spdlog::error("Error processing rating: {}", e.what());
-                continue;
-            }
-        }
+                        try {
+                            double rating = std::stod(ratingStr);
+                            ratings.emplace_back(user, item, rating);
+                            spdlog::debug("Queued rating: {} -> {} = {}", user,
+                                          item, rating);
+                        } catch (const std::exception& e) {
+                            spdlog::error("Error processing rating: {}",
+                                          e.what());
+                            continue;
+                        }
+                    }
 
-        // Use efficient batch processing
-        pImpl_->addRatings(ratings);
-        spdlog::info("Processed {} ratings in batch from {}", ratings.size(),
-                     csvFilename);
-    } catch (const std::exception& e) {
-        spdlog::error("Error in batch updating StarObjects: {}", e.what());
-    }
+                    // Use efficient batch processing
+                    pImpl_->addRatings(ratings);
+                    spdlog::info("Processed {} ratings in batch from {}",
+                                 ratings.size(), csvFilename);
+                } catch (const std::exception& e) {
+                    spdlog::error("Error in batch updating StarObjects: {}",
+                                  e.what());
+                }
 }
 
 void SearchEngine::batchUpdateStarObjects(const std::string& csvFilename) {
-    spdlog::info("Starting batch update for star objects from {}", csvFilename);
-    if (!pImpl_->batchUpdateStarObjects(csvFilename)) {
-        spdlog::warn("Batch update failed for {}", csvFilename);
-    }
+                spdlog::info("Starting batch update for star objects from {}",
+                             csvFilename);
+                if (!pImpl_->batchUpdateStarObjects(csvFilename)) {
+                    spdlog::warn("Batch update failed for {}", csvFilename);
+                }
 }
 
 void SearchEngine::clearCache() {
-    pImpl_->clearCache();
+                pImpl_->clearCache();
 }
 
 void SearchEngine::setCacheSize(size_t size) {
-    pImpl_->setCacheSize(size);
+                pImpl_->setCacheSize(size);
 }
 
 auto SearchEngine::getCacheStats() const -> std::string {
-    spdlog::info("Retrieving cache statistics");
-    return pImpl_->getCacheStats();
+                spdlog::info("Retrieving cache statistics");
+                return pImpl_->getCacheStats();
 }
 
 void SearchEngine::optimizeRecommendationEngine() {
-    spdlog::info("Optimizing recommendation engine");
-    pImpl_->optimizeRecommendationEngine();
+                spdlog::info("Optimizing recommendation engine");
+                pImpl_->optimizeRecommendationEngine();
 }
 
 auto SearchEngine::getRecommendationEngineStats() const -> std::string {
-    spdlog::info("Retrieving recommendation engine statistics");
-    return pImpl_->getRecommendationEngineStats();
+                spdlog::info("Retrieving recommendation engine statistics");
+                return pImpl_->getRecommendationEngineStats();
 }
 
 void SearchEngine::addImplicitFeedback(const std::string& user,
                                        const std::string& item) {
-    spdlog::info("Adding implicit feedback: User '{}', Item '{}'", user, item);
-    try {
-        pImpl_->addImplicitFeedback(user, item);
-    } catch (const std::exception& e) {
-        spdlog::error("Error adding implicit feedback: {}", e.what());
-    }
+                spdlog::info("Adding implicit feedback: User '{}', Item '{}'",
+                             user, item);
+                try {
+                    pImpl_->addImplicitFeedback(user, item);
+                } catch (const std::exception& e) {
+                    spdlog::error("Error adding implicit feedback: {}",
+                                  e.what());
+                }
 }
 
 bool SearchEngine::exportRecommendationDataToCSV(
     const std::string& filename) const {
-    spdlog::info("Exporting recommendation data to {}", filename);
-    return pImpl_->exportRecommendationDataToCSV(filename);
+                spdlog::info("Exporting recommendation data to {}", filename);
+                return pImpl_->exportRecommendationDataToCSV(filename);
 }
 
 bool SearchEngine::importRecommendationDataFromCSV(
     const std::string& filename) {
-    spdlog::info("Importing recommendation data from {}", filename);
-    return pImpl_->importRecommendationDataFromCSV(filename);
+                spdlog::info("Importing recommendation data from {}", filename);
+                return pImpl_->importRecommendationDataFromCSV(filename);
 }
-}
+        }

@@ -15,9 +15,13 @@ namespace lithium::task::camera {
  */
 class FilterSequenceTask : public CameraTaskBase {
 public:
-    FilterSequenceTask() : CameraTaskBase("FilterSequence") { setupParameters(); }
+    FilterSequenceTask() : CameraTaskBase("FilterSequence") {
+        setupParameters();
+    }
     FilterSequenceTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "FilterSequence"; }
     static std::string getTaskTypeName() { return "FilterSequence"; }
@@ -37,7 +41,9 @@ class RGBSequenceTask : public CameraTaskBase {
 public:
     RGBSequenceTask() : CameraTaskBase("RGBSequence") { setupParameters(); }
     RGBSequenceTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "RGBSequence"; }
     static std::string getTaskTypeName() { return "RGBSequence"; }
@@ -55,9 +61,13 @@ private:
  */
 class NarrowbandSequenceTask : public CameraTaskBase {
 public:
-    NarrowbandSequenceTask() : CameraTaskBase("NarrowbandSequence") { setupParameters(); }
+    NarrowbandSequenceTask() : CameraTaskBase("NarrowbandSequence") {
+        setupParameters();
+    }
     NarrowbandSequenceTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "NarrowbandSequence"; }
     static std::string getTaskTypeName() { return "NarrowbandSequence"; }

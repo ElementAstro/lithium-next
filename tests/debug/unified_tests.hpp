@@ -1,15 +1,15 @@
 #ifndef LITHIUM_DEBUG_UNIFIED_TESTS_HPP
 #define LITHIUM_DEBUG_UNIFIED_TESTS_HPP
 
-#include "unified_manager.hpp"
-#include "optimized_terminal.hpp"
-#include "optimized_checker.hpp"
-#include "error_handling.hpp"
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <memory>
+#include <gtest/gtest.h>
 #include <chrono>
 #include <future>
+#include <memory>
+#include "error_handling.hpp"
+#include "optimized_checker.hpp"
+#include "optimized_terminal.hpp"
+#include "unified_manager.hpp"
 
 namespace lithium::debug::tests {
 
@@ -38,8 +38,10 @@ public:
 class MockErrorReporter : public ErrorReporterBase {
 public:
     MOCK_METHOD(void, reportError, (const DebugError&), (noexcept, override));
-    MOCK_METHOD(void, reportException, (const DebugException&), (noexcept, override));
-    MOCK_METHOD(std::vector<DebugError>, getRecentErrors, (std::chrono::milliseconds), (const, noexcept, override));
+    MOCK_METHOD(void, reportException, (const DebugException&),
+                (noexcept, override));
+    MOCK_METHOD(std::vector<DebugError>, getRecentErrors,
+                (std::chrono::milliseconds), (const, noexcept, override));
 };
 
 // Test fixtures
@@ -311,6 +313,6 @@ public:
     void StressTestLongRunningOperations();
 };
 
-} // namespace lithium::debug::tests
+}  // namespace lithium::debug::tests
 
-#endif // LITHIUM_DEBUG_UNIFIED_TESTS_HPP
+#endif  // LITHIUM_DEBUG_UNIFIED_TESTS_HPP

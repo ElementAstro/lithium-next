@@ -2,8 +2,8 @@
 #define LITHIUM_SERVER_UTILS_RESPONSE_HPP
 
 #include <crow.h>
-#include "atom/type/json.hpp"
 #include "../models/api.hpp"
+#include "atom/type/json.hpp"
 
 namespace lithium::server::utils {
 
@@ -12,7 +12,8 @@ namespace lithium::server::utils {
  *
  * All responses follow the format:
  * - Success: {"success": true, "request_id": "...", "data": {...}}
- * - Error: {"success": false, "request_id": "...", "error": {"code": "...", "message": "..."}}
+ * - Error: {"success": false, "request_id": "...", "error": {"code": "...",
+ * "message": "..."}}
  *
  * The X-Request-ID header is also set for correlation.
  */
@@ -24,7 +25,8 @@ public:
     static crow::response success(const nlohmann::json& data,
                                   const std::string& message = "") {
         auto request_id = lithium::models::api::generateRequestId();
-        auto body = lithium::models::api::makeSuccess(data, request_id, message);
+        auto body =
+            lithium::models::api::makeSuccess(data, request_id, message);
         return makeResponse(200, request_id, body);
     }
 
@@ -34,7 +36,8 @@ public:
     static crow::response created(const nlohmann::json& data,
                                   const std::string& message = "") {
         auto request_id = lithium::models::api::generateRequestId();
-        auto body = lithium::models::api::makeSuccess(data, request_id, message);
+        auto body =
+            lithium::models::api::makeSuccess(data, request_id, message);
         return makeResponse(201, request_id, body);
     }
 
@@ -44,7 +47,8 @@ public:
     static crow::response accepted(const std::string& message,
                                    const nlohmann::json& data = {}) {
         auto request_id = lithium::models::api::generateRequestId();
-        auto body = lithium::models::api::makeAccepted(data, request_id, message);
+        auto body =
+            lithium::models::api::makeAccepted(data, request_id, message);
         return makeResponse(202, request_id, body);
     }
 
@@ -54,7 +58,8 @@ public:
     static crow::response successWithMessage(const std::string& message,
                                              const nlohmann::json& data = {}) {
         auto request_id = lithium::models::api::generateRequestId();
-        auto body = lithium::models::api::makeSuccess(data, request_id, message);
+        auto body =
+            lithium::models::api::makeSuccess(data, request_id, message);
         return makeResponse(200, request_id, body);
     }
 
@@ -63,19 +68,20 @@ public:
      */
     static crow::response noContent() {
         crow::response res(204);
-        res.set_header("X-Request-ID", lithium::models::api::generateRequestId());
+        res.set_header("X-Request-ID",
+                       lithium::models::api::generateRequestId());
         return res;
     }
 
     /**
      * @brief Create a generic error response
      */
-    static crow::response error(int status,
-                                const std::string& code,
+    static crow::response error(int status, const std::string& code,
                                 const std::string& message,
                                 const nlohmann::json& details = {}) {
         auto request_id = lithium::models::api::generateRequestId();
-        auto body = lithium::models::api::makeError(code, message, request_id, details);
+        auto body =
+            lithium::models::api::makeError(code, message, request_id, details);
         return makeResponse(status, request_id, body);
     }
 
@@ -90,7 +96,8 @@ public:
     /**
      * @brief Create a 401 Unauthorized response
      */
-    static crow::response unauthorized(const std::string& message = "Unauthorized") {
+    static crow::response unauthorized(
+        const std::string& message = "Unauthorized") {
         return error(401, "unauthorized", message);
     }
 
@@ -111,12 +118,13 @@ public:
     /**
      * @brief Create a 404 Not Found response with resource type and name
      */
-    static crow::response notFound(const std::string& resourceType, const std::string& resourceName) {
-        nlohmann::json details = {
-            {"type", resourceType},
-            {"name", resourceName}
-        };
-        return error(404, "not_found", resourceType + " '" + resourceName + "' not found", details);
+    static crow::response notFound(const std::string& resourceType,
+                                   const std::string& resourceName) {
+        nlohmann::json details = {{"type", resourceType},
+                                  {"name", resourceName}};
+        return error(404, "not_found",
+                     resourceType + " '" + resourceName + "' not found",
+                     details);
     }
 
     /**
@@ -124,11 +132,10 @@ public:
      */
     static crow::response deviceNotFound(const std::string& deviceId,
                                          const std::string& deviceType) {
-        nlohmann::json details = {
-            {"deviceId", deviceId},
-            {"deviceType", deviceType}
-        };
-        return error(404, "device_not_found", deviceType + " not found", details);
+        nlohmann::json details = {{"deviceId", deviceId},
+                                  {"deviceType", deviceType}};
+        return error(404, "device_not_found", deviceType + " not found",
+                     details);
     }
 
     /**
@@ -153,8 +160,7 @@ public:
     static crow::response rateLimited(int retryAfterSeconds = 60) {
         auto request_id = lithium::models::api::generateRequestId();
         auto body = lithium::models::api::makeError(
-            "rate_limited",
-            "Too many requests. Please try again later.",
+            "rate_limited", "Too many requests. Please try again later.",
             request_id);
         crow::response res(429);
         res.set_header("Content-Type", "application/json");
@@ -167,14 +173,16 @@ public:
     /**
      * @brief Create a 500 Internal Server Error response
      */
-    static crow::response internalError(const std::string& message = "Internal server error") {
+    static crow::response internalError(
+        const std::string& message = "Internal server error") {
         return error(500, "internal_error", message);
     }
 
     /**
      * @brief Create a 503 Service Unavailable response
      */
-    static crow::response serviceUnavailable(const std::string& message = "Service temporarily unavailable") {
+    static crow::response serviceUnavailable(
+        const std::string& message = "Service temporarily unavailable") {
         return error(503, "service_unavailable", message);
     }
 
@@ -182,10 +190,9 @@ public:
      * @brief Create a 400 Missing Field response
      */
     static crow::response missingField(const std::string& fieldName) {
-        nlohmann::json details = {
-            {"field", fieldName}
-        };
-        return error(400, "missing_field", "Required field '" + fieldName + "' is missing", details);
+        nlohmann::json details = {{"field", fieldName}};
+        return error(400, "missing_field",
+                     "Required field '" + fieldName + "' is missing", details);
     }
 
     /**

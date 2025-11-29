@@ -123,13 +123,13 @@ public:
 protected:
     void executeImpl(const json& params) override {
         logProgress("Starting custom task");
-        
+
         // Check for cancellation
         if (!shouldContinue()) {
             logProgress("Task cancelled");
             return;
         }
-        
+
         // Do work...
         logProgress("Work complete", 1.0);
     }

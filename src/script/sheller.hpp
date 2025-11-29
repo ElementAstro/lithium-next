@@ -55,90 +55,96 @@ enum class ScriptLanguage {
  * @brief Script execution progress information
  */
 struct ScriptProgress {
-    float percentage{0.0f};                              ///< Progress 0.0-1.0
-    std::string status;                                  ///< Current status message
-    std::string currentStep;                             ///< Current execution step
-    std::chrono::system_clock::time_point timestamp;     ///< Last update time
-    std::optional<std::string> output;                   ///< Partial output if available
+    float percentage{0.0f};   ///< Progress 0.0-1.0
+    std::string status;       ///< Current status message
+    std::string currentStep;  ///< Current execution step
+    std::chrono::system_clock::time_point timestamp;  ///< Last update time
+    std::optional<std::string> output;  ///< Partial output if available
 };
 
 /**
  * @brief Extended script metadata with Python support
  */
 struct ScriptMetadata {
-    std::string description;                             ///< Script description
-    std::vector<std::string> tags;                       ///< Categorization tags
-    std::chrono::system_clock::time_point createdAt;     ///< Creation timestamp
-    std::chrono::system_clock::time_point lastModified;  ///< Last modification time
-    size_t version{1};                                   ///< Version number
-    std::unordered_map<std::string, std::string> parameters;  ///< Script parameters
-    ScriptLanguage language{ScriptLanguage::Auto};       ///< Script language type
-    std::string author;                                  ///< Script author
-    std::vector<std::string> dependencies;               ///< Required dependencies
-    std::optional<std::filesystem::path> sourcePath;     ///< Original source file path
-    bool isPython{false};                                ///< Quick check for Python scripts
+    std::string description;                          ///< Script description
+    std::vector<std::string> tags;                    ///< Categorization tags
+    std::chrono::system_clock::time_point createdAt;  ///< Creation timestamp
+    std::chrono::system_clock::time_point
+        lastModified;   ///< Last modification time
+    size_t version{1};  ///< Version number
+    std::unordered_map<std::string, std::string>
+        parameters;                                 ///< Script parameters
+    ScriptLanguage language{ScriptLanguage::Auto};  ///< Script language type
+    std::string author;                             ///< Script author
+    std::vector<std::string> dependencies;          ///< Required dependencies
+    std::optional<std::filesystem::path>
+        sourcePath;        ///< Original source file path
+    bool isPython{false};  ///< Quick check for Python scripts
 };
 
 /**
  * @brief Script execution result with detailed information
  */
 struct ScriptExecutionResult {
-    bool success{false};                                 ///< Whether execution succeeded
-    int exitCode{-1};                                    ///< Exit code
-    std::string output;                                  ///< Standard output
-    std::string errorOutput;                             ///< Standard error
-    std::chrono::milliseconds executionTime{0};          ///< Total execution time
-    std::optional<std::string> exception;                ///< Exception message if any
-    ScriptLanguage detectedLanguage{ScriptLanguage::Auto};  ///< Detected script type
+    bool success{false};      ///< Whether execution succeeded
+    int exitCode{-1};         ///< Exit code
+    std::string output;       ///< Standard output
+    std::string errorOutput;  ///< Standard error
+    std::chrono::milliseconds executionTime{0};  ///< Total execution time
+    std::optional<std::string> exception;        ///< Exception message if any
+    ScriptLanguage detectedLanguage{
+        ScriptLanguage::Auto};  ///< Detected script type
 };
 
 /**
  * @brief Python script configuration for enhanced integration
  */
 struct PythonScriptConfig {
-    std::string moduleName;                              ///< Python module name
-    std::string entryFunction;                           ///< Entry function to call
-    std::vector<std::string> sysPaths;                   ///< Additional sys.path entries
-    std::unordered_map<std::string, std::string> envVars;  ///< Environment variables
-    bool useVirtualEnv{false};                           ///< Use virtual environment
-    std::string virtualEnvPath;                          ///< Virtual environment path
-    std::vector<std::string> requiredPackages;           ///< Required pip packages
-    bool enableProfiling{false};                         ///< Enable performance profiling
-    size_t memoryLimitMB{0};                             ///< Memory limit (0 = unlimited)
-    std::chrono::seconds timeout{300};                   ///< Execution timeout
+    std::string moduleName;             ///< Python module name
+    std::string entryFunction;          ///< Entry function to call
+    std::vector<std::string> sysPaths;  ///< Additional sys.path entries
+    std::unordered_map<std::string, std::string>
+        envVars;                                ///< Environment variables
+    bool useVirtualEnv{false};                  ///< Use virtual environment
+    std::string virtualEnvPath;                 ///< Virtual environment path
+    std::vector<std::string> requiredPackages;  ///< Required pip packages
+    bool enableProfiling{false};        ///< Enable performance profiling
+    size_t memoryLimitMB{0};            ///< Memory limit (0 = unlimited)
+    std::chrono::seconds timeout{300};  ///< Execution timeout
 };
 
 /**
  * @brief Resource limits for script execution
  */
 struct ScriptResourceLimits {
-    size_t maxMemoryMB{1024};                            ///< Maximum memory in MB
-    int maxCpuPercent{100};                              ///< Maximum CPU percentage
-    std::chrono::seconds maxExecutionTime{3600};         ///< Maximum execution time
-    size_t maxOutputSize{10 * 1024 * 1024};              ///< Max output size in bytes
-    int maxConcurrentScripts{4};                         ///< Max concurrent executions
+    size_t maxMemoryMB{1024};                     ///< Maximum memory in MB
+    int maxCpuPercent{100};                       ///< Maximum CPU percentage
+    std::chrono::seconds maxExecutionTime{3600};  ///< Maximum execution time
+    size_t maxOutputSize{10 * 1024 * 1024};       ///< Max output size in bytes
+    int maxConcurrentScripts{4};                  ///< Max concurrent executions
 };
 
 /**
  * @brief Retry strategy configuration
  */
 enum class RetryStrategy {
-    None,        ///< No retry
-    Linear,      ///< Linear backoff
-    Exponential, ///< Exponential backoff
-    Custom       ///< Custom retry logic
+    None,         ///< No retry
+    Linear,       ///< Linear backoff
+    Exponential,  ///< Exponential backoff
+    Custom        ///< Custom retry logic
 };
 
 /**
  * @brief Retry configuration with detailed options
  */
 struct RetryConfig {
-    RetryStrategy strategy{RetryStrategy::None};         ///< Retry strategy
-    int maxRetries{3};                                   ///< Maximum retry attempts
-    std::chrono::milliseconds initialDelay{100};         ///< Initial delay
-    std::chrono::milliseconds maxDelay{30000};           ///< Maximum delay
-    double multiplier{2.0};                              ///< Backoff multiplier
-    std::function<bool(int, const ScriptExecutionResult&)> shouldRetry;  ///< Custom retry predicate
+    RetryStrategy strategy{RetryStrategy::None};  ///< Retry strategy
+    int maxRetries{3};                            ///< Maximum retry attempts
+    std::chrono::milliseconds initialDelay{100};  ///< Initial delay
+    std::chrono::milliseconds maxDelay{30000};    ///< Maximum delay
+    double multiplier{2.0};                       ///< Backoff multiplier
+    std::function<bool(int, const ScriptExecutionResult&)>
+        shouldRetry;  ///< Custom retry predicate
 };
 
 /**
@@ -553,7 +559,8 @@ public:
      * @return Number of scripts discovered and loaded.
      */
     auto discoverScripts(const std::filesystem::path& directory,
-                         const std::vector<std::string>& extensions = {".py", ".sh"},
+                         const std::vector<std::string>& extensions = {".py",
+                                                                       ".sh"},
                          bool recursive = true) -> size_t;
 
     /**
@@ -580,7 +587,8 @@ public:
      * @param name Script name.
      * @param metadata Metadata to set.
      */
-    void setScriptMetadata(std::string_view name, const ScriptMetadata& metadata);
+    void setScriptMetadata(std::string_view name,
+                           const ScriptMetadata& metadata);
 
     // =========================================================================
     // Enhanced Execution Methods
@@ -599,8 +607,8 @@ public:
         std::string_view name,
         const std::unordered_map<std::string, std::string>& args,
         const RetryConfig& config = {},
-        const std::optional<ScriptResourceLimits>& resourceLimits = std::nullopt)
-        -> ScriptExecutionResult;
+        const std::optional<ScriptResourceLimits>& resourceLimits =
+            std::nullopt) -> ScriptExecutionResult;
 
     /**
      * @brief Executes a script and returns a future for async handling.

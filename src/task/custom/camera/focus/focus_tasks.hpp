@@ -17,7 +17,9 @@ class AutoFocusTask : public CameraTaskBase {
 public:
     AutoFocusTask() : CameraTaskBase("AutoFocus") { setupParameters(); }
     AutoFocusTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "AutoFocus"; }
     static std::string getTaskTypeName() { return "AutoFocus"; }
@@ -29,7 +31,7 @@ protected:
 private:
     void setupParameters();
     FocusResult findBestFocus(int startPos, int stepSize, int numSteps,
-                               const json& params);
+                              const json& params);
     double measureFocusMetric(int position, const json& params);
 };
 
@@ -40,7 +42,9 @@ class FocusSeriesTask : public CameraTaskBase {
 public:
     FocusSeriesTask() : CameraTaskBase("FocusSeries") { setupParameters(); }
     FocusSeriesTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "FocusSeries"; }
     static std::string getTaskTypeName() { return "FocusSeries"; }
@@ -58,9 +62,13 @@ private:
  */
 class TemperatureFocusTask : public CameraTaskBase {
 public:
-    TemperatureFocusTask() : CameraTaskBase("TemperatureFocus") { setupParameters(); }
+    TemperatureFocusTask() : CameraTaskBase("TemperatureFocus") {
+        setupParameters();
+    }
     TemperatureFocusTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "TemperatureFocus"; }
     static std::string getTaskTypeName() { return "TemperatureFocus"; }
@@ -71,7 +79,8 @@ protected:
 
 private:
     void setupParameters();
-    int calculateCompensation(double currentTemp, double referenceTemp, double coefficient);
+    int calculateCompensation(double currentTemp, double referenceTemp,
+                              double coefficient);
 };
 
 }  // namespace lithium::task::camera

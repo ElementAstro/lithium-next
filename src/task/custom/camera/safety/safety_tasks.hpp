@@ -15,9 +15,13 @@ namespace lithium::task::camera {
  */
 class WeatherMonitorTask : public CameraTaskBase {
 public:
-    WeatherMonitorTask() : CameraTaskBase("WeatherMonitor") { setupParameters(); }
+    WeatherMonitorTask() : CameraTaskBase("WeatherMonitor") {
+        setupParameters();
+    }
     WeatherMonitorTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "WeatherMonitor"; }
     static std::string getTaskTypeName() { return "WeatherMonitor"; }
@@ -35,9 +39,13 @@ private:
  */
 class CloudDetectionTask : public CameraTaskBase {
 public:
-    CloudDetectionTask() : CameraTaskBase("CloudDetection") { setupParameters(); }
+    CloudDetectionTask() : CameraTaskBase("CloudDetection") {
+        setupParameters();
+    }
     CloudDetectionTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "CloudDetection"; }
     static std::string getTaskTypeName() { return "CloudDetection"; }
@@ -55,9 +63,13 @@ private:
  */
 class SafetyShutdownTask : public CameraTaskBase {
 public:
-    SafetyShutdownTask() : CameraTaskBase("SafetyShutdown") { setupParameters(); }
+    SafetyShutdownTask() : CameraTaskBase("SafetyShutdown") {
+        setupParameters();
+    }
     SafetyShutdownTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "SafetyShutdown"; }
     static std::string getTaskTypeName() { return "SafetyShutdown"; }

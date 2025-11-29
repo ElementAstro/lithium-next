@@ -28,7 +28,6 @@
 #include "atom/utils/to_string.hpp"
 #include "spdlog/spdlog.h"
 
-
 namespace fs = std::filesystem;
 
 namespace lithium {

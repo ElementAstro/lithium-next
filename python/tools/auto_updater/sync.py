@@ -19,7 +19,7 @@ class AutoUpdaterSync:
     def __init__(
         self,
         config: Dict[str, Any],
-        progress_callback: Optional[Callable[[str, float, str], None]] = None
+        progress_callback: Optional[Callable[[str, float, str], None]] = None,
     ):
         """
         Initialize the synchronous auto updater.
@@ -32,8 +32,10 @@ class AutoUpdaterSync:
 
         # Wrap the progress callback if provided
         if progress_callback:
-            self.updater.progress_callback = lambda status, progress, message: progress_callback(
-                status.value, progress, message
+            self.updater.progress_callback = (
+                lambda status, progress, message: progress_callback(
+                    status.value, progress, message
+                )
             )
 
     def check_for_updates(self) -> bool:

@@ -6,12 +6,11 @@ using namespace lithium::system;
 class DependencyManagerTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        manager = std::make_unique<DependencyManager>("./config/package_managers.json");
+        manager = std::make_unique<DependencyManager>(
+            "./config/package_managers.json");
     }
 
-    void TearDown() override {
-        manager.reset();
-    }
+    void TearDown() override { manager.reset(); }
 
     std::unique_ptr<DependencyManager> manager;
 };
@@ -35,12 +34,12 @@ TEST_F(DependencyManagerTest, AddAndRemoveDependency) {
     dep.packageManager = "apt";
 
     manager->addDependency(dep);
-    
+
     auto report = manager->generateDependencyReport();
     EXPECT_TRUE(report.find("test-dependency") != std::string::npos);
 
     manager->removeDependency("test-dependency");
-    
+
     report = manager->generateDependencyReport();
     EXPECT_TRUE(report.find("test-dependency") == std::string::npos);
 }
@@ -55,7 +54,7 @@ TEST_F(DependencyManagerTest, ExportAndImportConfig) {
 
     auto exportResult = manager->exportConfig();
     ASSERT_TRUE(exportResult.value.has_value());
-    
+
     std::string config = *exportResult.value;
     EXPECT_TRUE(config.find("export-test") != std::string::npos);
     EXPECT_TRUE(config.find("2.1.0") != std::string::npos);
@@ -145,7 +144,7 @@ TEST_F(DependencyManagerTest, LinuxPackageManagerDetection) {
     auto pkgManagers = manager->getPackageManagers();
     bool hasLinuxPm = false;
     for (const auto& pm : pkgManagers) {
-        if (pm.name == "apt" || pm.name == "dnf" || pm.name == "pacman" || 
+        if (pm.name == "apt" || pm.name == "dnf" || pm.name == "pacman" ||
             pm.name == "zypper" || pm.name == "yum") {
             hasLinuxPm = true;
             break;

@@ -47,13 +47,7 @@ using json = nlohmann::json;
 /**
  * @brief ASCOM property types
  */
-enum class ASCOMPropertyType {
-    NUMBER,
-    STRING,
-    BOOLEAN,
-    ARRAY,
-    UNKNOWN
-};
+enum class ASCOMPropertyType { NUMBER, STRING, BOOLEAN, ARRAY, UNKNOWN };
 
 /**
  * @brief ASCOM property value container
@@ -227,15 +221,16 @@ public:
      * @brief Set property value
      */
     virtual auto setProperty(const std::string& deviceName,
-                             const std::string& propertyName,
-                             const json& value) -> bool = 0;
+                             const std::string& propertyName, const json& value)
+        -> bool = 0;
 
     /**
      * @brief Execute device action
      */
     virtual auto executeAction(const std::string& deviceName,
                                const std::string& action,
-                               const std::string& parameters = "") -> std::string = 0;
+                               const std::string& parameters = "")
+        -> std::string = 0;
 
     /**
      * @brief Get supported actions for device
@@ -267,13 +262,14 @@ public:
     /**
      * @brief Construct adapter with existing client
      */
-    explicit ASCOMClientAdapter(std::shared_ptr<lithium::client::ASCOMClient> client);
-    
+    explicit ASCOMClientAdapter(
+        std::shared_ptr<lithium::client::ASCOMClient> client);
+
     /**
      * @brief Construct adapter (creates internal client)
      */
     ASCOMClientAdapter();
-    
+
     ~ASCOMClientAdapter() override;
 
     auto connectServer(const std::string& host, int port) -> bool override;
@@ -292,11 +288,10 @@ public:
         -> std::optional<ASCOMPropertyValue> override;
 
     auto setProperty(const std::string& deviceName,
-                     const std::string& propertyName,
-                     const json& value) -> bool override;
+                     const std::string& propertyName, const json& value)
+        -> bool override;
 
-    auto executeAction(const std::string& deviceName,
-                       const std::string& action,
+    auto executeAction(const std::string& deviceName, const std::string& action,
                        const std::string& parameters) -> std::string override;
 
     auto getSupportedActions(const std::string& deviceName)
@@ -316,7 +311,8 @@ public:
 
 private:
     // Convert client DeviceInfo to adapter ASCOMDeviceInfo
-    ASCOMDeviceInfo convertDeviceInfo(const lithium::client::DeviceInfo& info) const;
+    ASCOMDeviceInfo convertDeviceInfo(
+        const lithium::client::DeviceInfo& info) const;
 
     std::shared_ptr<lithium::client::ASCOMClient> client_;
     mutable std::mutex mutex_;
@@ -337,7 +333,7 @@ public:
         host_ = host;
         port_ = port;
         serverConnected_ = true;
-        LOG_INFO( "ASCOMAdapter: Connected to server %s:%d", host.c_str(), port);
+        LOG_INFO("ASCOMAdapter: Connected to server %s:%d", host.c_str(), port);
         return true;
     }
 
@@ -345,7 +341,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         serverConnected_ = false;
         devices_.clear();
-        LOG_INFO( "ASCOMAdapter: Disconnected from server");
+        LOG_INFO("ASCOMAdapter: Disconnected from server");
         return true;
     }
 
@@ -408,16 +404,15 @@ public:
     }
 
     auto setProperty(const std::string& deviceName,
-                     const std::string& propertyName,
-                     const json& value) -> bool override {
+                     const std::string& propertyName, const json& value)
+        -> bool override {
         (void)deviceName;
         (void)propertyName;
         (void)value;
         return true;
     }
 
-    auto executeAction(const std::string& deviceName,
-                       const std::string& action,
+    auto executeAction(const std::string& deviceName, const std::string& action,
                        const std::string& parameters) -> std::string override {
         (void)deviceName;
         (void)action;
@@ -478,16 +473,17 @@ public:
     static auto createDefaultAdapter() -> std::shared_ptr<ASCOMAdapter> {
         return std::make_shared<DefaultASCOMAdapter>();
     }
-    
+
     /**
      * @brief Create real adapter with new ASCOM client
      */
     static auto createAdapter() -> std::shared_ptr<ASCOMAdapter>;
-    
+
     /**
      * @brief Create adapter with existing ASCOM client
      */
-    static auto createAdapter(std::shared_ptr<lithium::client::ASCOMClient> client)
+    static auto createAdapter(
+        std::shared_ptr<lithium::client::ASCOMClient> client)
         -> std::shared_ptr<ASCOMAdapter>;
 };
 

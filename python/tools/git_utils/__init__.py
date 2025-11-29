@@ -24,8 +24,11 @@ Version:
 """
 
 from .exceptions import (
-    GitException, GitCommandError, GitRepositoryNotFound,
-    GitBranchError, GitMergeConflict
+    GitException,
+    GitCommandError,
+    GitRepositoryNotFound,
+    GitBranchError,
+    GitMergeConflict,
 )
 from .models import GitResult, GitOutputFormat
 from .utils import change_directory, ensure_path, validate_repository
@@ -37,19 +40,19 @@ __author__ = "Max Qian"
 __license__ = "GPL-3.0-or-later"
 
 __all__ = [
-    'GitUtils',
-    'GitUtilsPyBindAdapter',
-    'GitException',
-    'GitCommandError',
-    'GitRepositoryNotFound',
-    'GitBranchError',
-    'GitMergeConflict',
-    'GitResult',
-    'GitOutputFormat',
-    'change_directory',
-    'ensure_path',
-    'validate_repository',
-    'get_tool_info',
+    "GitUtils",
+    "GitUtilsPyBindAdapter",
+    "GitException",
+    "GitCommandError",
+    "GitRepositoryNotFound",
+    "GitBranchError",
+    "GitMergeConflict",
+    "GitResult",
+    "GitOutputFormat",
+    "change_directory",
+    "ensure_path",
+    "validate_repository",
+    "get_tool_info",
 ]
 
 
@@ -120,5 +123,5 @@ def get_tool_info() -> dict:
         "classes": {
             "GitUtils": "Main Git operations interface",
             "GitUtilsPyBindAdapter": "Simplified pybind11 interface",
-        }
+        },
     }

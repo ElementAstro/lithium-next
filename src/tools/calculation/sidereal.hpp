@@ -56,7 +56,7 @@ using namespace lithium::tools::astronomy;
  * @return LST in hours (0-24).
  */
 [[nodiscard]] inline double calculateLSTHours(double jd,
-                                               double longitude) noexcept {
+                                              double longitude) noexcept {
     return calculateLST(jd, longitude) / HOURS_TO_DEG;
 }
 
@@ -70,12 +70,14 @@ using namespace lithium::tools::astronomy;
 template <std::floating_point T = double>
 [[nodiscard]] auto calculateSiderealTime(const DateTime& dt, T longitude) -> T {
     T jd = calculateJulianDate<T>(dt);
-    T T_century = (jd - static_cast<T>(JD_J2000)) / static_cast<T>(JULIAN_CENTURY);
+    T T_century =
+        (jd - static_cast<T>(JD_J2000)) / static_cast<T>(JULIAN_CENTURY);
 
-    T theta = static_cast<T>(280.46061837) +
-              static_cast<T>(360.98564736629) * (jd - static_cast<T>(JD_J2000)) +
-              static_cast<T>(0.000387933) * T_century * T_century -
-              T_century * T_century * T_century / static_cast<T>(38710000.0);
+    T theta =
+        static_cast<T>(280.46061837) +
+        static_cast<T>(360.98564736629) * (jd - static_cast<T>(JD_J2000)) +
+        static_cast<T>(0.000387933) * T_century * T_century -
+        T_century * T_century * T_century / static_cast<T>(38710000.0);
 
     // Convert to hours and add longitude contribution
     T siderealTime = theta / static_cast<T>(HOURS_TO_DEG) +
@@ -99,8 +101,10 @@ template <std::floating_point T = double>
 [[nodiscard]] inline double calculateHourAngle(double lst, double ra) noexcept {
     double ha = lst - ra;
     // Normalize to [-12, +12)
-    while (ha < -12.0) ha += 24.0;
-    while (ha >= 12.0) ha -= 24.0;
+    while (ha < -12.0)
+        ha += 24.0;
+    while (ha >= 12.0)
+        ha -= 24.0;
     return ha;
 }
 
@@ -111,7 +115,7 @@ template <std::floating_point T = double>
  * @return Hour angle in degrees.
  */
 [[nodiscard]] inline double calculateHourAngleDeg(double lstDeg,
-                                                   double raDeg) noexcept {
+                                                  double raDeg) noexcept {
     double ha = lstDeg - raDeg;
     return normalizeAngle180(ha);
 }

@@ -250,14 +250,14 @@ public:
      * @brief Watcher lifecycle event types for hooks
      */
     enum class WatcherEvent {
-        STARTED,         ///< Watcher started
-        STOPPED,         ///< Watcher stopped
-        PAUSED,          ///< Watcher paused
-        RESUMED,         ///< Watcher resumed
-        PATH_ADDED,      ///< New path added to watch
-        PATH_REMOVED,    ///< Path removed from watch
-        FILE_CHANGED,    ///< File change detected (before callback)
-        ERROR_OCCURRED   ///< Error occurred during watching
+        STARTED,        ///< Watcher started
+        STOPPED,        ///< Watcher stopped
+        PAUSED,         ///< Watcher paused
+        RESUMED,        ///< Watcher resumed
+        PATH_ADDED,     ///< New path added to watch
+        PATH_REMOVED,   ///< Path removed from watch
+        FILE_CHANGED,   ///< File change detected (before callback)
+        ERROR_OCCURRED  ///< Error occurred during watching
     };
 
     /**

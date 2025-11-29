@@ -8,8 +8,8 @@
 #define LITHIUM_ASYNC_SEARCH_ENGINE_CONTROLLER_HPP
 
 #include <crow/json.h>
-#include "controller.hpp"
 #include "../utils/response.hpp"
+#include "controller.hpp"
 
 #include <functional>
 #include <memory>
@@ -31,65 +31,38 @@ private:
 
     // Utility function to handle all search engine actions
     static auto handleSearchEngineAction(
-        const crow::request& req, const crow::json::rvalue& body,
+        const crow::request& req, const nlohmann::json& body,
         const std::string& command,
-        std::function<bool(std::shared_ptr<lithium::target::SearchEngine>)>
-            func) {
-        crow::json::wvalue res;
-        res["command"] = command;
-
+        std::function<
+            crow::response(std::shared_ptr<lithium::target::SearchEngine>)>
+            func) -> crow::response {
         try {
             auto searchEngine = mSearchEngine.lock();
             if (!searchEngine) {
-                res["status"] = "error";
-                res["code"] = 500;
-                res["error"] =
-                    "Internal Server Error: SearchEngine instance is null.";
                 LOG_ERROR(
-                      "SearchEngine instance is null. Unable to proceed with "
-                      "command: {}",
-                      command);
-                return crow::response(500, res);
-            } else {
-                bool success = func(searchEngine);
-                if (success) {
-                    res["status"] = "success";
-                    res["code"] = 200;
-                } else {
-                    res["status"] = "error";
-                    res["code"] = 404;
-                    res["error"] = "Not Found: The specified operation failed.";
-                }
+                    "SearchEngine instance is null. Unable to proceed with "
+                    "command: {}",
+                    command);
+                return ResponseBuilder::internalError(
+                    "SearchEngine instance is null.");
             }
+            return func(searchEngine);
         } catch (const std::invalid_argument& e) {
-            res["status"] = "error";
-            res["code"] = 400;
-            res["error"] =
-                std::string("Bad Request: Invalid argument - ") + e.what();
             LOG_ERROR(
-                  "Invalid argument while executing command: {}. Exception: {}",
-                  command, e.what());
+                "Invalid argument while executing command: {}. Exception: {}",
+                command, e.what());
+            return ResponseBuilder::badRequest(e.what());
         } catch (const std::runtime_error& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Runtime error - ") +
-                e.what();
             LOG_ERROR(
-                  "Runtime error while executing command: {}. Exception: {}",
-                  command, e.what());
+                "Runtime error while executing command: {}. Exception: {}",
+                command, e.what());
+            return ResponseBuilder::internalError(e.what());
         } catch (const std::exception& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Exception occurred - ") +
-                e.what();
             LOG_ERROR(
                 "Exception occurred while executing command: {}. Exception: {}",
                 command, e.what());
+            return ResponseBuilder::internalError(e.what());
         }
-
-        return crow::response(200, res);
     }
 
 public:
@@ -148,22 +121,28 @@ public:
 
     // Endpoint to add a star object
     void addStarObject(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "addStarObject", [&](auto searchEngine) {
-                std::vector<std::string> aliases;
-                for (const auto& alias : body["aliases"]) {
-                    aliases.push_back(alias.s());
-                }
-                lithium::target::StarObject starObject(
-                    body["name"].s(), aliases, body["clickCount"].i());
-                searchEngine->addStarObject(starObject);
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "addStarObject",
+                [&](auto searchEngine) -> crow::response {
+                    std::vector<std::string> aliases;
+                    for (const auto& alias : body["aliases"]) {
+                        aliases.push_back(alias.get<std::string>());
+                    }
+                    lithium::target::StarObject starObject(
+                        body["name"].get<std::string>(), aliases,
+                        body["clickCount"].get<int>());
+                    searchEngine->addStarObject(starObject);
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     auto to_json(const lithium::target::CelestialObject& celestialObject) {
-        crow::json::wvalue obj;
+        nlohmann::json obj;
         obj["ID"] = celestialObject.ID;
         obj["Identifier"] = celestialObject.Identifier;
         obj["MIdentifier"] = celestialObject.MIdentifier;
@@ -195,7 +174,7 @@ public:
     }
 
     auto to_json(const lithium::target::StarObject& starObject) {
-        crow::json::wvalue obj;
+        nlohmann::json obj;
         obj["name"] = starObject.getName();
         obj["aliases"] = starObject.getAliases();
         obj["clickCount"] = starObject.getClickCount();
@@ -204,323 +183,401 @@ public:
     }
 
     auto to_json(const std::vector<lithium::target::StarObject>& starObjects) {
-        crow::json::wvalue arr;
+        nlohmann::json arr = nlohmann::json::array();
         for (size_t i = 0; i < starObjects.size(); i++) {
-            arr[i] = to_json(starObjects[i]);
+            arr.push_back(to_json(starObjects[i]));
         }
         return arr;
     }
 
     // Endpoint to search for a star object
     void searchStarObject(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "searchStarObject", [&](auto searchEngine) {
-                auto results =
-                    searchEngine->searchStarObject(body["query"].s());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["results"] = to_json(results);
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "searchStarObject",
+                [&](auto searchEngine) -> crow::response {
+                    auto results = searchEngine->searchStarObject(
+                        body["query"].get<std::string>());
+                    nlohmann::json response;
+                    response["results"] = to_json(results);
+                    return ResponseBuilder::success(response);
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to perform a fuzzy search for a star object
     void fuzzySearchStarObject(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "fuzzySearchStarObject", [&](auto searchEngine) {
-                auto results = searchEngine->fuzzySearchStarObject(
-                    body["query"].s(), body["tolerance"].i());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["results"] = to_json(results);
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "fuzzySearchStarObject",
+                [&](auto searchEngine) -> crow::response {
+                    auto results = searchEngine->fuzzySearchStarObject(
+                        body["query"].get<std::string>(),
+                        body["tolerance"].get<int>());
+                    nlohmann::json response;
+                    response["results"] = to_json(results);
+                    return ResponseBuilder::success(response);
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to auto-complete a star object name
     void autoCompleteStarObject(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "autoCompleteStarObject", [&](auto searchEngine) {
-                auto results =
-                    searchEngine->autoCompleteStarObject(body["prefix"].s());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                for (size_t i = 0; i < results.size(); i++) {
-                    response[i] = results[i];
-                }
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "autoCompleteStarObject",
+                [&](auto searchEngine) -> crow::response {
+                    auto results = searchEngine->autoCompleteStarObject(
+                        body["prefix"].get<std::string>());
+                    nlohmann::json response = nlohmann::json::array();
+                    for (size_t i = 0; i < results.size(); i++) {
+                        response.push_back(results[i]);
+                    }
+                    return ResponseBuilder::success(response);
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to perform a filtered search
     void filterSearch(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "filterSearch", [&](auto searchEngine) {
-                auto results = searchEngine->filterSearch(
-                    body["type"].s(), body["morphology"].s(),
-                    body["minMagnitude"].d(), body["maxMagnitude"].d());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["results"] = to_json(results);
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "filterSearch",
+                [&](auto searchEngine) -> crow::response {
+                    auto results = searchEngine->filterSearch(
+                        body["type"].get<std::string>(),
+                        body["morphology"].get<std::string>(),
+                        body["minMagnitude"].get<double>(),
+                        body["maxMagnitude"].get<double>());
+                    nlohmann::json response;
+                    response["results"] = to_json(results);
+                    return ResponseBuilder::success(response);
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to load star objects from a name JSON file
     void loadFromNameJson(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "loadFromNameJson", [&](auto searchEngine) {
-                searchEngine->loadFromNameJson(body["filename"].s());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "loadFromNameJson",
+                [&](auto searchEngine) -> crow::response {
+                    searchEngine->loadFromNameJson(
+                        body["filename"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to load celestial objects from a JSON file
     void loadFromCelestialJson(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "loadFromCelestialJson", [&](auto searchEngine) {
-                searchEngine->loadFromCelestialJson(body["filename"].s());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "loadFromCelestialJson",
+                [&](auto searchEngine) -> crow::response {
+                    searchEngine->loadFromCelestialJson(
+                        body["filename"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to initialize the recommendation engine
     void initializeRecommendationEngine(const crow::request& req,
                                         crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "initializeRecommendationEngine",
-            [&](auto searchEngine) {
-                searchEngine->initializeRecommendationEngine(
-                    body["modelFilename"].s());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "initializeRecommendationEngine",
+                [&](auto searchEngine) -> crow::response {
+                    searchEngine->initializeRecommendationEngine(
+                        body["modelFilename"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to add a user rating
     void addUserRating(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "addUserRating", [&](auto searchEngine) {
-                searchEngine->addUserRating(body["user"].s(), body["item"].s(),
-                                            body["rating"].d());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "addUserRating",
+                [&](auto searchEngine) -> crow::response {
+                    searchEngine->addUserRating(body["user"].get<std::string>(),
+                                                body["item"].get<std::string>(),
+                                                body["rating"].get<double>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     auto to_json(const std::vector<std::pair<std::string, double>>& results) {
-        crow::json::wvalue arr;
+        nlohmann::json arr = nlohmann::json::array();
         for (size_t i = 0; i < results.size(); i++) {
-            arr[i]["item"] = results[i].first;
-            arr[i]["rating"] = results[i].second;
+            nlohmann::json obj;
+            obj["item"] = results[i].first;
+            obj["rating"] = results[i].second;
+            arr.push_back(obj);
         }
         return arr;
     }
 
     // Endpoint to recommend items for a user
     void recommendItems(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "recommendItems", [&](auto searchEngine) {
-                auto results = searchEngine->recommendItems(body["user"].s(),
-                                                            body["topN"].i());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["results"] = to_json(results);
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "recommendItems",
+                [&](auto searchEngine) -> crow::response {
+                    auto results = searchEngine->recommendItems(
+                        body["user"].get<std::string>(),
+                        body["topN"].get<int>());
+                    nlohmann::json response;
+                    response["results"] = to_json(results);
+                    return ResponseBuilder::success(response);
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to save the recommendation model
     void saveRecommendationModel(const crow::request& req,
                                  crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "saveRecommendationModel", [&](auto searchEngine) {
-                searchEngine->saveRecommendationModel(body["filename"].s());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "saveRecommendationModel",
+                [&](auto searchEngine) -> crow::response {
+                    searchEngine->saveRecommendationModel(
+                        body["filename"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to load the recommendation model
     void loadRecommendationModel(const crow::request& req,
                                  crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "loadRecommendationModel", [&](auto searchEngine) {
-                searchEngine->loadRecommendationModel(body["filename"].s());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "loadRecommendationModel",
+                [&](auto searchEngine) -> crow::response {
+                    searchEngine->loadRecommendationModel(
+                        body["filename"].get<std::string>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to train the recommendation engine
     void trainRecommendationEngine(const crow::request& req,
                                    crow::response& res) {
         res = handleSearchEngineAction(
-            req, crow::json::rvalue{}, "trainRecommendationEngine",
-            [&](auto searchEngine) {
+            req, nlohmann::json{}, "trainRecommendationEngine",
+            [&](auto searchEngine) -> crow::response {
                 searchEngine->trainRecommendationEngine();
-                return true;
+                return ResponseBuilder::success(nlohmann::json{});
             });
     }
 
     // Endpoint to load data from a CSV file
     void loadFromCSV(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "loadFromCSV", [&](auto searchEngine) {
-                std::vector<std::string> requiredFields;
-                for (const auto& field : body["requiredFields"]) {
-                    requiredFields.push_back(field.s());
-                }
-                lithium::target::Dialect dialect;
-                if (body.has("dialect")) {
-                    const auto& d = body["dialect"];
-                    if (d.has("delimiter") &&
-                        d["delimiter"].t() == crow::json::type::String) {
-                        std::string s = d["delimiter"].s();
-                        if (!s.empty()) dialect.delimiter = s[0];
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "loadFromCSV",
+                [&](auto searchEngine) -> crow::response {
+                    std::vector<std::string> requiredFields;
+                    for (const auto& field : body["requiredFields"]) {
+                        requiredFields.push_back(field.get<std::string>());
                     }
-                    if (d.has("quotechar") &&
-                        d["quotechar"].t() == crow::json::type::String) {
-                        std::string s = d["quotechar"].s();
-                        if (!s.empty()) dialect.quotechar = s[0];
+                    lithium::target::Dialect dialect;
+                    if (body.contains("dialect")) {
+                        const auto& d = body["dialect"];
+                        if (d.contains("delimiter") &&
+                            d["delimiter"].is_string()) {
+                            std::string s = d["delimiter"].get<std::string>();
+                            if (!s.empty())
+                                dialect.delimiter = s[0];
+                        }
+                        if (d.contains("quotechar") &&
+                            d["quotechar"].is_string()) {
+                            std::string s = d["quotechar"].get<std::string>();
+                            if (!s.empty())
+                                dialect.quotechar = s[0];
+                        }
+                        if (d.contains("doublequote")) {
+                            dialect.doublequote = d["doublequote"].get<bool>();
+                        }
+                        if (d.contains("skip_initial_space")) {
+                            dialect.skip_initial_space =
+                                d["skip_initial_space"].get<bool>();
+                        }
+                        if (d.contains("lineterminator") &&
+                            d["lineterminator"].is_string()) {
+                            dialect.lineterminator =
+                                d["lineterminator"].get<std::string>();
+                        }
+                        if (d.contains("quoting") && d["quoting"].is_number()) {
+                            dialect.quoting =
+                                static_cast<lithium::target::Quoting>(
+                                    d["quoting"].get<int>());
+                        }
                     }
-                    if (d.has("doublequote")) {
-                        dialect.doublequote = d["doublequote"].b();
-                    }
-                    if (d.has("skip_initial_space")) {
-                        dialect.skip_initial_space = d["skip_initial_space"].b();
-                    }
-                    if (d.has("lineterminator") &&
-                        d["lineterminator"].t() == crow::json::type::String) {
-                        dialect.lineterminator = d["lineterminator"].s();
-                    }
-                    if (d.has("quoting") &&
-                        d["quoting"].t() == crow::json::type::Number) {
-                        dialect.quoting = static_cast<lithium::target::Quoting>(
-                            d["quoting"].i());
-                    }
-                }
-                searchEngine->loadFromCSV(body["filename"].s(), requiredFields,
-                                          dialect);
-                return true;
-            });
+                    searchEngine->loadFromCSV(
+                        body["filename"].get<std::string>(), requiredFields,
+                        dialect);
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get hybrid recommendations
     void getHybridRecommendations(const crow::request& req,
                                   crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "getHybridRecommendations", [&](auto searchEngine) {
-                auto results = searchEngine->getHybridRecommendations(
-                    body["user"].s(), body["topN"].i(),
-                    body["contentWeight"].d(), body["collaborativeWeight"].d());
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
-                response["results"] = to_json(results);
-                res.write(response.dump());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "getHybridRecommendations",
+                [&](auto searchEngine) -> crow::response {
+                    auto results = searchEngine->getHybridRecommendations(
+                        body["user"].get<std::string>(),
+                        body["topN"].get<int>(),
+                        body["contentWeight"].get<double>(),
+                        body["collaborativeWeight"].get<double>());
+                    nlohmann::json response;
+                    response["results"] = to_json(results);
+                    return ResponseBuilder::success(response);
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to export data to a CSV file
     void exportToCSV(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "exportToCSV", [&](auto searchEngine) {
-                std::vector<std::string> fields;
-                for (const auto& field : body["fields"]) {
-                    fields.push_back(field.s());
-                }
-                lithium::target::Dialect dialect;
-                if (body.has("dialect")) {
-                    const auto& d = body["dialect"];
-                    if (d.has("delimiter") &&
-                        d["delimiter"].t() == crow::json::type::String) {
-                        std::string s = d["delimiter"].s();
-                        if (!s.empty()) dialect.delimiter = s[0];
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "exportToCSV",
+                [&](auto searchEngine) -> crow::response {
+                    std::vector<std::string> fields;
+                    for (const auto& field : body["fields"]) {
+                        fields.push_back(field.get<std::string>());
                     }
-                    if (d.has("quotechar") &&
-                        d["quotechar"].t() == crow::json::type::String) {
-                        std::string s = d["quotechar"].s();
-                        if (!s.empty()) dialect.quotechar = s[0];
+                    lithium::target::Dialect dialect;
+                    if (body.contains("dialect")) {
+                        const auto& d = body["dialect"];
+                        if (d.contains("delimiter") &&
+                            d["delimiter"].is_string()) {
+                            std::string s = d["delimiter"].get<std::string>();
+                            if (!s.empty())
+                                dialect.delimiter = s[0];
+                        }
+                        if (d.contains("quotechar") &&
+                            d["quotechar"].is_string()) {
+                            std::string s = d["quotechar"].get<std::string>();
+                            if (!s.empty())
+                                dialect.quotechar = s[0];
+                        }
+                        if (d.contains("doublequote")) {
+                            dialect.doublequote = d["doublequote"].get<bool>();
+                        }
+                        if (d.contains("skip_initial_space")) {
+                            dialect.skip_initial_space =
+                                d["skip_initial_space"].get<bool>();
+                        }
+                        if (d.contains("lineterminator") &&
+                            d["lineterminator"].is_string()) {
+                            dialect.lineterminator =
+                                d["lineterminator"].get<std::string>();
+                        }
+                        if (d.contains("quoting") && d["quoting"].is_number()) {
+                            dialect.quoting =
+                                static_cast<lithium::target::Quoting>(
+                                    d["quoting"].get<int>());
+                        }
                     }
-                    if (d.has("doublequote")) {
-                        dialect.doublequote = d["doublequote"].b();
-                    }
-                    if (d.has("skip_initial_space")) {
-                        dialect.skip_initial_space = d["skip_initial_space"].b();
-                    }
-                    if (d.has("lineterminator") &&
-                        d["lineterminator"].t() == crow::json::type::String) {
-                        dialect.lineterminator = d["lineterminator"].s();
-                    }
-                    if (d.has("quoting") &&
-                        d["quoting"].t() == crow::json::type::Number) {
-                        dialect.quoting = static_cast<lithium::target::Quoting>(
-                            d["quoting"].i());
-                    }
-                }
-                searchEngine->exportToCSV(body["filename"].s(), fields,
-                                          dialect);
-                return true;
-            });
+                    searchEngine->exportToCSV(
+                        body["filename"].get<std::string>(), fields, dialect);
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to clear the cache
     void clearCache(const crow::request& req, crow::response& res) {
-        res = handleSearchEngineAction(req, crow::json::rvalue{}, "clearCache",
-                                       [&](auto searchEngine) {
-                                           searchEngine->clearCache();
-                                           return true;
-                                       });
+        res = handleSearchEngineAction(
+            req, nlohmann::json{}, "clearCache",
+            [&](auto searchEngine) -> crow::response {
+                searchEngine->clearCache();
+                return ResponseBuilder::success(nlohmann::json{});
+            });
     }
 
     // Endpoint to set the cache size
     void setCacheSize(const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        res = handleSearchEngineAction(
-            req, body, "setCacheSize", [&](auto searchEngine) {
-                searchEngine->setCacheSize(body["size"].u());
-                return true;
-            });
+        try {
+            auto body = nlohmann::json::parse(req.body);
+            res = handleSearchEngineAction(
+                req, body, "setCacheSize",
+                [&](auto searchEngine) -> crow::response {
+                    searchEngine->setCacheSize(body["size"].get<size_t>());
+                    return ResponseBuilder::success(nlohmann::json{});
+                });
+        } catch (const nlohmann::json::exception& e) {
+            res = ResponseBuilder::invalidJson(e.what());
+        }
     }
 
     // Endpoint to get cache statistics
     void getCacheStats(const crow::request& req, crow::response& res) {
         res = handleSearchEngineAction(
-            req, crow::json::rvalue{}, "getCacheStats", [&](auto searchEngine) {
+            req, nlohmann::json{}, "getCacheStats",
+            [&](auto searchEngine) -> crow::response {
                 auto stats = searchEngine->getCacheStats();
-                crow::json::wvalue response;
-                response["status"] = "success";
-                response["code"] = 200;
+                nlohmann::json response;
                 response["stats"] = stats;
-                res.write(response.dump());
-                return true;
+                return ResponseBuilder::success(response);
             });
     }
 };
 
-inline std::weak_ptr<lithium::target::SearchEngine> SearchController::mSearchEngine;
+inline std::weak_ptr<lithium::target::SearchEngine>
+    SearchController::mSearchEngine;
 
 }  // namespace lithium::server::controller
 

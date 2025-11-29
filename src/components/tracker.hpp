@@ -165,7 +165,8 @@ public:
      * @param callback The callback function.
      */
     // 推荐：非模板重载，解决 linkage 问题
-    void setChangeCallback(std::function<void(const fs::path&, const std::string&)> callback);
+    void setChangeCallback(
+        std::function<void(const fs::path&, const std::string&)> callback);
 
     template <ChangeNotifier Callback>
     void setChangeCallback(Callback&& callback);

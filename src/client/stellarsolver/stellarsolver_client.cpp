@@ -74,8 +74,8 @@ bool StellarSolverClient::destroy() {
     return true;
 }
 
-bool StellarSolverClient::connect(const std::string& /*target*/, int /*timeout*/,
-                                  int /*maxRetry*/) {
+bool StellarSolverClient::connect(const std::string& /*target*/,
+                                  int /*timeout*/, int /*maxRetry*/) {
     logger_->debug("Connecting StellarSolver");
     setState(ClientState::Connecting);
 
@@ -118,10 +118,8 @@ std::vector<std::string> StellarSolverClient::scan() {
 
 PlateSolveResult StellarSolverClient::solve(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH,
-    int /*imageWidth*/, int /*imageHeight*/) {
-
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH, int /*imageWidth*/, int /*imageHeight*/) {
     auto startTime = std::chrono::steady_clock::now();
     lastResult_.clear();
 
@@ -162,19 +160,30 @@ PlateSolveResult StellarSolverClient::solve(
         } else if (ssOptions_.scaleLow && ssOptions_.scaleHigh) {
             QString units;
             switch (ssOptions_.scaleUnits) {
-                case ScaleUnits::DegWidth: units = "degwidth"; break;
-                case ScaleUnits::ArcMinWidth: units = "arcminwidth"; break;
-                case ScaleUnits::ArcSecPerPix: units = "arcsecperpix"; break;
-                case ScaleUnits::FocalMM: units = "focalmm"; break;
+                case ScaleUnits::DegWidth:
+                    units = "degwidth";
+                    break;
+                case ScaleUnits::ArcMinWidth:
+                    units = "arcminwidth";
+                    break;
+                case ScaleUnits::ArcSecPerPix:
+                    units = "arcsecperpix";
+                    break;
+                case ScaleUnits::FocalMM:
+                    units = "focalmm";
+                    break;
             }
-            solver_->setSearchScale(*ssOptions_.scaleLow, *ssOptions_.scaleHigh, units);
+            solver_->setSearchScale(*ssOptions_.scaleLow, *ssOptions_.scaleHigh,
+                                    units);
         }
 
         // Set search position
         if (initialCoordinates && initialCoordinates->isValid()) {
-            solver_->setSearchPositionRaDec(initialCoordinates->ra, initialCoordinates->dec);
+            solver_->setSearchPositionRaDec(initialCoordinates->ra,
+                                            initialCoordinates->dec);
         } else if (ssOptions_.searchRA && ssOptions_.searchDec) {
-            solver_->setSearchPositionRaDec(*ssOptions_.searchRA, *ssOptions_.searchDec);
+            solver_->setSearchPositionRaDec(*ssOptions_.searchRA,
+                                            *ssOptions_.searchDec);
         }
 
         // Apply profile
@@ -184,7 +193,8 @@ PlateSolveResult StellarSolverClient::solve(
         auto solveStart = std::chrono::steady_clock::now();
         bool success = solver_->solve();
         auto solveEnd = std::chrono::steady_clock::now();
-        solvingTime_ = std::chrono::duration<double>(solveEnd - solveStart).count();
+        solvingTime_ =
+            std::chrono::duration<double>(solveEnd - solveStart).count();
 
         if (abortRequested_.load()) {
             lastResult_.errorMessage = "Solve aborted by user";
@@ -208,7 +218,8 @@ PlateSolveResult StellarSolverClient::solve(
     }
 
     auto endTime = std::chrono::steady_clock::now();
-    lastResult_.solveTime = std::chrono::duration<double>(endTime - startTime).count();
+    lastResult_.solveTime =
+        std::chrono::duration<double>(endTime - startTime).count();
 
     solving_.store(false);
 
@@ -240,7 +251,6 @@ void StellarSolverClient::abort() {
 
 std::vector<StarResult> StellarSolverClient::extractStars(
     const std::string& imageFilePath, bool calculateHFR) {
-
     lastStars_.clear();
 
     if (!isConnected()) {
@@ -265,7 +275,8 @@ std::vector<StarResult> StellarSolverClient::extractStars(
         auto extractStart = std::chrono::steady_clock::now();
         bool success = solver_->extract(calculateHFR);
         auto extractEnd = std::chrono::steady_clock::now();
-        extractionTime_ = std::chrono::duration<double>(extractEnd - extractStart).count();
+        extractionTime_ =
+            std::chrono::duration<double>(extractEnd - extractStart).count();
 
         if (success) {
             auto stars = solver_->findStarsByStellarSolver(true, calculateHFR);
@@ -281,7 +292,8 @@ std::vector<StarResult> StellarSolverClient::extractStars(
                 result.numPixels = star.numPixels;
                 lastStars_.push_back(result);
             }
-            logger_->info("Extracted {} stars in {:.2f}s", lastStars_.size(), extractionTime_);
+            logger_->info("Extracted {} stars in {:.2f}s", lastStars_.size(),
+                          extractionTime_);
         }
 
     } catch (const std::exception& ex) {
@@ -300,16 +312,20 @@ void StellarSolverClient::setProfile(StellarSolverProfile profile) {
                 solver_->setParameterProfile(SSolver::Parameters::DEFAULT);
                 break;
             case StellarSolverProfile::SingleThreadSolving:
-                solver_->setParameterProfile(SSolver::Parameters::SINGLE_THREAD_SOLVING);
+                solver_->setParameterProfile(
+                    SSolver::Parameters::SINGLE_THREAD_SOLVING);
                 break;
             case StellarSolverProfile::ParallelLargeScale:
-                solver_->setParameterProfile(SSolver::Parameters::PARALLEL_LARGESCALE);
+                solver_->setParameterProfile(
+                    SSolver::Parameters::PARALLEL_LARGESCALE);
                 break;
             case StellarSolverProfile::ParallelSmallScale:
-                solver_->setParameterProfile(SSolver::Parameters::PARALLEL_SMALLSCALE);
+                solver_->setParameterProfile(
+                    SSolver::Parameters::PARALLEL_SMALLSCALE);
                 break;
             case StellarSolverProfile::SmallScaleStars:
-                solver_->setParameterProfile(SSolver::Parameters::SMALL_SCALE_STARS);
+                solver_->setParameterProfile(
+                    SSolver::Parameters::SMALL_SCALE_STARS);
                 break;
             default:
                 break;
@@ -319,7 +335,6 @@ void StellarSolverClient::setProfile(StellarSolverProfile profile) {
 
 std::vector<std::string> StellarSolverClient::getIndexFiles(
     const std::vector<std::string>& directories) const {
-
     std::vector<std::string> results;
 
     QStringList dirs;
@@ -331,7 +346,8 @@ std::vector<std::string> StellarSolverClient::getIndexFiles(
         }
     }
 
-    auto files = SS::getIndexFiles(dirs, ssOptions_.indexToUse, ssOptions_.healpixToUse);
+    auto files =
+        SS::getIndexFiles(dirs, ssOptions_.indexToUse, ssOptions_.healpixToUse);
     for (const auto& file : files) {
         results.push_back(file.toStdString());
     }
@@ -353,7 +369,8 @@ bool StellarSolverClient::isStellarSolverAvailable() {
     return true;  // Always available if compiled with StellarSolver
 }
 
-bool StellarSolverClient::pixelToWCS(double x, double y, double& ra, double& dec) const {
+bool StellarSolverClient::pixelToWCS(double x, double y, double& ra,
+                                     double& dec) const {
     if (!solver_ || !lastResult_.success) {
         return false;
     }
@@ -370,7 +387,8 @@ bool StellarSolverClient::pixelToWCS(double x, double y, double& ra, double& dec
     return false;
 }
 
-bool StellarSolverClient::wcsToPixel(double ra, double dec, double& x, double& y) const {
+bool StellarSolverClient::wcsToPixel(double ra, double dec, double& x,
+                                     double& y) const {
     if (!solver_ || !lastResult_.success) {
         return false;
     }
@@ -387,7 +405,8 @@ bool StellarSolverClient::wcsToPixel(double ra, double dec, double& x, double& y
     return false;
 }
 
-std::string StellarSolverClient::getOutputPath(const std::string& imageFilePath) const {
+std::string StellarSolverClient::getOutputPath(
+    const std::string& imageFilePath) const {
     std::filesystem::path path(imageFilePath);
     return (path.parent_path() / (path.stem().string() + ".wcs")).string();
 }
@@ -400,7 +419,8 @@ bool StellarSolverClient::loadImage(const std::string& imageFilePath) {
 }
 
 void StellarSolverClient::applyOptions() {
-    if (!solver_) return;
+    if (!solver_)
+        return;
 
     // Apply profile
     setProfile(ssOptions_.profile);
@@ -410,7 +430,7 @@ void StellarSolverClient::applyOptions() {
 }
 
 // Register with client registry
-LITHIUM_REGISTER_CLIENT(StellarSolverClient, "stellarsolver", "StellarSolver Library",
-                        ClientType::Solver, "1.0.0")
+LITHIUM_REGISTER_CLIENT(StellarSolverClient, "stellarsolver",
+                        "StellarSolver Library", ClientType::Solver, "1.0.0")
 
 }  // namespace lithium::client

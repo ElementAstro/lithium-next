@@ -4,8 +4,8 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "device/service/guider_service.hpp"
 
@@ -37,13 +37,9 @@ class GuiderServiceConnectionTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceConnectionTest, GetConnectionStatusNotConnected) {
@@ -68,13 +64,9 @@ class GuiderServiceStatusTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceStatusTest, GetStatusNotConnected) {
@@ -107,13 +99,9 @@ class GuiderServiceGuidingTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceGuidingTest, StartGuidingNotConnected) {
@@ -168,13 +156,9 @@ class GuiderServiceCalibrationTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceCalibrationTest, IsCalibratedNotConnected) {
@@ -209,13 +193,9 @@ class GuiderServiceStarSelectionTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceStarSelectionTest, FindStarNotConnected) {
@@ -250,13 +230,9 @@ class GuiderServiceCameraTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceCameraTest, GetExposureNotConnected) {
@@ -285,13 +261,9 @@ class GuiderServicePulseTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServicePulseTest, GuidePulseNotConnected) {
@@ -314,13 +286,9 @@ class GuiderServiceAlgorithmTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceAlgorithmTest, GetDecGuideModeNotConnected) {
@@ -355,13 +323,9 @@ class GuiderServiceEquipmentTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceEquipmentTest, IsEquipmentConnectedNotConnected) {
@@ -396,13 +360,9 @@ class GuiderServiceProfileTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceProfileTest, GetProfilesNotConnected) {
@@ -431,13 +391,9 @@ class GuiderServiceSettingsTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceSettingsTest, UpdateSettingsNotConnected) {
@@ -458,13 +414,9 @@ class GuiderServiceLockShiftTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceLockShiftTest, IsLockShiftEnabledNotConnected) {
@@ -487,13 +439,9 @@ class GuiderServiceShutdownTest : public ::testing::Test {
 protected:
     std::unique_ptr<GuiderService> service;
 
-    void SetUp() override {
-        service = std::make_unique<GuiderService>();
-    }
+    void SetUp() override { service = std::make_unique<GuiderService>(); }
 
-    void TearDown() override {
-        service.reset();
-    }
+    void TearDown() override { service.reset(); }
 };
 
 TEST_F(GuiderServiceShutdownTest, ShutdownNotConnected) {

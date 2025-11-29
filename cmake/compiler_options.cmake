@@ -31,7 +31,7 @@ endif()
 # Check and set compiler version
 function(lithium_check_compiler_version)
     lithium_print_subsection("Compiler Detection")
-    
+
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         execute_process(
             COMMAND ${CMAKE_CXX_COMPILER} -dumpfullversion
@@ -131,7 +131,7 @@ function(lithium_apply_compiler_flags TARGET_NAME)
             target_compile_options(${TARGET_NAME} PRIVATE -stdlib=libc++)
         endif()
     endif()
-    
+
     # Warning flags
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(${TARGET_NAME} PRIVATE
@@ -142,7 +142,7 @@ function(lithium_apply_compiler_flags TARGET_NAME)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         target_compile_options(${TARGET_NAME} PRIVATE /W4)
     endif()
-    
+
     # LTO for Release builds
     if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
         if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -158,7 +158,7 @@ endfunction()
 # Function to apply strict compiler flags (for new/clean code)
 function(lithium_apply_strict_flags TARGET_NAME)
     lithium_apply_compiler_flags(${TARGET_NAME})
-    
+
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(${TARGET_NAME} PRIVATE
             -Werror

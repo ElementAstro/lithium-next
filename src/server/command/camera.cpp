@@ -1,117 +1,223 @@
+/*
+ * camera.cpp - Camera Command Handlers
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
 #include "camera.hpp"
 
-#include <spdlog/spdlog.h>
-
+#include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "command.hpp"
 #include "device/service/camera_service.hpp"
+#include "response.hpp"
 
 namespace lithium::app {
 
-using nlohmann::json;
+using json = nlohmann::json;
+using command::CommandResponse;
 
-// Global service instance
-static lithium::device::CameraService& getCameraService() {
+namespace {
+
+auto& getCameraService() {
     static lithium::device::CameraService instance;
     return instance;
 }
 
+auto normalizeFrameType(const std::string& frameType)
+    -> std::optional<std::string> {
+    std::string lower = frameType;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+    if (lower == "light") {
+        return "Light";
+    }
+    if (lower == "dark") {
+        return "Dark";
+    }
+    if (lower == "flat") {
+        return "Flat";
+    }
+    if (lower == "bias") {
+        return "Bias";
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
 void registerCamera(std::shared_ptr<CommandDispatcher> dispatcher) {
     // Camera: start exposure
-    dispatcher->registerCommand<json>(
-        "camera.start_exposure",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+    dispatcher->registerCommand<json>("camera.start_exposure", [](json&
+                                                                      payload) {
+        // Validate required deviceId
+        if (!payload.contains("deviceId") || !payload["deviceId"].is_string() ||
+            payload["deviceId"].get<std::string>().empty()) {
+            LOG_WARN("camera.start_exposure: missing deviceId");
+            payload = CommandResponse::missingParameter("deviceId");
+            return;
+        }
+        std::string deviceId = payload["deviceId"].get<std::string>();
 
-            std::string deviceId = p.value("deviceId", std::string("cam-001"));
+        LOG_INFO("Executing camera.start_exposure for device: {}", deviceId);
 
-            if (!p.contains("duration")) {
-                throw std::runtime_error(
-                    "camera.start_exposure: missing 'duration'");
-            }
-            double duration = p["duration"].get<double>();
+        // Validate required duration
+        if (!payload.contains("duration")) {
+            LOG_WARN("camera.start_exposure: missing duration for device {}",
+                     deviceId);
+            payload = CommandResponse::missingParameter("duration");
+            return;
+        }
+        if (!payload["duration"].is_number()) {
+            payload = CommandResponse::invalidParameter("duration",
+                                                        "must be a number");
+            return;
+        }
+        double duration = payload["duration"].get<double>();
+        if (duration <= 0) {
+            payload = CommandResponse::invalidParameter("duration",
+                                                        "must be positive");
+            return;
+        }
 
-            if (!p.contains("frameType")) {
-                throw std::runtime_error(
-                    "camera.start_exposure: missing 'frameType'");
-            }
-            if (!p["frameType"].is_string()) {
-                throw std::runtime_error(
-                    "camera.start_exposure: 'frameType' must be a string");
-            }
+        // Validate required frameType
+        if (!payload.contains("frameType")) {
+            LOG_WARN("camera.start_exposure: missing frameType for device {}",
+                     deviceId);
+            payload = CommandResponse::missingParameter("frameType");
+            return;
+        }
+        if (!payload["frameType"].is_string()) {
+            payload = CommandResponse::invalidParameter("frameType",
+                                                        "must be a string");
+            return;
+        }
 
-            std::string frameType = p["frameType"].get<std::string>();
+        auto normalizedType =
+            normalizeFrameType(payload["frameType"].get<std::string>());
+        if (!normalizedType) {
+            payload = CommandResponse::invalidParameter(
+                "frameType", "must be one of: Light, Dark, Flat, Bias");
+            return;
+        }
+        std::string frameType = *normalizedType;
 
-            if (frameType == "light" || frameType == "LIGHT") {
-                frameType = "Light";
-            } else if (frameType == "dark" || frameType == "DARK") {
-                frameType = "Dark";
-            } else if (frameType == "flat" || frameType == "FLAT") {
-                frameType = "Flat";
-            } else if (frameType == "bias" || frameType == "BIAS") {
-                frameType = "Bias";
-            }
+        std::string filename = payload.value("filename", std::string(""));
 
-            if (frameType != "Light" && frameType != "Dark" &&
-                frameType != "Flat" && frameType != "Bias") {
-                throw std::runtime_error(
-                    "camera.start_exposure: 'frameType' must be one of: Light, Dark, Flat, Bias");
-            }
+        // Apply optional settings (binning/gain/offset)
+        json settings = json::object();
+        if (payload.contains("binning")) {
+            settings["binning"] = payload["binning"];
+        }
+        if (payload.contains("gain")) {
+            settings["gain"] = payload["gain"];
+        }
+        if (payload.contains("offset")) {
+            settings["offset"] = payload["offset"];
+        }
 
-            std::string filename = p.value("filename", std::string(""));
-
-            // Apply optional settings (binning/gain/offset) via shared middleware
-            // implementation to keep HTTP and WebSocket behaviour consistent.
-            json settings = json::object();
-            if (p.contains("binning")) {
-                settings["binning"] = p["binning"];
-            }
-            if (p.contains("gain")) {
-                settings["gain"] = p["gain"];
-            }
-            if (p.contains("offset")) {
-                settings["offset"] = p["offset"];
-            }
-
+        try {
             if (!settings.empty()) {
                 auto settingsResult =
                     getCameraService().updateSettings(deviceId, settings);
                 if (settingsResult.contains("status") &&
                     settingsResult["status"] == "error") {
-                    p = settingsResult;
+                    LOG_ERROR(
+                        "camera.start_exposure: failed to update settings "
+                        "for device {}",
+                        deviceId);
+                    payload = settingsResult;
                     return;
                 }
             }
 
-            auto result = getCameraService().startExposure(
-                deviceId, duration, frameType, filename);
-            p = result;
-        });
-    spdlog::info("Registered command handler for 'camera.start_exposure'");
+            auto result = getCameraService().startExposure(deviceId, duration,
+                                                           frameType, filename);
+
+            if (result.contains("status") && result["status"] == "error") {
+                LOG_ERROR("camera.start_exposure failed for device {}",
+                          deviceId);
+                payload = result;
+            } else {
+                LOG_INFO(
+                    "camera.start_exposure completed successfully for "
+                    "device {}",
+                    deviceId);
+                payload = CommandResponse::success(result);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("camera.start_exposure exception for device {}: {}",
+                      deviceId, e.what());
+            payload =
+                CommandResponse::operationFailed("start_exposure", e.what());
+        }
+    });
+    LOG_INFO("Registered command handler for 'camera.start_exposure'");
 
     // Camera: abort exposure
     dispatcher->registerCommand<json>(
-        "camera.abort_exposure",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+        "camera.abort_exposure", [](json& payload) {
+            if (!payload.contains("deviceId") ||
+                !payload["deviceId"].is_string() ||
+                payload["deviceId"].get<std::string>().empty()) {
+                LOG_WARN("camera.abort_exposure: missing deviceId");
+                payload = CommandResponse::missingParameter("deviceId");
+                return;
+            }
+            std::string deviceId = payload["deviceId"].get<std::string>();
 
-            std::string deviceId = p.value("deviceId", std::string("cam-001"));
-            auto result = getCameraService().abortExposure(deviceId);
-            p = result;
+            LOG_INFO("Executing camera.abort_exposure for device: {}",
+                     deviceId);
+
+            try {
+                auto result = getCameraService().abortExposure(deviceId);
+                if (result.contains("status") && result["status"] == "error") {
+                    LOG_ERROR("camera.abort_exposure failed for device {}",
+                              deviceId);
+                    payload = result;
+                } else {
+                    LOG_INFO(
+                        "camera.abort_exposure completed successfully for "
+                        "device {}",
+                        deviceId);
+                    payload = CommandResponse::success(result);
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("camera.abort_exposure exception for device {}: {}",
+                          deviceId, e.what());
+                payload = CommandResponse::operationFailed("abort_exposure",
+                                                           e.what());
+            }
         });
-    spdlog::info("Registered command handler for 'camera.abort_exposure'");
+    LOG_INFO("Registered command handler for 'camera.abort_exposure'");
 
     // Camera: get status
-    dispatcher->registerCommand<json>(
-        "camera.status",
-        [](const json& payload) {
-            auto& p = const_cast<json&>(payload);
+    dispatcher->registerCommand<json>("camera.status", [](json& payload) {
+        if (!payload.contains("deviceId") || !payload["deviceId"].is_string() ||
+            payload["deviceId"].get<std::string>().empty()) {
+            LOG_WARN("camera.status: missing deviceId");
+            payload = CommandResponse::missingParameter("deviceId");
+            return;
+        }
+        std::string deviceId = payload["deviceId"].get<std::string>();
 
-            std::string deviceId = p.value("deviceId", std::string("cam-001"));
+        LOG_DEBUG("Executing camera.status for device: {}", deviceId);
+
+        try {
             auto result = getCameraService().getStatus(deviceId);
-            p = result;
-        });
-    spdlog::info("Registered command handler for 'camera.status'");
+            if (result.contains("status") && result["status"] == "error") {
+                LOG_WARN("camera.status failed for device {}", deviceId);
+                payload = result;
+            } else {
+                payload = CommandResponse::success(result);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("camera.status exception for device {}: {}", deviceId,
+                      e.what());
+            payload = CommandResponse::operationFailed("status", e.what());
+        }
+    });
+    LOG_INFO("Registered command handler for 'camera.status'");
 }
 
 }  // namespace lithium::app

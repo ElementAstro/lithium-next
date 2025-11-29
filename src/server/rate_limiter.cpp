@@ -2,7 +2,6 @@
 #include <spdlog/spdlog.h>
 #include <algorithm>
 
-
 RateLimiter::RateLimiter(int max_tokens,
                          std::chrono::milliseconds refill_interval)
     : max_tokens_(max_tokens),

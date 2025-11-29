@@ -27,8 +27,8 @@ public:
 
     auto initialize() -> bool override;
     auto destroy() -> bool override;
-    auto connect(const std::string &deviceName, int timeout,
-                 int maxRetry) -> bool override;
+    auto connect(const std::string& deviceName, int timeout, int maxRetry)
+        -> bool override;
     auto disconnect() -> bool override;
     auto reconnect(int timeout, int maxRetry) -> bool;
     auto scan() -> std::vector<std::string> override;

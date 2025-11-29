@@ -17,7 +17,9 @@ class AutoGuidingTask : public CameraTaskBase {
 public:
     AutoGuidingTask() : CameraTaskBase("AutoGuiding") { setupParameters(); }
     AutoGuidingTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "AutoGuiding"; }
     static std::string getTaskTypeName() { return "AutoGuiding"; }
@@ -37,9 +39,13 @@ private:
  */
 class GuidedExposureTask : public CameraTaskBase {
 public:
-    GuidedExposureTask() : CameraTaskBase("GuidedExposure") { setupParameters(); }
+    GuidedExposureTask() : CameraTaskBase("GuidedExposure") {
+        setupParameters();
+    }
     GuidedExposureTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "GuidedExposure"; }
     static std::string getTaskTypeName() { return "GuidedExposure"; }
@@ -58,9 +64,13 @@ private:
  */
 class DitherSequenceTask : public CameraTaskBase {
 public:
-    DitherSequenceTask() : CameraTaskBase("DitherSequence") { setupParameters(); }
+    DitherSequenceTask() : CameraTaskBase("DitherSequence") {
+        setupParameters();
+    }
     DitherSequenceTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "DitherSequence"; }
     static std::string getTaskTypeName() { return "DitherSequence"; }

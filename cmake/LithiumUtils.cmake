@@ -85,59 +85,59 @@ function(lithium_add_library)
     set(oneValueArgs NAME VERSION TYPE DESCRIPTION)
     set(multiValueArgs SOURCES HEADERS LIBRARIES INCLUDES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    
+
     # Validate required arguments
     if(NOT ARG_NAME)
         message(FATAL_ERROR "lithium_add_library: NAME is required")
     endif()
-    
+
     if(NOT ARG_SOURCES)
         message(FATAL_ERROR "lithium_add_library: SOURCES is required for ${ARG_NAME}")
     endif()
-    
+
     # Set default values
     if(NOT ARG_VERSION)
         set(ARG_VERSION "${PROJECT_VERSION}")
     endif()
-    
+
     if(NOT ARG_TYPE)
         set(ARG_TYPE STATIC)
     endif()
-    
+
     # Print library creation message
     lithium_message(STATUS "Creating ${ARG_TYPE} library: ${BoldMagenta}${ARG_NAME}${ColorReset}")
     if(ARG_DESCRIPTION)
         message(STATUS "  Description: ${ARG_DESCRIPTION}")
     endif()
-    
+
     # Create the library
     add_library(${ARG_NAME} ${ARG_TYPE} ${ARG_SOURCES} ${ARG_HEADERS})
-    
+
     # Set position independent code
     set_property(TARGET ${ARG_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
-    
+
     # Set target properties
     set_target_properties(${ARG_NAME} PROPERTIES
         VERSION ${ARG_VERSION}
         SOVERSION 1
         OUTPUT_NAME ${ARG_NAME}
     )
-    
+
     # Add include directories
     if(ARG_INCLUDES)
         target_include_directories(${ARG_NAME} PUBLIC ${ARG_INCLUDES})
     else()
-        target_include_directories(${ARG_NAME} PUBLIC 
+        target_include_directories(${ARG_NAME} PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         )
     endif()
-    
+
     # Link libraries
     if(ARG_LIBRARIES)
         target_link_libraries(${ARG_NAME} PRIVATE ${ARG_LIBRARIES})
     endif()
-    
+
     # Install rules
     install(TARGETS ${ARG_NAME}
         EXPORT ${ARG_NAME}Targets
@@ -145,14 +145,14 @@ function(lithium_add_library)
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
-    
+
     # Install public headers if specified
     if(ARG_PUBLIC_HEADERS AND ARG_HEADERS)
         install(FILES ${ARG_HEADERS}
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${ARG_NAME}
         )
     endif()
-    
+
     message(STATUS "  Sources: ${ARG_SOURCES}")
     if(ARG_LIBRARIES)
         message(STATUS "  Links: ${ARG_LIBRARIES}")
@@ -165,31 +165,31 @@ function(lithium_find_package PACKAGE_NAME)
     set(oneValueArgs VERSION)
     set(multiValueArgs COMPONENTS)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    
+
     lithium_message(INFO "Searching for package: ${BoldYellow}${PACKAGE_NAME}${ColorReset}")
-    
+
     # Build find_package arguments
     set(find_args ${PACKAGE_NAME})
-    
+
     if(ARG_VERSION)
         list(APPEND find_args ${ARG_VERSION})
     endif()
-    
+
     if(ARG_REQUIRED)
         list(APPEND find_args REQUIRED)
     endif()
-    
+
     if(ARG_QUIET)
         list(APPEND find_args QUIET)
     endif()
-    
+
     if(ARG_COMPONENTS)
         list(APPEND find_args COMPONENTS ${ARG_COMPONENTS})
     endif()
-    
+
     # Find the package
     find_package(${find_args})
-    
+
     # Report result
     if(${PACKAGE_NAME}_FOUND OR ${${PACKAGE_NAME}_FOUND})
         lithium_message(SUCCESS "Found ${PACKAGE_NAME}")

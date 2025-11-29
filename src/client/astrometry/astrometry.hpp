@@ -2,12 +2,12 @@
 #ifndef LITHIUM_CLIENT_ASTROMETRY_HPP
 #define LITHIUM_CLIENT_ASTROMETRY_HPP
 
-#include "device/template/solver.hpp"
 #include <future>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
+#include "device/template/solver.hpp"
 
 class SolveResult {
 public:
@@ -142,22 +142,22 @@ public:
 
     bool initialize() override;
     bool destroy() override;
-    bool connect(const std::string& name, int timeout = 30, int maxRetry = 3) override;
+    bool connect(const std::string& name, int timeout = 30,
+                 int maxRetry = 3) override;
     bool disconnect() override;
     std::vector<std::string> scan() override;
     bool isConnected() const override;
 
     // 实现AtomSolver的虚函数
     PlateSolveResult solve(const std::string& imageFilePath,
-                          const std::optional<Coordinates>& initialCoordinates,
-                          double fovW, double fovH,
-                          int imageWidth, int imageHeight) override;
+                           const std::optional<Coordinates>& initialCoordinates,
+                           double fovW, double fovH, int imageWidth,
+                           int imageHeight) override;
 
     std::future<PlateSolveResult> async_solve(
         const std::string& imageFilePath,
-        const std::optional<Coordinates>& initialCoordinates,
-        double fovW, double fovH,
-        int imageWidth, int imageHeight) override;
+        const std::optional<Coordinates>& initialCoordinates, double fovW,
+        double fovH, int imageWidth, int imageHeight) override;
 
     // 配置相关方法
     bool configure(const SolveOptions& options);
@@ -172,8 +172,8 @@ private:
     SolveOptions options_;
     std::string solverPath_;
     std::string buildCommand(const std::string& imageFilePath,
-                            const std::optional<Coordinates>& coords,
-                            double fovW, double fovH);
+                             const std::optional<Coordinates>& coords,
+                             double fovW, double fovH);
     PlateSolveResult parseSolveOutput(const std::string& output);
 };
 

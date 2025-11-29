@@ -21,8 +21,20 @@ This package is released under the GPL-3.0-or-later License.
 """
 
 from .converter import Converter
-from .options import ConversionOptions, ConversionMode, DataFormat, CommentStyle, CompressionType, ChecksumAlgo
-from .exceptions import ConversionError, FileFormatError, CompressionError, ChecksumError
+from .options import (
+    ConversionOptions,
+    ConversionMode,
+    DataFormat,
+    CommentStyle,
+    CompressionType,
+    ChecksumAlgo,
+)
+from .exceptions import (
+    ConversionError,
+    FileFormatError,
+    CompressionError,
+    ChecksumError,
+)
 from .utils import HeaderInfo
 from .converter import convert_to_header, convert_to_file, get_header_info
 from .pybind_adapter import ConvertToHeaderPyBindAdapter
@@ -39,7 +51,10 @@ import sys
 # Remove default handler and add custom one
 logger.remove()
 logger.add(
-    sys.stderr, format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}", level="INFO")
+    sys.stderr,
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
+    level="INFO",
+)
 
 
 def get_tool_info() -> dict:
@@ -80,24 +95,24 @@ def get_tool_info() -> dict:
             "Converter": "Main binary/header conversion interface",
             "ConversionOptions": "Configuration options for conversions",
             "ConvertToHeaderPyBindAdapter": "Simplified pybind11 interface",
-        }
+        },
     }
 
 
 # Public API
 __all__ = [
-    'Converter',
-    'ConversionOptions',
-    'ConversionMode',
-    'HeaderInfo',
-    'ConversionError',
-    'FileFormatError',
-    'CompressionError',
-    'ChecksumError',
-    'convert_to_header',
-    'convert_to_file',
-    'get_header_info',
-    'get_tool_info',
-    'ConvertToHeaderPyBindAdapter',
-    'logger'
+    "Converter",
+    "ConversionOptions",
+    "ConversionMode",
+    "HeaderInfo",
+    "ConversionError",
+    "FileFormatError",
+    "CompressionError",
+    "ChecksumError",
+    "convert_to_header",
+    "convert_to_file",
+    "get_header_info",
+    "get_tool_info",
+    "ConvertToHeaderPyBindAdapter",
+    "logger",
 ]

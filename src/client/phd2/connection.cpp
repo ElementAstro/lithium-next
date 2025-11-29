@@ -31,14 +31,11 @@ namespace phd2 {
 class Connection::Impl {
 public:
     Impl(ConnectionConfig config, std::shared_ptr<EventHandler> eventHandler)
-        : config_(std::move(config)),
-          eventHandler_(std::move(eventHandler)) {
+        : config_(std::move(config)), eventHandler_(std::move(eventHandler)) {
         curlInit_ = std::make_unique<CurlGlobalInit>();
     }
 
-    ~Impl() {
-        disconnect();
-    }
+    ~Impl() { disconnect(); }
 
     auto connect(int timeoutMs) -> bool {
         std::lock_guard lock(mutex_);
@@ -63,13 +60,15 @@ public:
         // Set options
         curl_easy_setopt(curlEasy_, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curlEasy_, CURLOPT_CONNECT_ONLY, 1L);
-        curl_easy_setopt(curlEasy_, CURLOPT_CONNECTTIMEOUT_MS, static_cast<long>(timeoutMs));
+        curl_easy_setopt(curlEasy_, CURLOPT_CONNECTTIMEOUT_MS,
+                         static_cast<long>(timeoutMs));
         curl_easy_setopt(curlEasy_, CURLOPT_NOSIGNAL, 1L);
 
         // Attempt connection
         auto result = curl_easy_perform(curlEasy_);
         if (result != CURLE_OK) {
-            spdlog::error("Failed to connect to PHD2: {}", curl_easy_strerror(result));
+            spdlog::error("Failed to connect to PHD2: {}",
+                          curl_easy_strerror(result));
             curl_easy_cleanup(curlEasy_);
             curlEasy_ = nullptr;
             state_ = ConnectionState::Error;
@@ -93,9 +92,8 @@ public:
         stats_.connectedSince = std::chrono::steady_clock::now();
 
         // Start receive thread
-        receiveThread_ = std::make_unique<std::jthread>([this](std::stop_token st) {
-            receiveLoop(st);
-        });
+        receiveThread_ = std::make_unique<std::jthread>(
+            [this](std::stop_token st) { receiveLoop(st); });
 
         spdlog::info("Connected to PHD2 at {}:{}", config_.host, config_.port);
 
@@ -133,11 +131,10 @@ public:
         {
             std::lock_guard rpcLock(rpcMutex_);
             for (auto& [id, promise] : pendingRpcs_) {
-                promise.set_value(RpcResponse{
-                    .success = false,
-                    .errorCode = -1,
-                    .errorMessage = "Connection closed"
-                });
+                promise.set_value(
+                    RpcResponse{.success = false,
+                                .errorCode = -1,
+                                .errorMessage = "Connection closed"});
             }
             pendingRpcs_.clear();
         }
@@ -157,7 +154,8 @@ public:
         return state_;
     }
 
-    auto sendRpc(std::string_view method, const json& params, int timeoutMs) -> RpcResponse {
+    auto sendRpc(std::string_view method, const json& params, int timeoutMs)
+        -> RpcResponse {
         if (!isConnected()) {
             throw ConnectionException("Not connected to PHD2");
         }
@@ -176,11 +174,7 @@ public:
         }
 
         // Build request
-        json request = {
-            {"jsonrpc", "2.0"},
-            {"method", method},
-            {"id", rpcId}
-        };
+        json request = {{"jsonrpc", "2.0"}, {"method", method}, {"id", rpcId}};
 
         if (!params.empty() && !params.is_null()) {
             request["params"] = params;
@@ -197,8 +191,8 @@ public:
             if (result != CURLE_OK) {
                 std::lock_guard rpcLock(rpcMutex_);
                 pendingRpcs_.erase(rpcId);
-                throw ConnectionException(std::format("Failed to send RPC: {}",
-                                                      curl_easy_strerror(result)));
+                throw ConnectionException(std::format(
+                    "Failed to send RPC: {}", curl_easy_strerror(result)));
             }
             stats_.messagesSent++;
         }
@@ -210,14 +204,17 @@ public:
         if (status == std::future_status::timeout) {
             std::lock_guard lock(rpcMutex_);
             pendingRpcs_.erase(rpcId);
-            throw TimeoutException(std::format("RPC {} timed out", method), timeoutMs);
+            throw TimeoutException(std::format("RPC {} timed out", method),
+                                   timeoutMs);
         }
 
         return future.get();
     }
 
-    auto sendRpcAsync(std::string_view method, const json& params) -> std::future<RpcResponse> {
-        return std::async(std::launch::async, [this, m = std::string(method), p = params]() {
+    auto sendRpcAsync(std::string_view method, const json& params)
+        -> std::future<RpcResponse> {
+        return std::async(std::launch::async, [this, m = std::string(method),
+                                               p = params]() {
             return sendRpc(m, p, static_cast<int>(config_.rpcTimeout.count()));
         });
     }
@@ -239,9 +236,7 @@ public:
         return config_;
     }
 
-    [[nodiscard]] auto getStats() const noexcept -> Stats {
-        return stats_;
-    }
+    [[nodiscard]] auto getStats() const noexcept -> Stats { return stats_; }
 
 private:
     void receiveLoop(std::stop_token st) {
@@ -252,10 +247,11 @@ private:
 
             {
                 std::lock_guard lock(mutex_);
-                if (!curlEasy_) break;
+                if (!curlEasy_)
+                    break;
 
                 auto result = curl_easy_recv(curlEasy_, buffer.data(),
-                                            buffer.size(), &received);
+                                             buffer.size(), &received);
 
                 if (result == CURLE_AGAIN) {
                     // No data available, wait a bit
@@ -265,9 +261,11 @@ private:
 
                 if (result != CURLE_OK) {
                     if (!stopping_) {
-                        spdlog::error("Receive error: {}", curl_easy_strerror(result));
+                        spdlog::error("Receive error: {}",
+                                      curl_easy_strerror(result));
                         if (eventHandler_) {
-                            eventHandler_->onConnectionError(curl_easy_strerror(result));
+                            eventHandler_->onConnectionError(
+                                curl_easy_strerror(result));
                         }
                         if (errorCallback_) {
                             errorCallback_(curl_easy_strerror(result));
@@ -328,7 +326,8 @@ private:
         if (j.contains("error")) {
             response.success = false;
             response.errorCode = j["error"].value("code", -1);
-            response.errorMessage = j["error"].value("message", "Unknown error");
+            response.errorMessage =
+                j["error"].value("message", "Unknown error");
         } else {
             response.success = true;
             response.result = j.value("result", json{});
@@ -375,17 +374,14 @@ private:
                     .phdVersion = j.value("PHDVersion", ""),
                     .phdSubver = j.value("PHDSubver", ""),
                     .msgVersion = j.value("MsgVersion", 0),
-                    .overlapSupport = j.value("OverlapSupport", false)
-                };
+                    .overlapSupport = j.value("OverlapSupport", false)};
 
             case EventType::AppState:
-                return AppStateEvent{
-                    .type = type,
-                    .timestamp = timestamp,
-                    .host = host,
-                    .instance = instance,
-                    .state = j.value("State", "")
-                };
+                return AppStateEvent{.type = type,
+                                     .timestamp = timestamp,
+                                     .host = host,
+                                     .instance = instance,
+                                     .state = j.value("State", "")};
 
             case EventType::GuideStep:
                 return GuideStepEvent{
@@ -409,8 +405,7 @@ private:
                     .starMass = j.value("StarMass", 0.0),
                     .snr = j.value("SNR", 0.0),
                     .hfd = j.value("HFD", 0.0),
-                    .avgDist = j.value("AvgDist", 0.0)
-                };
+                    .avgDist = j.value("AvgDist", 0.0)};
 
             case EventType::SettleDone:
                 return SettleDoneEvent{
@@ -421,64 +416,51 @@ private:
                     .status = j.value("Status", 0),
                     .error = j.value("Error", ""),
                     .totalFrames = j.value("TotalFrames", 0),
-                    .droppedFrames = j.value("DroppedFrames", 0)
-                };
+                    .droppedFrames = j.value("DroppedFrames", 0)};
 
             case EventType::StarLost:
-                return StarLostEvent{
-                    .type = type,
-                    .timestamp = timestamp,
-                    .host = host,
-                    .instance = instance,
-                    .frame = j.value("Frame", 0),
-                    .time = j.value("Time", 0.0),
-                    .starMass = j.value("StarMass", 0.0),
-                    .snr = j.value("SNR", 0.0),
-                    .avgDist = j.value("AvgDist", 0.0),
-                    .errorCode = j.value("ErrorCode", 0),
-                    .status = j.value("Status", "")
-                };
+                return StarLostEvent{.type = type,
+                                     .timestamp = timestamp,
+                                     .host = host,
+                                     .instance = instance,
+                                     .frame = j.value("Frame", 0),
+                                     .time = j.value("Time", 0.0),
+                                     .starMass = j.value("StarMass", 0.0),
+                                     .snr = j.value("SNR", 0.0),
+                                     .avgDist = j.value("AvgDist", 0.0),
+                                     .errorCode = j.value("ErrorCode", 0),
+                                     .status = j.value("Status", "")};
 
             case EventType::StartGuiding:
-                return StartGuidingEvent{
-                    .type = type,
-                    .timestamp = timestamp,
-                    .host = host,
-                    .instance = instance
-                };
+                return StartGuidingEvent{.type = type,
+                                         .timestamp = timestamp,
+                                         .host = host,
+                                         .instance = instance};
 
             case EventType::GuidingStopped:
-                return GuidingStoppedEvent{
-                    .type = type,
-                    .timestamp = timestamp,
-                    .host = host,
-                    .instance = instance
-                };
+                return GuidingStoppedEvent{.type = type,
+                                           .timestamp = timestamp,
+                                           .host = host,
+                                           .instance = instance};
 
             case EventType::Paused:
-                return PausedEvent{
-                    .type = type,
-                    .timestamp = timestamp,
-                    .host = host,
-                    .instance = instance
-                };
+                return PausedEvent{.type = type,
+                                   .timestamp = timestamp,
+                                   .host = host,
+                                   .instance = instance};
 
             case EventType::Resumed:
-                return ResumedEvent{
-                    .type = type,
-                    .timestamp = timestamp,
-                    .host = host,
-                    .instance = instance
-                };
+                return ResumedEvent{.type = type,
+                                    .timestamp = timestamp,
+                                    .host = host,
+                                    .instance = instance};
 
             default:
-                return GenericEvent{
-                    .type = EventType::Generic,
-                    .timestamp = timestamp,
-                    .host = host,
-                    .instance = instance,
-                    .data = j
-                };
+                return GenericEvent{.type = EventType::Generic,
+                                    .timestamp = timestamp,
+                                    .host = host,
+                                    .instance = instance,
+                                    .data = j};
         }
     }
 
@@ -509,10 +491,13 @@ private:
 // Connection Public Interface
 // ============================================================================
 
-Connection::Connection(ConnectionConfig config, std::shared_ptr<EventHandler> eventHandler)
-    : impl_(std::make_unique<Impl>(std::move(config), std::move(eventHandler))) {}
+Connection::Connection(ConnectionConfig config,
+                       std::shared_ptr<EventHandler> eventHandler)
+    : impl_(
+          std::make_unique<Impl>(std::move(config), std::move(eventHandler))) {}
 
-Connection::Connection(std::string host, int port, std::shared_ptr<EventHandler> eventHandler)
+Connection::Connection(std::string host, int port,
+                       std::shared_ptr<EventHandler> eventHandler)
     : impl_(std::make_unique<Impl>(
           ConnectionConfig{.host = std::move(host), .port = port},
           std::move(eventHandler))) {}
@@ -526,9 +511,7 @@ auto Connection::connect(int timeoutMs) -> bool {
     return impl_->connect(timeoutMs);
 }
 
-void Connection::disconnect() {
-    impl_->disconnect();
-}
+void Connection::disconnect() { impl_->disconnect(); }
 
 auto Connection::isConnected() const noexcept -> bool {
     return impl_->isConnected();
@@ -538,11 +521,13 @@ auto Connection::getState() const noexcept -> ConnectionState {
     return impl_->getState();
 }
 
-auto Connection::sendRpc(std::string_view method, const json& params, int timeoutMs) -> RpcResponse {
+auto Connection::sendRpc(std::string_view method, const json& params,
+                         int timeoutMs) -> RpcResponse {
     return impl_->sendRpc(method, params, timeoutMs);
 }
 
-auto Connection::sendRpcAsync(std::string_view method, const json& params) -> std::future<RpcResponse> {
+auto Connection::sendRpcAsync(std::string_view method, const json& params)
+    -> std::future<RpcResponse> {
     return impl_->sendRpcAsync(method, params);
 }
 

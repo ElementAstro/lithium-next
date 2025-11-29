@@ -17,22 +17,22 @@
 #include <unordered_map>
 #include <vector>
 
-#include "tools/astronomy/types.hpp"
 #include "atom/async/safetype.hpp"
 #include "task.hpp"
+#include "tools/astronomy/types.hpp"
 
 namespace lithium::task {
 
 // Import astronomy types into task namespace for convenience
-using tools::astronomy::Coordinates;
-using tools::astronomy::HorizontalCoordinates;
-using tools::astronomy::ObserverLocation;
 using tools::astronomy::AltitudeConstraints;
-using tools::astronomy::ObservabilityWindow;
+using tools::astronomy::Coordinates;
 using tools::astronomy::ExposurePlan;
-using tools::astronomy::TargetConfig;
-using tools::astronomy::MeridianState;
+using tools::astronomy::HorizontalCoordinates;
 using tools::astronomy::MeridianFlipInfo;
+using tools::astronomy::MeridianState;
+using tools::astronomy::ObservabilityWindow;
+using tools::astronomy::ObserverLocation;
+using tools::astronomy::TargetConfig;
 
 /**
  * @enum TargetStatus
@@ -520,17 +520,17 @@ private:
     // Astronomical Observation Data
     // ========================================================================
 
-    TargetConfig astroConfig_;            ///< Astronomical configuration
-    ObservabilityWindow observability_;   ///< Current observability window
-    HorizontalCoordinates currentAltAz_;  ///< Current altitude/azimuth
-    MeridianFlipInfo meridianInfo_;       ///< Meridian flip information
+    TargetConfig astroConfig_;              ///< Astronomical configuration
+    ObservabilityWindow observability_;     ///< Current observability window
+    HorizontalCoordinates currentAltAz_;    ///< Current altitude/azimuth
+    MeridianFlipInfo meridianInfo_;         ///< Meridian flip information
     mutable std::shared_mutex astroMutex_;  ///< Mutex for astro data access
 
     size_t currentExposurePlanIndex_{0};  ///< Index of current exposure plan
 
     // Execution state
-    std::atomic<bool> paused_{false};     ///< Whether target is paused
-    std::atomic<bool> aborted_{false};    ///< Whether target is aborted
+    std::atomic<bool> paused_{false};   ///< Whether target is paused
+    std::atomic<bool> aborted_{false};  ///< Whether target is aborted
 
     /**
      * @brief Notifies that the target has started.

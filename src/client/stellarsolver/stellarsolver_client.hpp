@@ -42,12 +42,7 @@ enum class StellarSolverProfile {
 /**
  * @brief StellarSolver scale units
  */
-enum class ScaleUnits {
-    DegWidth,
-    ArcMinWidth,
-    ArcSecPerPix,
-    FocalMM
-};
+enum class ScaleUnits { DegWidth, ArcMinWidth, ArcSecPerPix, FocalMM };
 
 /**
  * @brief StellarSolver-specific options
@@ -55,37 +50,37 @@ enum class ScaleUnits {
 struct StellarSolverOptions {
     // Profile settings
     StellarSolverProfile profile{StellarSolverProfile::Default};
-    
+
     // Scale settings
     std::optional<double> scaleLow;
     std::optional<double> scaleHigh;
     ScaleUnits scaleUnits{ScaleUnits::ArcSecPerPix};
-    
+
     // Position hints
     std::optional<double> searchRA;
     std::optional<double> searchDec;
     std::optional<double> searchRadius;
-    
+
     // Processing options
     bool calculateHFR{false};
     bool extractOnly{false};
     int downsample{0};
-    
+
     // Index file settings
     std::vector<std::string> indexFolders;
     int indexToUse{-1};
     int healpixToUse{-1};
-    
+
     // External program paths (for astrometry.net backend)
     std::string sextractorPath;
     std::string solverPath;
     std::string configFilePath;
     std::string wcsPath;
-    
+
     // Convolution filter
     int convFilterType{0};  // 0=default, 1=gaussian, etc.
     double convFilterFWHM{3.5};
-    
+
     // Star extraction parameters
     int minArea{5};
     double deblendNThresh{32};
@@ -138,11 +133,10 @@ public:
 
     // ==================== Solver Interface ====================
 
-    PlateSolveResult solve(
-        const std::string& imageFilePath,
-        const std::optional<Coordinates>& initialCoordinates,
-        double fovW, double fovH,
-        int imageWidth, int imageHeight) override;
+    PlateSolveResult solve(const std::string& imageFilePath,
+                           const std::optional<Coordinates>& initialCoordinates,
+                           double fovW, double fovH, int imageWidth,
+                           int imageHeight) override;
 
     void abort() override;
 

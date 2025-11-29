@@ -28,7 +28,9 @@ class TakeExposureTask : public CameraTaskBase {
 public:
     TakeExposureTask() : CameraTaskBase("TakeExposure") { setupParameters(); }
     TakeExposureTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "TakeExposure"; }
     static std::string getTaskTypeName() { return "TakeExposure"; }
@@ -52,9 +54,13 @@ private:
  */
 class TakeManyExposureTask : public CameraTaskBase {
 public:
-    TakeManyExposureTask() : CameraTaskBase("TakeManyExposure") { setupParameters(); }
+    TakeManyExposureTask() : CameraTaskBase("TakeManyExposure") {
+        setupParameters();
+    }
     TakeManyExposureTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "TakeManyExposure"; }
     static std::string getTaskTypeName() { return "TakeManyExposure"; }
@@ -79,9 +85,13 @@ private:
  */
 class SubframeExposureTask : public CameraTaskBase {
 public:
-    SubframeExposureTask() : CameraTaskBase("SubframeExposure") { setupParameters(); }
+    SubframeExposureTask() : CameraTaskBase("SubframeExposure") {
+        setupParameters();
+    }
     SubframeExposureTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "SubframeExposure"; }
     static std::string getTaskTypeName() { return "SubframeExposure"; }
@@ -108,7 +118,9 @@ class SmartExposureTask : public CameraTaskBase {
 public:
     SmartExposureTask() : CameraTaskBase("SmartExposure") { setupParameters(); }
     SmartExposureTask(const std::string& name, const json& config)
-        : CameraTaskBase(name, config) { setupParameters(); }
+        : CameraTaskBase(name, config) {
+        setupParameters();
+    }
 
     static std::string taskName() { return "SmartExposure"; }
     static std::string getTaskTypeName() { return "SmartExposure"; }
@@ -119,7 +131,8 @@ protected:
 
 private:
     void setupParameters();
-    double calculateOptimalExposure(double currentExposure, double achievedSNR, double targetSNR);
+    double calculateOptimalExposure(double currentExposure, double achievedSNR,
+                                    double targetSNR);
 };
 
 }  // namespace lithium::task::camera

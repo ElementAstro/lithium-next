@@ -280,7 +280,7 @@ public:
                 return this->handleRequest(req);
             });
     }
-    
+
 private:
     crow::response handleRequest(const crow::request& req) {
         using namespace utils;

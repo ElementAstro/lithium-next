@@ -21,8 +21,14 @@ Date: 2025-06-09
 """
 
 from .types import (
-    UpdateStatus, UpdaterError, NetworkError, VerificationError, InstallationError,
-    UpdaterConfig, PathLike, HashType
+    UpdateStatus,
+    UpdaterError,
+    NetworkError,
+    VerificationError,
+    InstallationError,
+    UpdaterConfig,
+    PathLike,
+    HashType,
 )
 from .core import AutoUpdater
 from .sync import AutoUpdaterSync, create_updater, run_updater
@@ -39,17 +45,14 @@ __all__ = [
     "AutoUpdater",
     "AutoUpdaterSync",
     "AutoUpdaterPyBindAdapter",
-
     # Types
     "UpdaterConfig",
     "UpdateStatus",
-
     # Exceptions
     "UpdaterError",
     "NetworkError",
     "VerificationError",
     "InstallationError",
-
     # Utility functions
     "compare_versions",
     "parse_version",
@@ -57,11 +60,9 @@ __all__ = [
     "create_updater",
     "run_updater",
     "get_tool_info",
-
     # Type definitions
     "PathLike",
     "HashType",
-
     # Logger
     "logger",
 ]
@@ -123,7 +124,7 @@ def get_tool_info() -> dict:
             "AutoUpdater": "Main async update management interface",
             "AutoUpdaterSync": "Synchronous wrapper for pybind11 compatibility",
             "AutoUpdaterPyBindAdapter": "Simplified pybind11 interface with structured returns",
-        }
+        },
     }
 
 
@@ -131,4 +132,5 @@ def get_tool_info() -> dict:
 if __name__ == "__main__":
     import sys
     from .cli import main
+
     sys.exit(main())

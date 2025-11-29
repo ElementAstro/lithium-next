@@ -90,8 +90,8 @@ TEST_F(ComponentLoaderIntegrationTest, ModuleLoaderThreadPoolConfiguration) {
 TEST_F(ComponentLoaderIntegrationTest, ComponentStateTransitions) {
     EXPECT_TRUE(componentManager->initialize());
 
-    json params = {
-        {"name", "state_test_component"}, {"path", testDir.string()}};
+    json params = {{"name", "state_test_component"},
+                   {"path", testDir.string()}};
     EXPECT_TRUE(componentManager->loadComponent(params));
 
     // Test state transitions
@@ -199,7 +199,7 @@ TEST_F(DependencyVersionIntegrationTest, ParallelDependencyResolution) {
     // Add some dependencies
     for (int i = 1; i < 10; ++i) {
         dependencyGraph->addDependency("node_" + std::to_string(i), "node_0",
-                                        version);
+                                       version);
     }
 
     // Parallel resolution
@@ -216,12 +216,14 @@ TEST_F(DependencyVersionIntegrationTest, ParallelDependencyResolution) {
 class SystemDependencyIntegrationTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        platformDetector = std::make_unique<lithium::system::PlatformDetector>();
+        platformDetector =
+            std::make_unique<lithium::system::PlatformDetector>();
         packageManagerRegistry =
             std::make_unique<lithium::system::PackageManagerRegistry>(
                 *platformDetector);
-        dependencyManager = std::make_unique<lithium::system::DependencyManager>(
-            "./config/package_managers.json");
+        dependencyManager =
+            std::make_unique<lithium::system::DependencyManager>(
+                "./config/package_managers.json");
     }
 
     void TearDown() override {
@@ -453,7 +455,7 @@ TEST_F(CrossComponentIntegrationTest, ComponentManagerWithDependencyGraph) {
     dependencyGraph->addNode("base_component", version);
     dependencyGraph->addNode("derived_component", version);
     dependencyGraph->addDependency("derived_component", "base_component",
-                                    version);
+                                   version);
 
     // Verify no cycles
     EXPECT_FALSE(dependencyGraph->hasCycle());
@@ -635,13 +637,13 @@ TEST_F(ConcurrentIntegrationTest, ConcurrentDependencyResolution) {
     // Create nodes
     for (int i = 0; i < 20; ++i) {
         dependencyGraph->addNode("concurrent_node_" + std::to_string(i),
-                                  version);
+                                 version);
     }
 
     // Add dependencies
     for (int i = 1; i < 20; ++i) {
         dependencyGraph->addDependency("concurrent_node_" + std::to_string(i),
-                                        "concurrent_node_0", version);
+                                       "concurrent_node_0", version);
     }
 
     // Concurrent resolution
@@ -653,7 +655,8 @@ TEST_F(ConcurrentIntegrationTest, ConcurrentDependencyResolution) {
             std::vector<std::string> targets = {
                 "concurrent_node_" + std::to_string(i * 4 + 1),
                 "concurrent_node_" + std::to_string(i * 4 + 2)};
-            auto resolved = dependencyGraph->resolveParallelDependencies(targets);
+            auto resolved =
+                dependencyGraph->resolveParallelDependencies(targets);
             if (!resolved.empty()) {
                 successCount++;
             }

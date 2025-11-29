@@ -28,8 +28,7 @@ Description: ASTAP plate solver client implementation
 
 namespace lithium::client {
 
-AstapClient::AstapClient(std::string name)
-    : SolverClient(std::move(name)) {
+AstapClient::AstapClient(std::string name) : SolverClient(std::move(name)) {
     logger_ = spdlog::get("astap_client");
     if (!logger_) {
         logger_ = spdlog::stdout_color_mt("astap_client");
@@ -138,17 +137,12 @@ std::vector<std::string> AstapClient::scan() {
     std::vector<std::string> searchPaths;
 
 #ifdef _WIN32
-    searchPaths = {
-        "C:\\Program Files\\astap\\astap.exe",
-        "C:\\Program Files (x86)\\astap\\astap.exe",
-        "C:\\astap\\astap.exe"
-    };
+    searchPaths = {"C:\\Program Files\\astap\\astap.exe",
+                   "C:\\Program Files (x86)\\astap\\astap.exe",
+                   "C:\\astap\\astap.exe"};
 #else
-    searchPaths = {
-        "/usr/bin/astap",
-        "/usr/local/bin/astap",
-        "/opt/astap/astap"
-    };
+    searchPaths = {"/usr/bin/astap", "/usr/local/bin/astap",
+                   "/opt/astap/astap"};
 #endif
 
     for (const auto& path : searchPaths) {
@@ -163,7 +157,8 @@ std::vector<std::string> AstapClient::scan() {
         auto sysPath = atom::system::getAppPath("astap");
         if (!sysPath.empty()) {
             std::string pathStr = sysPath.string();
-            if (std::find(results.begin(), results.end(), pathStr) == results.end()) {
+            if (std::find(results.begin(), results.end(), pathStr) ==
+                results.end()) {
                 results.push_back(pathStr);
             }
         }
@@ -203,10 +198,8 @@ bool AstapClient::scanSolver() {
 
 PlateSolveResult AstapClient::solve(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH,
-    int /*imageWidth*/, int /*imageHeight*/) {
-
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH, int /*imageWidth*/, int /*imageHeight*/) {
     auto startTime = std::chrono::steady_clock::now();
     lastResult_.clear();
 
@@ -254,14 +247,16 @@ PlateSolveResult AstapClient::solve(
     }
 
     auto endTime = std::chrono::steady_clock::now();
-    lastResult_.solveTime = std::chrono::duration<double>(endTime - startTime).count();
+    lastResult_.solveTime =
+        std::chrono::duration<double>(endTime - startTime).count();
 
     solving_.store(false);
 
     if (lastResult_.success) {
-        logger_->info("Solve successful: RA={:.4f}, Dec={:.4f}, Scale={:.2f}\"/px",
-                      lastResult_.coordinates.ra, lastResult_.coordinates.dec,
-                      lastResult_.pixelScale);
+        logger_->info(
+            "Solve successful: RA={:.4f}, Dec={:.4f}, Scale={:.2f}\"/px",
+            lastResult_.coordinates.ra, lastResult_.coordinates.dec,
+            lastResult_.pixelScale);
         emitEvent("solve_completed", imageFilePath);
     } else {
         logger_->error("Solve failed for: {}", imageFilePath);
@@ -293,15 +288,15 @@ void AstapClient::abort() {
 
 std::string AstapClient::buildCommand(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH) {
-
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH) {
     std::ostringstream cmd;
     cmd << "\"" << solverPath_ << "\"";
     cmd << " -f \"" << imageFilePath << "\"";
 
     // Field of view (use average or height)
-    double fov = (fovW > 0 && fovH > 0) ? (fovW + fovH) / 2.0 : std::max(fovW, fovH);
+    double fov =
+        (fovW > 0 && fovH > 0) ? (fovW + fovH) / 2.0 : std::max(fovW, fovH);
     if (fov > 0) {
         cmd << " -fov " << fov;
     }
@@ -309,7 +304,9 @@ std::string AstapClient::buildCommand(
     // Initial coordinates hint
     if (initialCoordinates && initialCoordinates->isValid()) {
         cmd << " -ra " << initialCoordinates->ra;
-        cmd << " -spd " << (90.0 - initialCoordinates->dec);  // ASTAP uses SPD (South Pole Distance)
+        cmd << " -spd "
+            << (90.0 - initialCoordinates
+                           ->dec);  // ASTAP uses SPD (South Pole Distance)
     }
 
     // Search radius
@@ -400,10 +397,10 @@ std::string AstapClient::buildCommand(
 
 bool AstapClient::executeSolve(
     const std::string& imageFilePath,
-    const std::optional<Coordinates>& initialCoordinates,
-    double fovW, double fovH) {
-
-    std::string command = buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
+    const std::optional<Coordinates>& initialCoordinates, double fovW,
+    double fovH) {
+    std::string command =
+        buildCommand(imageFilePath, initialCoordinates, fovW, fovH);
     logger_->debug("Executing: {}", command);
 
     try {

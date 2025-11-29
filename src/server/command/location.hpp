@@ -27,19 +27,18 @@ inline void saveCurrentLocation(double latitude, double longitude) {
         configManager->set("/quarcs/location/latitude", latitude);
         configManager->set("/quarcs/location/longitude", longitude);
         LOG_INFO(
-              "saveCurrentLocation: Successfully saved location: latitude={}, "
-              "longitude={}",
-              latitude, longitude);
+            "saveCurrentLocation: Successfully saved location: latitude={}, "
+            "longitude={}",
+            latitude, longitude);
     } catch (const std::exception& e) {
-        LOG_ERROR( "saveCurrentLocation: Failed to save location: {}",
-              e.what());
+        LOG_ERROR("saveCurrentLocation: Failed to save location: {}", e.what());
     }
 
-    LOG_INFO( "saveCurrentLocation: Exiting function");
+    LOG_INFO("saveCurrentLocation: Exiting function");
 }
 
 inline void getCurrentLocation() {
-    LOG_INFO( "getCurrentLocation: Entering function");
+    LOG_INFO("getCurrentLocation: Entering function");
 
     LITHIUM_GET_REQUIRED_PTR(messageBus, atom::async::MessageBus,
                              Constants::MESSAGE_BUS);
@@ -54,20 +53,20 @@ inline void getCurrentLocation() {
             auto latitude = latitudeJ.value().get<double>();
             auto longitude = longitudeJ.value().get<double>();
             LOG_INFO(
-                  "getCurrentLocation: Current location: latitude={}, "
-                  "longitude={}",
-                  latitude, longitude);
+                "getCurrentLocation: Current location: latitude={}, "
+                "longitude={}",
+                latitude, longitude);
             messageBus->publish(
                 "quarcs", "SetCurrentLocation:{}:{}"_fmt(latitude, longitude));
         } else {
-            LOG_WARN( "getCurrentLocation: Location data not found");
+            LOG_WARN("getCurrentLocation: Location data not found");
         }
     } catch (const std::exception& e) {
-        LOG_ERROR( "getCurrentLocation: Failed to get current location: {}",
-              e.what());
+        LOG_ERROR("getCurrentLocation: Failed to get current location: {}",
+                  e.what());
     }
 
-    LOG_INFO( "getCurrentLocation: Exiting function");
+    LOG_INFO("getCurrentLocation: Exiting function");
 }
 }  // namespace lithium::middleware
 

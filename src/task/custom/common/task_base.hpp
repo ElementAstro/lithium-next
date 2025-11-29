@@ -13,10 +13,10 @@
 #ifndef LITHIUM_TASK_COMMON_TASK_BASE_HPP
 #define LITHIUM_TASK_COMMON_TASK_BASE_HPP
 
-#include "../../task.hpp"
 #include <spdlog/spdlog.h>
 #include <chrono>
 #include <memory>
+#include "../../task.hpp"
 
 namespace lithium::task {
 
@@ -48,7 +48,8 @@ public:
      */
     TaskBase(const std::string& name, const json& config)
         : Task(name, [this](const json& p) { this->executeImpl(p); }),
-          taskTypeName_(name), config_(config) {
+          taskTypeName_(name),
+          config_(config) {
         setupBaseParameters();
         setTaskType(name);
     }
@@ -66,10 +67,10 @@ public:
     void execute(const json& params) override {
         startTimer();
         markStartTime();
-        
+
         try {
             spdlog::info("[{}] Starting execution", taskTypeName_);
-            
+
             // Check if cancelled before starting
             if (isCancelled()) {
                 setStatus(TaskStatus::Failed);
@@ -77,7 +78,7 @@ public:
                 setError("Task was cancelled before execution");
                 return;
             }
-            
+
             // Validate parameters first
             if (!validateParams(params)) {
                 setStatus(TaskStatus::Failed);
@@ -88,10 +89,10 @@ public:
                 }
                 return;
             }
-            
+
             setStatus(TaskStatus::InProgress);
             executeImpl(params);
-            
+
             if (!isCancelled()) {
                 setStatus(TaskStatus::Completed);
                 logCompletion();
@@ -103,7 +104,7 @@ public:
             setError(e.what());
             throw;
         }
-        
+
         markEndTime();
     }
 
@@ -125,9 +126,12 @@ protected:
      * @brief Setup base parameters common to all tasks
      */
     virtual void setupBaseParameters() {
-        addParamDefinition("timeout", "integer", false, 3600, "Task timeout (seconds)");
-        addParamDefinition("retry_count", "integer", false, 0, "Retry count on failure");
-        addParamDefinition("retry_delay", "integer", false, 1000, "Delay between retries (ms)");
+        addParamDefinition("timeout", "integer", false, 3600,
+                           "Task timeout (seconds)");
+        addParamDefinition("retry_count", "integer", false, 0,
+                           "Retry count on failure");
+        addParamDefinition("retry_delay", "integer", false, 1000,
+                           "Delay between retries (ms)");
     }
 
     /**
@@ -138,7 +142,8 @@ protected:
     void logProgress(const std::string& message, double progress = -1.0) {
         addHistoryEntry(message);
         if (progress >= 0.0) {
-            spdlog::info("[{}] Progress {:.1f}%: {}", taskTypeName_, progress * 100, message);
+            spdlog::info("[{}] Progress {:.1f}%: {}", taskTypeName_,
+                         progress * 100, message);
         } else {
             spdlog::info("[{}] {}", taskTypeName_, message);
         }
@@ -156,9 +161,7 @@ protected:
     /**
      * @brief Start timing
      */
-    void startTimer() {
-        timerStart_ = std::chrono::steady_clock::now();
-    }
+    void startTimer() { timerStart_ = std::chrono::steady_clock::now(); }
 
     /**
      * @brief Get elapsed time in milliseconds
@@ -166,13 +169,14 @@ protected:
     [[nodiscard]] int64_t getElapsedMs() const {
         auto now = std::chrono::steady_clock::now();
         return std::chrono::duration_cast<std::chrono::milliseconds>(
-            now - timerStart_).count();
+                   now - timerStart_)
+            .count();
     }
 
     /**
      * @brief Get configuration value with default
      */
-    template<typename T>
+    template <typename T>
     T getConfig(const std::string& key, const T& defaultValue) const {
         if (config_.contains(key)) {
             return config_[key].get<T>();
@@ -183,9 +187,7 @@ protected:
     /**
      * @brief Check if task should continue (not cancelled)
      */
-    [[nodiscard]] bool shouldContinue() const {
-        return !isCancelled();
-    }
+    [[nodiscard]] bool shouldContinue() const { return !isCancelled(); }
 
     std::string taskTypeName_;
     json config_;
@@ -195,19 +197,23 @@ protected:
 /**
  * @brief Macro for defining a task class with boilerplate
  */
-#define DECLARE_TASK(ClassName, TaskTypeName) \
-class ClassName : public TaskBase { \
-public: \
-    ClassName() : TaskBase(TaskTypeName) { setupParameters(); } \
-    ClassName(const std::string& name, const json& config) \
-        : TaskBase(name, config) { setupParameters(); } \
-    static std::string taskName() { return TaskTypeName; } \
-    static std::string getStaticTaskTypeName() { return TaskTypeName; } \
-protected: \
-    void executeImpl(const json& params) override; \
-private: \
-    void setupParameters(); \
-};
+#define DECLARE_TASK(ClassName, TaskTypeName)                               \
+    class ClassName : public TaskBase {                                     \
+    public:                                                                 \
+        ClassName() : TaskBase(TaskTypeName) { setupParameters(); }         \
+        ClassName(const std::string& name, const json& config)              \
+            : TaskBase(name, config) {                                      \
+            setupParameters();                                              \
+        }                                                                   \
+        static std::string taskName() { return TaskTypeName; }              \
+        static std::string getStaticTaskTypeName() { return TaskTypeName; } \
+                                                                            \
+    protected:                                                              \
+        void executeImpl(const json& params) override;                      \
+                                                                            \
+    private:                                                                \
+        void setupParameters();                                             \
+    };
 
 }  // namespace lithium::task
 

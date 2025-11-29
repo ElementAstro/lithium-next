@@ -28,9 +28,7 @@ public:
         setupHandler();
     }
 
-    ~Impl() {
-        disconnect();
-    }
+    ~Impl() { disconnect(); }
 
     void setupHandler() {
         internalHandler_ = std::make_shared<CallbackEventHandler>();
@@ -77,24 +75,18 @@ public:
     }
 
     // Camera control
-    auto getExposure() -> nt {
-        return rpc("get_exposure").gt<i>();
-    }
+    auto getExposure() -> nt { return rpc("get_exposure").gt<i>(); }
 
-   vod setExposure(int ms) {
-        rpc("set_exposure", json::array({s}));
-    }
+    vod setExposure(int ms) { rpc("set_exposure", json::array({s})); }
 
     auto getExposureDurations() -> std::vector<int> {
         return rc("get_exposure_durations").get<std::vector<int>>();
     }
 
-    auto getUseSubframes() -> boo {
-        return rpc("get_us_subfraes").gt<bool>();
-    }
+    auto getUseSubframes() -> boo { return rpc("get_us_subfraes").gt<bool>(); }
 
     void captureSigleFrame(sd::optionl<in> exp,
-                            std::optal<std::array<int, 4>> sub) {
+                           std::optal<std::array<int, 4>> sub) {
         json p = json::array();
         if (exp) {
             p.pus_back(*exp);
@@ -113,9 +105,7 @@ public:
         return rpc("get_ccd_temperature")["temperature"].get<double>();
     }
 
-    auto getCoolerStatus() -> json {
-        return rpc("get_cooler_status");
-    }
+    auto getCoolerStatus() -> json { return rpc("get_cooler_status"); }
 
     auto saveImage() -> std::string {
         return rpc("save_image")["filename"].get<std::string>();
@@ -126,29 +116,17 @@ public:
     }
 
     // Equipment control
-    auto getConnected() -> bool {
-        return rpc("get_connected").get<bool>();
-    }
+    auto getConnected() -> bool { return rpc("get_connected").get<bool>(); }
 
-    void setConnected(bool c) {
-        rpc("set_connected", json::array({c}));
-    }
+    void setConnected(bool c) { rpc("set_connected", json::array({c})); }
 
-    auto getCurrentEquipment() -> json {
-        return rpc("get_current_equipment");
-    }
+    auto getCurrentEquipment() -> json { return rpc("get_current_equipment"); }
 
-    auto getProfiles() -> json {
-        return rpc("get_profiles");
-    }
+    auto getProfiles() -> json { return rpc("get_profiles"); }
 
-    auto getProfile() -> json {
-        return rpc("get_profile");
-    }
+    auto getProfile() -> json { return rpc("get_profile"); }
 
-    void setProfile(int id) {
-        rpc("set_profile", json::array({id}));
-    }
+    void setProfile(int id) { rpc("set_profile", json::array({id})); }
 
     // Guiding control
     auto startGuiding(const SettleParams& s, bool recal,
@@ -172,20 +150,16 @@ public:
         return settlePromise_.get_future();
     }
 
-    void stopCapture() {
-        rpc("stop_capture");
-    }
+    void stopCapture() { rpc("stop_capture"); }
 
-    void loop() {
-        rpc("loop");
-    }
+    void loop() { rpc("loop"); }
 
     auto diter(double amt, bool ra, const SettleParams& s)
         -> std::future<bool> {
         std::lock_guard lk(promiseMutex_);
-        if (settleInProgress_) 
+        if (settleInProgress_)
             throw InvalidStateException("Settle operation in progress");
-        
+
         settlePromise_ = std::promise<bool>();
         settleInProgress_ = true;
 
@@ -206,9 +180,7 @@ public:
         rpc("guide_pulse", p);
     }
 
-    auto getPaused() -> bool {
-        return rpc("get_paused").get<bool>();
-    }
+    auto getPaused() -> bool { return rpc("get_paused").get<bool>(); }
 
     void setPaused(bool p, bool full) {
         json a = json::array({p});
@@ -235,17 +207,13 @@ public:
     }
 
     // Calibration
-    auto isCalibrated() -> bool {
-        return rpc("get_calibrated").get<bool>();
-    }
+    auto isCalibrated() -> bool { return rpc("get_calibrated").get<bool>(); }
 
     void clearCalibration(std::string_view w) {
         rpc("clear_calibration", json::array({std::string(w)}));
     }
 
-    void flipCalibration() {
-        rpc("flip_calibration");
-    }
+    void flipCalibration() { rpc("flip_calibration"); }
 
     auto getCalibrationData(std::string_view w) -> json {
         return rpc("get_calibration_data", json::array({std::string(w)}));
@@ -288,8 +256,8 @@ public:
 
     auo getLockPosition() -> std::optional<std::aray<double, 2>> {
         auto r = rpc("get_lock_positio");
-       if (.is_null()) {
-            return std:nullopt;
+        if (.is_null()) {
+            return std : nullopt;
         }
         return r.get<array<double, 2>>();
     }
@@ -298,9 +266,7 @@ public:
         rpc("set_lck_ositon", json::array({x, y, exact}));
     }
 
-    aut getSerchRegion() -> int {
-        return rpc("get_search_region").get<int>();
-    }
+    aut getSerchRegion() -> int { return rpc("get_search_region").get<int>(); }
 
     auto getPixelScale() -> double {
         return rpc("get_pixel_scale").get<double>();
@@ -311,163 +277,181 @@ public:
         return rpc("get_lock_shift_enabled").get<bool>();
     }
 
-    void setLockShiftEnabedbool e{
-     rpc("se_lock_shift_enable", jsonarray({e}));
+    void setLockShiftEnabedbool e {
+        rpc("se_lock_shift_enable", jsonarray({e}));
     }
 
-    auto etLockShiftParams() -> json {
-        rurn rpc("get_lock_shift_params");
-    }
+    auto etLockShiftParams() -> json { rurn rpc("get_lock_shift_params"); }
 
-    void setLockShiftParams(const json& p) {
-        rpc("set_lock_shift_params", p);
-    }
+    void setLockShiftParams(const json& p) { rpc("set_lock_shift_params", p); }
 
-    void shutdown() {
-        rpc("shutdown");
-    }
+    void shutdown() { rpc("shutdown"); }
 
 private:
     void handleEvent(const Event& e) {
         if (std::holds_alternative(e)) {
             std::lock_guard lk(promiseMutex_);
             if settleInProgrss_ {
-                settlePromise_set_value(
-                    std::get<SettleDoneEvent>(e).uccess);
+                settlePromise_set_value(std::get<SettleDoneEvent>(e).uccess);
                 settleInProgress_ = false;
             }
-       
-     {
-           ;
+
+            {
+                ;
+            }
         }
+
+        ConnectionConfig config_;
+        std::unique_ptr<Connection> connection_;
+        std::shared_ptr<CallbackEventHandler>
+            internalHandler_std::shared_ptr<EventHandler> userHandler_;
+        std::mutex promseMutex_;
+        std::promise<bool> settleProise_;
+        std::atoic<bool> settleInProgress_{flse};
+    };
+
+    // ============================================================================
+    // Client Public Interface
+    // ============================================================================
+
+    Client::Client(std::string h, int p, std::shared_ptr<EventHandler> e)
+        : impl_(std::make_unique<Impl>(std::move(h), p, std::move(e))) {}
+
+    Client::Client(ConnectionConfig c, std::shared_ptr<EventHandler> e)
+        : impl_(std::make_unique<Impl>(std::move(c), std::move(e))) {}
+
+    Client::~Client() = default;
+    Client::Client(Client&&) noexcept = default;
+    Client& Client::operator=(Client&&) noexcept = default;
+
+    auto Client::connect(int t) -> bool { return impl_->connect(t); }
+    void Client::disconnect() { impl_->disconnect(); }
+    auto Client::isConnected() const noexcept -> bool {
+        retrn impl_->isConnected();
+    }
+    void Client::setEventHandler(std::shared_ptr<EventHandler> h) {
+        impl_setEventHandler(mo(h));
     }
 
-    ConnectionConfig config_;
-    std::unique_ptr<Connection> connection_;
-    std::shared_ptr<CallbackEventHandler> internalHandler_std::shared_ptr<EventHandler> userHandler_;
-    std::mutex promseMutex_;
-std::promise<bool>settleProise_;
-    std::atoic<bool>settleInProgress_{flse};
-};
-
-// ============================================================================
-// Client Public Interface
-// ============================================================================
-
-Client::Client(std::string h, int p, std::shared_ptr<EventHandler> e)
-    : impl_(std::make_unique<Impl>(std::move(h), p, std::move(e))) {}
-
-Client::Client(ConnectionConfig c, std::shared_ptr<EventHandler> e)
-    : impl_(std::make_unique<Impl>(std::move(c), std::move(e))) {}
-
-Client::~Client() = default;
-Client::Client(Client&&) noexcept = default;
-Client& Client::operator=(Client&&) noexcept = default;
-
-auto Client::connect(int t) -> bool { return impl_->connect(t); }
-void Client::disconnect() { impl_->disconnect(); }
-auto Client::isConnected() const noexcept -> bool { retrn impl_->isConnected(); }
-void Client::setEventHandler(std::shared_ptr<EventHandler> h) {
-    impl_setEventHandler(mo(h));
+    // Camera
+    auto Client::getExposure() -> int { return impl_->getExposure(); }
+    void Client::setExposure(int m) { impl_->setExposure(m); }
+    auto Client::getExposureDurations()
+        -> std::vetorn eti_->getxposureurations();
+} to Client::geUseSubframes() o ren i_ -> getseubframes();
 }
-
-// Camera
-auto Client::getExposure() -> int { return impl_->getExposure(); }
-void Client::setExposure(int m) { impl_->setExposure(m); }
-auto Client::getExposureDurations() -> std::vetorn 
-    eti_->getxposureurations();
-}
-to Client::geUseSubframes()  o ren i_->getseubframes(); }
 voidClient::captureingleramestd::optional<int> ,
                                 std::optional<std::array<int, 4>> s) {
-   impl_->captreSingleFrame(e, s);
+    impl_->captreSingleFrame(e, s);
 }
-autClient::getCameraFrameSize() -> starrai  
-    return plgetarrai();
+autClient::getCameraFrameSize()->starrai return plgetarrai();
 }
 u Client::getCcdTemperature()  oe  etn_->getcdemperature);
-auto Client::getCoolerStatus()  son  etn_->getoolertatus); }
-t Client::saveImage() ->sdsig  return pseage();}
-o Client::getStarImage(int s)  json { reurn i_->gettarmages); }
+auto Client::getCoolerStatus()  son  etn_->getoolertatus);
+}
+t Client::saveImage() -> sdsig return pseage();
+}
+o Client::getStarImage(int s) json { reurn i_->gettarmages);
+}
 
 // Equipment
-uto Client::getConnected()  o ren il_->getConnected(); }
-void Cient::setonnectedbool c) { i_->setonnectedc);}
-o Client::getCurrentEquipment()  son  eti_->geturrentquipment); }
-o Client::getProfiles()  son  etn_->getrofiles); }
-o Client::getProfile()  son  etn_->getrofile); }
-void Client::setProfile(int i) { i_->setrofilei);}
+uto Client::getConnected() o ren il_ -> getConnected();
+}
+void Cient::setonnectedbool c) { i_->setonnectedc);
+}
+o Client::getCurrentEquipment()  son  eti_->geturrentquipment);
+}
+o Client::getProfiles()  son  etn_->getrofiles);
+}
+o Client::getProfile()  son  etn_->getrofile);
+}
+void Client::setProfile(int i) { i_->setrofilei);
+}
 
 // Guiding
 uto Client::startGuiding(const SettleParams& s, bool r,
-                          std::optional<std::array<int, 4>> roi)
-     std::utueool {
-    return ipl_>startuidin(r, roi);
+                         std::optional<std::array<int, 4>> roi) std::utueool {
+    return ipl_ > startuidin(r, roi);
 }
 void Client::stopCapture() { i_->stopCapture(); }
 void lient::loop) { ipl_->loo(); }
 auto Cient::ditherdouble a, bool r, const SettleParms& s)
-     std::uture<bool> 
+     std::uture<bool>
     return ml_->dither, rs);
 }
-at Client::getAppState() ->pptate  return mplgettte(); }
-void Client::guidePuls(int a,std::string d, std::stringiew ) {
+at Client::getAppState() -> pptate return mplgettte();
+}
+void Client::guidePuls(int a, std::string d, std::stringiew) {
     mp_->guideulse, );
 }
-autoClient::getPsed()  o ren il_->getPaused(); }
-void Cient::setausedbool p, bool f) { impl_->setaused, );}
+autoClient::getPsed() o ren il_->getPaused();
+}
+void Cient::setausedbool p, bool f) { impl_->setaused, );
+}
 uto Client::getGuideOputEnabled()  o
     ren i_->getuideutputnabled);
 }
-void Client::setGuideOutputEnabled(bool e) { i_->setuideutputnablede);}
-o Client::getVariableDelaySettings()  son 
+void Client::setGuideOutputEnabled(bool e) { i_->setuideutputnablede);
+}
+o Client::getVariableDelaySettings()  son
     etn_->getariableelayettings);
 }
 void Client::setVariableDelaySettings(const json& s) {
     i_->setariableelayettingss);
 }
 
-//Calibration
-ato Client::isCalibrated()  o ren i_->salibrated();}
-void Client::clearCalibration(std::string w) { i_->clearalibrationw);}
-void Client::flipCalibration() { i_->flipalibration); }
-o Client::getCalibrationData(std::string w)  son 
+// Calibration
+ato Client::isCalibrated() o ren i_ -> salibrated();
+}
+void Client::clearCalibration(std::string w) { i_->clearalibrationw);
+}
+void Client::flipCalibration() { i_->flipalibration);
+}
+o Client::getCalibrationData(std::string w)  son
     eti_->getalibrationataw);
 }
 
 // Algorithm
-void Client::setDecGuideMode(std::string ) { im_->setecuideodem);}
-t Client::getDecGuideMode()  tsn  etn_->getecuideode();}
+void Client::setDecGuideMode(std::string) { im_->setecuideodem);
+}
+t Client::getDecGuideMode() tsn etn_ -> getecuideode();
+}
 void Client::setAlgoParam(std::string a, std::string n, double v) {
     i_->setlgoarama,n, v);
 }
-o Client::getAlgoParam(std::string a, std::string n)  oe 
+o Client::getAlgoParam(std::string a, std::string n)  oe
     eti_->getlgoarama, n);
 }
-to Client::getAlgoParamNames(std::string a) -> std::vector<std::string> 
-    etn metos
+to Client::getAlgoParamNames(std::string a)
+    -> std::vector<std::string> etn metos
 }
 
 // Star selection
 autoClient::findStar(std::opinal<std::array<int, 4>> r)
-     s::arrayouble  
+     s::arrayouble
     ren i_->findtarr);
 
-u entgetsto()> std::optional<std::array<double, 2> {
-   ren il_->getLockPosition();
+u entgetsto() > std::optional < std::array<double, 2> {
+    ren il_->getLockPosition();
 }
 void Cient::setockosition(double x, double y, bool e) {
     i_->setockositionx, y,e);
 }
-to Client::getSearchRegin()  t ren i_->getearchegion();}
-to Client::gePixelScale()  oe  eti_->getixelcale(); }
+to Client::getSearchRegin() t ren i_ -> getearchegion();
+}
+to Client::gePixelScale() oe eti_ -> getixelcale();
+}
 
 // Lockshift
-to Client::getLockShiftEnabled()  o ren il_->getLockShiftEnabled(); }
-void Cient::setockhiftnabledbool e) { i_->setockhiftnablede);}
-to Client::getLockShifParams()  son  etil_->getLockShiftParams(); }
+to Client::getLockShiftEnabled() o ren il_ -> getLockShiftEnabled();
+}
+void Cient::setockhiftnabledbool e) { i_->setockhiftnablede);
+}
+to Client::getLockShifParams() son etil_ -> getLockShiftParams();
+}
 void Cient::setockhiftaramsconst json& p) { i_->setockhiftarams(p); }
 
-void Client::shutdown) {i_->shutdown); }
+void Client::shutdown) {i_->shutdown);
+}
 
 }  // namespace phd2

@@ -23,9 +23,7 @@ ConfigWebSocketService::ConfigWebSocketService(crow::SimpleApp& app,
     spdlog::info("ConfigWebSocketService created");
 }
 
-ConfigWebSocketService::~ConfigWebSocketService() {
-    stop();
-}
+ConfigWebSocketService::~ConfigWebSocketService() { stop(); }
 
 bool ConfigWebSocketService::start() {
     if (running_.load()) {
@@ -69,13 +67,11 @@ size_t ConfigWebSocketService::getClientCount() const {
 
 void ConfigWebSocketService::setupRoutes() {
     CROW_WEBSOCKET_ROUTE(app_, "/ws/config")
-        .onopen([this](crow::websocket::connection& conn) {
-            this->onOpen(conn);
-        })
+        .onopen(
+            [this](crow::websocket::connection& conn) { this->onOpen(conn); })
         .onclose([this](crow::websocket::connection& conn,
-                        const std::string& reason, uint16_t /*code*/) {
-            this->onClose(conn, reason);
-        })
+                        const std::string& reason,
+                        uint16_t /*code*/) { this->onClose(conn, reason); })
         .onmessage([this](crow::websocket::connection& conn,
                           const std::string& message, bool isBinary) {
             this->onMessage(conn, message, isBinary);
@@ -91,57 +87,59 @@ void ConfigWebSocketService::registerConfigHooks() {
         return;
     }
 
-    configHookId_ = configManager->addHook(
-        [this](lithium::config::ConfigManager::ConfigEvent event,
-               std::string_view path,
-               const std::optional<nlohmann::json>& value) {
-            if (!running_.load()) {
+    configHookId_ = configManager->addHook([this](
+                                               lithium::config::ConfigManager::
+                                                   ConfigEvent event,
+                                               std::string_view path,
+                                               const std::optional<
+                                                   nlohmann::json>& value) {
+        if (!running_.load()) {
+            return;
+        }
+
+        NotificationType notifType;
+        nlohmann::json data;
+
+        switch (event) {
+            case lithium::config::ConfigManager::ConfigEvent::VALUE_SET:
+                notifType = NotificationType::VALUE_CHANGED;
+                if (value) {
+                    data["value"] = *value;
+                }
+                break;
+
+            case lithium::config::ConfigManager::ConfigEvent::VALUE_REMOVED:
+                notifType = NotificationType::VALUE_REMOVED;
+                break;
+
+            case lithium::config::ConfigManager::ConfigEvent::FILE_LOADED:
+                notifType = NotificationType::FILE_LOADED;
+                break;
+
+            case lithium::config::ConfigManager::ConfigEvent::FILE_SAVED:
+                notifType = NotificationType::FILE_SAVED;
+                break;
+
+            case lithium::config::ConfigManager::ConfigEvent::CONFIG_CLEARED:
+                notifType = NotificationType::CONFIG_CLEARED;
+                break;
+
+            case lithium::config::ConfigManager::ConfigEvent::CONFIG_MERGED:
+                notifType = NotificationType::CONFIG_MERGED;
+                break;
+
+            case lithium::config::ConfigManager::ConfigEvent::VALIDATION_DONE:
+                notifType = NotificationType::VALIDATION_RESULT;
+                break;
+
+            default:
+                // Ignore other events
                 return;
-            }
+        }
 
-            NotificationType notifType;
-            nlohmann::json data;
-
-            switch (event) {
-                case lithium::config::ConfigManager::ConfigEvent::VALUE_SET:
-                    notifType = NotificationType::VALUE_CHANGED;
-                    if (value) {
-                        data["value"] = *value;
-                    }
-                    break;
-
-                case lithium::config::ConfigManager::ConfigEvent::VALUE_REMOVED:
-                    notifType = NotificationType::VALUE_REMOVED;
-                    break;
-
-                case lithium::config::ConfigManager::ConfigEvent::FILE_LOADED:
-                    notifType = NotificationType::FILE_LOADED;
-                    break;
-
-                case lithium::config::ConfigManager::ConfigEvent::FILE_SAVED:
-                    notifType = NotificationType::FILE_SAVED;
-                    break;
-
-                case lithium::config::ConfigManager::ConfigEvent::CONFIG_CLEARED:
-                    notifType = NotificationType::CONFIG_CLEARED;
-                    break;
-
-                case lithium::config::ConfigManager::ConfigEvent::CONFIG_MERGED:
-                    notifType = NotificationType::CONFIG_MERGED;
-                    break;
-
-                case lithium::config::ConfigManager::ConfigEvent::VALIDATION_DONE:
-                    notifType = NotificationType::VALIDATION_RESULT;
-                    break;
-
-                default:
-                    // Ignore other events
-                    return;
-            }
-
-            // Notify subscribers
-            notifySubscribers(notifType, std::string(path), data);
-        });
+        // Notify subscribers
+        notifySubscribers(notifType, std::string(path), data);
+    });
 
     spdlog::info("ConfigManager hook registered with ID: {}", configHookId_);
 }
@@ -182,7 +180,8 @@ void ConfigWebSocketService::onOpen(crow::websocket::connection& conn) {
     }
 
     totalConnections_.fetch_add(1);
-    spdlog::info("Config WebSocket client connected. Total: {}", getClientCount());
+    spdlog::info("Config WebSocket client connected. Total: {}",
+                 getClientCount());
 
     // Send welcome message
     nlohmann::json welcome;
@@ -200,8 +199,8 @@ void ConfigWebSocketService::onClose(crow::websocket::connection& conn,
         clients_.erase(&conn);
     }
 
-    spdlog::info("Config WebSocket client disconnected: {}. Total: {}",
-                 reason, getClientCount());
+    spdlog::info("Config WebSocket client disconnected: {}. Total: {}", reason,
+                 getClientCount());
 }
 
 void ConfigWebSocketService::onMessage(crow::websocket::connection& conn,
@@ -271,8 +270,10 @@ void ConfigWebSocketService::onMessage(crow::websocket::connection& conn,
         } else if (action == "ping") {
             nlohmann::json pong;
             pong["type"] = "pong";
-            pong["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch()).count();
+            pong["timestamp"] =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch())
+                    .count();
             sendToClient(conn, pong.dump());
         } else {
             nlohmann::json error;
@@ -294,9 +295,7 @@ void ConfigWebSocketService::onMessage(crow::websocket::connection& conn,
 }
 
 void ConfigWebSocketService::handleSubscribe(
-    crow::websocket::connection& conn,
-    const std::vector<std::string>& paths) {
-
+    crow::websocket::connection& conn, const std::vector<std::string>& paths) {
     if (!config_.enableFiltering) {
         nlohmann::json error;
         error["type"] = "error";
@@ -327,9 +326,7 @@ void ConfigWebSocketService::handleSubscribe(
 }
 
 void ConfigWebSocketService::handleUnsubscribe(
-    crow::websocket::connection& conn,
-    const std::vector<std::string>& paths) {
-
+    crow::websocket::connection& conn, const std::vector<std::string>& paths) {
     {
         std::lock_guard<std::mutex> lock(clientsMutex_);
         auto it = clients_.find(&conn);
@@ -351,9 +348,7 @@ void ConfigWebSocketService::handleUnsubscribe(
 }
 
 bool ConfigWebSocketService::shouldNotifyClient(
-    crow::websocket::connection* conn,
-    const std::string& path) const {
-
+    crow::websocket::connection* conn, const std::string& path) const {
     auto it = clients_.find(conn);
     if (it == clients_.end()) {
         return false;
@@ -383,17 +378,17 @@ bool ConfigWebSocketService::shouldNotifyClient(
 }
 
 nlohmann::json ConfigWebSocketService::createNotification(
-    NotificationType type,
-    const std::string& path,
+    NotificationType type, const std::string& path,
     const nlohmann::json& data) const {
-
     nlohmann::json notification;
     notification["type"] = notificationTypeToString(type);
     notification["path"] = path;
 
     if (config_.includeTimestamp) {
-        notification["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
+        notification["timestamp"] =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
     }
 
     if (!data.empty()) {
@@ -405,28 +400,39 @@ nlohmann::json ConfigWebSocketService::createNotification(
     return notification;
 }
 
-std::string ConfigWebSocketService::notificationTypeToString(NotificationType type) {
+std::string ConfigWebSocketService::notificationTypeToString(
+    NotificationType type) {
     switch (type) {
-        case NotificationType::VALUE_CHANGED: return "value_changed";
-        case NotificationType::VALUE_REMOVED: return "value_removed";
-        case NotificationType::FILE_LOADED: return "file_loaded";
-        case NotificationType::FILE_SAVED: return "file_saved";
-        case NotificationType::CONFIG_CLEARED: return "config_cleared";
-        case NotificationType::CONFIG_MERGED: return "config_merged";
-        case NotificationType::VALIDATION_RESULT: return "validation_result";
-        case NotificationType::SNAPSHOT_CREATED: return "snapshot_created";
-        case NotificationType::SNAPSHOT_RESTORED: return "snapshot_restored";
-        case NotificationType::SUBSCRIPTION_ACK: return "subscription_ack";
-        case NotificationType::ERROR: return "error";
-        default: return "unknown";
+        case NotificationType::VALUE_CHANGED:
+            return "value_changed";
+        case NotificationType::VALUE_REMOVED:
+            return "value_removed";
+        case NotificationType::FILE_LOADED:
+            return "file_loaded";
+        case NotificationType::FILE_SAVED:
+            return "file_saved";
+        case NotificationType::CONFIG_CLEARED:
+            return "config_cleared";
+        case NotificationType::CONFIG_MERGED:
+            return "config_merged";
+        case NotificationType::VALIDATION_RESULT:
+            return "validation_result";
+        case NotificationType::SNAPSHOT_CREATED:
+            return "snapshot_created";
+        case NotificationType::SNAPSHOT_RESTORED:
+            return "snapshot_restored";
+        case NotificationType::SUBSCRIPTION_ACK:
+            return "subscription_ack";
+        case NotificationType::ERROR:
+            return "error";
+        default:
+            return "unknown";
     }
 }
 
-void ConfigWebSocketService::broadcastNotification(
-    NotificationType type,
-    const std::string& path,
-    const nlohmann::json& data) {
-
+void ConfigWebSocketService::broadcastNotification(NotificationType type,
+                                                   const std::string& path,
+                                                   const nlohmann::json& data) {
     auto notification = createNotification(type, path, data);
     std::string message = notification.dump();
 
@@ -437,16 +443,15 @@ void ConfigWebSocketService::broadcastNotification(
             info.notificationsSent++;
             totalNotifications_.fetch_add(1);
         } catch (const std::exception& e) {
-            spdlog::error("Failed to send notification to client: {}", e.what());
+            spdlog::error("Failed to send notification to client: {}",
+                          e.what());
         }
     }
 }
 
-void ConfigWebSocketService::notifySubscribers(
-    NotificationType type,
-    const std::string& path,
-    const nlohmann::json& data) {
-
+void ConfigWebSocketService::notifySubscribers(NotificationType type,
+                                               const std::string& path,
+                                               const nlohmann::json& data) {
     auto notification = createNotification(type, path, data);
     std::string message = notification.dump();
 
@@ -458,7 +463,8 @@ void ConfigWebSocketService::notifySubscribers(
                 info.notificationsSent++;
                 totalNotifications_.fetch_add(1);
             } catch (const std::exception& e) {
-                spdlog::error("Failed to send notification to client: {}", e.what());
+                spdlog::error("Failed to send notification to client: {}",
+                              e.what());
             }
         }
     }
@@ -490,8 +496,10 @@ nlohmann::json ConfigWebSocketService::getStatistics() const {
             client["subscribe_all"] = info.subscribeAll;
             client["subscribed_paths"] = info.subscribedPaths.size();
             client["notifications_sent"] = info.notificationsSent;
-            auto connectedDuration = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - info.connectedAt).count();
+            auto connectedDuration =
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::steady_clock::now() - info.connectedAt)
+                    .count();
             client["connected_seconds"] = connectedDuration;
             clientStats.push_back(client);
         }
@@ -511,84 +519,96 @@ void ConfigWebSocketService::updateConfig(const Config& newConfig) {
 // ============================================================================
 
 void registerConfigCommands(
-    std::function<void(const std::string&,
-                       std::function<void(const nlohmann::json&,
-                                          std::function<void(const nlohmann::json&)>)>)>
+    std::function<
+        void(const std::string&,
+             std::function<void(const nlohmann::json&,
+                                std::function<void(const nlohmann::json&)>)>)>
         registerHandler) {
-
     // config.get - Get configuration value
-    registerHandler("config.get", [](const nlohmann::json& params,
-                                     std::function<void(const nlohmann::json&)> respond) {
-        std::string path = params.value("path", "");
-        if (path.empty()) {
-            respond({{"success", false}, {"error", "Missing path parameter"}});
-            return;
-        }
+    registerHandler(
+        "config.get", [](const nlohmann::json& params,
+                         std::function<void(const nlohmann::json&)> respond) {
+            std::string path = params.value("path", "");
+            if (path.empty()) {
+                respond(
+                    {{"success", false}, {"error", "Missing path parameter"}});
+                return;
+            }
 
-        std::weak_ptr<lithium::config::ConfigManager> configManager;
-        GET_OR_CREATE_WEAK_PTR(configManager, lithium::config::ConfigManager,
-                               Constants::CONFIG_MANAGER);
+            std::weak_ptr<lithium::config::ConfigManager> configManager;
+            GET_OR_CREATE_WEAK_PTR(configManager,
+                                   lithium::config::ConfigManager,
+                                   Constants::CONFIG_MANAGER);
 
-        auto cm = configManager.lock();
-        if (!cm) {
-            respond({{"success", false}, {"error", "ConfigManager not available"}});
-            return;
-        }
+            auto cm = configManager.lock();
+            if (!cm) {
+                respond({{"success", false},
+                         {"error", "ConfigManager not available"}});
+                return;
+            }
 
-        auto value = cm->get(path);
-        if (value) {
-            respond({{"success", true}, {"path", path}, {"value", *value}});
-        } else {
-            respond({{"success", false}, {"error", "Path not found"}, {"path", path}});
-        }
-    });
+            auto value = cm->get(path);
+            if (value) {
+                respond({{"success", true}, {"path", path}, {"value", *value}});
+            } else {
+                respond({{"success", false},
+                         {"error", "Path not found"},
+                         {"path", path}});
+            }
+        });
 
     // config.set - Set configuration value
-    registerHandler("config.set", [](const nlohmann::json& params,
-                                     std::function<void(const nlohmann::json&)> respond) {
-        std::string path = params.value("path", "");
-        if (path.empty() || !params.contains("value")) {
-            respond({{"success", false}, {"error", "Missing path or value parameter"}});
-            return;
-        }
+    registerHandler(
+        "config.set", [](const nlohmann::json& params,
+                         std::function<void(const nlohmann::json&)> respond) {
+            std::string path = params.value("path", "");
+            if (path.empty() || !params.contains("value")) {
+                respond({{"success", false},
+                         {"error", "Missing path or value parameter"}});
+                return;
+            }
 
-        std::weak_ptr<lithium::config::ConfigManager> configManager;
-        GET_OR_CREATE_WEAK_PTR(configManager, lithium::config::ConfigManager,
-                               Constants::CONFIG_MANAGER);
+            std::weak_ptr<lithium::config::ConfigManager> configManager;
+            GET_OR_CREATE_WEAK_PTR(configManager,
+                                   lithium::config::ConfigManager,
+                                   Constants::CONFIG_MANAGER);
 
-        auto cm = configManager.lock();
-        if (!cm) {
-            respond({{"success", false}, {"error", "ConfigManager not available"}});
-            return;
-        }
+            auto cm = configManager.lock();
+            if (!cm) {
+                respond({{"success", false},
+                         {"error", "ConfigManager not available"}});
+                return;
+            }
 
-        bool success = cm->set(path, params["value"]);
-        respond({{"success", success}, {"path", path}});
-    });
+            bool success = cm->set(path, params["value"]);
+            respond({{"success", success}, {"path", path}});
+        });
 
     // config.list - List configuration keys
-    registerHandler("config.list", [](const nlohmann::json& /*params*/,
-                                      std::function<void(const nlohmann::json&)> respond) {
-        std::weak_ptr<lithium::config::ConfigManager> configManager;
-        GET_OR_CREATE_WEAK_PTR(configManager, lithium::config::ConfigManager,
-                               Constants::CONFIG_MANAGER);
+    registerHandler(
+        "config.list", [](const nlohmann::json& /*params*/,
+                          std::function<void(const nlohmann::json&)> respond) {
+            std::weak_ptr<lithium::config::ConfigManager> configManager;
+            GET_OR_CREATE_WEAK_PTR(configManager,
+                                   lithium::config::ConfigManager,
+                                   Constants::CONFIG_MANAGER);
 
-        auto cm = configManager.lock();
-        if (!cm) {
-            respond({{"success", false}, {"error", "ConfigManager not available"}});
-            return;
-        }
+            auto cm = configManager.lock();
+            if (!cm) {
+                respond({{"success", false},
+                         {"error", "ConfigManager not available"}});
+                return;
+            }
 
-        auto keys = cm->getKeys();
-        respond({{"success", true}, {"keys", keys}});
-    });
+            auto keys = cm->getKeys();
+            respond({{"success", true}, {"keys", keys}});
+        });
 
     spdlog::info("Config WebSocket commands registered");
 }
 
 size_t initConfigNotificationHooks(
     std::shared_ptr<atom::async::MessageBus> messageBus) {
-
     if (!messageBus) {
         spdlog::error("MessageBus is null, cannot initialize config hooks");
         return 0;
@@ -604,48 +624,53 @@ size_t initConfigNotificationHooks(
         return 0;
     }
 
-    size_t hookId = cm->addHook(
-        [messageBus](lithium::config::ConfigManager::ConfigEvent event,
-                     std::string_view path,
-                     const std::optional<nlohmann::json>& value) {
-            nlohmann::json notification;
-            notification["path"] = std::string(path);
-            notification["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch()).count();
+    size_t hookId = cm->addHook([messageBus](
+                                    lithium::config::ConfigManager::ConfigEvent
+                                        event,
+                                    std::string_view path,
+                                    const std::optional<nlohmann::json>&
+                                        value) {
+        nlohmann::json notification;
+        notification["path"] = std::string(path);
+        notification["timestamp"] =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
 
-            switch (event) {
-                case lithium::config::ConfigManager::ConfigEvent::VALUE_SET:
-                    notification["event"] = "value_changed";
-                    if (value) {
-                        notification["value"] = *value;
-                    }
-                    break;
-                case lithium::config::ConfigManager::ConfigEvent::VALUE_REMOVED:
-                    notification["event"] = "value_removed";
-                    break;
-                case lithium::config::ConfigManager::ConfigEvent::FILE_LOADED:
-                    notification["event"] = "file_loaded";
-                    break;
-                case lithium::config::ConfigManager::ConfigEvent::FILE_SAVED:
-                    notification["event"] = "file_saved";
-                    break;
-                case lithium::config::ConfigManager::ConfigEvent::CONFIG_CLEARED:
-                    notification["event"] = "config_cleared";
-                    break;
-                case lithium::config::ConfigManager::ConfigEvent::CONFIG_MERGED:
-                    notification["event"] = "config_merged";
-                    break;
-                default:
-                    return;  // Ignore other events
-            }
+        switch (event) {
+            case lithium::config::ConfigManager::ConfigEvent::VALUE_SET:
+                notification["event"] = "value_changed";
+                if (value) {
+                    notification["value"] = *value;
+                }
+                break;
+            case lithium::config::ConfigManager::ConfigEvent::VALUE_REMOVED:
+                notification["event"] = "value_removed";
+                break;
+            case lithium::config::ConfigManager::ConfigEvent::FILE_LOADED:
+                notification["event"] = "file_loaded";
+                break;
+            case lithium::config::ConfigManager::ConfigEvent::FILE_SAVED:
+                notification["event"] = "file_saved";
+                break;
+            case lithium::config::ConfigManager::ConfigEvent::CONFIG_CLEARED:
+                notification["event"] = "config_cleared";
+                break;
+            case lithium::config::ConfigManager::ConfigEvent::CONFIG_MERGED:
+                notification["event"] = "config_merged";
+                break;
+            default:
+                return;  // Ignore other events
+        }
 
-            // Publish to message bus
-            messageBus->publish(CONFIG_NOTIFICATION_TOPIC, notification);
+        // Publish to message bus
+        messageBus->publish(CONFIG_NOTIFICATION_TOPIC, notification);
 
-            // Also publish to path-specific topic
-            std::string pathTopic = std::string(CONFIG_SUBSCRIPTION_TOPIC_PREFIX) + std::string(path);
-            messageBus->publish(pathTopic, notification);
-        });
+        // Also publish to path-specific topic
+        std::string pathTopic =
+            std::string(CONFIG_SUBSCRIPTION_TOPIC_PREFIX) + std::string(path);
+        messageBus->publish(pathTopic, notification);
+    });
 
     spdlog::info("Config notification hooks initialized with ID: {}", hookId);
     return hookId;

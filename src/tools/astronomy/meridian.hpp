@@ -35,10 +35,10 @@ using json = nlohmann::json;
  * which is important for German equatorial mount operation.
  */
 enum class MeridianState {
-    East,           ///< Target is east of meridian
-    West,           ///< Target is west of meridian
-    NearMeridian,   ///< Target is near meridian (within offset)
-    Unknown         ///< State unknown or not calculated
+    East,          ///< Target is east of meridian
+    West,          ///< Target is west of meridian
+    NearMeridian,  ///< Target is near meridian (within offset)
+    Unknown        ///< State unknown or not calculated
 };
 
 /**
@@ -46,13 +46,19 @@ enum class MeridianState {
  * @param state The meridian state.
  * @return String representation of the state.
  */
-[[nodiscard]] inline const char* meridianStateToString(MeridianState state) noexcept {
+[[nodiscard]] inline const char* meridianStateToString(
+    MeridianState state) noexcept {
     switch (state) {
-        case MeridianState::East: return "East";
-        case MeridianState::West: return "West";
-        case MeridianState::NearMeridian: return "NearMeridian";
-        case MeridianState::Unknown: return "Unknown";
-        default: return "Invalid";
+        case MeridianState::East:
+            return "East";
+        case MeridianState::West:
+            return "West";
+        case MeridianState::NearMeridian:
+            return "NearMeridian";
+        case MeridianState::Unknown:
+            return "Unknown";
+        default:
+            return "Invalid";
     }
 }
 
@@ -61,10 +67,14 @@ enum class MeridianState {
  * @param str String representation.
  * @return Corresponding MeridianState, or Unknown if invalid.
  */
-[[nodiscard]] inline MeridianState stringToMeridianState(const std::string& str) noexcept {
-    if (str == "East") return MeridianState::East;
-    if (str == "West") return MeridianState::West;
-    if (str == "NearMeridian") return MeridianState::NearMeridian;
+[[nodiscard]] inline MeridianState stringToMeridianState(
+    const std::string& str) noexcept {
+    if (str == "East")
+        return MeridianState::East;
+    if (str == "West")
+        return MeridianState::West;
+    if (str == "NearMeridian")
+        return MeridianState::NearMeridian;
     return MeridianState::Unknown;
 }
 
@@ -80,11 +90,12 @@ enum class MeridianState {
  * a flip has been completed. Essential for automated observation scheduling.
  */
 struct MeridianFlipInfo {
-    MeridianState currentState{MeridianState::Unknown};  ///< Current meridian state
-    std::chrono::system_clock::time_point flipTime;      ///< Expected flip time
-    bool flipRequired{false};     ///< Whether flip is required
-    bool flipCompleted{false};    ///< Whether flip has been completed
-    double hourAngle{0.0};        ///< Current hour angle (hours, -12 to +12)
+    MeridianState currentState{
+        MeridianState::Unknown};                     ///< Current meridian state
+    std::chrono::system_clock::time_point flipTime;  ///< Expected flip time
+    bool flipRequired{false};   ///< Whether flip is required
+    bool flipCompleted{false};  ///< Whether flip has been completed
+    double hourAngle{0.0};      ///< Current hour angle (hours, -12 to +12)
 
     // ========================================================================
     // Constructors
@@ -101,7 +112,8 @@ struct MeridianFlipInfo {
      * @return Seconds until flip, or 0 if not required.
      */
     [[nodiscard]] int64_t secondsToFlip() const {
-        if (!flipRequired) return 0;
+        if (!flipRequired)
+            return 0;
         auto now = std::chrono::system_clock::now();
         return std::chrono::duration_cast<std::chrono::seconds>(flipTime - now)
             .count();
@@ -113,7 +125,8 @@ struct MeridianFlipInfo {
      * @return true if flip is required and within threshold.
      */
     [[nodiscard]] bool isFlipImminent(int64_t thresholdSeconds = 300) const {
-        if (!flipRequired || flipCompleted) return false;
+        if (!flipRequired || flipCompleted)
+            return false;
         auto seconds = secondsToFlip();
         return seconds > 0 && seconds <= thresholdSeconds;
     }
@@ -123,7 +136,8 @@ struct MeridianFlipInfo {
      * @return true if flip was required but time has passed.
      */
     [[nodiscard]] bool isFlipOverdue() const {
-        if (!flipRequired || flipCompleted) return false;
+        if (!flipRequired || flipCompleted)
+            return false;
         return secondsToFlip() < 0;
     }
 
@@ -166,18 +180,17 @@ struct MeridianFlipInfo {
     // ========================================================================
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"currentState", static_cast<int>(currentState)},
-            {"flipTime", std::chrono::system_clock::to_time_t(flipTime)},
-            {"flipRequired", flipRequired},
-            {"flipCompleted", flipCompleted},
-            {"hourAngle", hourAngle}
-        };
+        return {{"currentState", static_cast<int>(currentState)},
+                {"flipTime", std::chrono::system_clock::to_time_t(flipTime)},
+                {"flipRequired", flipRequired},
+                {"flipCompleted", flipCompleted},
+                {"hourAngle", hourAngle}};
     }
 
     [[nodiscard]] static MeridianFlipInfo fromJson(const json& j) {
         MeridianFlipInfo info;
-        info.currentState = static_cast<MeridianState>(j.value("currentState", 3));
+        info.currentState =
+            static_cast<MeridianState>(j.value("currentState", 3));
         info.flipTime = std::chrono::system_clock::from_time_t(
             j.value("flipTime", static_cast<std::time_t>(0)));
         info.flipRequired = j.value("flipRequired", false);
@@ -214,13 +227,13 @@ struct MeridianFlipInfo {
  * timing offsets and automation preferences.
  */
 struct MeridianFlipSettings {
-    double flipOffset{0.0};       ///< Minutes past meridian before flip
-    bool autoFlip{true};          ///< Allow automatic meridian flip
+    double flipOffset{0.0};               ///< Minutes past meridian before flip
+    bool autoFlip{true};                  ///< Allow automatic meridian flip
     bool avoidFlipDuringExposure{false};  ///< Avoid flip during exposure
-    double pauseBeforeFlip{30.0}; ///< Seconds to pause before flip
-    double pauseAfterFlip{30.0};  ///< Seconds to pause after flip
-    bool recenterAfterFlip{true}; ///< Re-center target after flip
-    bool refocusAfterFlip{false}; ///< Refocus after flip
+    double pauseBeforeFlip{30.0};         ///< Seconds to pause before flip
+    double pauseAfterFlip{30.0};          ///< Seconds to pause after flip
+    bool recenterAfterFlip{true};         ///< Re-center target after flip
+    bool refocusAfterFlip{false};         ///< Refocus after flip
 
     // ========================================================================
     // Constructors
@@ -233,15 +246,13 @@ struct MeridianFlipSettings {
     // ========================================================================
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"flipOffset", flipOffset},
-            {"autoFlip", autoFlip},
-            {"avoidFlipDuringExposure", avoidFlipDuringExposure},
-            {"pauseBeforeFlip", pauseBeforeFlip},
-            {"pauseAfterFlip", pauseAfterFlip},
-            {"recenterAfterFlip", recenterAfterFlip},
-            {"refocusAfterFlip", refocusAfterFlip}
-        };
+        return {{"flipOffset", flipOffset},
+                {"autoFlip", autoFlip},
+                {"avoidFlipDuringExposure", avoidFlipDuringExposure},
+                {"pauseBeforeFlip", pauseBeforeFlip},
+                {"pauseAfterFlip", pauseAfterFlip},
+                {"recenterAfterFlip", recenterAfterFlip},
+                {"refocusAfterFlip", refocusAfterFlip}};
     }
 
     [[nodiscard]] static MeridianFlipSettings fromJson(const json& j) {

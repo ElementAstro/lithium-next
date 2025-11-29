@@ -2,15 +2,16 @@
 #define LITHIUM_TASK_CUSTOM_SOLVER_TASK_HPP
 
 #include "../task.hpp"
-#include "server/command/solver.hpp"
 #include "atom/log/spdlog_logger.hpp"
+#include "server/command/solver.hpp"
 
 namespace lithium::task {
 
 class SolverTask : public Task {
 public:
-    SolverTask(std::string name, const json& config) 
-        : Task(std::move(name), [this](const json& params){ this->runSolver(params); }) {
+    SolverTask(std::string name, const json& config)
+        : Task(std::move(name),
+               [this](const json& params) { this->runSolver(params); }) {
         // Initialize from config if needed
     }
 
@@ -23,35 +24,36 @@ private:
             } else {
                 throw std::invalid_argument("Missing filePath parameter");
             }
-            
+
             double ra = params.value("ra", 0.0);
             double dec = params.value("dec", 0.0);
             double scale = params.value("scale", 0.0);
             double radius = params.value("radius", 180.0);
-            
-            LOG_INFO( "SolverTask: Starting solve for %s", filePath.c_str());
-            
-            auto result = lithium::middleware::solveImage(filePath, ra, dec, scale, radius);
-            
+
+            LOG_INFO("SolverTask: Starting solve for %s", filePath.c_str());
+
+            auto result = lithium::middleware::solveImage(filePath, ra, dec,
+                                                          scale, radius);
+
             if (result["status"] != "success") {
                 std::string errorMsg = "Solving failed";
                 if (result.contains("error")) {
-                     errorMsg = result["error"].value("message", errorMsg);
+                    errorMsg = result["error"].value("message", errorMsg);
                 } else if (result.contains("message")) {
-                     errorMsg = result["message"];
+                    errorMsg = result["message"];
                 }
                 throw std::runtime_error(errorMsg);
             }
-            
-            LOG_INFO( "SolverTask: Solved successfully.");
-            
+
+            LOG_INFO("SolverTask: Solved successfully.");
+
         } catch (const std::exception& e) {
-            LOG_ERROR( "SolverTask exception: %s", e.what());
-            throw; // Re-throw to let Task handle the failure state
+            LOG_ERROR("SolverTask exception: %s", e.what());
+            throw;  // Re-throw to let Task handle the failure state
         }
     }
 };
 
-} // namespace lithium::task
+}  // namespace lithium::task
 
-#endif // LITHIUM_TASK_CUSTOM_SOLVER_TASK_HPP
+#endif  // LITHIUM_TASK_CUSTOM_SOLVER_TASK_HPP

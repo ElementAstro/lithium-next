@@ -92,7 +92,9 @@ public:
     void setEventCallback(EventCallback cb) { eventCallback_ = std::move(cb); }
     void setErrorCallback(ErrorCallback cb) { errorCallback_ = std::move(cb); }
     void setStateCallback(StateCallback cb) { stateCallback_ = std::move(cb); }
-    void setGuidingCallback(GuidingCallback cb) { guidingCallback_ = std::move(cb); }
+    void setGuidingCallback(GuidingCallback cb) {
+        guidingCallback_ = std::move(cb);
+    }
 
 private:
     EventCallback eventCallback_;
@@ -149,11 +151,9 @@ private:
  */
 class FilteredEventHandler : public EventHandler {
 public:
-    explicit FilteredEventHandler(
-        std::shared_ptr<EventHandler> target,
-        std::vector<EventType> allowedTypes)
-        : target_(std::move(target)),
-          allowedTypes_(std::move(allowedTypes)) {}
+    explicit FilteredEventHandler(std::shared_ptr<EventHandler> target,
+                                  std::vector<EventType> allowedTypes)
+        : target_(std::move(target)), allowedTypes_(std::move(allowedTypes)) {}
 
     void onEvent(const Event& event) override {
         auto type = getEventType(event);

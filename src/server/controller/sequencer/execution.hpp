@@ -8,19 +8,23 @@
 #define LITHIUM_SERVER_CONTROLLER_SEQUENCE_EXECUTION_HPP
 
 #include "../controller.hpp"
+#include "server/utils/response.hpp"
 
 #include <functional>
 #include <memory>
 #include <string>
 #include "task/sequencer.hpp"
 
+namespace lithium::server::controller {
+
+using ResponseBuilder = utils::ResponseBuilder;
+
 /**
  * @brief Controller for sequence execution control operations
  */
 class SequenceExecutionController : public Controller {
 private:
-    static std::weak_ptr<lithium::task::ExposureSequence>
-        mExposureSequence;
+    static std::weak_ptr<lithium::task::ExposureSequence> mExposureSequence;
 
     /**
      * @brief Utility function to handle execution actions with error handling
@@ -28,60 +32,41 @@ private:
     static auto handleExecutionAction(
         const crow::request& req, const crow::json::rvalue& body,
         const std::string& command,
-        std::function<crow::json::wvalue(
-            std::shared_ptr<lithium::task::ExposureSequence>)>
+        std::function<
+            nlohmann::json(std::shared_ptr<lithium::task::ExposureSequence>)>
             func) {
-        crow::json::wvalue res;
-        res["command"] = command;
-
         spdlog::info("Received execution command: {}", command);
         spdlog::info("Request body: {}", req.body);
 
         try {
             auto exposureSequence = mExposureSequence.lock();
             if (!exposureSequence) {
-                res["status"] = "error";
-                res["code"] = 500;
-                res["error"] =
-                    "Internal Server Error: ExposureSequence instance is null.";
                 spdlog::error(
                     "ExposureSequence instance is null for command: {}",
                     command);
-                return crow::response(500, res);
+                return ResponseBuilder::internalError(
+                    "ExposureSequence instance is null");
             }
 
             auto result = func(exposureSequence);
-            res["status"] = "success";
-            res["code"] = 200;
-            res["data"] = std::move(result);
             spdlog::info("Command '{}' executed successfully", command);
+            return ResponseBuilder::success(result, command);
 
         } catch (const std::invalid_argument& e) {
-            res["status"] = "error";
-            res["code"] = 400;
-            res["error"] =
-                std::string("Bad Request: Invalid argument - ") + e.what();
             spdlog::error("Invalid argument for command {}: {}", command,
                           e.what());
+            return ResponseBuilder::badRequest(
+                std::string("Invalid argument - ") + e.what());
         } catch (const std::runtime_error& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Runtime error - ") +
-                e.what();
             spdlog::error("Runtime error for command {}: {}", command,
                           e.what());
+            return ResponseBuilder::internalError(
+                std::string("Runtime error - ") + e.what());
         } catch (const std::exception& e) {
-            res["status"] = "error";
-            res["code"] = 500;
-            res["error"] =
-                std::string("Internal Server Error: Exception occurred - ") +
-                e.what();
             spdlog::error("Exception for command {}: {}", command, e.what());
+            return ResponseBuilder::internalError(
+                std::string("Exception occurred - ") + e.what());
         }
-
-        spdlog::info("Response for command '{}': {}", command, res.dump());
-        return crow::response(200, res);
     }
 
 public:
@@ -97,8 +82,8 @@ public:
                     crow::json::load(req.body.empty() ? "{}" : req.body);
                 return handleExecutionAction(
                     req, body, "executeAll",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->executeAll();
                         result["message"] = "Sequence execution started";
@@ -113,8 +98,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "stop",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->stop();
                         result["message"] = "Sequence execution stopped";
@@ -129,8 +114,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "pause",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->pause();
                         result["message"] = "Sequence execution paused";
@@ -145,8 +130,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "resume",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->resume();
                         result["message"] = "Sequence execution resumed";
@@ -161,8 +146,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "getProgress",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto progress = exposureSequence->getProgress();
                         result["progress"] = progress;
@@ -178,8 +163,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "getExecutionStats",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto avgTime =
                             exposureSequence->getAverageExecutionTime();
@@ -194,10 +179,8 @@ public:
                         result["averageExecutionTime"] = avgTime.count();
                         result["memoryUsage"] = memoryUsage;
                         result["progress"] = progress;
-                        result["executionStats"] =
-                            crow::json::load(executionStats.dump());
-                        result["resourceUsage"] =
-                            crow::json::load(resourceUsage.dump());
+                        result["executionStats"] = executionStats;
+                        result["resourceUsage"] = resourceUsage;
 
                         return result;
                     });
@@ -209,8 +192,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleExecutionAction(
                     req, body, "setSchedulingStrategy",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("strategy")) {
                             throw std::invalid_argument(
@@ -250,8 +233,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleExecutionAction(
                     req, body, "setRecoveryStrategy",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("strategy")) {
                             throw std::invalid_argument(
@@ -294,8 +277,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleExecutionAction(
                     req, body, "setMaxConcurrentTargets",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("maxConcurrent")) {
                             throw std::invalid_argument(
@@ -324,8 +307,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleExecutionAction(
                     req, body, "setGlobalTimeout",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("timeout")) {
                             throw std::invalid_argument(
@@ -352,8 +335,8 @@ public:
                 auto body = crow::json::load(req.body);
                 return handleExecutionAction(
                     req, body, "setTargetTimeout",
-                    [&body](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [&body](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         if (!body.has("targetName") || !body.has("timeout")) {
                             throw std::invalid_argument(
@@ -383,8 +366,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "retryFailedTargets",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->retryFailedTargets();
                         result["message"] = "Failed targets retry initiated";
@@ -399,8 +382,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "skipFailedTargets",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         exposureSequence->skipFailedTargets();
                         result["message"] = "Failed targets skipped";
@@ -415,8 +398,8 @@ public:
                 auto body = crow::json::load("{}");
                 return handleExecutionAction(
                     req, body, "getFailedTargets",
-                    [](auto exposureSequence) -> crow::json::wvalue {
-                        crow::json::wvalue result;
+                    [](auto exposureSequence) -> nlohmann::json {
+                        nlohmann::json result;
 
                         auto failedTargets =
                             exposureSequence->getFailedTargets();
@@ -438,6 +421,9 @@ public:
     }
 };
 
-inline std::weak_ptr<lithium::task::ExposureSequence> SequenceExecutionController::mExposureSequence;
+inline std::weak_ptr<lithium::task::ExposureSequence>
+    SequenceExecutionController::mExposureSequence;
+
+}  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SEQUENCE_EXECUTION_HPP

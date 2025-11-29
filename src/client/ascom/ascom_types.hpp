@@ -48,18 +48,30 @@ enum class ASCOMDeviceType {
  */
 inline auto deviceTypeToString(ASCOMDeviceType type) -> std::string {
     switch (type) {
-        case ASCOMDeviceType::Camera: return "camera";
-        case ASCOMDeviceType::CoverCalibrator: return "covercalibrator";
-        case ASCOMDeviceType::Dome: return "dome";
-        case ASCOMDeviceType::FilterWheel: return "filterwheel";
-        case ASCOMDeviceType::Focuser: return "focuser";
-        case ASCOMDeviceType::ObservingConditions: return "observingconditions";
-        case ASCOMDeviceType::Rotator: return "rotator";
-        case ASCOMDeviceType::SafetyMonitor: return "safetymonitor";
-        case ASCOMDeviceType::Switch: return "switch";
-        case ASCOMDeviceType::Telescope: return "telescope";
-        case ASCOMDeviceType::Video: return "video";
-        default: return "unknown";
+        case ASCOMDeviceType::Camera:
+            return "camera";
+        case ASCOMDeviceType::CoverCalibrator:
+            return "covercalibrator";
+        case ASCOMDeviceType::Dome:
+            return "dome";
+        case ASCOMDeviceType::FilterWheel:
+            return "filterwheel";
+        case ASCOMDeviceType::Focuser:
+            return "focuser";
+        case ASCOMDeviceType::ObservingConditions:
+            return "observingconditions";
+        case ASCOMDeviceType::Rotator:
+            return "rotator";
+        case ASCOMDeviceType::SafetyMonitor:
+            return "safetymonitor";
+        case ASCOMDeviceType::Switch:
+            return "switch";
+        case ASCOMDeviceType::Telescope:
+            return "telescope";
+        case ASCOMDeviceType::Video:
+            return "video";
+        default:
+            return "unknown";
     }
 }
 
@@ -78,9 +90,8 @@ inline auto stringToDeviceType(const std::string& str) -> ASCOMDeviceType {
         {"safetymonitor", ASCOMDeviceType::SafetyMonitor},
         {"switch", ASCOMDeviceType::Switch},
         {"telescope", ASCOMDeviceType::Telescope},
-        {"video", ASCOMDeviceType::Video}
-    };
-    
+        {"video", ASCOMDeviceType::Video}};
+
     auto it = typeMap.find(str);
     return it != typeMap.end() ? it->second : ASCOMDeviceType::Unknown;
 }
@@ -109,9 +120,9 @@ struct AlpacaResponse {
     int errorNumber{0};
     std::string errorMessage;
     json value;
-    
+
     [[nodiscard]] bool isSuccess() const { return errorNumber == 0; }
-    
+
     [[nodiscard]] auto toJson() const -> json {
         json j;
         j["ClientTransactionID"] = clientTransactionId;
@@ -123,7 +134,7 @@ struct AlpacaResponse {
         }
         return j;
     }
-    
+
     static auto fromJson(const json& j) -> AlpacaResponse {
         AlpacaResponse resp;
         resp.clientTransactionId = j.value("ClientTransactionID", 0);
@@ -145,7 +156,7 @@ struct ASCOMDeviceDescription {
     ASCOMDeviceType deviceType;
     int deviceNumber{0};
     std::string uniqueId;
-    
+
     [[nodiscard]] auto toJson() const -> json {
         json j;
         j["DeviceName"] = deviceName;
@@ -154,7 +165,7 @@ struct ASCOMDeviceDescription {
         j["UniqueID"] = uniqueId;
         return j;
     }
-    
+
     static auto fromJson(const json& j) -> ASCOMDeviceDescription {
         ASCOMDeviceDescription desc;
         desc.deviceName = j.value("DeviceName", "");
@@ -174,14 +185,14 @@ struct AlpacaServerInfo {
     std::string manufacturerVersion;
     std::string location;
     std::vector<ASCOMDeviceDescription> devices;
-    
+
     [[nodiscard]] auto toJson() const -> json {
         json j;
         j["ServerName"] = serverName;
         j["Manufacturer"] = manufacturer;
         j["ManufacturerVersion"] = manufacturerVersion;
         j["Location"] = location;
-        
+
         json devArray = json::array();
         for (const auto& dev : devices) {
             devArray.push_back(dev.toJson());
@@ -189,14 +200,14 @@ struct AlpacaServerInfo {
         j["Devices"] = devArray;
         return j;
     }
-    
+
     static auto fromJson(const json& j) -> AlpacaServerInfo {
         AlpacaServerInfo info;
         info.serverName = j.value("ServerName", "");
         info.manufacturer = j.value("Manufacturer", "");
         info.manufacturerVersion = j.value("ManufacturerVersion", "");
         info.location = j.value("Location", "");
-        
+
         if (j.contains("Devices") && j["Devices"].is_array()) {
             for (const auto& dev : j["Devices"]) {
                 info.devices.push_back(ASCOMDeviceDescription::fromJson(dev));
@@ -209,12 +220,7 @@ struct AlpacaServerInfo {
 /**
  * @brief ASCOM image array types
  */
-enum class ImageArrayType {
-    Unknown = 0,
-    Int16 = 2,
-    Int32 = 3,
-    Double = 5
-};
+enum class ImageArrayType { Unknown = 0, Int16 = 2, Int32 = 3, Double = 5 };
 
 /**
  * @brief ASCOM sensor types
@@ -243,40 +249,22 @@ enum class CameraState {
 /**
  * @brief ASCOM guide directions
  */
-enum class GuideDirection {
-    North = 0,
-    South = 1,
-    East = 2,
-    West = 3
-};
+enum class GuideDirection { North = 0, South = 1, East = 2, West = 3 };
 
 /**
  * @brief ASCOM telescope tracking rates
  */
-enum class DriveRate {
-    Sidereal = 0,
-    Lunar = 1,
-    Solar = 2,
-    King = 3
-};
+enum class DriveRate { Sidereal = 0, Lunar = 1, Solar = 2, King = 3 };
 
 /**
  * @brief ASCOM telescope alignment modes
  */
-enum class AlignmentMode {
-    AltAz = 0,
-    Polar = 1,
-    GermanPolar = 2
-};
+enum class AlignmentMode { AltAz = 0, Polar = 1, GermanPolar = 2 };
 
 /**
  * @brief ASCOM pier side
  */
-enum class PierSide {
-    Unknown = -1,
-    East = 0,
-    West = 1
-};
+enum class PierSide { Unknown = -1, East = 0, West = 1 };
 
 /**
  * @brief ASCOM shutter states

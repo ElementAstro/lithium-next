@@ -20,8 +20,7 @@ Description: PHD2 guider client implementation
 
 namespace lithium::client {
 
-PHD2Client::PHD2Client(std::string name)
-    : GuiderClient(std::move(name)) {
+PHD2Client::PHD2Client(std::string name) : GuiderClient(std::move(name)) {
     spdlog::info("PHD2Client created: {}", getName());
 }
 
@@ -74,7 +73,8 @@ bool PHD2Client::connect(const std::string& target, int timeout, int maxRetry) {
 
     // Create connection with this as event handler
     connection_ = std::make_unique<phd2::Connection>(
-        host, port, std::shared_ptr<phd2::EventHandler>(this, [](phd2::EventHandler*){}));
+        host, port,
+        std::shared_ptr<phd2::EventHandler>(this, [](phd2::EventHandler*) {}));
 
     for (int attempt = 0; attempt < maxRetry; ++attempt) {
         if (connection_->connect(timeout)) {
@@ -130,7 +130,8 @@ std::future<bool> PHD2Client::startGuiding(const SettleParams& settle,
     std::lock_guard<std::mutex> lock(promiseMutex_);
 
     if (settleInProgress_) {
-        throw phd2::InvalidStateException("Settle operation already in progress");
+        throw phd2::InvalidStateException(
+            "Settle operation already in progress");
     }
 
     settlePromise_ = std::promise<bool>();
@@ -138,11 +139,9 @@ std::future<bool> PHD2Client::startGuiding(const SettleParams& settle,
 
     try {
         phd2::json params = phd2::json::object();
-        params["settle"] = {
-            {"pixels", settle.pixels},
-            {"time", settle.time},
-            {"timeout", settle.timeout}
-        };
+        params["settle"] = {{"pixels", settle.pixels},
+                            {"time", settle.time},
+                            {"timeout", settle.timeout}};
         params["recalibrate"] = recalibrate;
 
         connection_->sendRpc("guide", params);
@@ -159,7 +158,8 @@ std::future<bool> PHD2Client::startGuiding(const SettleParams& settle,
 }
 
 void PHD2Client::stopGuiding() {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("stop_capture");
@@ -171,7 +171,8 @@ void PHD2Client::stopGuiding() {
 }
 
 void PHD2Client::pause(bool full) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         phd2::json params = {full};
@@ -184,7 +185,8 @@ void PHD2Client::pause(bool full) {
 }
 
 void PHD2Client::resume() {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_paused", {false});
@@ -199,7 +201,8 @@ std::future<bool> PHD2Client::dither(const DitherParams& params) {
     std::lock_guard<std::mutex> lock(promiseMutex_);
 
     if (settleInProgress_) {
-        throw phd2::InvalidStateException("Settle operation already in progress");
+        throw phd2::InvalidStateException(
+            "Settle operation already in progress");
     }
 
     settlePromise_ = std::promise<bool>();
@@ -209,11 +212,9 @@ std::future<bool> PHD2Client::dither(const DitherParams& params) {
         phd2::json rpcParams = phd2::json::object();
         rpcParams["amount"] = params.amount;
         rpcParams["raOnly"] = params.raOnly;
-        rpcParams["settle"] = {
-            {"pixels", params.settle.pixels},
-            {"time", params.settle.time},
-            {"timeout", params.settle.timeout}
-        };
+        rpcParams["settle"] = {{"pixels", params.settle.pixels},
+                               {"time", params.settle.time},
+                               {"timeout", params.settle.timeout}};
 
         connection_->sendRpc("dither", rpcParams);
         emitEvent("dither_started", std::to_string(params.amount));
@@ -228,7 +229,8 @@ std::future<bool> PHD2Client::dither(const DitherParams& params) {
 }
 
 void PHD2Client::loop() {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("loop");
@@ -240,7 +242,8 @@ void PHD2Client::loop() {
 }
 
 bool PHD2Client::isCalibrated() const {
-    if (!isConnected()) return false;
+    if (!isConnected())
+        return false;
 
     try {
         auto response = connection_->sendRpc("get_calibrated");
@@ -251,7 +254,8 @@ bool PHD2Client::isCalibrated() const {
 }
 
 void PHD2Client::clearCalibration() {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("clear_calibration", {"both"});
@@ -263,7 +267,8 @@ void PHD2Client::clearCalibration() {
 }
 
 void PHD2Client::flipCalibration() {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("flip_calibration");
@@ -274,7 +279,8 @@ void PHD2Client::flipCalibration() {
 }
 
 CalibrationData PHD2Client::getCalibrationData() const {
-    if (!isConnected()) return calibrationData_;
+    if (!isConnected())
+        return calibrationData_;
 
     try {
         auto response = connection_->sendRpc("get_calibration_data", {"Mount"});
@@ -292,7 +298,8 @@ CalibrationData PHD2Client::getCalibrationData() const {
 
 GuideStar PHD2Client::findStar(const std::optional<std::array<int, 4>>& roi) {
     GuideStar star;
-    if (!isConnected()) return star;
+    if (!isConnected())
+        return star;
 
     try {
         phd2::json params = phd2::json::array();
@@ -305,7 +312,8 @@ GuideStar PHD2Client::findStar(const std::optional<std::array<int, 4>>& roi) {
         star.y = response.result[1].get<double>();
         star.valid = true;
 
-        emitEvent("star_found", std::to_string(star.x) + "," + std::to_string(star.y));
+        emitEvent("star_found",
+                  std::to_string(star.x) + "," + std::to_string(star.y));
     } catch (const std::exception& e) {
         spdlog::error("Failed to find star: {}", e.what());
     }
@@ -314,34 +322,37 @@ GuideStar PHD2Client::findStar(const std::optional<std::array<int, 4>>& roi) {
 }
 
 void PHD2Client::setLockPosition(double x, double y, bool exact) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_lock_position", {x, y, exact});
-        emitEvent("lock_position_set", std::to_string(x) + "," + std::to_string(y));
+        emitEvent("lock_position_set",
+                  std::to_string(x) + "," + std::to_string(y));
     } catch (const std::exception& e) {
         spdlog::error("Failed to set lock position: {}", e.what());
     }
 }
 
 std::optional<std::array<double, 2>> PHD2Client::getLockPosition() const {
-    if (!isConnected()) return std::nullopt;
+    if (!isConnected())
+        return std::nullopt;
 
     try {
         auto response = connection_->sendRpc("get_lock_position");
         if (response.result.is_array() && response.result.size() >= 2) {
-            return std::array<double, 2>{
-                response.result[0].get<double>(),
-                response.result[1].get<double>()
-            };
+            return std::array<double, 2>{response.result[0].get<double>(),
+                                         response.result[1].get<double>()};
         }
-    } catch (...) {}
+    } catch (...) {
+    }
 
     return std::nullopt;
 }
 
 int PHD2Client::getExposure() const {
-    if (!isConnected()) return 0;
+    if (!isConnected())
+        return 0;
 
     try {
         auto response = connection_->sendRpc("get_exposure");
@@ -352,7 +363,8 @@ int PHD2Client::getExposure() const {
 }
 
 void PHD2Client::setExposure(int exposureMs) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_exposure", {exposureMs});
@@ -363,7 +375,8 @@ void PHD2Client::setExposure(int exposureMs) {
 }
 
 std::vector<int> PHD2Client::getExposureDurations() const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_exposure_durations");
@@ -373,9 +386,7 @@ std::vector<int> PHD2Client::getExposureDurations() const {
     }
 }
 
-GuiderState PHD2Client::getGuiderState() const {
-    return guiderState_.load();
-}
+GuiderState PHD2Client::getGuiderState() const { return guiderState_.load(); }
 
 GuideStats PHD2Client::getGuideStats() const {
     std::lock_guard<std::mutex> lock(stateMutex_);
@@ -388,7 +399,8 @@ GuideStar PHD2Client::getCurrentStar() const {
 }
 
 double PHD2Client::getPixelScale() const {
-    if (!isConnected()) return 0.0;
+    if (!isConnected())
+        return 0.0;
 
     try {
         auto response = connection_->sendRpc("get_pixel_scale");
@@ -403,7 +415,8 @@ void PHD2Client::configurePHD2(const PHD2Config& config) {
 }
 
 std::string PHD2Client::getAppState() const {
-    if (!isConnected()) return "Disconnected";
+    if (!isConnected())
+        return "Disconnected";
 
     try {
         auto response = connection_->sendRpc("get_app_state");
@@ -414,7 +427,8 @@ std::string PHD2Client::getAppState() const {
 }
 
 phd2::json PHD2Client::getProfile() const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_profile");
@@ -425,7 +439,8 @@ phd2::json PHD2Client::getProfile() const {
 }
 
 void PHD2Client::setProfile(int profileId) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_profile", {profileId});
@@ -436,7 +451,8 @@ void PHD2Client::setProfile(int profileId) {
 }
 
 phd2::json PHD2Client::getProfiles() const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_profiles");
@@ -448,7 +464,8 @@ phd2::json PHD2Client::getProfiles() const {
 
 void PHD2Client::guidePulse(int amount, const std::string& direction,
                             const std::string& which) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("guide_pulse", {amount, direction, which});
@@ -458,7 +475,8 @@ void PHD2Client::guidePulse(int amount, const std::string& direction,
 }
 
 std::string PHD2Client::getDecGuideMode() const {
-    if (!isConnected()) return "";
+    if (!isConnected())
+        return "";
 
     try {
         auto response = connection_->sendRpc("get_dec_guide_mode");
@@ -469,7 +487,8 @@ std::string PHD2Client::getDecGuideMode() const {
 }
 
 void PHD2Client::setDecGuideMode(const std::string& mode) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_dec_guide_mode", {mode});
@@ -480,7 +499,8 @@ void PHD2Client::setDecGuideMode(const std::string& mode) {
 }
 
 std::string PHD2Client::saveImage() {
-    if (!isConnected()) return "";
+    if (!isConnected())
+        return "";
 
     try {
         auto response = connection_->sendRpc("save_image");
@@ -491,7 +511,8 @@ std::string PHD2Client::saveImage() {
 }
 
 std::array<int, 2> PHD2Client::getCameraFrameSize() const {
-    if (!isConnected()) return {0, 0};
+    if (!isConnected())
+        return {0, 0};
 
     try {
         auto response = connection_->sendRpc("get_camera_frame_size");
@@ -502,7 +523,8 @@ std::array<int, 2> PHD2Client::getCameraFrameSize() const {
 }
 
 double PHD2Client::getCcdTemperature() const {
-    if (!isConnected()) return 0.0;
+    if (!isConnected())
+        return 0.0;
 
     try {
         auto response = connection_->sendRpc("get_ccd_temperature");
@@ -513,7 +535,8 @@ double PHD2Client::getCcdTemperature() const {
 }
 
 phd2::json PHD2Client::getCoolerStatus() const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_cooler_status");
@@ -524,7 +547,8 @@ phd2::json PHD2Client::getCoolerStatus() const {
 }
 
 phd2::json PHD2Client::getStarImage(int size) const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         phd2::json params = phd2::json::array();
@@ -539,7 +563,8 @@ phd2::json PHD2Client::getStarImage(int size) const {
 }
 
 phd2::json PHD2Client::getCurrentEquipment() const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_current_equipment");
@@ -550,7 +575,8 @@ phd2::json PHD2Client::getCurrentEquipment() const {
 }
 
 bool PHD2Client::getConnected() const {
-    if (!isConnected()) return false;
+    if (!isConnected())
+        return false;
 
     try {
         auto response = connection_->sendRpc("get_connected");
@@ -561,18 +587,22 @@ bool PHD2Client::getConnected() const {
 }
 
 void PHD2Client::setConnected(bool connect) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_connected", {connect});
-        emitEvent(connect ? "equipment_connected" : "equipment_disconnected", "");
+        emitEvent(connect ? "equipment_connected" : "equipment_disconnected",
+                  "");
     } catch (const std::exception& e) {
         spdlog::error("Failed to set connected: {}", e.what());
     }
 }
 
-std::vector<std::string> PHD2Client::getAlgoParamNames(const std::string& axis) const {
-    if (!isConnected()) return {};
+std::vector<std::string> PHD2Client::getAlgoParamNames(
+    const std::string& axis) const {
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_algo_param_names", {axis});
@@ -582,8 +612,10 @@ std::vector<std::string> PHD2Client::getAlgoParamNames(const std::string& axis) 
     }
 }
 
-double PHD2Client::getAlgoParam(const std::string& axis, const std::string& name) const {
-    if (!isConnected()) return 0.0;
+double PHD2Client::getAlgoParam(const std::string& axis,
+                                const std::string& name) const {
+    if (!isConnected())
+        return 0.0;
 
     try {
         auto response = connection_->sendRpc("get_algo_param", {axis, name});
@@ -593,8 +625,10 @@ double PHD2Client::getAlgoParam(const std::string& axis, const std::string& name
     }
 }
 
-void PHD2Client::setAlgoParam(const std::string& axis, const std::string& name, double value) {
-    if (!isConnected()) return;
+void PHD2Client::setAlgoParam(const std::string& axis, const std::string& name,
+                              double value) {
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_algo_param", {axis, name, value});
@@ -604,7 +638,8 @@ void PHD2Client::setAlgoParam(const std::string& axis, const std::string& name, 
 }
 
 bool PHD2Client::getGuideOutputEnabled() const {
-    if (!isConnected()) return false;
+    if (!isConnected())
+        return false;
 
     try {
         auto response = connection_->sendRpc("get_guide_output_enabled");
@@ -615,7 +650,8 @@ bool PHD2Client::getGuideOutputEnabled() const {
 }
 
 void PHD2Client::setGuideOutputEnabled(bool enable) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_guide_output_enabled", {enable});
@@ -625,7 +661,8 @@ void PHD2Client::setGuideOutputEnabled(bool enable) {
 }
 
 bool PHD2Client::getLockShiftEnabled() const {
-    if (!isConnected()) return false;
+    if (!isConnected())
+        return false;
 
     try {
         auto response = connection_->sendRpc("get_lock_shift_enabled");
@@ -636,7 +673,8 @@ bool PHD2Client::getLockShiftEnabled() const {
 }
 
 void PHD2Client::setLockShiftEnabled(bool enable) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_lock_shift_enabled", {enable});
@@ -646,7 +684,8 @@ void PHD2Client::setLockShiftEnabled(bool enable) {
 }
 
 phd2::json PHD2Client::getLockShiftParams() const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_lock_shift_params");
@@ -657,7 +696,8 @@ phd2::json PHD2Client::getLockShiftParams() const {
 }
 
 void PHD2Client::setLockShiftParams(const phd2::json& params) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_lock_shift_params", params);
@@ -667,7 +707,8 @@ void PHD2Client::setLockShiftParams(const phd2::json& params) {
 }
 
 phd2::json PHD2Client::getVariableDelaySettings() const {
-    if (!isConnected()) return {};
+    if (!isConnected())
+        return {};
 
     try {
         auto response = connection_->sendRpc("get_variable_delay_settings");
@@ -678,7 +719,8 @@ phd2::json PHD2Client::getVariableDelaySettings() const {
 }
 
 void PHD2Client::setVariableDelaySettings(const phd2::json& settings) {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("set_variable_delay_settings", settings);
@@ -688,7 +730,8 @@ void PHD2Client::setVariableDelaySettings(const phd2::json& settings) {
 }
 
 bool PHD2Client::getSettling() const {
-    if (!isConnected()) return false;
+    if (!isConnected())
+        return false;
 
     try {
         auto response = connection_->sendRpc("get_settling");
@@ -698,9 +741,10 @@ bool PHD2Client::getSettling() const {
     }
 }
 
-void PHD2Client::captureSingleFrame(std::optional<int> exposureMs,
-                                    std::optional<std::array<int, 4>> subframe) {
-    if (!isConnected()) return;
+void PHD2Client::captureSingleFrame(
+    std::optional<int> exposureMs, std::optional<std::array<int, 4>> subframe) {
+    if (!isConnected())
+        return;
 
     try {
         phd2::json params = phd2::json::object();
@@ -717,7 +761,8 @@ void PHD2Client::captureSingleFrame(std::optional<int> exposureMs,
 }
 
 int PHD2Client::getSearchRegion() const {
-    if (!isConnected()) return 0;
+    if (!isConnected())
+        return 0;
 
     try {
         auto response = connection_->sendRpc("get_search_region");
@@ -728,7 +773,8 @@ int PHD2Client::getSearchRegion() const {
 }
 
 int PHD2Client::getCameraBinning() const {
-    if (!isConnected()) return 1;
+    if (!isConnected())
+        return 1;
 
     try {
         auto response = connection_->sendRpc("get_camera_binning");
@@ -739,7 +785,8 @@ int PHD2Client::getCameraBinning() const {
 }
 
 std::string PHD2Client::exportConfigSettings() const {
-    if (!isConnected()) return "";
+    if (!isConnected())
+        return "";
 
     try {
         auto response = connection_->sendRpc("export_config_settings");
@@ -750,7 +797,8 @@ std::string PHD2Client::exportConfigSettings() const {
 }
 
 void PHD2Client::shutdown() {
-    if (!isConnected()) return;
+    if (!isConnected())
+        return;
 
     try {
         connection_->sendRpc("shutdown");
@@ -760,9 +808,7 @@ void PHD2Client::shutdown() {
     }
 }
 
-void PHD2Client::onEvent(const phd2::Event& event) {
-    processEvent(event);
-}
+void PHD2Client::onEvent(const phd2::Event& event) { processEvent(event); }
 
 void PHD2Client::onConnectionError(const std::string& error) {
     spdlog::error("PHD2 connection error: {}", error);
@@ -796,49 +842,44 @@ void PHD2Client::updateGuiderState(const std::string& appState) {
 }
 
 void PHD2Client::processEvent(const phd2::Event& event) {
-    std::visit([this](auto&& e) {
-        using T = std::decay_t<decltype(e)>;
+    std::visit(
+        [this](auto&& e) {
+            using T = std::decay_t<decltype(e)>;
 
-        if constexpr (std::is_same_v<T, phd2::AppStateEvent>) {
-            updateGuiderState(e.state);
-            emitEvent("app_state", e.state);
-        }
-        else if constexpr (std::is_same_v<T, phd2::GuideStepEvent>) {
-            std::lock_guard<std::mutex> lock(stateMutex_);
-            currentStar_.x = e.starMass;  // Approximation
-            currentStar_.snr = e.snr;
-            guideStats_.rmsRA = e.raDistanceRaw;
-            guideStats_.rmsDec = e.decDistanceRaw;
-            emitEvent("guide_step", "");
-        }
-        else if constexpr (std::is_same_v<T, phd2::SettleDoneEvent>) {
-            handleSettleDone(e.status == 0);
-        }
-        else if constexpr (std::is_same_v<T, phd2::StarLostEvent>) {
-            guiderState_.store(GuiderState::LostStar);
-            emitEvent("star_lost", e.status);
-        }
-        else if constexpr (std::is_same_v<T, phd2::CalibrationCompleteEvent>) {
-            calibrationData_.calibrated = true;
-            emitEvent("calibration_complete", "");
-        }
-        else if constexpr (std::is_same_v<T, phd2::StartGuidingEvent>) {
-            guiderState_.store(GuiderState::Guiding);
-            emitEvent("guiding_started", "");
-        }
-        else if constexpr (std::is_same_v<T, phd2::GuidingStoppedEvent>) {
-            guiderState_.store(GuiderState::Stopped);
-            emitEvent("guiding_stopped", "");
-        }
-        else if constexpr (std::is_same_v<T, phd2::PausedEvent>) {
-            guiderState_.store(GuiderState::Paused);
-            emitEvent("paused", "");
-        }
-        else if constexpr (std::is_same_v<T, phd2::ResumedEvent>) {
-            guiderState_.store(GuiderState::Guiding);
-            emitEvent("resumed", "");
-        }
-    }, event);
+            if constexpr (std::is_same_v<T, phd2::AppStateEvent>) {
+                updateGuiderState(e.state);
+                emitEvent("app_state", e.state);
+            } else if constexpr (std::is_same_v<T, phd2::GuideStepEvent>) {
+                std::lock_guard<std::mutex> lock(stateMutex_);
+                currentStar_.x = e.starMass;  // Approximation
+                currentStar_.snr = e.snr;
+                guideStats_.rmsRA = e.raDistanceRaw;
+                guideStats_.rmsDec = e.decDistanceRaw;
+                emitEvent("guide_step", "");
+            } else if constexpr (std::is_same_v<T, phd2::SettleDoneEvent>) {
+                handleSettleDone(e.status == 0);
+            } else if constexpr (std::is_same_v<T, phd2::StarLostEvent>) {
+                guiderState_.store(GuiderState::LostStar);
+                emitEvent("star_lost", e.status);
+            } else if constexpr (std::is_same_v<
+                                     T, phd2::CalibrationCompleteEvent>) {
+                calibrationData_.calibrated = true;
+                emitEvent("calibration_complete", "");
+            } else if constexpr (std::is_same_v<T, phd2::StartGuidingEvent>) {
+                guiderState_.store(GuiderState::Guiding);
+                emitEvent("guiding_started", "");
+            } else if constexpr (std::is_same_v<T, phd2::GuidingStoppedEvent>) {
+                guiderState_.store(GuiderState::Stopped);
+                emitEvent("guiding_stopped", "");
+            } else if constexpr (std::is_same_v<T, phd2::PausedEvent>) {
+                guiderState_.store(GuiderState::Paused);
+                emitEvent("paused", "");
+            } else if constexpr (std::is_same_v<T, phd2::ResumedEvent>) {
+                guiderState_.store(GuiderState::Guiding);
+                emitEvent("resumed", "");
+            }
+        },
+        event);
 }
 
 // Register with client registry

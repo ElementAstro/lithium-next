@@ -30,7 +30,7 @@ target_link_libraries(lithium_system_dependency
 # 可选：创建测试可执行文件
 if(BUILD_TESTING)
     add_executable(test_system_dependency test_example.cpp)
-    target_link_libraries(test_system_dependency 
+    target_link_libraries(test_system_dependency
         lithium_system_dependency
         GTest::gtest_main
     )

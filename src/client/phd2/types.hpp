@@ -109,7 +109,8 @@ inline constexpr std::array<std::pair<std::string_view, EventType>, 26>
         {"AppState", EventType::AppState},
         {"CalibrationFailed", EventType::CalibrationFailed},
         {"CalibrationDataFlipped", EventType::CalibrationDataFlipped},
-        {"LockPositionShiftLimitReached", EventType::LockPositionShiftLimitReached},
+        {"LockPositionShiftLimitReached",
+         EventType::LockPositionShiftLimitReached},
         {"LoopingExposures", EventType::LoopingExposures},
         {"LoopingExposuresStopped", EventType::LoopingExposuresStopped},
         {"SettleBegin", EventType::SettleBegin},
@@ -134,7 +135,8 @@ inline constexpr std::array<std::pair<std::string_view, EventType>, 26>
 [[nodiscard]] constexpr auto appStateFromString(std::string_view state) noexcept
     -> AppStateType {
     for (const auto& [str, type] : detail::kAppStateMap) {
-        if (str == state) return type;
+        if (str == state)
+            return type;
     }
     return AppStateType::Unknown;
 }
@@ -145,7 +147,8 @@ inline constexpr std::array<std::pair<std::string_view, EventType>, 26>
 [[nodiscard]] constexpr auto appStateToString(AppStateType state) noexcept
     -> std::string_view {
     for (const auto& [str, type] : detail::kAppStateMap) {
-        if (type == state) return str;
+        if (type == state)
+            return str;
     }
     return "Unknown";
 }
@@ -153,10 +156,11 @@ inline constexpr std::array<std::pair<std::string_view, EventType>, 26>
 /**
  * @brief Convert string to EventType
  */
-[[nodiscard]] constexpr auto eventTypeFromString(std::string_view event) noexcept
-    -> EventType {
+[[nodiscard]] constexpr auto eventTypeFromString(
+    std::string_view event) noexcept -> EventType {
     for (const auto& [str, type] : detail::kEventTypeMap) {
-        if (str == event) return type;
+        if (str == event)
+            return type;
     }
     return EventType::Generic;
 }
@@ -189,20 +193,18 @@ struct RpcResponse {
  * @brief Settle parameters for guide and dither commands
  */
 struct SettleParams {
-    double pixels{1.5};   // Maximum distance for "settled" state
-    double time{10.0};    // Minimum time to remain "settled"
-    double timeout{60.0}; // Maximum time before giving up
+    double pixels{1.5};    // Maximum distance for "settled" state
+    double time{10.0};     // Minimum time to remain "settled"
+    double timeout{60.0};  // Maximum time before giving up
 
     [[nodiscard]] auto toJson() const -> json {
         return json{{"pixels", pixels}, {"time", time}, {"timeout", timeout}};
     }
 
     static auto fromJson(const json& j) -> SettleParams {
-        return SettleParams{
-            .pixels = j.value("pixels", 1.5),
-            .time = j.value("time", 10.0),
-            .timeout = j.value("timeout", 60.0)
-        };
+        return SettleParams{.pixels = j.value("pixels", 1.5),
+                            .time = j.value("time", 10.0),
+                            .timeout = j.value("timeout", 60.0)};
     }
 };
 
@@ -399,39 +401,27 @@ struct CalibrationFailedEvent : EventBase {
 /**
  * @brief Event variant type for polymorphic event handling
  */
-using Event = std::variant<
-    VersionEvent,
-    LockPositionSetEvent,
-    CalibratingEvent,
-    CalibrationCompleteEvent,
-    CalibrationFailedEvent,
-    StarSelectedEvent,
-    AppStateEvent,
-    StartGuidingEvent,
-    GuidingStoppedEvent,
-    PausedEvent,
-    ResumedEvent,
-    GuideStepEvent,
-    SettleBeginEvent,
-    SettlingEvent,
-    SettleDoneEvent,
-    StarLostEvent,
-    GuidingDitheredEvent,
-    AlertEvent,
-    GenericEvent
->;
+using Event =
+    std::variant<VersionEvent, LockPositionSetEvent, CalibratingEvent,
+                 CalibrationCompleteEvent, CalibrationFailedEvent,
+                 StarSelectedEvent, AppStateEvent, StartGuidingEvent,
+                 GuidingStoppedEvent, PausedEvent, ResumedEvent, GuideStepEvent,
+                 SettleBeginEvent, SettlingEvent, SettleDoneEvent,
+                 StarLostEvent, GuidingDitheredEvent, AlertEvent, GenericEvent>;
 
 /**
  * @brief Get the event type from a variant
  */
-[[nodiscard]] inline auto getEventType(const Event& event) noexcept -> EventType {
+[[nodiscard]] inline auto getEventType(const Event& event) noexcept
+    -> EventType {
     return std::visit([](const auto& e) { return e.type; }, event);
 }
 
 /**
  * @brief Get the timestamp from a variant
  */
-[[nodiscard]] inline auto getEventTimestamp(const Event& event) noexcept -> double {
+[[nodiscard]] inline auto getEventTimestamp(const Event& event) noexcept
+    -> double {
     return std::visit([](const auto& e) { return e.timestamp; }, event);
 }
 
@@ -443,10 +433,9 @@ using Event = std::variant<
  * @brief Concept for PHD2 event types
  */
 template <typename T>
-concept Phd2Event = std::derived_from<T, EventBase> ||
-    requires(T t) {
-        { t.type } -> std::convertible_to<EventType>;
-        { t.timestamp } -> std::convertible_to<double>;
-    };
+concept Phd2Event = std::derived_from<T, EventBase> || requires(T t) {
+    { t.type } -> std::convertible_to<EventType>;
+    { t.timestamp } -> std::convertible_to<double>;
+};
 
 }  // namespace phd2

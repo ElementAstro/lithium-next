@@ -19,9 +19,13 @@ from cryptography.hazmat.primitives.serialization import pkcs12
 from loguru import logger
 
 from .cert_types import (
-    CertificateOptions, CertificateResult, RevokedCertInfo,
-    CertificateDetails, KeyGenerationError, CertificateGenerationError,
-    CertificateType
+    CertificateOptions,
+    CertificateResult,
+    RevokedCertInfo,
+    CertificateDetails,
+    KeyGenerationError,
+    CertificateGenerationError,
+    CertificateType,
 )
 from .cert_utils import ensure_directory_exists, log_operation
 
@@ -46,14 +50,11 @@ def create_key(key_size: int = 2048) -> rsa.RSAPrivateKey:
             key_size=key_size,
         )
     except Exception as e:
-        raise KeyGenerationError(
-            f"Failed to generate RSA key: {str(e)}") from e
+        raise KeyGenerationError(f"Failed to generate RSA key: {str(e)}") from e
 
 
 @log_operation
-def create_self_signed_cert(
-    options: CertificateOptions
-) -> CertificateResult:
+def create_self_signed_cert(options: CertificateOptions) -> CertificateResult:
     """
     Creates a self-signed SSL certificate based on the provided options.
 
@@ -79,25 +80,31 @@ def create_self_signed_cert(
         key = create_key(options.key_size)
 
         # Prepare subject attributes
-        name_attributes = [x509.NameAttribute(
-            NameOID.COMMON_NAME, options.hostname)]
+        name_attributes = [x509.NameAttribute(NameOID.COMMON_NAME, options.hostname)]
 
         # Add optional attributes if provided
         if options.country:
-            name_attributes.append(x509.NameAttribute(
-                NameOID.COUNTRY_NAME, options.country))
+            name_attributes.append(
+                x509.NameAttribute(NameOID.COUNTRY_NAME, options.country)
+            )
         if options.state:
-            name_attributes.append(x509.NameAttribute(
-                NameOID.STATE_OR_PROVINCE_NAME, options.state))
+            name_attributes.append(
+                x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, options.state)
+            )
         if options.organization:
-            name_attributes.append(x509.NameAttribute(
-                NameOID.ORGANIZATION_NAME, options.organization))
+            name_attributes.append(
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, options.organization)
+            )
         if options.organizational_unit:
-            name_attributes.append(x509.NameAttribute(
-                NameOID.ORGANIZATIONAL_UNIT_NAME, options.organizational_unit))
+            name_attributes.append(
+                x509.NameAttribute(
+                    NameOID.ORGANIZATIONAL_UNIT_NAME, options.organizational_unit
+                )
+            )
         if options.email:
-            name_attributes.append(x509.NameAttribute(
-                NameOID.EMAIL_ADDRESS, options.email))
+            name_attributes.append(
+                x509.NameAttribute(NameOID.EMAIL_ADDRESS, options.email)
+            )
 
         # Create subject
         subject = x509.Name(name_attributes)
@@ -109,8 +116,7 @@ def create_self_signed_cert(
 
         # Certificate validity period
         not_valid_before = datetime.datetime.utcnow()
-        not_valid_after = not_valid_before + \
-            datetime.timedelta(days=options.valid_days)
+        not_valid_after = not_valid_before + datetime.timedelta(days=options.valid_days)
 
         # Start building the certificate
         cert_builder = (
@@ -146,9 +152,9 @@ def create_self_signed_cert(
                         key_cert_sign=True,
                         crl_sign=True,
                         encipher_only=False,
-                        decipher_only=False
+                        decipher_only=False,
                     ),
-                    critical=True
+                    critical=True,
                 )
 
             case CertificateType.CLIENT:
@@ -167,9 +173,9 @@ def create_self_signed_cert(
                         key_cert_sign=False,
                         crl_sign=False,
                         encipher_only=False,
-                        decipher_only=False
+                        decipher_only=False,
                     ),
-                    critical=True
+                    critical=True,
                 )
                 cert_builder = cert_builder.add_extension(
                     x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH]),
@@ -192,9 +198,9 @@ def create_self_signed_cert(
                         key_cert_sign=False,
                         crl_sign=False,
                         encipher_only=False,
-                        decipher_only=False
+                        decipher_only=False,
                     ),
-                    critical=True
+                    critical=True,
                 )
                 cert_builder = cert_builder.add_extension(
                     x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]),
@@ -203,10 +209,10 @@ def create_self_signed_cert(
 
         # Add Subject Key Identifier extension
         subject_key_identifier = x509.SubjectKeyIdentifier.from_public_key(
-            key.public_key())
+            key.public_key()
+        )
         cert_builder = cert_builder.add_extension(
-            subject_key_identifier,
-            critical=False
+            subject_key_identifier, critical=False
         )
 
         # Sign the certificate with the private key
@@ -241,10 +247,7 @@ def create_self_signed_cert(
 
 @log_operation
 def export_to_pkcs12(
-    cert_path: Path,
-    key_path: Path,
-    password: str,
-    export_path: Optional[Path] = None
+    cert_path: Path, key_path: Path, password: str, export_path: Optional[Path] = None
 ) -> Path:
     """
     Export the certificate and private key to a PKCS#12 (PFX) file.
@@ -284,14 +287,30 @@ def export_to_pkcs12(
 
         # Load private key
         with key_path.open("rb") as key_file:
-            key = serialization.load_pem_private_key(
-                key_file.read(), password=None)
+            key = serialization.load_pem_private_key(key_file.read(), password=None)
 
         # Ensure the private key is of a supported type for PKCS#12
-        from cryptography.hazmat.primitives.asymmetric import rsa, dsa, ec, ed25519, ed448
-        if not isinstance(key, (rsa.RSAPrivateKey, dsa.DSAPrivateKey, ec.EllipticCurvePrivateKey, ed25519.Ed25519PrivateKey, ed448.Ed448PrivateKey)):
+        from cryptography.hazmat.primitives.asymmetric import (
+            rsa,
+            dsa,
+            ec,
+            ed25519,
+            ed448,
+        )
+
+        if not isinstance(
+            key,
+            (
+                rsa.RSAPrivateKey,
+                dsa.DSAPrivateKey,
+                ec.EllipticCurvePrivateKey,
+                ed25519.Ed25519PrivateKey,
+                ed448.Ed448PrivateKey,
+            ),
+        ):
             raise TypeError(
-                "Unsupported private key type for PKCS#12 export. Must be RSA, DSA, EC, Ed25519, or Ed448 private key.")
+                "Unsupported private key type for PKCS#12 export. Must be RSA, DSA, EC, Ed25519, or Ed448 private key."
+            )
 
         # Create PKCS#12 file
         pfx = pkcs12.serialize_key_and_certificates(
@@ -300,7 +319,8 @@ def export_to_pkcs12(
             cert=cert,
             cas=None,
             encryption_algorithm=serialization.BestAvailableEncryption(
-                password.encode())
+                password.encode()
+            ),
         )
 
         # Write to file
@@ -323,7 +343,7 @@ def generate_crl(
     revoked_certs: List[RevokedCertInfo],
     crl_dir: Path,
     crl_filename: str = "revoked.crl",
-    valid_days: int = 30
+    valid_days: int = 30,
 ) -> Path:
     """
     Generate a Certificate Revocation List (CRL) for the given CA certificate.
@@ -359,44 +379,48 @@ def generate_crl(
                 break
 
         if not is_ca:
-            raise ValueError(
-                f"Certificate {cert_path} is not a CA certificate")
+            raise ValueError(f"Certificate {cert_path} is not a CA certificate")
 
         # Load the private key
         with key_path.open("rb") as key_file:
             private_key = serialization.load_pem_private_key(
-                key_file.read(), password=None)
+                key_file.read(), password=None
+            )
 
         # Ensure the private key is of a supported type
         from cryptography.hazmat.primitives.asymmetric import rsa, dsa, ec
-        if not isinstance(private_key, (rsa.RSAPrivateKey, dsa.DSAPrivateKey, ec.EllipticCurvePrivateKey)):
+
+        if not isinstance(
+            private_key,
+            (rsa.RSAPrivateKey, dsa.DSAPrivateKey, ec.EllipticCurvePrivateKey),
+        ):
             raise TypeError(
-                "Unsupported private key type for CRL signing. Must be RSA, DSA, or EC private key.")
+                "Unsupported private key type for CRL signing. Must be RSA, DSA, or EC private key."
+            )
 
         # Build the CRL
         builder = x509.CertificateRevocationListBuilder().issuer_name(cert.subject)
 
         # Add revoked certificates
         for revoked in revoked_certs:
-            revoked_cert_builder = x509.RevokedCertificateBuilder().serial_number(
-                revoked.serial_number
-            ).revocation_date(
-                revoked.revocation_date
+            revoked_cert_builder = (
+                x509.RevokedCertificateBuilder()
+                .serial_number(revoked.serial_number)
+                .revocation_date(revoked.revocation_date)
             )
 
             if revoked.reason:
                 revoked_cert_builder = revoked_cert_builder.add_extension(
-                    x509.CRLReason(revoked.reason),
-                    critical=False
+                    x509.CRLReason(revoked.reason), critical=False
                 )
 
-            builder = builder.add_revoked_certificate(
-                revoked_cert_builder.build())
+            builder = builder.add_revoked_certificate(revoked_cert_builder.build())
 
         # Set validity period
         now = datetime.datetime.utcnow()
         builder = builder.last_update(now).next_update(
-            now + datetime.timedelta(days=valid_days))
+            now + datetime.timedelta(days=valid_days)
+        )
 
         # Sign the CRL
         crl = builder.sign(private_key, hashes.SHA256())
@@ -417,9 +441,7 @@ def generate_crl(
 
 @log_operation
 def load_ssl_context(
-    cert_path: Path,
-    key_path: Path,
-    ca_path: Optional[Path] = None
+    cert_path: Path, key_path: Path, ca_path: Optional[Path] = None
 ) -> ssl.SSLContext:
     """
     Load an SSL context from certificate and key files.
@@ -449,7 +471,7 @@ def load_ssl_context(
 
     # Set security options
     context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1  # Disable TLS 1.0 and 1.1
-    context.set_ciphers('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20')
+    context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20")
     context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
 
     # Load CA certificate if provided
@@ -489,10 +511,13 @@ def get_cert_details(cert_path: Path) -> CertificateDetails:
             break
 
     # Get public key in PEM format
-    public_key = cert.public_key().public_bytes(
-        serialization.Encoding.PEM,
-        serialization.PublicFormat.SubjectPublicKeyInfo
-    ).decode('utf-8')
+    public_key = (
+        cert.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        .decode("utf-8")
+    )
 
     # Calculate fingerprint
     fingerprint = cert.fingerprint(hashes.SHA256()).hex()
@@ -506,7 +531,7 @@ def get_cert_details(cert_path: Path) -> CertificateDetails:
         public_key=public_key,
         extensions=list(cert.extensions),
         is_ca=is_ca,
-        fingerprint=fingerprint
+        fingerprint=fingerprint,
     )
 
 
@@ -557,17 +582,14 @@ def check_cert_expiry(cert_path: Path, warning_days: int = 30) -> Tuple[bool, in
         FileNotFoundError: If certificate file doesn't exist
     """
     details = get_cert_details(cert_path)
-    remaining_days = (details.not_valid_after -
-                      datetime.datetime.utcnow()).days
+    remaining_days = (details.not_valid_after - datetime.datetime.utcnow()).days
 
     is_expiring = remaining_days <= warning_days
 
     if is_expiring:
-        logger.warning(
-            f"Certificate {cert_path} is expiring in {remaining_days} days")
+        logger.warning(f"Certificate {cert_path} is expiring in {remaining_days} days")
     else:
-        logger.info(
-            f"Certificate {cert_path} is valid for {remaining_days} more days")
+        logger.info(f"Certificate {cert_path} is valid for {remaining_days} more days")
 
     return is_expiring, remaining_days
 
@@ -578,7 +600,7 @@ def renew_cert(
     key_path: Path,
     valid_days: int = 365,
     new_cert_dir: Optional[Path] = None,
-    new_suffix: str = "_renewed"
+    new_suffix: str = "_renewed",
 ) -> Path:
     """
     Renew an existing certificate by creating a new one with extended validity.
@@ -613,14 +635,24 @@ def renew_cert(
 
     # Load the private key
     with key_path.open("rb") as key_file:
-        key = serialization.load_pem_private_key(
-            key_file.read(), password=None)
+        key = serialization.load_pem_private_key(key_file.read(), password=None)
 
     # Ensure the private key is of a supported type
     from cryptography.hazmat.primitives.asymmetric import rsa, dsa, ec, ed25519, ed448
-    if not isinstance(key, (rsa.RSAPrivateKey, dsa.DSAPrivateKey, ec.EllipticCurvePrivateKey, ed25519.Ed25519PrivateKey, ed448.Ed448PrivateKey)):
+
+    if not isinstance(
+        key,
+        (
+            rsa.RSAPrivateKey,
+            dsa.DSAPrivateKey,
+            ec.EllipticCurvePrivateKey,
+            ed25519.Ed25519PrivateKey,
+            ed448.Ed448PrivateKey,
+        ),
+    ):
         raise TypeError(
-            "Unsupported private key type for certificate renewal. Must be RSA, DSA, EC, Ed25519, or Ed448 private key.")
+            "Unsupported private key type for certificate renewal. Must be RSA, DSA, EC, Ed25519, or Ed448 private key."
+        )
 
     # Try to extract the common name for filename
     common_name = None
@@ -648,8 +680,7 @@ def renew_cert(
     # Copy all extensions from the original certificate
     for extension in cert.extensions:
         new_cert_builder = new_cert_builder.add_extension(
-            extension.value,
-            extension.critical
+            extension.value, extension.critical
         )
 
     # Sign the new certificate
@@ -668,8 +699,7 @@ def renew_cert(
 
 @log_operation
 def create_certificate_chain(
-    cert_paths: List[Path],
-    output_path: Optional[Path] = None
+    cert_paths: List[Path], output_path: Optional[Path] = None
 ) -> Path:
     """
     Create a certificate chain file from multiple certificates.

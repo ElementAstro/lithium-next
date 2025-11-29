@@ -59,9 +59,7 @@ struct Coordinates {
      * @brief Convert RA to hours (0-24).
      * @return Right Ascension in hours.
      */
-    [[nodiscard]] double raHours() const noexcept {
-        return ra / HOURS_TO_DEG;
-    }
+    [[nodiscard]] double raHours() const noexcept { return ra / HOURS_TO_DEG; }
 
     /**
      * @brief Convert RA hours to degrees.
@@ -116,7 +114,7 @@ struct Coordinates {
      * @return Coordinates object.
      */
     [[nodiscard]] static Coordinates fromHMS(double raHours, double decDeg,
-                                              double epoch = 2000.0) {
+                                             double epoch = 2000.0) {
         return {raHours * HOURS_TO_DEG, decDeg, epoch};
     }
 
@@ -159,8 +157,9 @@ struct Coordinates {
  * Represents the position of an object in the local sky as seen by an observer.
  */
 struct HorizontalCoordinates {
-    double altitude{0.0};   ///< Altitude in degrees (0-90, negative below horizon)
-    double azimuth{0.0};    ///< Azimuth in degrees (0-360, N=0, E=90)
+    double altitude{
+        0.0};  ///< Altitude in degrees (0-90, negative below horizon)
+    double azimuth{0.0};  ///< Azimuth in degrees (0-360, N=0, E=90)
 
     // ========================================================================
     // Constructors
@@ -168,8 +167,7 @@ struct HorizontalCoordinates {
 
     HorizontalCoordinates() = default;
 
-    HorizontalCoordinates(double alt, double az)
-        : altitude(alt), azimuth(az) {}
+    HorizontalCoordinates(double alt, double az) : altitude(alt), azimuth(az) {}
 
     // ========================================================================
     // Validation
@@ -188,8 +186,8 @@ struct HorizontalCoordinates {
      * @return true if within valid ranges.
      */
     [[nodiscard]] bool isValid() const noexcept {
-        return altitude >= -90.0 && altitude <= 90.0 &&
-               azimuth >= 0.0 && azimuth < 360.0;
+        return altitude >= -90.0 && altitude <= 90.0 && azimuth >= 0.0 &&
+               azimuth < 360.0;
     }
 
     // ========================================================================
@@ -229,9 +227,9 @@ struct HorizontalCoordinates {
  * Represents the observer's position on Earth for coordinate transformations.
  */
 struct ObserverLocation {
-    double latitude{0.0};    ///< Latitude in degrees (-90 to +90)
-    double longitude{0.0};   ///< Longitude in degrees (-180 to +180)
-    double elevation{0.0};   ///< Elevation in meters above sea level
+    double latitude{0.0};   ///< Latitude in degrees (-90 to +90)
+    double longitude{0.0};  ///< Longitude in degrees (-180 to +180)
+    double elevation{0.0};  ///< Elevation in meters above sea level
 
     // ========================================================================
     // Constructors
@@ -251,8 +249,8 @@ struct ObserverLocation {
      * @return true if coordinates are within valid ranges.
      */
     [[nodiscard]] bool isValid() const noexcept {
-        return latitude >= -90.0 && latitude <= 90.0 &&
-               longitude >= -180.0 && longitude <= 180.0;
+        return latitude >= -90.0 && latitude <= 90.0 && longitude >= -180.0 &&
+               longitude <= 180.0;
     }
 
     // ========================================================================
@@ -266,8 +264,7 @@ struct ObserverLocation {
     }
 
     [[nodiscard]] static ObserverLocation fromJson(const json& j) {
-        return {j.value("latitude", 0.0),
-                j.value("longitude", 0.0),
+        return {j.value("latitude", 0.0), j.value("longitude", 0.0),
                 j.value("elevation", 0.0)};
     }
 

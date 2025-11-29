@@ -53,9 +53,15 @@ class CompilerHelperPyBindAdapter:
                     "supports_parallel": compiler.features.supports_parallel,
                     "supports_pch": compiler.features.supports_pch,
                     "supports_modules": compiler.features.supports_modules,
-                    "supported_cpp_versions": [v.value for v in compiler.features.supported_cpp_versions],
-                    "supported_sanitizers": list(compiler.features.supported_sanitizers),
-                    "supported_optimizations": list(compiler.features.supported_optimizations),
+                    "supported_cpp_versions": [
+                        v.value for v in compiler.features.supported_cpp_versions
+                    ],
+                    "supported_sanitizers": list(
+                        compiler.features.supported_sanitizers
+                    ),
+                    "supported_optimizations": list(
+                        compiler.features.supported_optimizations
+                    ),
                 }
             return result
         except Exception as e:
@@ -73,7 +79,9 @@ class CompilerHelperPyBindAdapter:
         Returns:
             Dict containing compiler information.
         """
-        logger.info(f"C++ binding: Getting info for compiler {compiler_name or 'default'}")
+        logger.info(
+            f"C++ binding: Getting info for compiler {compiler_name or 'default'}"
+        )
         try:
             compiler = get_compiler(compiler_name)
             return {
@@ -85,16 +93,17 @@ class CompilerHelperPyBindAdapter:
                 "supports_parallel": compiler.features.supports_parallel,
                 "supports_pch": compiler.features.supports_pch,
                 "supports_modules": compiler.features.supports_modules,
-                "supported_cpp_versions": [v.value for v in compiler.features.supported_cpp_versions],
+                "supported_cpp_versions": [
+                    v.value for v in compiler.features.supported_cpp_versions
+                ],
                 "supported_sanitizers": list(compiler.features.supported_sanitizers),
-                "supported_optimizations": list(compiler.features.supported_optimizations),
+                "supported_optimizations": list(
+                    compiler.features.supported_optimizations
+                ),
             }
         except Exception as e:
             logger.exception(f"Error in get_compiler_info: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def compile(
@@ -106,7 +115,7 @@ class CompilerHelperPyBindAdapter:
         defines: Optional[Dict[str, Optional[str]]] = None,
         optimization: Optional[str] = None,
         debug: bool = False,
-        extra_flags: Optional[List[str]] = None
+        extra_flags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Compile a single source file (synchronous).
@@ -132,7 +141,9 @@ class CompilerHelperPyBindAdapter:
                 cpp_enum = CppVersion(cpp_version)
             except ValueError:
                 # Try alternate format (c++17 -> CPP17)
-                cpp_name = "CPP" + cpp_version.upper().replace("C++", "").replace("C+", "")
+                cpp_name = "CPP" + cpp_version.upper().replace("C++", "").replace(
+                    "C+", ""
+                )
                 cpp_enum = CppVersion[cpp_name]
 
             # Build compile options
@@ -145,7 +156,9 @@ class CompilerHelperPyBindAdapter:
             if optimization:
                 options["optimization"] = optimization
 
-            result = compile_file(source_file, output_file, compiler_name, cpp_enum, options)
+            result = compile_file(
+                source_file, output_file, compiler_name, cpp_enum, options
+            )
 
             return {
                 "success": result.success,
@@ -153,7 +166,7 @@ class CompilerHelperPyBindAdapter:
                 "duration_ms": result.duration_ms,
                 "errors": result.errors,
                 "warnings": result.warnings,
-                "command_line": result.command_line or []
+                "command_line": result.command_line or [],
             }
         except Exception as e:
             logger.exception(f"Error in compile: {e}")
@@ -163,7 +176,7 @@ class CompilerHelperPyBindAdapter:
                 "duration_ms": 0,
                 "errors": [str(e)],
                 "warnings": [],
-                "command_line": []
+                "command_line": [],
             }
 
     @staticmethod
@@ -174,7 +187,7 @@ class CompilerHelperPyBindAdapter:
         library_paths: Optional[List[str]] = None,
         libraries: Optional[List[str]] = None,
         shared: bool = False,
-        extra_flags: Optional[List[str]] = None
+        extra_flags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Link object files into an executable or library (synchronous).
@@ -191,7 +204,9 @@ class CompilerHelperPyBindAdapter:
         Returns:
             Dict with success status, output_file, duration_ms, errors, warnings.
         """
-        logger.info(f"C++ binding: Linking {len(object_files)} objects to {output_file}")
+        logger.info(
+            f"C++ binding: Linking {len(object_files)} objects to {output_file}"
+        )
         try:
             compiler = get_compiler(compiler_name)
 
@@ -211,7 +226,7 @@ class CompilerHelperPyBindAdapter:
                 "duration_ms": result.duration_ms,
                 "errors": result.errors,
                 "warnings": result.warnings,
-                "command_line": result.command_line or []
+                "command_line": result.command_line or [],
             }
         except Exception as e:
             logger.exception(f"Error in link: {e}")
@@ -221,7 +236,7 @@ class CompilerHelperPyBindAdapter:
                 "duration_ms": 0,
                 "errors": [str(e)],
                 "warnings": [],
-                "command_line": []
+                "command_line": [],
             }
 
     @staticmethod
@@ -233,7 +248,7 @@ class CompilerHelperPyBindAdapter:
         compile_options: Optional[Dict[str, Any]] = None,
         link_options: Optional[Dict[str, Any]] = None,
         build_dir: Optional[str] = None,
-        incremental: bool = True
+        incremental: bool = True,
     ) -> Dict[str, Any]:
         """
         Build a project from multiple source files (synchronous).
@@ -257,7 +272,9 @@ class CompilerHelperPyBindAdapter:
             try:
                 cpp_enum = CppVersion(cpp_version)
             except ValueError:
-                cpp_name = "CPP" + cpp_version.upper().replace("C++", "").replace("C+", "")
+                cpp_name = "CPP" + cpp_version.upper().replace("C++", "").replace(
+                    "C+", ""
+                )
                 cpp_enum = CppVersion[cpp_name]
 
             result = build_project(
@@ -268,7 +285,7 @@ class CompilerHelperPyBindAdapter:
                 compile_options=compile_options,
                 link_options=link_options,
                 build_dir=build_dir,
-                incremental=incremental
+                incremental=incremental,
             )
 
             return {
@@ -277,7 +294,7 @@ class CompilerHelperPyBindAdapter:
                 "duration_ms": result.duration_ms,
                 "errors": result.errors,
                 "warnings": result.warnings,
-                "command_line": result.command_line or []
+                "command_line": result.command_line or [],
             }
         except Exception as e:
             logger.exception(f"Error in build_project: {e}")
@@ -287,7 +304,7 @@ class CompilerHelperPyBindAdapter:
                 "duration_ms": 0,
                 "errors": [str(e)],
                 "warnings": [],
-                "command_line": []
+                "command_line": [],
             }
 
     # ========================
@@ -304,7 +321,7 @@ class CompilerHelperPyBindAdapter:
         defines: Optional[Dict[str, Optional[str]]] = None,
         optimization: Optional[str] = None,
         debug: bool = False,
-        extra_flags: Optional[List[str]] = None
+        extra_flags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Compile a single source file (asynchronous).
@@ -339,7 +356,7 @@ class CompilerHelperPyBindAdapter:
             defines,
             optimization,
             debug,
-            extra_flags
+            extra_flags,
         )
 
     @staticmethod
@@ -350,7 +367,7 @@ class CompilerHelperPyBindAdapter:
         library_paths: Optional[List[str]] = None,
         libraries: Optional[List[str]] = None,
         shared: bool = False,
-        extra_flags: Optional[List[str]] = None
+        extra_flags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Link object files into an executable or library (asynchronous).
@@ -380,7 +397,7 @@ class CompilerHelperPyBindAdapter:
             library_paths,
             libraries,
             shared,
-            extra_flags
+            extra_flags,
         )
 
     @staticmethod
@@ -392,7 +409,7 @@ class CompilerHelperPyBindAdapter:
         compile_options: Optional[Dict[str, Any]] = None,
         link_options: Optional[Dict[str, Any]] = None,
         build_dir: Optional[str] = None,
-        incremental: bool = True
+        incremental: bool = True,
     ) -> Dict[str, Any]:
         """
         Build a project from multiple source files (asynchronous).
@@ -424,7 +441,7 @@ class CompilerHelperPyBindAdapter:
             compile_options,
             link_options,
             build_dir,
-            incremental
+            incremental,
         )
 
     @staticmethod
@@ -437,13 +454,12 @@ class CompilerHelperPyBindAdapter:
         """
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
-            None,
-            CompilerHelperPyBindAdapter.detect_compilers
+            None, CompilerHelperPyBindAdapter.detect_compilers
         )
 
     @staticmethod
     async def get_compiler_info_async(
-        compiler_name: Optional[str] = None
+        compiler_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Get information about a specific compiler (asynchronous).
@@ -456,7 +472,5 @@ class CompilerHelperPyBindAdapter:
         """
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
-            None,
-            CompilerHelperPyBindAdapter.get_compiler_info,
-            compiler_name
+            None, CompilerHelperPyBindAdapter.get_compiler_info, compiler_name
         )

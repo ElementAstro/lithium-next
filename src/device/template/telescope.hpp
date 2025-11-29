@@ -89,8 +89,8 @@ public:
 
     virtual auto getTargetRADECJNow()
         -> std::optional<std::pair<double, double>> = 0;
-    virtual auto setTargetRADECJNow(double raHours,
-                                    double decDegrees) -> bool = 0;
+    virtual auto setTargetRADECJNow(double raHours, double decDegrees)
+        -> bool = 0;
     virtual auto slewToRADECJNow(double raHours, double decDegrees,
                                  bool enableTracking) -> bool = 0;
 

@@ -97,6 +97,8 @@ if(LITHIUM_ENABLE_CPPTRACE)
             set(CPPTRACE_BUILD_SHARED OFF CACHE BOOL "" FORCE)
             set(CPPTRACE_BUILD_TESTING OFF CACHE BOOL "" FORCE)
             set(CPPTRACE_STATIC ON CACHE BOOL "" FORCE)
+            # Disable C++20 modules scanning for MinGW Makefiles compatibility
+            set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "" FORCE)
 
             # Add subdirectory
             add_subdirectory(${CPPTRACE_SUBMODULE_DIR} ${CMAKE_BINARY_DIR}/cpptrace EXCLUDE_FROM_ALL)

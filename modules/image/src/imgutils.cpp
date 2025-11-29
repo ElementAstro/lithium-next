@@ -36,8 +36,8 @@ auto checkElongated(int width, int height) -> bool {
     return elongated;
 }
 
-auto checkWhitePixel(const cv::Mat& rect_contour, int xCoord,
-                     int yCoord) -> int {
+auto checkWhitePixel(const cv::Mat& rect_contour, int xCoord, int yCoord)
+    -> int {
     LOG_F(INFO, "Checking white pixel at ({}, {})", xCoord, yCoord);
     if (xCoord >= 0 && xCoord < rect_contour.cols && yCoord >= 0 &&
         yCoord < rect_contour.rows) {
@@ -54,8 +54,8 @@ auto checkWhitePixel(const cv::Mat& rect_contour, int xCoord,
 }
 
 auto eightSymmetryCircleCheck(const cv::Mat& rect_contour,
-                              const cv::Point& center, int xCoord,
-                              int yCoord) -> int {
+                              const cv::Point& center, int xCoord, int yCoord)
+    -> int {
     LOG_F(INFO,
           "Performing EightSymmetryCircleCheck with xCoord: {}, yCoord: {}",
           xCoord, yCoord);

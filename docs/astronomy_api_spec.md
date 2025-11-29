@@ -3954,15 +3954,15 @@ function reconnect() {
     console.error("Max reconnection attempts reached");
     return;
   }
-  
+
   setTimeout(() => {
     attempts++;
     // Add jitter: ±20%
     const jitter = reconnectDelay * 0.2 * (Math.random() - 0.5);
     const delay = reconnectDelay + jitter;
-    
+
     connectWebSocket();
-    
+
     // Double the delay for next attempt
     reconnectDelay = Math.min(reconnectDelay * 2, maxDelay);
   }, reconnectDelay);

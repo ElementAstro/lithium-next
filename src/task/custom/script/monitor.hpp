@@ -176,6 +176,6 @@ private:
         completionCallback_;  ///< Callback for script completion events.
 };
 
-}  // namespace lithium::task::task
+}  // namespace lithium::task::script
 
 #endif  // LITHIUM_TASK_SCRIPT_MONITOR_TASK_HPP

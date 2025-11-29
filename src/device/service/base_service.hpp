@@ -44,7 +44,8 @@ struct ErrorCode {
     static constexpr const char* DEVICE_BUSY = "device_busy";
     static constexpr const char* CONNECTION_FAILED = "connection_failed";
     static constexpr const char* INVALID_FIELD_VALUE = "invalid_field_value";
-    static constexpr const char* FEATURE_NOT_SUPPORTED = "feature_not_supported";
+    static constexpr const char* FEATURE_NOT_SUPPORTED =
+        "feature_not_supported";
     static constexpr const char* OPERATION_FAILED = "operation_failed";
     static constexpr const char* INVALID_COORDINATES = "invalid_coordinates";
     static constexpr const char* TIMEOUT = "timeout";
@@ -177,8 +178,7 @@ protected:
      * @brief Get device from DeviceManager by type
      */
     template <typename DeviceT>
-    auto getDevice(const std::string& deviceType)
-        -> std::shared_ptr<DeviceT> {
+    auto getDevice(const std::string& deviceType) -> std::shared_ptr<DeviceT> {
         if (deviceManager_) {
             auto device = deviceManager_->getPrimaryDevice(deviceType);
             return std::dynamic_pointer_cast<DeviceT>(device);
@@ -217,9 +217,10 @@ protected:
         event["deviceType"] = deviceType;
         event["deviceId"] = deviceId;
         event["state"] = state;
-        event["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::system_clock::now().time_since_epoch())
-                                 .count();
+        event["timestamp"] =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
         publishEvent("device.state", event.dump());
     }
 
@@ -227,14 +228,14 @@ protected:
      * @brief Log operation start
      */
     void logOperationStart(const std::string& operation) const {
-        LOG_INFO( "%s::%s: Starting", serviceName_.c_str(), operation.c_str());
+        LOG_INFO("%s::%s: Starting", serviceName_.c_str(), operation.c_str());
     }
 
     /**
      * @brief Log operation end
      */
     void logOperationEnd(const std::string& operation) const {
-        LOG_INFO( "%s::%s: Completed", serviceName_.c_str(), operation.c_str());
+        LOG_INFO("%s::%s: Completed", serviceName_.c_str(), operation.c_str());
     }
 
     /**
@@ -242,8 +243,8 @@ protected:
      */
     void logOperationError(const std::string& operation,
                            const std::string& error) const {
-        LOG_ERROR( "%s::%s: Error: %s", serviceName_.c_str(),
-              operation.c_str(), error.c_str());
+        LOG_ERROR("%s::%s: Error: %s", serviceName_.c_str(), operation.c_str(),
+                  error.c_str());
     }
 
     /**
@@ -251,8 +252,8 @@ protected:
      */
     void logOperationWarning(const std::string& operation,
                              const std::string& warning) const {
-        LOG_WARN( "%s::%s: %s", serviceName_.c_str(), operation.c_str(),
-              warning.c_str());
+        LOG_WARN("%s::%s: %s", serviceName_.c_str(), operation.c_str(),
+                 warning.c_str());
     }
 
     /**
@@ -284,15 +285,14 @@ private:
             GET_OR_CREATE_PTR(deviceManager_, DeviceManager,
                               Constants::DEVICE_MANAGER)
         } catch (...) {
-            LOG_WARN( "%s: DeviceManager not available",
-                  serviceName_.c_str());
+            LOG_WARN("%s: DeviceManager not available", serviceName_.c_str());
         }
 
         try {
             GET_OR_CREATE_PTR(messageBus_, atom::async::MessageBus,
                               Constants::MESSAGE_BUS)
         } catch (...) {
-            LOG_WARN( "%s: MessageBus not available", serviceName_.c_str());
+            LOG_WARN("%s: MessageBus not available", serviceName_.c_str());
         }
     }
 
@@ -338,8 +338,8 @@ protected:
      */
     template <typename Func>
     auto withConnectedDevice(const std::string& deviceId,
-                             const std::string& operationName,
-                             Func&& operation) -> json {
+                             const std::string& operationName, Func&& operation)
+        -> json {
         return executeWithErrorHandling(operationName, [&]() -> json {
             auto device = getPrimaryDevice();
             if (auto error = checkDeviceConnected(device, deviceTypeName_)) {
@@ -354,7 +354,8 @@ protected:
      */
     template <typename Func>
     auto withDevice(const std::string& deviceId,
-                    const std::string& operationName, Func&& operation) -> json {
+                    const std::string& operationName, Func&& operation)
+        -> json {
         return executeWithErrorHandling(operationName, [&]() -> json {
             auto device = getPrimaryDevice();
             if (!device) {

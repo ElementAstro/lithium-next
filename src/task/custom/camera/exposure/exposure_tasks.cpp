@@ -4,9 +4,9 @@
  */
 
 #include "exposure_tasks.hpp"
-#include <thread>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <thread>
 
 namespace lithium::task::camera {
 
@@ -15,11 +15,15 @@ namespace lithium::task::camera {
 // ============================================================================
 
 void TakeExposureTask::setupParameters() {
-    addParamDefinition("exposure", "number", true, nullptr, "Exposure time in seconds");
-    addParamDefinition("type", "string", false, "light", "Frame type (light/dark/bias/flat/snapshot)");
+    addParamDefinition("exposure", "number", true, nullptr,
+                       "Exposure time in seconds");
+    addParamDefinition("type", "string", false, "light",
+                       "Frame type (light/dark/bias/flat/snapshot)");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
-    addParamDefinition("offset", "integer", false, 10, "Camera offset/black level");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning configuration");
+    addParamDefinition("offset", "integer", false, 10,
+                       "Camera offset/black level");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning configuration");
     addParamDefinition("filter", "string", false, "L", "Filter name");
     addParamDefinition("output_path", "string", false, "", "Output file path");
 }
@@ -53,8 +57,10 @@ void TakeExposureTask::executeImpl(const json& params) {
     std::string filter = params.value("filter", "L");
 
     logProgress("Configuring camera settings");
-    logProgress("Gain: " + std::to_string(gain) + ", Offset: " + std::to_string(offset));
-    logProgress("Binning: " + std::to_string(binning.x) + "x" + std::to_string(binning.y));
+    logProgress("Gain: " + std::to_string(gain) +
+                ", Offset: " + std::to_string(offset));
+    logProgress("Binning: " + std::to_string(binning.x) + "x" +
+                std::to_string(binning.y));
 
     logProgress("Starting exposure: " + std::to_string(exposure) + "s");
 
@@ -75,15 +81,20 @@ void TakeExposureTask::executeImpl(const json& params) {
 // ============================================================================
 
 void TakeManyExposureTask::setupParameters() {
-    addParamDefinition("exposure", "number", true, nullptr, "Exposure time in seconds");
-    addParamDefinition("count", "integer", true, nullptr, "Number of exposures");
-    addParamDefinition("delay", "number", false, 0.0, "Delay between exposures in seconds");
+    addParamDefinition("exposure", "number", true, nullptr,
+                       "Exposure time in seconds");
+    addParamDefinition("count", "integer", true, nullptr,
+                       "Number of exposures");
+    addParamDefinition("delay", "number", false, 0.0,
+                       "Delay between exposures in seconds");
     addParamDefinition("type", "string", false, "light", "Frame type");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
     addParamDefinition("offset", "integer", false, 10, "Camera offset");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
     addParamDefinition("filter", "string", false, "L", "Filter name");
-    addParamDefinition("output_pattern", "string", false, "", "Output filename pattern");
+    addParamDefinition("output_pattern", "string", false, "",
+                       "Output filename pattern");
 }
 
 void TakeManyExposureTask::validateParams(const json& params) {
@@ -114,7 +125,9 @@ void TakeManyExposureTask::executeImpl(const json& params) {
 
     for (int i = 0; i < count; ++i) {
         double progress = static_cast<double>(i) / count;
-        logProgress("Taking exposure " + std::to_string(i + 1) + "/" + std::to_string(count), progress);
+        logProgress("Taking exposure " + std::to_string(i + 1) + "/" +
+                        std::to_string(count),
+                    progress);
 
         // Create single exposure params
         json singleParams = params;
@@ -126,13 +139,16 @@ void TakeManyExposureTask::executeImpl(const json& params) {
 
         // Delay between exposures
         if (delay > 0 && i < count - 1) {
-            logProgress("Waiting " + std::to_string(delay) + "s before next exposure");
+            logProgress("Waiting " + std::to_string(delay) +
+                        "s before next exposure");
             std::this_thread::sleep_for(
                 std::chrono::milliseconds(static_cast<int>(delay * 1000)));
         }
     }
 
-    logProgress("Sequence complete: " + std::to_string(count) + " frames captured", 1.0);
+    logProgress(
+        "Sequence complete: " + std::to_string(count) + " frames captured",
+        1.0);
 }
 
 // ============================================================================
@@ -141,11 +157,13 @@ void TakeManyExposureTask::executeImpl(const json& params) {
 
 void SubframeExposureTask::setupParameters() {
     addParamDefinition("exposure", "number", true, nullptr, "Exposure time");
-    addParamDefinition("subframe", "object", true, nullptr, "Subframe coordinates {x, y, width, height}");
+    addParamDefinition("subframe", "object", true, nullptr,
+                       "Subframe coordinates {x, y, width, height}");
     addParamDefinition("type", "string", false, "light", "Frame type");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
     addParamDefinition("offset", "integer", false, 10, "Camera offset");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
 }
 
 void SubframeExposureTask::validateParams(const json& params) {
@@ -165,9 +183,10 @@ void SubframeExposureTask::executeImpl(const json& params) {
     double exposure = params["exposure"].get<double>();
     SubframeConfig subframe = params["subframe"].get<SubframeConfig>();
 
-    logProgress("Setting subframe ROI: " +
-                std::to_string(subframe.width) + "x" + std::to_string(subframe.height) +
-                " at (" + std::to_string(subframe.x) + ", " + std::to_string(subframe.y) + ")");
+    logProgress("Setting subframe ROI: " + std::to_string(subframe.width) +
+                "x" + std::to_string(subframe.height) + " at (" +
+                std::to_string(subframe.x) + ", " + std::to_string(subframe.y) +
+                ")");
 
     // Take exposure with subframe
     json exposureParams = params;
@@ -184,14 +203,20 @@ void SubframeExposureTask::executeImpl(const json& params) {
 // ============================================================================
 
 void SmartExposureTask::setupParameters() {
-    addParamDefinition("target_snr", "number", false, 50.0, "Target signal-to-noise ratio");
-    addParamDefinition("min_exposure", "number", false, 1.0, "Minimum exposure time");
-    addParamDefinition("max_exposure", "number", false, 300.0, "Maximum exposure time");
-    addParamDefinition("max_attempts", "integer", false, 5, "Maximum optimization attempts");
-    addParamDefinition("tolerance", "number", false, 0.1, "SNR tolerance (fraction)");
+    addParamDefinition("target_snr", "number", false, 50.0,
+                       "Target signal-to-noise ratio");
+    addParamDefinition("min_exposure", "number", false, 1.0,
+                       "Minimum exposure time");
+    addParamDefinition("max_exposure", "number", false, 300.0,
+                       "Maximum exposure time");
+    addParamDefinition("max_attempts", "integer", false, 5,
+                       "Maximum optimization attempts");
+    addParamDefinition("tolerance", "number", false, 0.1,
+                       "SNR tolerance (fraction)");
     addParamDefinition("gain", "integer", false, 100, "Camera gain");
     addParamDefinition("offset", "integer", false, 10, "Camera offset");
-    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}}, "Binning");
+    addParamDefinition("binning", "object", false, json{{"x", 1}, {"y", 1}},
+                       "Binning");
 }
 
 void SmartExposureTask::validateParams(const json& params) {
@@ -216,15 +241,18 @@ void SmartExposureTask::executeImpl(const json& params) {
     int maxAttempts = params.value("max_attempts", 5);
     double tolerance = params.value("tolerance", 0.1);
 
-    logProgress("Starting smart exposure targeting SNR " + std::to_string(targetSNR));
+    logProgress("Starting smart exposure targeting SNR " +
+                std::to_string(targetSNR));
 
     double currentExposure = (minExposure + maxExposure) / 2.0;
     double achievedSNR = 0.0;
 
     for (int attempt = 1; attempt <= maxAttempts; ++attempt) {
         double progress = static_cast<double>(attempt - 1) / maxAttempts;
-        logProgress("Attempt " + std::to_string(attempt) + "/" + std::to_string(maxAttempts) +
-                   " with " + std::to_string(currentExposure) + "s exposure", progress);
+        logProgress("Attempt " + std::to_string(attempt) + "/" +
+                        std::to_string(maxAttempts) + " with " +
+                        std::to_string(currentExposure) + "s exposure",
+                    progress);
 
         // Take test exposure
         json exposureParams = {
@@ -232,17 +260,17 @@ void SmartExposureTask::executeImpl(const json& params) {
             {"type", "light"},
             {"gain", params.value("gain", 100)},
             {"offset", params.value("offset", 10)},
-            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}
-        };
+            {"binning", params.value("binning", json{{"x", 1}, {"y", 1}})}};
 
         TakeExposureTask testExposure;
         testExposure.execute(exposureParams);
 
         // Simulate SNR measurement (replace with actual image analysis)
-        achievedSNR = std::min(targetSNR * 1.2, std::sqrt(currentExposure) * 15.0);
+        achievedSNR =
+            std::min(targetSNR * 1.2, std::sqrt(currentExposure) * 15.0);
 
         logProgress("Achieved SNR: " + std::to_string(achievedSNR) +
-                   ", Target: " + std::to_string(targetSNR));
+                    ", Target: " + std::to_string(targetSNR));
 
         // Check if within tolerance
         if (std::abs(achievedSNR - targetSNR) <= targetSNR * tolerance) {
@@ -252,13 +280,16 @@ void SmartExposureTask::executeImpl(const json& params) {
 
         // Calculate next exposure
         if (attempt < maxAttempts) {
-            currentExposure = calculateOptimalExposure(currentExposure, achievedSNR, targetSNR);
-            currentExposure = std::clamp(currentExposure, minExposure, maxExposure);
+            currentExposure = calculateOptimalExposure(currentExposure,
+                                                       achievedSNR, targetSNR);
+            currentExposure =
+                std::clamp(currentExposure, minExposure, maxExposure);
         }
     }
 
     // Take final exposure
-    logProgress("Taking final exposure: " + std::to_string(currentExposure) + "s");
+    logProgress("Taking final exposure: " + std::to_string(currentExposure) +
+                "s");
     json finalParams = params;
     finalParams["exposure"] = currentExposure;
     finalParams.erase("target_snr");
@@ -270,12 +301,14 @@ void SmartExposureTask::executeImpl(const json& params) {
     TakeExposureTask finalExposure;
     finalExposure.execute(finalParams);
 
-    logProgress("Smart exposure complete with final SNR " + std::to_string(achievedSNR), 1.0);
+    logProgress(
+        "Smart exposure complete with final SNR " + std::to_string(achievedSNR),
+        1.0);
 }
 
 double SmartExposureTask::calculateOptimalExposure(double currentExposure,
-                                                    double achievedSNR,
-                                                    double targetSNR) {
+                                                   double achievedSNR,
+                                                   double targetSNR) {
     // SNR scales with sqrt(exposure) for shot-noise limited images
     double ratio = targetSNR / achievedSNR;
     return currentExposure * ratio * ratio;

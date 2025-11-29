@@ -27,16 +27,16 @@ private:
 
 // Export function declarations
 extern "C" {
-    // Simple function exports
-    int add(int a, int b);
-    int multiply(int a, int b);
-    const char* getVersion();
+// Simple function exports
+int add(int a, int b);
+int multiply(int a, int b);
+const char* getVersion();
 
-    // Instance creation functions
-    std::shared_ptr<TestClass> createInstance(const json& config);
-    std::unique_ptr<TestClass> createUniqueInstance(const json& config);
+// Instance creation functions
+std::shared_ptr<TestClass> createInstance(const json& config);
+std::unique_ptr<TestClass> createUniqueInstance(const json& config);
 }
 
-} // namespace test_module
+}  // namespace test_module
 
-#endif // TEST_MODULE_HPP
+#endif  // TEST_MODULE_HPP

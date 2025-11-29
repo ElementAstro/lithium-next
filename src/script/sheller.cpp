@@ -790,8 +790,8 @@ auto ScriptManager::getRunningScripts() const -> std::vector<std::string> {
 
 void ScriptManager::registerPythonScriptWithConfig(
     std::string_view name, const PythonScriptConfig& config) {
-    spdlog::info("Registering Python script '{}' with module '{}'",
-                 name, config.moduleName);
+    spdlog::info("Registering Python script '{}' with module '{}'", name,
+                 config.moduleName);
 
     std::unique_lock lock(pImpl_->mSharedMutex_);
     std::string nameStr(name);
@@ -818,8 +818,8 @@ auto ScriptManager::executePythonFunction(
     std::string_view moduleName, std::string_view functionName,
     const std::unordered_map<std::string, std::string>& args)
     -> ScriptExecutionResult {
-    spdlog::info("Executing Python function '{}::{}' with {} args",
-                 moduleName, functionName, args.size());
+    spdlog::info("Executing Python function '{}::{}' with {} args", moduleName,
+                 functionName, args.size());
 
     auto startTime = std::chrono::steady_clock::now();
     ScriptExecutionResult result;
@@ -841,8 +841,9 @@ auto ScriptManager::executePythonFunction(
             moduleStr, funcStr);
 
         auto endTime = std::chrono::steady_clock::now();
-        result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-            endTime - startTime);
+        result.executionTime =
+            std::chrono::duration_cast<std::chrono::milliseconds>(endTime -
+                                                                  startTime);
         result.success = true;
         result.exitCode = 0;
         result.output = pyResult;
@@ -852,8 +853,9 @@ auto ScriptManager::executePythonFunction(
 
     } catch (const std::exception& e) {
         auto endTime = std::chrono::steady_clock::now();
-        result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-            endTime - startTime);
+        result.executionTime =
+            std::chrono::duration_cast<std::chrono::milliseconds>(endTime -
+                                                                  startTime);
         result.success = false;
         result.exitCode = -1;
         result.errorOutput = e.what();
@@ -908,7 +910,7 @@ auto ScriptManager::loadPythonScriptsFromDirectory(
                 }
             } catch (const std::exception& e) {
                 spdlog::warn("Failed to load Python script {}: {}",
-                            path.string(), e.what());
+                             path.string(), e.what());
             }
         }
     };
@@ -921,7 +923,8 @@ auto ScriptManager::loadPythonScriptsFromDirectory(
             }
         }
     } else {
-        for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+        for (const auto& entry :
+             std::filesystem::directory_iterator(directory)) {
             if (entry.is_regular_file()) {
                 processFile(entry.path());
             }
@@ -961,10 +964,11 @@ void ScriptManager::addPythonSysPath(const std::filesystem::path& path) {
 // =============================================================================
 
 void ScriptManager::setResourceLimits(const ScriptResourceLimits& limits) {
-    spdlog::info("Setting resource limits: maxMemory={}MB, maxCPU={}%, "
-                 "maxTime={}s, maxConcurrent={}",
-                 limits.maxMemoryMB, limits.maxCpuPercent,
-                 limits.maxExecutionTime.count(), limits.maxConcurrentScripts);
+    spdlog::info(
+        "Setting resource limits: maxMemory={}MB, maxCPU={}%, "
+        "maxTime={}s, maxConcurrent={}",
+        limits.maxMemoryMB, limits.maxCpuPercent,
+        limits.maxExecutionTime.count(), limits.maxConcurrentScripts);
 
     std::unique_lock lock(pImpl_->mSharedMutex_);
     pImpl_->resourceLimits_ = limits;
@@ -980,12 +984,14 @@ auto ScriptManager::getResourceUsage() const
     std::shared_lock lock(pImpl_->mSharedMutex_);
 
     std::unordered_map<std::string, double> usage;
-    usage["running_scripts"] = static_cast<double>(pImpl_->runningScripts_.size());
-    usage["total_scripts"] = static_cast<double>(pImpl_->scripts_.size() +
-                                                  pImpl_->powerShellScripts_.size());
+    usage["running_scripts"] =
+        static_cast<double>(pImpl_->runningScripts_.size());
+    usage["total_scripts"] = static_cast<double>(
+        pImpl_->scripts_.size() + pImpl_->powerShellScripts_.size());
     usage["memory_usage_percent"] =
         (static_cast<double>(pImpl_->currentMemoryUsage_) /
-         static_cast<double>(pImpl_->resourceLimits_.maxMemoryMB)) * 100.0;
+         static_cast<double>(pImpl_->resourceLimits_.maxMemoryMB)) *
+        100.0;
 
     return usage;
 }
@@ -994,9 +1000,9 @@ auto ScriptManager::getResourceUsage() const
 // Script Discovery and Auto-Loading Implementation
 // =============================================================================
 
-auto ScriptManager::discoverScripts(
-    const std::filesystem::path& directory,
-    const std::vector<std::string>& extensions, bool recursive) -> size_t {
+auto ScriptManager::discoverScripts(const std::filesystem::path& directory,
+                                    const std::vector<std::string>& extensions,
+                                    bool recursive) -> size_t {
     spdlog::info("Discovering scripts in: {} (extensions: {}, recursive: {})",
                  directory.string(), extensions.size(), recursive);
 
@@ -1007,8 +1013,8 @@ auto ScriptManager::discoverScripts(
         return 0;
     }
 
-    auto processFile = [this, &count, &extensions](
-                           const std::filesystem::path& path) {
+    auto processFile = [this, &count,
+                        &extensions](const std::filesystem::path& path) {
         std::string ext = path.extension().string();
         if (std::find(extensions.begin(), extensions.end(), ext) !=
             extensions.end()) {
@@ -1042,11 +1048,11 @@ auto ScriptManager::discoverScripts(
                     count++;
 
                     spdlog::debug("Discovered script: {} ({})", name,
-                                 static_cast<int>(lang));
+                                  static_cast<int>(lang));
                 }
             } catch (const std::exception& e) {
-                spdlog::warn("Failed to load script {}: {}",
-                            path.string(), e.what());
+                spdlog::warn("Failed to load script {}: {}", path.string(),
+                             e.what());
             }
         }
     };
@@ -1059,7 +1065,8 @@ auto ScriptManager::discoverScripts(
             }
         }
     } else {
-        for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+        for (const auto& entry :
+             std::filesystem::directory_iterator(directory)) {
             if (entry.is_regular_file()) {
                 processFile(entry.path());
             }
@@ -1140,7 +1147,8 @@ auto ScriptManager::executeWithConfig(
     ScriptExecutionResult result;
 
     // Apply resource limits if provided
-    ScriptResourceLimits limits = resourceLimits.value_or(pImpl_->resourceLimits_);
+    ScriptResourceLimits limits =
+        resourceLimits.value_or(pImpl_->resourceLimits_);
 
     int attempts = 0;
     std::chrono::milliseconds delay = config.initialDelay;
@@ -1156,8 +1164,9 @@ auto ScriptManager::executeWithConfig(
             }
 
             // Execute the script
-            auto execResult = runScript(name, args, true,
-                                        static_cast<int>(limits.maxExecutionTime.count() * 1000));
+            auto execResult = runScript(
+                name, args, true,
+                static_cast<int>(limits.maxExecutionTime.count() * 1000));
 
             if (execResult) {
                 result.success = (execResult->second == 0);
@@ -1175,8 +1184,9 @@ auto ScriptManager::executeWithConfig(
             }
 
             auto endTime = std::chrono::steady_clock::now();
-            result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-                endTime - startTime);
+            result.executionTime =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    endTime - startTime);
 
             // Check if we should retry
             if (result.success || config.strategy == RetryStrategy::None) {
@@ -1189,8 +1199,8 @@ auto ScriptManager::executeWithConfig(
 
             attempts++;
             if (attempts <= config.maxRetries) {
-                spdlog::info("Retrying script '{}' (attempt {}/{})",
-                            name, attempts, config.maxRetries);
+                spdlog::info("Retrying script '{}' (attempt {}/{})", name,
+                             attempts, config.maxRetries);
 
                 // Calculate delay based on strategy
                 switch (config.strategy) {
@@ -1198,8 +1208,8 @@ auto ScriptManager::executeWithConfig(
                         delay += config.initialDelay;
                         break;
                     case RetryStrategy::Exponential:
-                        delay = std::chrono::milliseconds(
-                            static_cast<int>(delay.count() * config.multiplier));
+                        delay = std::chrono::milliseconds(static_cast<int>(
+                            delay.count() * config.multiplier));
                         break;
                     default:
                         break;
@@ -1217,7 +1227,8 @@ auto ScriptManager::executeWithConfig(
 
             spdlog::error("Script execution error: {}", e.what());
 
-            if (config.strategy == RetryStrategy::None || attempts >= config.maxRetries) {
+            if (config.strategy == RetryStrategy::None ||
+                attempts >= config.maxRetries) {
                 break;
             }
             attempts++;
@@ -1240,7 +1251,8 @@ auto ScriptManager::executeAsync(
     std::string nameStr(name);
     auto argsCopy = args;
 
-    return std::async(std::launch::async,
+    return std::async(
+        std::launch::async,
         [this, nameStr, argsCopy, progressCallback]() -> ScriptExecutionResult {
             ScriptProgress progress;
             progress.status = "Starting";
@@ -1285,7 +1297,8 @@ auto ScriptManager::executePipeline(
         results.push_back(result);
 
         if (!result.success && stopOnError) {
-            spdlog::warn("Pipeline stopped due to error in script '{}'", scriptName);
+            spdlog::warn("Pipeline stopped due to error in script '{}'",
+                         scriptName);
             break;
         }
 
@@ -1295,8 +1308,8 @@ auto ScriptManager::executePipeline(
         }
     }
 
-    spdlog::info("Pipeline completed: {}/{} scripts executed",
-                 results.size(), scripts.size());
+    spdlog::info("Pipeline completed: {}/{} scripts executed", results.size(),
+                 scripts.size());
     return results;
 }
 
@@ -1316,14 +1329,17 @@ auto ScriptManager::getScriptStatistics(std::string_view name) const
         stats["execution_count"] = static_cast<double>(s.executionCount);
         stats["success_count"] = static_cast<double>(s.successCount);
         stats["failure_count"] = static_cast<double>(s.failureCount);
-        stats["total_execution_time_ms"] = static_cast<double>(s.totalExecutionTime.count());
+        stats["total_execution_time_ms"] =
+            static_cast<double>(s.totalExecutionTime.count());
         stats["average_execution_time_ms"] =
             s.executionCount > 0
-                ? static_cast<double>(s.totalExecutionTime.count()) / s.executionCount
+                ? static_cast<double>(s.totalExecutionTime.count()) /
+                      s.executionCount
                 : 0.0;
         stats["success_rate"] =
             s.executionCount > 0
-                ? (static_cast<double>(s.successCount) / s.executionCount) * 100.0
+                ? (static_cast<double>(s.successCount) / s.executionCount) *
+                      100.0
                 : 0.0;
     }
 
@@ -1347,8 +1363,8 @@ auto ScriptManager::getGlobalStatistics() const
         totalTime += s.totalExecutionTime;
     }
 
-    stats["total_scripts"] = static_cast<double>(pImpl_->scripts_.size() +
-                                                  pImpl_->powerShellScripts_.size());
+    stats["total_scripts"] = static_cast<double>(
+        pImpl_->scripts_.size() + pImpl_->powerShellScripts_.size());
     stats["total_executions"] = static_cast<double>(totalExecutions);
     stats["total_successes"] = static_cast<double>(totalSuccesses);
     stats["total_failures"] = static_cast<double>(totalFailures);

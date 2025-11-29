@@ -3,7 +3,6 @@
 #include <spdlog/spdlog.h>
 #include <format>
 
-
 #include "atom/error/exception.hpp"
 
 namespace lithium {

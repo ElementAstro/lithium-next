@@ -133,27 +133,32 @@ void Database::configure(
 
 void Database::commit() {
     if (!valid.load()) {
-        THROW_VALIDATION_ERROR("Attempted to commit on invalid database connection");
+        THROW_VALIDATION_ERROR(
+            "Attempted to commit on invalid database connection");
     }
     try {
         execute("COMMIT;");
         spdlog::info("Database transaction committed via Database::commit()");
     } catch (const std::exception& e) {
         spdlog::error("Failed to commit transaction: {}", e.what());
-        THROW_TRANSACTION_ERROR("Failed to commit transaction: " + std::string(e.what()));
+        THROW_TRANSACTION_ERROR("Failed to commit transaction: " +
+                                std::string(e.what()));
     }
 }
 
 void Database::rollback() {
     if (!valid.load()) {
-        THROW_VALIDATION_ERROR("Attempted to rollback on invalid database connection");
+        THROW_VALIDATION_ERROR(
+            "Attempted to rollback on invalid database connection");
     }
     try {
         execute("ROLLBACK;");
-        spdlog::info("Database transaction rolled back via Database::rollback()");
+        spdlog::info(
+            "Database transaction rolled back via Database::rollback()");
     } catch (const std::exception& e) {
         spdlog::error("Failed to rollback transaction: {}", e.what());
-        THROW_TRANSACTION_ERROR("Failed to rollback transaction: " + std::string(e.what()));
+        THROW_TRANSACTION_ERROR("Failed to rollback transaction: " +
+                                std::string(e.what()));
     }
 }
 

@@ -190,8 +190,7 @@ TEST_F(ComponentManagerTest, PerformanceMonitoring) {
 // Error Handling Tests
 TEST_F(ComponentManagerTest, ErrorHandling) {
     json invalidParams = {
-        {"name", "invalid_component"}
-        // Missing required 'path' field
+        {"name", "invalid_component"}  // Missing required 'path' field
     };
 
     EXPECT_FALSE(manager->loadComponent(invalidParams));

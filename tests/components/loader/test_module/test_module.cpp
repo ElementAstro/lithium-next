@@ -12,31 +12,19 @@ TestClass::TestClass(const json& config) {
     }
 }
 
-std::string TestClass::getName() const {
-    return name_;
-}
+std::string TestClass::getName() const { return name_; }
 
-int TestClass::getValue() const {
-    return value_;
-}
+int TestClass::getValue() const { return value_; }
 
-void TestClass::setValue(int value) {
-    value_ = value;
-}
+void TestClass::setValue(int value) { value_ = value; }
 
 extern "C" {
 
-int add(int a, int b) {
-    return a + b;
-}
+int add(int a, int b) { return a + b; }
 
-int multiply(int a, int b) {
-    return a * b;
-}
+int multiply(int a, int b) { return a * b; }
 
-const char* getVersion() {
-    return "1.0.0";
-}
+const char* getVersion() { return "1.0.0"; }
 
 std::shared_ptr<TestClass> createInstance(const json& config) {
     return std::make_shared<TestClass>(config);
@@ -46,6 +34,6 @@ std::unique_ptr<TestClass> createUniqueInstance(const json& config) {
     return std::make_unique<TestClass>(config);
 }
 
-} // extern "C"
+}  // extern "C"
 
-} // namespace test_module
+}  // namespace test_module

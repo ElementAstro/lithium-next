@@ -10,8 +10,8 @@
 #ifndef LITHIUM_TASK_CAMERA_COMMON_TYPES_HPP
 #define LITHIUM_TASK_CAMERA_COMMON_TYPES_HPP
 
-#include "atom/type/json.hpp"
 #include <string>
+#include "atom/type/json.hpp"
 
 namespace lithium::task::camera {
 
@@ -21,20 +21,21 @@ using json = nlohmann::json;
  * @brief Exposure frame type enumeration
  */
 enum class ExposureType {
-    Light,     ///< Light frame - main science exposure
-    Dark,      ///< Dark frame - noise calibration
-    Bias,      ///< Bias frame - readout noise calibration
-    Flat,      ///< Flat frame - optical system response
-    Snapshot   ///< Quick preview exposure
+    Light,    ///< Light frame - main science exposure
+    Dark,     ///< Dark frame - noise calibration
+    Bias,     ///< Bias frame - readout noise calibration
+    Flat,     ///< Flat frame - optical system response
+    Snapshot  ///< Quick preview exposure
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType, {
-    {ExposureType::Light, "light"},
-    {ExposureType::Dark, "dark"},
-    {ExposureType::Bias, "bias"},
-    {ExposureType::Flat, "flat"},
-    {ExposureType::Snapshot, "snapshot"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(ExposureType,
+                             {
+                                 {ExposureType::Light, "light"},
+                                 {ExposureType::Dark, "dark"},
+                                 {ExposureType::Bias, "bias"},
+                                 {ExposureType::Flat, "flat"},
+                                 {ExposureType::Snapshot, "snapshot"},
+                             })
 
 /**
  * @brief Focus method enumeration
@@ -46,12 +47,13 @@ enum class FocusMethod {
     Bahtinov   ///< Bahtinov mask focus
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(FocusMethod, {
-    {FocusMethod::HFD, "hfd"},
-    {FocusMethod::FWHM, "fwhm"},
-    {FocusMethod::Contrast, "contrast"},
-    {FocusMethod::Bahtinov, "bahtinov"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(FocusMethod,
+                             {
+                                 {FocusMethod::HFD, "hfd"},
+                                 {FocusMethod::FWHM, "fwhm"},
+                                 {FocusMethod::Contrast, "contrast"},
+                                 {FocusMethod::Bahtinov, "bahtinov"},
+                             })
 
 /**
  * @brief Filter type enumeration
@@ -68,36 +70,37 @@ enum class FilterType {
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(FilterType, {
-    {FilterType::Luminance, "L"},
-    {FilterType::Red, "R"},
-    {FilterType::Green, "G"},
-    {FilterType::Blue, "B"},
-    {FilterType::Ha, "Ha"},
-    {FilterType::OIII, "OIII"},
-    {FilterType::SII, "SII"},
-    {FilterType::Custom, "custom"},
-})
+                                             {FilterType::Luminance, "L"},
+                                             {FilterType::Red, "R"},
+                                             {FilterType::Green, "G"},
+                                             {FilterType::Blue, "B"},
+                                             {FilterType::Ha, "Ha"},
+                                             {FilterType::OIII, "OIII"},
+                                             {FilterType::SII, "SII"},
+                                             {FilterType::Custom, "custom"},
+                                         })
 
 /**
  * @brief Guiding state enumeration
  */
 enum class GuidingState {
-    Idle,       ///< Not guiding
-    Calibrating,///< Calibrating guider
-    Guiding,    ///< Actively guiding
-    Settling,   ///< Settling after dither
-    Paused,     ///< Guiding paused
-    Error       ///< Guiding error
+    Idle,         ///< Not guiding
+    Calibrating,  ///< Calibrating guider
+    Guiding,      ///< Actively guiding
+    Settling,     ///< Settling after dither
+    Paused,       ///< Guiding paused
+    Error         ///< Guiding error
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(GuidingState, {
-    {GuidingState::Idle, "idle"},
-    {GuidingState::Calibrating, "calibrating"},
-    {GuidingState::Guiding, "guiding"},
-    {GuidingState::Settling, "settling"},
-    {GuidingState::Paused, "paused"},
-    {GuidingState::Error, "error"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(GuidingState,
+                             {
+                                 {GuidingState::Idle, "idle"},
+                                 {GuidingState::Calibrating, "calibrating"},
+                                 {GuidingState::Guiding, "guiding"},
+                                 {GuidingState::Settling, "settling"},
+                                 {GuidingState::Paused, "paused"},
+                                 {GuidingState::Error, "error"},
+                             })
 
 /**
  * @brief Camera binning configuration

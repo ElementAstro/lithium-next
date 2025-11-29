@@ -188,7 +188,7 @@ public:
      * @param depName The name of the dependency.
      * @return Optional containing the version if found, nullopt otherwise.
      */
-    auto getInstalledVersion(const std::string& depName) 
+    auto getInstalledVersion(const std::string& depName)
         -> std::optional<VersionInfo>;
 
     /**

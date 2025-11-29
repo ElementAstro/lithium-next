@@ -64,7 +64,8 @@ public:
      * @param settings JSON object with settings to update
      * @return JSON response with operation result
      */
-    auto updateSettings(const std::string& deviceId, const json& settings) -> json;
+    auto updateSettings(const std::string& deviceId, const json& settings)
+        -> json;
 
     /**
      * @brief Start a single exposure
@@ -134,8 +135,8 @@ public:
      * @brief Set INDI-specific camera property
      */
     auto setINDIProperty(const std::string& deviceId,
-                         const std::string& propertyName,
-                         const json& value) -> json;
+                         const std::string& propertyName, const json& value)
+        -> json;
 
     /**
      * @brief Get camera frame types
@@ -145,8 +146,8 @@ public:
     /**
      * @brief Set camera frame type
      */
-    auto setFrameType(const std::string& deviceId,
-                      const std::string& frameType) -> json;
+    auto setFrameType(const std::string& deviceId, const std::string& frameType)
+        -> json;
 
     /**
      * @brief Get available readout modes

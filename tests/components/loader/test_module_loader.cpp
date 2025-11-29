@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <memory>
-#include <filesystem>
-#include <thread>
 #include <atomic>
+#include <filesystem>
+#include <memory>
+#include <thread>
 
 #include "components/loader.hpp"
 
@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 
 // Forward declaration for instance tests
 namespace test_module {
-    class TestClass;
+class TestClass;
 }
 
 namespace lithium::test {
@@ -156,7 +156,8 @@ protected:
         fs::create_directories(testDir);
         loader = std::make_unique<ModuleLoader>(testDir.string());
 
-        // Get the test module path (should be in the same directory as the test executable)
+        // Get the test module path (should be in the same directory as the test
+        // executable)
         moduleDir = fs::current_path();
 #ifdef _WIN32
         modulePath = moduleDir / "test_module.dll";
@@ -175,9 +176,7 @@ protected:
         }
     }
 
-    bool moduleExists() const {
-        return fs::exists(modulePath);
-    }
+    bool moduleExists() const { return fs::exists(modulePath); }
 
     fs::path testDir;
     fs::path moduleDir;
@@ -186,8 +185,8 @@ protected:
 };
 
 // Skip real module tests if module doesn't exist
-#define SKIP_IF_NO_MODULE() \
-    if (!moduleExists()) { \
+#define SKIP_IF_NO_MODULE()                                         \
+    if (!moduleExists()) {                                          \
         GTEST_SKIP() << "Test module not found at: " << modulePath; \
     }
 
@@ -195,7 +194,8 @@ TEST_F(RealModuleLoaderTest, LoadRealModule) {
     SKIP_IF_NO_MODULE();
 
     auto result = loader->loadModule(modulePath.string(), "test_module");
-    ASSERT_TRUE(result.has_value()) << "Failed to load module: " << result.error();
+    ASSERT_TRUE(result.has_value())
+        << "Failed to load module: " << result.error();
     EXPECT_TRUE(result.value());
     EXPECT_TRUE(loader->hasModule("test_module"));
 }
@@ -310,7 +310,8 @@ TEST_F(RealModuleLoaderTest, GetSimpleFunction) {
     ASSERT_TRUE(loadResult.has_value());
 
     auto addFunc = loader->getFunction<int(int, int)>("test_module", "add");
-    ASSERT_TRUE(addFunc.has_value()) << "Failed to get function: " << addFunc.error();
+    ASSERT_TRUE(addFunc.has_value())
+        << "Failed to get function: " << addFunc.error();
 
     // Test the function
     EXPECT_EQ(addFunc.value()(3, 4), 7);
@@ -325,7 +326,8 @@ TEST_F(RealModuleLoaderTest, GetMultipleFunctions) {
     ASSERT_TRUE(loadResult.has_value());
 
     auto addFunc = loader->getFunction<int(int, int)>("test_module", "add");
-    auto mulFunc = loader->getFunction<int(int, int)>("test_module", "multiply");
+    auto mulFunc =
+        loader->getFunction<int(int, int)>("test_module", "multiply");
 
     ASSERT_TRUE(addFunc.has_value());
     ASSERT_TRUE(mulFunc.has_value());
@@ -340,7 +342,8 @@ TEST_F(RealModuleLoaderTest, GetVersionFunction) {
     auto loadResult = loader->loadModule(modulePath.string(), "test_module");
     ASSERT_TRUE(loadResult.has_value());
 
-    auto versionFunc = loader->getFunction<const char*()>("test_module", "getVersion");
+    auto versionFunc =
+        loader->getFunction<const char*()>("test_module", "getVersion");
     ASSERT_TRUE(versionFunc.has_value());
 
     const char* version = versionFunc.value()();
@@ -353,7 +356,8 @@ TEST_F(RealModuleLoaderTest, GetNonExistentFunction) {
     auto loadResult = loader->loadModule(modulePath.string(), "test_module");
     ASSERT_TRUE(loadResult.has_value());
 
-    auto func = loader->getFunction<void()>("test_module", "nonExistentFunction");
+    auto func =
+        loader->getFunction<void()>("test_module", "nonExistentFunction");
     EXPECT_FALSE(func.has_value());
 }
 
@@ -391,7 +395,8 @@ TEST_F(RealModuleLoaderTest, CreateSharedInstance) {
         EXPECT_EQ(instance->getValue(), 42);
     } else {
         // Instance creation might fail if symbol not properly exported
-        GTEST_SKIP() << "Instance creation not supported: " << instanceResult.error();
+        GTEST_SKIP() << "Instance creation not supported: "
+                     << instanceResult.error();
     }
 }
 
@@ -412,7 +417,8 @@ TEST_F(RealModuleLoaderTest, CreateUniqueInstance) {
         EXPECT_EQ(instance->getName(), "UniqueInstance");
         EXPECT_EQ(instance->getValue(), 100);
     } else {
-        GTEST_SKIP() << "Unique instance creation not supported: " << instanceResult.error();
+        GTEST_SKIP() << "Unique instance creation not supported: "
+                     << instanceResult.error();
     }
 }
 
@@ -424,8 +430,7 @@ TEST_F(RealModuleLoaderTest, LoadModulesAsync) {
     SKIP_IF_NO_MODULE();
 
     std::vector<std::pair<std::string, std::string>> modules = {
-        {modulePath.string(), "test_module_async"}
-    };
+        {modulePath.string(), "test_module_async"}};
 
     auto futures = loader->loadModulesAsync(modules);
     ASSERT_EQ(futures.size(), 1);
@@ -454,7 +459,8 @@ TEST_F(RealModuleLoaderTest, ConcurrentModuleAccess) {
     for (int i = 0; i < numThreads; ++i) {
         threads.emplace_back([this, &successCount]() {
             if (loader->hasModule("test_module")) {
-                auto func = loader->getFunction<int(int, int)>("test_module", "add");
+                auto func =
+                    loader->getFunction<int(int, int)>("test_module", "add");
                 if (func.has_value() && func.value()(2, 3) == 5) {
                     successCount++;
                 }
@@ -476,7 +482,8 @@ TEST_F(RealModuleLoaderTest, ConcurrentLoadUnload) {
 
     for (int i = 0; i < iterations; ++i) {
         // Load
-        auto loadResult = loader->loadModule(modulePath.string(), "test_module");
+        auto loadResult =
+            loader->loadModule(modulePath.string(), "test_module");
         ASSERT_TRUE(loadResult.has_value()) << "Failed at iteration " << i;
 
         // Verify
@@ -484,7 +491,8 @@ TEST_F(RealModuleLoaderTest, ConcurrentLoadUnload) {
 
         // Unload
         auto unloadResult = loader->unloadModule("test_module");
-        ASSERT_TRUE(unloadResult.has_value()) << "Unload failed at iteration " << i;
+        ASSERT_TRUE(unloadResult.has_value())
+            << "Unload failed at iteration " << i;
     }
 }
 
@@ -499,13 +507,14 @@ TEST_F(RealModuleLoaderTest, BatchProcessModules) {
     ASSERT_TRUE(loadResult.has_value());
 
     int processedCount = 0;
-    auto count = loader->batchProcessModules([&processedCount](std::shared_ptr<ModuleInfo> info) {
-        if (info && info->name == "test_module") {
-            processedCount++;
-            return true;
-        }
-        return false;
-    });
+    auto count = loader->batchProcessModules(
+        [&processedCount](std::shared_ptr<ModuleInfo> info) {
+            if (info && info->name == "test_module") {
+                processedCount++;
+                return true;
+            }
+            return false;
+        });
 
     EXPECT_EQ(count, 1);
     EXPECT_EQ(processedCount, 1);

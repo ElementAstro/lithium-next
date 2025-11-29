@@ -13,11 +13,11 @@
 #ifndef LITHIUM_TASK_API_ADAPTER_HPP
 #define LITHIUM_TASK_API_ADAPTER_HPP
 
+#include <functional>
 #include <memory>
 #include <string>
-#include <functional>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 #include "atom/type/json.hpp"
 
 namespace lithium::task {
@@ -60,22 +60,24 @@ struct ApiResponse {
     std::string status{"success"};
     json data;
     std::string message;
-    
+
     struct Error {
         std::string code;
         std::string message;
         json details;
     } error;
-    
+
     bool hasError{false};
-    
+
     // Helper methods
-    static ApiResponse success(const json& data, const std::string& message = "");
-    static ApiResponse accepted(const json& data, const std::string& message = "");
-    static ApiResponse makeError(int statusCode, const std::string& errorCode, 
-                                 const std::string& errorMessage, 
+    static ApiResponse success(const json& data,
+                               const std::string& message = "");
+    static ApiResponse accepted(const json& data,
+                                const std::string& message = "");
+    static ApiResponse makeError(int statusCode, const std::string& errorCode,
+                                 const std::string& errorMessage,
                                  const json& details = json());
-    
+
     /**
      * @brief Convert response to JSON
      */
@@ -97,30 +99,30 @@ enum class WsEventType {
     SequenceResumed,
     SequenceComplete,
     SequenceAborted,
-    
+
     // Target events
     TargetStart,
     TargetProgress,
     TargetComplete,
     TargetFailed,
-    
+
     // Task events
     TaskStart,
     TaskProgress,
     TaskComplete,
     TaskFailed,
-    
+
     // Exposure events
     ExposureStarted,
     ExposureProgress,
     ExposureFinished,
     ExposureAborted,
-    
+
     // Device events
     DeviceConnected,
     DeviceDisconnected,
     DeviceStatusUpdate,
-    
+
     // System events
     Notification,
     Error
@@ -140,10 +142,10 @@ struct WsEvent {
     std::string timestamp;  // ISO 8601
     json data;
     std::string correlationId;  // Optional, for command responses
-    
+
     json toJson() const;
     static WsEvent fromJson(const json& j);
-    static WsEvent create(WsEventType type, const json& data, 
+    static WsEvent create(WsEventType type, const json& data,
                           const std::string& correlationId = "");
 };
 
@@ -153,7 +155,7 @@ struct WsEvent {
 
 /**
  * @brief Sequence data model converter
- * 
+ *
  * Converts between API JSON format and internal task engine structures
  */
 class SequenceConverter {
@@ -162,17 +164,18 @@ public:
      * @brief Convert API sequence JSON to internal Target
      */
     static std::shared_ptr<Target> fromApiJson(const json& sequenceJson);
-    
+
     /**
      * @brief Convert internal Target to API JSON
      */
     static json toApiJson(const std::shared_ptr<Target>& target);
-    
+
     /**
      * @brief Convert task parameters from API format
      */
-    static json convertTaskParams(const std::string& taskType, const json& apiParams);
-    
+    static json convertTaskParams(const std::string& taskType,
+                                  const json& apiParams);
+
     /**
      * @brief Validate sequence JSON against schema
      * @return Validation errors (empty if valid)
@@ -191,21 +194,21 @@ public:
         std::string message;
         json details;
     };
-    
+
     /**
      * @brief Map exception to error info
      */
     static ErrorInfo mapException(const std::exception& exception);
-    
+
     /**
      * @brief Create error response from exception
      */
     static ApiResponse createErrorResponse(const std::exception& exception);
-    
+
     /**
      * @brief Create validation error response
      */
-    static ApiResponse createValidationError(const std::string& field, 
+    static ApiResponse createValidationError(const std::string& field,
                                              const std::string& message,
                                              const json& value = json());
 };

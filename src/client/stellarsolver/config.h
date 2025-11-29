@@ -1,16 +1,16 @@
 #pragma once
 
-#include <QObject>
 #include <libstellarsolver/stellarsolver.h>
+#include <QObject>
 
 class SolverConfig {
 public:
     static SolverConfig& getInstance();
 
     // 快速配置预设
-    void setQuickMode();      // 快速模式,精度较低
-    void setPreciseMode();    // 精确模式,耗时较长
-    void setBalancedMode();   // 平衡模式
+    void setQuickMode();     // 快速模式,精度较低
+    void setPreciseMode();   // 精确模式,耗时较长
+    void setBalancedMode();  // 平衡模式
 
     // 自定义配置
     void setCustomParameters(const SSolver::Parameters& params);

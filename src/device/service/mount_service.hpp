@@ -69,8 +69,8 @@ public:
     /**
      * @brief Execute position command (PARK/UNPARK/HOME/FIND_HOME)
      */
-    auto setPosition(const std::string& deviceId,
-                     const std::string& command) -> json;
+    auto setPosition(const std::string& deviceId, const std::string& command)
+        -> json;
 
     /**
      * @brief Execute pulse guide
@@ -98,8 +98,8 @@ public:
     /**
      * @brief Set tracking rate (Sidereal/Lunar/Solar)
      */
-    auto setTrackingRate(const std::string& deviceId,
-                         const std::string& rate) -> json;
+    auto setTrackingRate(const std::string& deviceId, const std::string& rate)
+        -> json;
 
     /**
      * @brief Get pier side
@@ -122,8 +122,8 @@ public:
      * @brief Set INDI-specific telescope property
      */
     auto setINDIProperty(const std::string& deviceId,
-                         const std::string& propertyName,
-                         const json& value) -> json;
+                         const std::string& propertyName, const json& value)
+        -> json;
 
     /**
      * @brief Get telescope info (aperture, focal length)
@@ -133,9 +133,9 @@ public:
     /**
      * @brief Set telescope info
      */
-    auto setTelescopeInfo(const std::string& deviceId,
-                          double aperture, double focalLength,
-                          double guiderAperture, double guiderFocalLength) -> json;
+    auto setTelescopeInfo(const std::string& deviceId, double aperture,
+                          double focalLength, double guiderAperture,
+                          double guiderFocalLength) -> json;
 
     /**
      * @brief Get site location
@@ -145,9 +145,8 @@ public:
     /**
      * @brief Set site location
      */
-    auto setSiteLocation(const std::string& deviceId,
-                         double latitude, double longitude,
-                         double elevation) -> json;
+    auto setSiteLocation(const std::string& deviceId, double latitude,
+                         double longitude, double elevation) -> json;
 
     /**
      * @brief Get UTC offset

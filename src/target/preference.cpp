@@ -519,7 +519,8 @@ bool AdvancedRecommendationEngine::exportToCSV(const std::string& filename) {
             return false;
         }
 
-        std::vector<std::string> fields = {"user", "item", "rating", "timestamp"};
+        std::vector<std::string> fields = {"user", "item", "rating",
+                                           "timestamp"};
         DictWriter writer(output, fields);
 
         for (const auto& [userId, itemId, rating, timestamp] : ratings_) {
@@ -542,7 +543,9 @@ bool AdvancedRecommendationEngine::exportToCSV(const std::string& filename) {
             }
 
             auto duration = timestamp.time_since_epoch();
-            auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+            auto seconds =
+                std::chrono::duration_cast<std::chrono::seconds>(duration)
+                    .count();
 
             std::unordered_map<std::string, std::string> row;
             row["user"] = userName;
@@ -552,7 +555,8 @@ bool AdvancedRecommendationEngine::exportToCSV(const std::string& filename) {
             writer.writeRow(row);
         }
 
-        spdlog::info("Successfully exported {} ratings to {}", ratings_.size(), filename);
+        spdlog::info("Successfully exported {} ratings to {}", ratings_.size(),
+                     filename);
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Error exporting to CSV {}: {}", filename, e.what());
@@ -582,7 +586,8 @@ bool AdvancedRecommendationEngine::importFromCSV(const std::string& filename) {
                 std::string item = row["item"];
                 double rating = std::stod(row["rating"]);
 
-                if (rating >= 0.0 && rating <= 5.0 && !user.empty() && !item.empty()) {
+                if (rating >= 0.0 && rating <= 5.0 && !user.empty() &&
+                    !item.empty()) {
                     batch.emplace_back(user, item, rating);
                     count++;
 
@@ -602,7 +607,8 @@ bool AdvancedRecommendationEngine::importFromCSV(const std::string& filename) {
             processBatch(batch);
         }
 
-        spdlog::info("Successfully imported {} ratings from {}", count, filename);
+        spdlog::info("Successfully imported {} ratings from {}", count,
+                     filename);
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Error importing from CSV {}: {}", filename, e.what());

@@ -54,14 +54,14 @@ public:
     /**
      * @brief Set filter position by slot number
      */
-    auto setPosition(const std::string& deviceId,
-                     const json& requestBody) -> json;
+    auto setPosition(const std::string& deviceId, const json& requestBody)
+        -> json;
 
     /**
      * @brief Set filter position by filter name
      */
-    auto setByName(const std::string& deviceId,
-                   const json& requestBody) -> json;
+    auto setByName(const std::string& deviceId, const json& requestBody)
+        -> json;
 
     /**
      * @brief Get filter wheel capabilities
@@ -71,8 +71,8 @@ public:
     /**
      * @brief Configure filter names
      */
-    auto configureNames(const std::string& deviceId,
-                        const json& requestBody) -> json;
+    auto configureNames(const std::string& deviceId, const json& requestBody)
+        -> json;
 
     /**
      * @brief Get filter offsets
@@ -82,8 +82,8 @@ public:
     /**
      * @brief Set filter offsets
      */
-    auto setOffsets(const std::string& deviceId,
-                    const json& requestBody) -> json;
+    auto setOffsets(const std::string& deviceId, const json& requestBody)
+        -> json;
 
     /**
      * @brief Halt filter wheel
@@ -106,8 +106,8 @@ public:
      * @brief Set INDI-specific filter wheel property
      */
     auto setINDIProperty(const std::string& deviceId,
-                         const std::string& propertyName,
-                         const json& value) -> json;
+                         const std::string& propertyName, const json& value)
+        -> json;
 
 private:
     class Impl;
