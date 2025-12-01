@@ -32,6 +32,7 @@
 #include <optional>
 #include <shared_mutex>
 #include <string>
+#include <future>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -306,21 +307,7 @@ private:
     static std::shared_mutex globalMutex_;
 };
 
-/**
- * @brief RAII guard for GIL acquisition when invoking tools
- */
-class ToolInvocationGuard {
-public:
-    explicit ToolInvocationGuard(PythonToolRegistry& registry);
-    ~ToolInvocationGuard();
-
-    ToolInvocationGuard(const ToolInvocationGuard&) = delete;
-    ToolInvocationGuard& operator=(const ToolInvocationGuard&) = delete;
-
-private:
-    class Impl;
-    std::unique_ptr<Impl> pImpl_;
-};
+// ToolInvocationGuard is defined in invocation.hpp
 
 }  // namespace lithium::tools
 

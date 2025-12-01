@@ -12,6 +12,22 @@ project(lithium_database_tests)
 find_package(GTest REQUIRED)
 find_package(SQLite3 REQUIRED)
 
+# Provide SQLite3::SQLite3 alias when only SQLite::SQLite3 or cache variables exist
+if(SQLite3_FOUND AND NOT TARGET SQLite3::SQLite3)
+    if(TARGET SQLite::SQLite3)
+        add_library(SQLite3::SQLite3 INTERFACE IMPORTED)
+        target_link_libraries(SQLite3::SQLite3 INTERFACE SQLite::SQLite3)
+    elseif(SQLite3_LIBRARIES)
+        add_library(SQLite3::SQLite3 INTERFACE IMPORTED)
+        target_link_libraries(SQLite3::SQLite3 INTERFACE ${SQLite3_LIBRARIES})
+        if(SQLite3_INCLUDE_DIRS)
+            target_include_directories(SQLite3::SQLite3 INTERFACE ${SQLite3_INCLUDE_DIRS})
+        endif()
+    else()
+        message(FATAL_ERROR "SQLite3 was found but no usable target information is available")
+    endif()
+endif()
+
 # Define helper macro for adding database tests
 macro(add_database_test TEST_NAME TEST_SOURCE)
     add_executable(${TEST_NAME} ${TEST_SOURCE})

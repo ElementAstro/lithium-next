@@ -8,16 +8,16 @@
 # ===========================================================================
 
 set(SEARCH_SOURCES
-    engine.cpp
-    reader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../engine.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader.cpp
     search_engine.cpp
     coordinate_searcher.cpp
     filter_evaluator.cpp
 )
 
 set(SEARCH_HEADERS
-    engine.hpp
-    reader.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../engine.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader.hpp
     search_engine.hpp
     coordinate_searcher.hpp
     filter_evaluator.hpp

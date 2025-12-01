@@ -1,0 +1,322 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "ninja-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF"
+      }
+    },
+    {
+      "name": "mingw-base",
+      "hidden": true,
+      "generator": "MinGW Makefiles",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "msvc-base",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Linux / GCC / Debug",
+      "description": "Debug build on Linux using GCC and Ninja (minimal warnings, compile_commands generated).",
+      "inherits": [
+        "ninja-base"
+      ],
+      "binaryDir": "${sourceDir}/build/linux-gcc-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Linux / Clang / Release",
+      "description": "Optimized Linux build with Clang and LTO-ready flags.",
+      "inherits": [
+        "ninja-base"
+      ],
+      "binaryDir": "${sourceDir}/build/linux-clang-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "linux-clang-relwithdebinfo",
+      "displayName": "Linux / Clang / RelWithDebInfo",
+      "description": "Balanced build for profiling on Linux (Clang, RelWithDebInfo).",
+      "inherits": [
+        "ninja-base"
+      ],
+      "binaryDir": "${sourceDir}/build/linux-clang-relwithdebinfo",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "macos-universal-clang",
+      "displayName": "macOS / Clang / Universal",
+      "description": "Universal macOS build (arm64 + x86_64) via Apple Clang.",
+      "inherits": [
+        "ninja-base"
+      ],
+      "binaryDir": "${sourceDir}/build/macos-universal-clang",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "windows-mingw-debug",
+      "displayName": "Windows / MinGW / Debug",
+      "description": "Debug build on Windows using MinGW-w64 GCC and Ninja (modules disabled).",
+      "inherits": [
+        "mingw-base"
+      ],
+      "binaryDir": "${sourceDir}/build/windows-mingw-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "OPENSSL_ROOT_DIR": "D:/msys64/mingw64",
+        "ZLIB_ROOT": "D:/msys64/mingw64",
+        "CMAKE_PREFIX_PATH": "D:/msys64/mingw64"
+      }
+    },
+    {
+      "name": "windows-mingw-release",
+      "displayName": "Windows / MinGW / Release",
+      "description": "Release build on Windows with MinGW-w64 (ideal for CI artifacts).",
+      "inherits": [
+        "mingw-base"
+      ],
+      "binaryDir": "${sourceDir}/build/windows-mingw-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "windows-msys2-mingw64",
+      "displayName": "Windows / MSYS2 MinGW64",
+      "description": "RelWithDebInfo build using MSYS2's mingw64 toolchain (PATH/compilers preconfigured). Set MSYS2_ROOT if not installed in C:/msys64.",
+      "inherits": [
+        "mingw-base"
+      ],
+      "binaryDir": "${sourceDir}/build/windows-msys2-mingw64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "environment": {
+        "MSYS2_ROOT": "C:/msys64",
+        "MSYSTEM": "MINGW64",
+        "CHERE_INVOKING": "1",
+        "MSYS2_PATH_TYPE": "inherit"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "C:/msys64/mingw64/bin/gcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/msys64/mingw64/bin/g++.exe",
+        "CMAKE_RC_COMPILER": "C:/msys64/mingw64/bin/windres.exe",
+        "CMAKE_AR": "C:/msys64/mingw64/bin/gcc-ar.exe",
+        "CMAKE_RANLIB": "C:/msys64/mingw64/bin/gcc-ranlib.exe"
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "displayName": "Windows / MSVC",
+      "description": "Multi-config Visual Studio 2022 generator with modern C++ modules.",
+      "inherits": [
+        "msvc-base"
+      ],
+      "binaryDir": "${sourceDir}/build/windows-msvc"
+    },
+    {
+      "name": "ci-ninja-release",
+      "displayName": "CI Ninja Release",
+      "description": "Generic portable release preset for CI/CD runners (Ninja).",
+      "inherits": [
+        "ninja-base"
+      ],
+      "binaryDir": "${sourceDir}/build/ci-ninja-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Build (Linux GCC Debug)",
+      "configurePreset": "linux-gcc-debug"
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Build (Linux Clang Release)",
+      "configurePreset": "linux-clang-release"
+    },
+    {
+      "name": "linux-clang-relwithdebinfo",
+      "displayName": "Build (Linux Clang RelWithDebInfo)",
+      "configurePreset": "linux-clang-relwithdebinfo"
+    },
+    {
+      "name": "macos-universal-clang",
+      "displayName": "Build (macOS Universal Clang)",
+      "configurePreset": "macos-universal-clang"
+    },
+    {
+      "name": "windows-mingw-debug",
+      "displayName": "Build (Windows MinGW Debug)",
+      "configurePreset": "windows-mingw-debug"
+    },
+    {
+      "name": "windows-mingw-release",
+      "displayName": "Build (Windows MinGW Release)",
+      "configurePreset": "windows-mingw-release"
+    },
+    {
+      "name": "windows-msys2-mingw64",
+      "displayName": "Build (Windows MSYS2 MinGW64)",
+      "configurePreset": "windows-msys2-mingw64"
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Build (Windows MSVC Debug)",
+      "configurePreset": "windows-msvc",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Build (Windows MSVC Release)",
+      "configurePreset": "windows-msvc",
+      "configuration": "Release"
+    },
+    {
+      "name": "ci-ninja-release",
+      "displayName": "Build (CI Ninja Release)",
+      "configurePreset": "ci-ninja-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Test (Linux GCC Debug)",
+      "configurePreset": "linux-gcc-debug"
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Test (Linux Clang Release)",
+      "configurePreset": "linux-clang-release"
+    },
+    {
+      "name": "linux-clang-relwithdebinfo",
+      "displayName": "Test (Linux Clang RelWithDebInfo)",
+      "configurePreset": "linux-clang-relwithdebinfo"
+    },
+    {
+      "name": "macos-universal-clang",
+      "displayName": "Test (macOS Universal Clang)",
+      "configurePreset": "macos-universal-clang"
+    },
+    {
+      "name": "windows-mingw-debug",
+      "displayName": "Test (Windows MinGW Debug)",
+      "configurePreset": "windows-mingw-debug"
+    },
+    {
+      "name": "windows-mingw-release",
+      "displayName": "Test (Windows MinGW Release)",
+      "configurePreset": "windows-mingw-release"
+    },
+    {
+      "name": "windows-msys2-mingw64",
+      "displayName": "Test (Windows MSYS2 MinGW64)",
+      "configurePreset": "windows-msys2-mingw64"
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Test (Windows MSVC Debug)",
+      "configurePreset": "windows-msvc",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Test (Windows MSVC Release)",
+      "configurePreset": "windows-msvc",
+      "configuration": "Release"
+    },
+    {
+      "name": "ci-ninja-release",
+      "displayName": "Test (CI Ninja Release)",
+      "configurePreset": "ci-ninja-release"
+    }
+  ]
+}

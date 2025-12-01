@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Lithium-Next Support
+    url: https://github.com/ElementAstro/lithium-next/blob/master/SUPPORT.md
+    about: Read available support channels before filing a new issue.
+  - name: Security Reports
+    url: https://github.com/ElementAstro/lithium-next/blob/master/SECURITY.md
+    about: Follow the security policy for responsibly disclosing vulnerabilities.

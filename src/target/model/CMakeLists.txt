@@ -8,7 +8,7 @@
 # ===========================================================================
 
 set(MODEL_SOURCES
-    # Target data models (currently header-only)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../celestial_model.cpp
 )
 
 set(MODEL_HEADERS

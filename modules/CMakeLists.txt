@@ -53,4 +53,3 @@ function(lithium_add_module_subdirectories start_dir)
 endfunction()
 
 lithium_add_module_subdirectories(${CMAKE_CURRENT_SOURCE_DIR})
-message(STATUS "")

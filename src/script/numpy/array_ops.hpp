@@ -23,94 +23,15 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include <concepts>
-#include <expected>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "types.hpp"
+
 namespace py = pybind11;
 
 namespace lithium::numpy {
-
-// Forward declarations
-enum class NumpyError;
-template<typename T>
-using NumpyResult = std::expected<T, NumpyError>;
-
-/**
- * @brief NumPy dtype type trait
- */
-template<typename T>
-struct NumpyDtype {
-    static constexpr const char* format = nullptr;
-    static constexpr const char* name = nullptr;
-};
-
-// Specializations for common types
-template<> struct NumpyDtype<float> {
-    static constexpr const char* format = "f";
-    static constexpr const char* name = "float32";
-};
-
-template<> struct NumpyDtype<double> {
-    static constexpr const char* format = "d";
-    static constexpr const char* name = "float64";
-};
-
-template<> struct NumpyDtype<int8_t> {
-    static constexpr const char* format = "b";
-    static constexpr const char* name = "int8";
-};
-
-template<> struct NumpyDtype<uint8_t> {
-    static constexpr const char* format = "B";
-    static constexpr const char* name = "uint8";
-};
-
-template<> struct NumpyDtype<int16_t> {
-    static constexpr const char* format = "h";
-    static constexpr const char* name = "int16";
-};
-
-template<> struct NumpyDtype<uint16_t> {
-    static constexpr const char* format = "H";
-    static constexpr const char* name = "uint16";
-};
-
-template<> struct NumpyDtype<int32_t> {
-    static constexpr const char* format = "i";
-    static constexpr const char* name = "int32";
-};
-
-template<> struct NumpyDtype<uint32_t> {
-    static constexpr const char* format = "I";
-    static constexpr const char* name = "uint32";
-};
-
-template<> struct NumpyDtype<int64_t> {
-    static constexpr const char* format = "q";
-    static constexpr const char* name = "int64";
-};
-
-template<> struct NumpyDtype<uint64_t> {
-    static constexpr const char* format = "Q";
-    static constexpr const char* name = "uint64";
-};
-
-template<> struct NumpyDtype<bool> {
-    static constexpr const char* format = "?";
-    static constexpr const char* name = "bool";
-};
-
-/**
- * @brief Concept for NumPy-compatible types
- */
-template<typename T>
-concept NumpyCompatible = requires {
-    { NumpyDtype<T>::format } -> std::convertible_to<const char*>;
-    requires std::is_trivially_copyable_v<T>;
-};
 
 /**
  * @brief NumPy array operations
@@ -336,21 +257,21 @@ template<NumpyCompatible T>
 py::array_t<T> ArrayOps::zeros(const std::vector<size_t>& shape) {
     py::module np = py::module::import("numpy");
     std::vector<py::ssize_t> pyShape(shape.begin(), shape.end());
-    return np.attr("zeros")(pyShape, py::dtype::of<T>()).cast<py::array_t<T>>();
+    return np.attr("zeros")(pyShape, py::dtype::of<T>()).template cast<py::array_t<T>>();
 }
 
 template<NumpyCompatible T>
 py::array_t<T> ArrayOps::empty(const std::vector<size_t>& shape) {
     py::module np = py::module::import("numpy");
     std::vector<py::ssize_t> pyShape(shape.begin(), shape.end());
-    return np.attr("empty")(pyShape, py::dtype::of<T>()).cast<py::array_t<T>>();
+    return np.attr("empty")(pyShape, py::dtype::of<T>()).template cast<py::array_t<T>>();
 }
 
 template<NumpyCompatible T>
 py::array_t<T> ArrayOps::full(const std::vector<size_t>& shape, T value) {
     py::module np = py::module::import("numpy");
     std::vector<py::ssize_t> pyShape(shape.begin(), shape.end());
-    return np.attr("full")(pyShape, value, py::dtype::of<T>()).cast<py::array_t<T>>();
+    return np.attr("full")(pyShape, value, py::dtype::of<T>()).template cast<py::array_t<T>>();
 }
 
 template<NumpyCompatible T>

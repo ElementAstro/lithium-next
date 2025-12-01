@@ -22,6 +22,7 @@
 #ifndef LITHIUM_SCRIPT_SHELL_HOOKS_HPP
 #define LITHIUM_SCRIPT_SHELL_HOOKS_HPP
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>

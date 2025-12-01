@@ -810,9 +810,9 @@ void PHD2Client::shutdown() {
 
 void PHD2Client::onEvent(const phd2::Event& event) { processEvent(event); }
 
-void PHD2Client::onConnectionError(const std::string& error) {
+void PHD2Client::onConnectionError(std::string_view error) {
     spdlog::error("PHD2 connection error: {}", error);
-    setError(100, error);
+    setError(100, std::string(error));
     emitEvent("connection_error", error);
 }
 

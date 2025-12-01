@@ -8,7 +8,7 @@
 # ===========================================================================
 
 set(REPOSITORY_SOURCES
-    celestial_repository.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../celestial_repository.cpp
     repository_interface.cpp
     repository_factory.cpp
     sqlite_repository.cpp
@@ -17,7 +17,7 @@ set(REPOSITORY_SOURCES
 )
 
 set(REPOSITORY_HEADERS
-    celestial_repository.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../celestial_repository.hpp
     repository_interface.hpp
     sqlite_repository.hpp
     memory_repository.hpp

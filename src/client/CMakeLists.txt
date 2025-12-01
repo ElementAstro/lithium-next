@@ -32,4 +32,3 @@ lithium_add_subdirectories_recursive(
 )
 
 lithium_message(SUCCESS "Client libraries configured")
-message(STATUS "")

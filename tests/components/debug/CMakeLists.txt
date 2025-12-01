@@ -1,7 +1,7 @@
 # Tests for Debug Components (ELF Parser, Core Dump Analyzer, Dynamic Library Parser)
 cmake_minimum_required(VERSION 3.20)
 
-project(lithium_debug_tests LANGUAGES CXX)
+project(lithium_components_debug_tests LANGUAGES CXX)
 
 # Find GTest
 find_package(GTest REQUIRED)

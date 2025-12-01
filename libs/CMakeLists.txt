@@ -31,4 +31,3 @@ lithium_add_subdirectories_recursive(
 )
 
 lithium_message(SUCCESS "Library configuration complete")
-message(STATUS "")

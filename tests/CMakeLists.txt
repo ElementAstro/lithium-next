@@ -28,4 +28,3 @@ lithium_add_subdirectories_recursive(
 )
 
 lithium_message(SUCCESS "Unit tests configured")
-message(STATUS "")

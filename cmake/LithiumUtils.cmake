@@ -107,7 +107,7 @@ function(lithium_add_library)
     # Print library creation message
     lithium_message(STATUS "Creating ${ARG_TYPE} library: ${BoldMagenta}${ARG_NAME}${ColorReset}")
     if(ARG_DESCRIPTION)
-        message(STATUS "  Description: ${ARG_DESCRIPTION}")
+        lithium_message(STATUS "  Description: ${ARG_DESCRIPTION}")
     endif()
 
     # Create the library
@@ -153,9 +153,9 @@ function(lithium_add_library)
         )
     endif()
 
-    message(STATUS "  Sources: ${ARG_SOURCES}")
+    lithium_message(STATUS "  Sources: ${ARG_SOURCES}")
     if(ARG_LIBRARIES)
-        message(STATUS "  Links: ${ARG_LIBRARIES}")
+        lithium_message(STATUS "  Links: ${ARG_LIBRARIES}")
     endif()
 endfunction()
 
@@ -194,7 +194,7 @@ function(lithium_find_package PACKAGE_NAME)
     if(${PACKAGE_NAME}_FOUND OR ${${PACKAGE_NAME}_FOUND})
         lithium_message(SUCCESS "Found ${PACKAGE_NAME}")
         if(${PACKAGE_NAME}_VERSION)
-            message(STATUS "  Version: ${${PACKAGE_NAME}_VERSION}")
+            lithium_message(STATUS "  Version: ${${PACKAGE_NAME}_VERSION}")
         endif()
     else()
         if(ARG_REQUIRED)
@@ -258,7 +258,6 @@ endmacro()
 # Function to print component completion
 function(lithium_component_end COMPONENT_NAME)
     lithium_message(SUCCESS "Configured ${COMPONENT_NAME}")
-    message(STATUS "")
 endfunction()
 
 # Function to validate source files exist

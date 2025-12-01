@@ -344,7 +344,7 @@ auto LoggingManager::searchLogs(const LogSearchQuery& query) const
     std::shared_lock lock(mutex_);
 
     if (!ring_buffer_sink_) {
-        result.success = false;
+        // Return empty result when ring buffer is not available
         return result;
     }
 

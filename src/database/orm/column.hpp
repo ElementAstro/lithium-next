@@ -26,12 +26,7 @@
 #include "column_base.hpp"
 #include "column_value.hpp"
 
-namespace lithium::database {
-
-// Forward declarations
-class Statement;
-
-}  // namespace lithium::database
+// Statement is already brought into lithium::database namespace by column_base.hpp
 
 namespace lithium::database::orm {
 

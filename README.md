@@ -1,4 +1,5 @@
 # lithium-next
+
 Next Generation of Lithium
 
 ## Project Description
@@ -30,6 +31,7 @@ The `build.yml` workflow is triggered on push and pull request events to the `ma
 To set up the development environment for Lithium-Next, follow these steps:
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/ElementAstro/lithium-next.git
    cd lithium-next
@@ -37,6 +39,7 @@ To set up the development environment for Lithium-Next, follow these steps:
    ```
 
 2. Install the required dependencies:
+
    ```bash
    sudo apt-get update
    sudo apt-get upgrade
@@ -44,12 +47,14 @@ To set up the development environment for Lithium-Next, follow these steps:
    ```
 
 3. Set up the pre-commit hooks:
+
    ```bash
    pip install pre-commit
    pre-commit install
    ```
 
 4. Build the project:
+
    ```bash
    mkdir build
    cd build
@@ -58,16 +63,19 @@ To set up the development environment for Lithium-Next, follow these steps:
    ```
 
 5. Run the tests:
+
    ```bash
    ctest
    ```
 
 6. Package the project:
+
    ```bash
    make package
    ```
 
 7. To build with Clang, ensure Clang 18 or higher is installed and set the compiler:
+
    ```bash
    sudo apt-get install -y clang-18
    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 60
@@ -79,6 +87,7 @@ To set up the development environment for Lithium-Next, follow these steps:
    ```
 
 8. To build with GCC 13, ensure GCC 13 is installed and set the compiler:
+
    ```bash
    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
    sudo apt-get update
@@ -92,6 +101,7 @@ To set up the development environment for Lithium-Next, follow these steps:
    ```
 
 9. Update cmake
+
    ```bash
    wget https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4.tar.gz
    tar -zxvf cmake-3.31.4.tar.gz
@@ -130,3 +140,10 @@ The task generation processes have been updated to reflect the new shooting func
 4. **New Functions in `modules/image/src/binning.cpp`**: New functions have been added to handle specific image processing requirements for the project.
 
 5. **Updated Documentation**: The documentation has been updated to reflect the new shooting functionalities and task generation processes.
+
+## Community & Support
+
+- Review our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+- Report vulnerabilities via the [Security Policy](SECURITY.md).
+- Find help options in [SUPPORT.md](SUPPORT.md) and the [Contributing Guide](CONTRIBUTING.md).
+- Use the provided GitHub issue and pull request templates to streamline collaboration.

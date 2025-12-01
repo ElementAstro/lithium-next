@@ -36,7 +36,7 @@ if(spdlog_FOUND)
     set(SPDLOG_FOUND TRUE)
     lithium_message(SUCCESS "Found spdlog via find_package (CONFIG mode)")
     if(spdlog_VERSION)
-        message(STATUS "  Version: ${spdlog_VERSION}")
+        lithium_message(STATUS "  Version: ${spdlog_VERSION}")
     endif()
 else()
     # Step 2: Fallback to submodule
@@ -84,7 +84,7 @@ if(LITHIUM_ENABLE_CPPTRACE)
         set(CPPTRACE_FOUND TRUE)
         lithium_message(SUCCESS "Found cpptrace via find_package")
         if(cpptrace_VERSION)
-            message(STATUS "  Version: ${cpptrace_VERSION}")
+            lithium_message(STATUS "  Version: ${cpptrace_VERSION}")
         endif()
     else()
         # Step 2: Fallback to submodule
@@ -129,8 +129,6 @@ endif()
 # Summary Report
 # ============================================================================
 
-message(STATUS "")
 lithium_print_subsection("Logging System Configuration")
 lithium_print_config("spdlog" "${SPDLOG_FOUND} (submodule: ${SPDLOG_FROM_SUBMODULE})")
 lithium_print_config("cpptrace" "${CPPTRACE_FOUND}")
-message(STATUS "")

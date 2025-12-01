@@ -23,11 +23,11 @@
 
 #include <string>
 
+#include "database/core/statement.hpp"
+
 namespace lithium::database {
-
-// Forward declarations
-class Statement;
-
+// Bring Statement from core namespace into database namespace
+using core::Statement;
 }  // namespace lithium::database
 
 namespace lithium::database::orm {

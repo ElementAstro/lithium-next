@@ -42,5 +42,3 @@ if(example_count EQUAL 0)
 else()
     lithium_message(SUCCESS "Configured ${example_count} example program(s)")
 endif()
-
-message(STATUS "")

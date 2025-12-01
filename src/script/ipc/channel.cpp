@@ -16,10 +16,11 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
+#include <fcntl.h>
 #define pipe(fds) _pipe(fds, 65536, _O_BINARY)
 #define read(fd, buf, size) _read(fd, buf, static_cast<unsigned int>(size))
 #define write(fd, buf, size) _write(fd, buf, static_cast<unsigned int>(size))
-#define close(fd) _close(fd)
+// Note: close macro conflicts with class methods, use _close directly
 #else
 #include <unistd.h>
 #include <fcntl.h>
@@ -64,11 +65,19 @@ public:
 
     void close() {
         if (readFd_ >= 0) {
+#ifdef _WIN32
+            _close(readFd_);
+#else
             ::close(readFd_);
+#endif
             readFd_ = -1;
         }
         if (writeFd_ >= 0) {
+#ifdef _WIN32
+            _close(writeFd_);
+#else
             ::close(writeFd_);
+#endif
             writeFd_ = -1;
         }
     }
@@ -192,14 +201,22 @@ public:
 
     void closeRead() {
         if (readFd_ >= 0) {
+#ifdef _WIN32
+            _close(readFd_);
+#else
             ::close(readFd_);
+#endif
             readFd_ = -1;
         }
     }
 
     void closeWrite() {
         if (writeFd_ >= 0) {
+#ifdef _WIN32
+            _close(writeFd_);
+#else
             ::close(writeFd_);
+#endif
             writeFd_ = -1;
         }
     }

@@ -171,4 +171,3 @@ function(lithium_apply_strict_flags TARGET_NAME)
 endfunction()
 
 lithium_message(STATUS "Compiler options configured successfully")
-message(STATUS "")

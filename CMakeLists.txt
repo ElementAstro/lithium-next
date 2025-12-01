@@ -12,8 +12,14 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium-next VERSION 1.0.0 LANGUAGES C CXX)
 
+option(LITHIUM_VERBOSE_LOGGING "Print detailed Lithium CMake output" OFF)
+
 # Disable C++20 modules scanning globally (required for MinGW Makefiles with cpptrace)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
+if(CMAKE_GENERATOR STREQUAL "MinGW Makefiles")
+    set(CPPTRACE_DISABLE_CXX_20_MODULES ON CACHE BOOL "Disable cpptrace modules on MinGW Makefiles" FORCE)
+endif()
 
 # ============================================================================
 # CMake Module Path and Core Includes
@@ -25,6 +31,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 include(cmake/policies.cmake)
 include(cmake/LithiumColors.cmake)
 include(cmake/LithiumUtils.cmake)
+include(cmake/dependency_targets.cmake)
 include(GNUInstallDirs)
 
 # Print project header
@@ -32,7 +39,6 @@ lithium_print_header("Lithium-Next: Open Astrophotography Terminal")
 lithium_message(STATUS "Version: ${BoldYellow}${PROJECT_VERSION}${ColorReset}")
 lithium_message(STATUS "Author: Max Qian")
 lithium_message(STATUS "License: GPL3")
-message(STATUS "")
 
 # ============================================================================
 # Project Directory Structure
@@ -46,7 +52,6 @@ lithium_print_subsection("Project Directories")
 lithium_print_config("Source Directory" "${lithium_src_dir}")
 lithium_print_config("Third-party Libraries" "${lithium_thirdparty_dir}")
 lithium_print_config("Atom Library" "${lithium_atom_dir}")
-message(STATUS "")
 
 # ============================================================================
 # Build Configuration
@@ -94,11 +99,19 @@ set(PYBIND11_FINDPYTHON ON)
 lithium_find_package(Python VERSION 3.7 COMPONENTS Interpreter Development REQUIRED)
 lithium_find_package(pybind11 REQUIRED)
 
-# Terminal libraries
+# Terminal libraries (optional on Windows)
 lithium_find_package(Readline REQUIRED)
-lithium_find_package(Curses REQUIRED)
-
-message(STATUS "")
+if(NOT WIN32)
+    lithium_find_package(Curses REQUIRED)
+else()
+    # Curses is not available on Windows, use PDCurses or skip
+    find_package(Curses QUIET)
+    if(NOT CURSES_FOUND)
+        lithium_message(INFO "Curses not found on Windows - terminal features may be limited")
+        set(CURSES_LIBRARIES "")
+        set(CURSES_INCLUDE_DIRS "")
+    endif()
+endif()
 
 # ============================================================================
 # Logging System Configuration (spdlog + cpptrace)
@@ -123,8 +136,6 @@ add_subdirectory(modules)
 add_subdirectory(src)
 add_subdirectory(example)
 add_subdirectory(tests)
-
-message(STATUS "")
 
 # ============================================================================
 # Main Executable
@@ -161,7 +172,6 @@ target_include_directories(lithium-next PRIVATE ${Python_INCLUDE_DIRS})
 lithium_apply_compiler_flags(lithium-next)
 
 lithium_message(SUCCESS "Main executable 'lithium-next' configured")
-message(STATUS "")
 
 # ============================================================================
 # IDE Configuration
@@ -183,9 +193,8 @@ install(TARGETS lithium-next
 # ============================================================================
 
 lithium_print_header("Configuration Complete")
-lithium_message(SUCCESS "Lithium-Next is ready to build!")
+lithium_message(SUCCESS "Lithium-Next is ready to build!" FORCE)
 lithium_print_config("Build Type" "${CMAKE_BUILD_TYPE}")
 lithium_print_config("C++ Compiler" "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 lithium_print_config("Install Prefix" "${CMAKE_INSTALL_PREFIX}")
-lithium_message(INFO "Run 'cmake --build .' to build the project")
-message(STATUS "")
+lithium_message(INFO "Run 'cmake --build .' to build the project" FORCE)

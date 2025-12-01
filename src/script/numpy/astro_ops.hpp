@@ -24,28 +24,17 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include <concepts>
-#include <expected>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "types.hpp"
+
 namespace py = pybind11;
 
 namespace lithium::numpy {
-
-// Forward declarations
-enum class NumpyError;
-template<typename T>
-concept NumpyCompatible = requires {
-    { 0 } -> std::convertible_to<T>;
-};
-struct StarData;
-struct ImageStats;
-template<typename T>
-using NumpyResult = std::expected<T, NumpyError>;
 
 /**
  * @brief Astronomical operations on star catalogs and FITS images

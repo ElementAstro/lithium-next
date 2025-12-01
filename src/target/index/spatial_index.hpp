@@ -8,6 +8,7 @@
 #include <span>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 namespace lithium::target::index {

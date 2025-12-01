@@ -158,7 +158,8 @@ auto levelFromString(const std::string& level) -> spdlog::level::level_enum {
 }
 
 auto levelToString(spdlog::level::level_enum level) -> std::string {
-    return std::string(spdlog::level::to_string_view(level));
+    auto sv = spdlog::level::to_string_view(level);
+    return std::string(sv.data(), sv.size());
 }
 
 }  // namespace lithium::logging

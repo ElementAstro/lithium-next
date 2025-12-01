@@ -27,7 +27,7 @@ std::vector<InstalledPackage> parsePipListJson(const std::string& jsonOutput) {
 
     // Simple JSON parsing for pip list --format=json output
     // Format: [{"name": "package", "version": "1.0.0"}, ...]
-    std::regex packageRegex(R"(\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"version"\s*:\s*"([^"]+)"\s*\})");
+    std::regex packageRegex(R"delim(\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"version"\s*:\s*"([^"]+)"\s*\})delim");
 
     auto begin = std::sregex_iterator(jsonOutput.begin(), jsonOutput.end(), packageRegex);
     auto end = std::sregex_iterator();

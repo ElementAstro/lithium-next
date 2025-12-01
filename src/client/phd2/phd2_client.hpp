@@ -321,7 +321,7 @@ public:
 protected:
     // EventHandler interface
     void onEvent(const phd2::Event& event) override;
-    void onConnectionError(const std::string& error) override;
+    void onConnectionError(std::string_view error) override;
 
 private:
     /**
