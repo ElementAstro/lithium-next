@@ -12,13 +12,13 @@ class HybridRecommenderTest : public ::testing::Test {
 protected:
     void SetUp() override {
         recommender_ = std::make_unique<HybridRecommender>();
-        
+
         // Setup collaborative data
         recommender_->addRating("user1", "M31", 5.0);
         recommender_->addRating("user1", "M42", 4.0);
         recommender_->addRating("user2", "M31", 4.0);
         recommender_->addRating("user2", "M45", 5.0);
-        
+
         // Setup content data
         recommender_->addItemFeatures("M31", {{"type", "Galaxy"}});
         recommender_->addItemFeatures("M42", {{"type", "Nebula"}});

@@ -12,7 +12,7 @@ class ContentFilterTest : public ::testing::Test {
 protected:
     void SetUp() override {
         filter_ = std::make_unique<ContentFilter>();
-        
+
         // Add items with features
         filter_->addItem("M31", {{"type", "Galaxy"}, {"constellation", "Andromeda"}});
         filter_->addItem("M42", {{"type", "Nebula"}, {"constellation", "Orion"}});

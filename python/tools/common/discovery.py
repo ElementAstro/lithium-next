@@ -281,7 +281,9 @@ class ToolRegistry:
         with self._tool_lock:
             return {
                 "tools": {name: tool.to_dict() for name, tool in self._tools.items()},
-                "categories": {cat: list(names) for cat, names in self._categories.items()},
+                "categories": {
+                    cat: list(names) for cat, names in self._categories.items()
+                },
                 "count": len(self._tools),
             }
 

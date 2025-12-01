@@ -139,7 +139,7 @@ TEST_F(ConfigCacheTest, OverwriteExisting) {
 TEST_F(ConfigCacheTest, PutWithCustomTtl) {
     cache_->put("ttl_key", json("value"), 100ms);
     EXPECT_TRUE(cache_->contains("ttl_key"));
-    
+
     std::this_thread::sleep_for(150ms);
     auto value = cache_->get("ttl_key");
     EXPECT_FALSE(value.has_value());

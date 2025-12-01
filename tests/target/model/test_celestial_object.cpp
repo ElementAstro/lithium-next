@@ -66,7 +66,7 @@ TEST_F(CelestialObjectTest, JsonDeserialization) {
         {"decDJ2000", 41.2689},
         {"visualMagnitudeV", 3.44}
     };
-    
+
     auto obj = CelestialObject::fromJson(j);
     EXPECT_EQ(obj.identifier, "NGC224");
     EXPECT_DOUBLE_EQ(obj.radJ2000, 10.6847);

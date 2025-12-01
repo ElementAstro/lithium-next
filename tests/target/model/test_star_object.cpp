@@ -62,10 +62,10 @@ TEST_F(StarObjectTest, CelestialObjectAssociation) {
     CelestialObject celestial;
     celestial.identifier = "M31";
     celestial.type = "Galaxy";
-    
+
     testStar_.setCelestialObject(celestial);
     auto retrieved = testStar_.getCelestialObject();
-    
+
     EXPECT_EQ(retrieved.identifier, "M31");
     EXPECT_EQ(retrieved.type, "Galaxy");
 }
