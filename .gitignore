@@ -64,9 +64,6 @@ htmlcov/
 .env
 .env.*
 
-# Rust artifacts
-target/
-
 # Package manager caches
 pip-wheel-metadata/
 pip-log.txt
@@ -84,3 +81,8 @@ Thumbs.db
 # Test scratch space
 test/
 llmdoc/
+
+# Build directories (additional)
+build_check/
+build_client/
+build_test/

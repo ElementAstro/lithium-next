@@ -24,6 +24,9 @@ set(PROJECT_SOURCES
     guider_service.cpp
     indi_adapter.cpp
     ascom_adapter.cpp
+    indi_backend.cpp
+    ascom_backend.cpp
+    device_factory.cpp
 )
 
 # ============================================================================

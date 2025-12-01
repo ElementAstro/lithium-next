@@ -15,7 +15,7 @@ add_subdirectory(common)
 add_subdirectory(astap)
 add_subdirectory(astrometry)
 add_subdirectory(phd2)
-add_subdirectory(indi)
+add_subdirectory(indi-manager)
 add_subdirectory(ascom)
 
 # Create aggregate test target

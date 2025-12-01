@@ -1,0 +1,265 @@
+# Lithium-Next Configuration File
+# This file contains all configuration options for the application.
+# Comments are supported in YAML format.
+
+lithium:
+  # ==========================================================================
+  # Logging Configuration
+  # ==========================================================================
+  logging:
+    # Console output settings
+    enableConsole: true
+    consoleLevel: info      # trace, debug, info, warn, error, critical, off
+    consoleColor: true
+
+    # File output settings
+    enableFile: true
+    logDir: logs
+    logFilename: lithium
+    fileLevel: trace
+
+    # Log rotation
+    maxFileSize: 10485760   # 10 MB
+    maxFiles: 5
+    useDailyRotation: false
+    rotationHour: 0
+    rotationMinute: 0
+
+    # Log format pattern
+    # Available: %Y %m %d %H %M %S %e (ms), %l (level), %n (name), %t (thread), %s (source), %# (line), %v (msg)
+    pattern: "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%t] %v"
+
+    # Async logging (recommended for production)
+    asyncMode: true
+    asyncQueueSize: 8192
+    asyncThreadCount: 1
+    overflowPolicy: block   # block or discard
+
+    # Ring buffer for in-memory log access
+    enableRingBuffer: false
+    ringBufferSize: 1000
+
+    # Main thread naming
+    mainThreadName: main
+
+  # ==========================================================================
+  # Server Configuration
+  # ==========================================================================
+  server:
+    # Network settings
+    host: 0.0.0.0
+    port: 8000
+
+    # Connection limits
+    maxConnections: 1000
+    threadPoolSize: 4
+    enableCompression: true
+    enableCors: true
+
+    # SSL/TLS (disabled by default)
+    enableSsl: false
+    # sslCertPath: /path/to/cert.pem
+    # sslKeyPath: /path/to/key.pem
+
+    # Timeouts (seconds)
+    connectionTimeout: 60
+    readTimeout: 30
+    writeTimeout: 30
+
+    # WebSocket settings
+    wsMaxPayloadSize: 16777216    # 16 MB
+    wsMessageQueueSize: 1000
+    wsPingInterval: 30
+    wsPongTimeout: 10
+
+    # Command dispatcher
+    cmdMaxHistorySize: 100
+    cmdDefaultTimeoutMs: 5000
+    cmdMaxConcurrent: 100
+    cmdEnablePriority: true
+
+    # Rate limiting
+    enableRateLimit: true
+    rateLimitRequests: 100
+    rateLimitWindowSeconds: 60
+
+    # API key authentication (disabled by default)
+    enableApiKeyAuth: false
+    apiKeyHeader: X-API-Key
+
+    # Web panel
+    enableWebPanel: true
+    webPanelPath: www
+
+  # ==========================================================================
+  # Device Configuration
+  # ==========================================================================
+  device:
+    # General settings
+    maxDevicesPerType: 10
+    connectionTimeoutSeconds: 10
+    operationTimeoutSeconds: 30
+    enableAutoDiscovery: true
+    enableEventLogging: true
+
+    # Retry configuration
+    retry:
+      strategy: exponential      # none, linear, exponential
+      maxRetries: 3
+      initialDelayMs: 100
+      maxDelayMs: 5000
+      multiplier: 2.0
+
+    # Health monitoring
+    health:
+      enabled: true
+      checkIntervalSeconds: 30
+      warningThreshold: 0.5      # 0.0-1.0
+      criticalThreshold: 0.2
+      maxConsecutiveErrors: 5
+      autoReconnect: true
+
+    # INDI server configuration
+    indi:
+      enabled: true
+      host: localhost
+      port: 7624
+      connectionTimeoutMs: 10000
+      responseTimeoutMs: 5000
+      autoStartServer: false
+      serverPath: /usr/bin/indiserver
+      # defaultDrivers: []
+
+    # Camera settings
+    camera:
+      defaultExposureTimeoutMs: 300000   # 5 minutes
+      enableCoolerOnConnect: false
+      defaultBinning: 1
+
+    # Mount settings
+    mount:
+      enableTracking: true
+      parkOnDisconnect: false
+      slewTimeoutMs: 120000              # 2 minutes
+
+    # Focuser settings
+    focuser:
+      moveTimeoutMs: 60000               # 1 minute
+      enableTemperatureCompensation: false
+
+  # ==========================================================================
+  # Script Engine Configuration
+  # ==========================================================================
+  script:
+    enablePython: true
+    enableShell: true
+    analysisConfigPath: ./config/script/analysis.json
+
+    # Interpreter pool
+    interpreterPool:
+      poolSize: 4
+      maxQueuedTasks: 1000
+      taskTimeoutMs: 30000
+      acquireTimeoutMs: 5000
+      enableStatistics: true
+      preloadModules: false
+      # modulesToPreload: []
+      useSubinterpreters: false
+      workerThreads: 0                   # 0 = poolSize
+
+    # Isolation settings
+    isolation:
+      level: subprocess                  # none, subprocess, sandboxed
+      maxMemoryMB: 512
+      maxCpuPercent: 100
+      timeoutSeconds: 300
+      allowNetwork: false
+      allowFilesystem: true
+      # allowedPaths: []
+      # allowedImports: []
+      # blockedImports: []
+      captureOutput: true
+      enableProfiling: false
+      inheritEnvironment: true
+
+    # Virtual environment
+    venv:
+      defaultPath: .venv
+      autoCreate: true
+      useCondaIfAvailable: false
+      # condaPath:
+      # defaultPythonVersion:
+      operationTimeoutSeconds: 300
+      # defaultPackages: []
+
+    # Shell script settings
+    shell:
+      # defaultShell:                    # Empty = system default
+      timeoutSeconds: 60
+      captureOutput: true
+      inheritEnvironment: true
+      scriptsDirectory: scripts
+
+  # ==========================================================================
+  # Terminal Configuration
+  # ==========================================================================
+  terminal:
+    enableTui: true
+    enableColors: true
+    enableUnicode: true
+    commandTimeoutMs: 5000
+    enableCommandCheck: true
+    # configFile:
+
+    # Theme settings
+    theme:
+      name: default
+      promptColor: bright_cyan
+      promptSymbolColor: bright_green
+      successColor: bright_green
+      errorColor: bright_red
+      warningColor: bright_yellow
+      infoColor: bright_blue
+      useUnicode: true
+      useColors: true
+
+    # Layout settings
+    layout:
+      showStatusBar: true
+      showHistory: false
+      showSuggestions: true
+      showHelp: false
+      splitVertical: false
+      historyPanelWidth: 30
+      suggestionPanelHeight: 5
+      statusBarHeight: 1
+
+    # History settings
+    history:
+      maxSize: 1000
+      # historyFile: ~/.lithium_history
+      persistOnExit: true
+      ignoreDuplicates: true
+      ignoreSpacePrefix: true
+      # ignorePatterns: []
+
+    # Completion settings
+    completion:
+      enabled: true
+      caseSensitive: false
+      maxSuggestions: 10
+      minChars: 1
+      showDescription: true
+      fuzzyMatching: true
+
+  # ==========================================================================
+  # Target Module Configuration (Future)
+  # ==========================================================================
+  # target:
+  #   search:
+  #     maxResults: 100
+  #     enableFuzzy: true
+  #   online:
+  #     enableSimbad: true
+  #     enableVizier: true
+  #     cacheTimeSeconds: 3600

@@ -1,4 +1,4 @@
-# Tests for Logging Manager Component
+# Tests for Logging Component
 cmake_minimum_required(VERSION 3.20)
 
 project(lithium_logging_tests LANGUAGES CXX)
@@ -6,9 +6,16 @@ project(lithium_logging_tests LANGUAGES CXX)
 # Find GTest
 find_package(GTest REQUIRED)
 
-# Test sources
+# Add sinks subdirectory
+add_subdirectory(sinks)
+
+# Test sources - comprehensive coverage for all logging modules
 set(TEST_SOURCES
     test_logging_manager.cpp
+    test_types.cpp
+    test_logger_registry.cpp
+    test_log_exporter.cpp
+    test_log_statistics.cpp
 )
 
 # Create test executable

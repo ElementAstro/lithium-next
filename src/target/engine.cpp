@@ -228,6 +228,11 @@ class SearchEngine::Impl {
 public:
     static constexpr size_t DEFAULT_CACHE_CAPACITY = 100;
 
+    // Enhanced database integration members
+    EngineConfig config_;
+    std::shared_ptr<CelestialRepository> repository_;
+    bool dbInitialized_ = false;
+
     Impl() : queryCache_(DEFAULT_CACHE_CAPACITY) {
         spdlog::info("SearchEngine initialized with cache capacity {}",
                      DEFAULT_CACHE_CAPACITY);
@@ -943,4 +948,348 @@ bool SearchEngine::importRecommendationDataFromCSV(
                 spdlog::info("Importing recommendation data from {}", filename);
                 return pImpl_->importRecommendationDataFromCSV(filename);
 }
+
+// ==================== Enhanced Database Integration Implementation ====================
+
+bool SearchEngine::initializeWithConfig(const EngineConfig& config) {
+    spdlog::info("Initializing SearchEngine with database config: {}", config.databasePath);
+    try {
+        pImpl_->config_ = config;
+        
+        // Create repository if using database
+        if (config.useDatabase) {
+            pImpl_->repository_ = std::make_shared<CelestialRepository>(config.databasePath);
+            if (!pImpl_->repository_->initializeSchema()) {
+                spdlog::error("Failed to initialize database schema");
+                return false;
+            }
         }
+        
+        // Sync from JSON files if configured
+        if (config.syncOnStartup && config.useDatabase) {
+            syncFromJsonFiles();
+        }
+        
+        // Load legacy data
+        if (!config.nameJsonPath.empty()) {
+            loadFromNameJson(config.nameJsonPath);
+        }
+        if (!config.celestialJsonPath.empty()) {
+            loadFromCelestialJson(config.celestialJsonPath);
+        }
+        if (!config.modelPath.empty()) {
+            initializeRecommendationEngine(config.modelPath);
+        }
+        
+        pImpl_->dbInitialized_ = true;
+        spdlog::info("SearchEngine initialization complete");
+        return true;
+    } catch (const std::exception& e) {
+        spdlog::error("SearchEngine initialization failed: {}", e.what());
+        return false;
+    }
+}
+
+void SearchEngine::setRepository(std::shared_ptr<CelestialRepository> repository) {
+    pImpl_->repository_ = std::move(repository);
+}
+
+std::shared_ptr<CelestialRepository> SearchEngine::getRepository() {
+    return pImpl_->repository_;
+}
+
+int SearchEngine::syncFromJsonFiles() {
+    if (!pImpl_->repository_) {
+        spdlog::warn("No repository configured for sync");
+        return 0;
+    }
+    
+    int synced = 0;
+    try {
+        if (!pImpl_->config_.celestialJsonPath.empty()) {
+            std::ifstream file(pImpl_->config_.celestialJsonPath);
+            if (file.is_open()) {
+                auto result = pImpl_->repository_->importFromJson(pImpl_->config_.celestialJsonPath);
+                synced += result.successCount;
+                spdlog::info("Synced {} objects from celestial JSON", result.successCount);
+            }
+        }
+        
+        if (!pImpl_->config_.nameJsonPath.empty()) {
+            std::ifstream file(pImpl_->config_.nameJsonPath);
+            if (file.is_open()) {
+                json data;
+                file >> data;
+                
+                for (const auto& item : data) {
+                    if (!item.is_array() || item.size() < 1) continue;
+                    
+                    std::string name = item[0].get<std::string>();
+                    auto existing = pImpl_->repository_->findByIdentifier(name);
+                    
+                    if (existing && item.size() >= 2 && !item[1].is_null()) {
+                        existing->aliases = item[1].get<std::string>();
+                        pImpl_->repository_->update(*existing);
+                    }
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("Sync failed: {}", e.what());
+    }
+    return synced;
+}
+
+std::vector<ScoredSearchResult> SearchEngine::scoredSearch(const std::string& query, int limit) {
+    if (!pImpl_->repository_) {
+        spdlog::warn("No repository configured for scored search");
+        return {};
+    }
+    
+    std::vector<ScoredSearchResult> results;
+    try {
+        auto exactMatches = pImpl_->repository_->searchByName(query, limit);
+        for (const auto& obj : exactMatches) {
+            ScoredSearchResult result;
+            result.object = obj;
+            result.matchType = "exact";
+            result.editDistance = 0;
+            
+            if (obj.identifier == query) {
+                result.relevanceScore = 1.0;
+            } else if (obj.identifier.find(query) == 0) {
+                result.relevanceScore = 0.9;
+            } else {
+                result.relevanceScore = 0.7;
+            }
+            result.relevanceScore += std::min(0.2, obj.clickCount * 0.001);
+            results.push_back(result);
+        }
+        
+        if (static_cast<int>(results.size()) < limit) {
+            auto fuzzyMatches = pImpl_->repository_->fuzzySearch(
+                query, pImpl_->config_.fuzzyTolerance, limit - results.size());
+            
+            for (const auto& [obj, dist] : fuzzyMatches) {
+                bool found = false;
+                for (const auto& r : results) {
+                    if (r.object.identifier == obj.identifier) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) continue;
+                
+                ScoredSearchResult result;
+                result.object = obj;
+                result.matchType = "fuzzy";
+                result.editDistance = dist;
+                result.relevanceScore = 0.5 * (1.0 - dist / 10.0);
+                result.relevanceScore += std::min(0.1, obj.clickCount * 0.0005);
+                results.push_back(result);
+            }
+        }
+        
+        std::sort(results.begin(), results.end(),
+            [](const auto& a, const auto& b) {
+                return a.relevanceScore > b.relevanceScore;
+            });
+        
+        if (static_cast<int>(results.size()) > limit) {
+            results.resize(limit);
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("Scored search failed: {}", e.what());
+    }
+    return results;
+}
+
+std::vector<ScoredSearchResult> SearchEngine::scoredFuzzySearch(
+    const std::string& query, int tolerance, int limit) {
+    if (!pImpl_->repository_) return {};
+    
+    std::vector<ScoredSearchResult> results;
+    try {
+        auto matches = pImpl_->repository_->fuzzySearch(query, tolerance, limit);
+        for (const auto& [obj, dist] : matches) {
+            ScoredSearchResult result;
+            result.object = obj;
+            result.matchType = "fuzzy";
+            result.editDistance = dist;
+            result.relevanceScore = 1.0 - (dist / static_cast<double>(tolerance + 1));
+            results.push_back(result);
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("Fuzzy search failed: {}", e.what());
+    }
+    return results;
+}
+
+std::vector<CelestialObjectModel> SearchEngine::searchByCoordinates(
+    double ra, double dec, double radius, int limit) {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->searchByCoordinates(ra, dec, radius, limit);
+}
+
+std::vector<CelestialObjectModel> SearchEngine::advancedSearch(
+    const CelestialSearchFilter& filter) {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->search(filter);
+}
+
+std::optional<CelestialObjectModel> SearchEngine::getObjectModel(
+    const std::string& identifier) {
+    if (!pImpl_->repository_) return std::nullopt;
+    return pImpl_->repository_->findByIdentifier(identifier);
+}
+
+std::vector<CelestialObjectModel> SearchEngine::getByType(
+    const std::string& type, int limit) {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->getByType(type, limit);
+}
+
+std::vector<CelestialObjectModel> SearchEngine::getByMagnitude(
+    double minMag, double maxMag, int limit) {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->getByMagnitudeRange(minMag, maxMag, limit);
+}
+
+std::vector<std::pair<CelestialObjectModel, double>> SearchEngine::getModelRecommendations(
+    const std::string& userId, int topN) {
+    std::vector<std::pair<CelestialObjectModel, double>> results;
+    try {
+        auto recs = recommendItems(userId, topN);
+        if (pImpl_->repository_) {
+            for (const auto& [itemId, score] : recs) {
+                auto obj = pImpl_->repository_->findByIdentifier(itemId);
+                if (obj) {
+                    results.emplace_back(*obj, score);
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("GetModelRecommendations failed: {}", e.what());
+    }
+    return results;
+}
+
+ImportResult SearchEngine::importFromJsonToDb(const std::string& filename) {
+    if (!pImpl_->repository_) {
+        return ImportResult{0, 0, 1, 0, {"No repository configured"}};
+    }
+    pImpl_->clearCache();
+    return pImpl_->repository_->importFromJson(filename);
+}
+
+ImportResult SearchEngine::importFromCsvToDb(const std::string& filename) {
+    if (!pImpl_->repository_) {
+        return ImportResult{0, 0, 1, 0, {"No repository configured"}};
+    }
+    pImpl_->clearCache();
+    return pImpl_->repository_->importFromCsv(filename);
+}
+
+int SearchEngine::exportToJsonFromDb(const std::string& filename,
+                                      const CelestialSearchFilter& filter) {
+    if (!pImpl_->repository_) return 0;
+    return pImpl_->repository_->exportToJson(filename, filter);
+}
+
+int SearchEngine::exportToCsvFromDb(const std::string& filename,
+                                     const CelestialSearchFilter& filter) {
+    if (!pImpl_->repository_) return 0;
+    return pImpl_->repository_->exportToCsv(filename, filter);
+}
+
+int64_t SearchEngine::upsertObject(const CelestialObjectModel& obj) {
+    if (!pImpl_->repository_) return -1;
+    pImpl_->clearCache();
+    auto existing = pImpl_->repository_->findByIdentifier(obj.identifier);
+    if (existing) {
+        CelestialObjectModel updated = obj;
+        updated.id = existing->id;
+        return pImpl_->repository_->update(updated) ? updated.id : -1;
+    }
+    return pImpl_->repository_->insert(obj);
+}
+
+int SearchEngine::batchUpsert(const std::vector<CelestialObjectModel>& objects) {
+    if (!pImpl_->repository_) return 0;
+    pImpl_->clearCache();
+    return pImpl_->repository_->upsert(objects);
+}
+
+bool SearchEngine::removeObject(const std::string& identifier) {
+    if (!pImpl_->repository_) return false;
+    pImpl_->clearCache();
+    auto obj = pImpl_->repository_->findByIdentifier(identifier);
+    if (obj) {
+        return pImpl_->repository_->remove(obj->id);
+    }
+    return false;
+}
+
+void SearchEngine::recordClick(const std::string& identifier) {
+    if (pImpl_->repository_) {
+        pImpl_->repository_->incrementClickCount(identifier);
+    }
+}
+
+void SearchEngine::recordSearch(const std::string& userId, const std::string& query,
+                                 const std::string& searchType, int resultCount) {
+    if (pImpl_->repository_) {
+        pImpl_->repository_->recordSearch(userId, query, searchType, resultCount);
+    }
+}
+
+std::vector<SearchHistoryModel> SearchEngine::getSearchHistory(
+    const std::string& userId, int limit) {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->getSearchHistory(userId, limit);
+}
+
+std::vector<std::pair<std::string, int>> SearchEngine::getPopularSearches(int limit) {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->getPopularSearches(limit);
+}
+
+std::vector<CelestialObjectModel> SearchEngine::getMostPopular(int limit) {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->getMostPopular(limit);
+}
+
+int64_t SearchEngine::getObjectCount() {
+    if (!pImpl_->repository_) return 0;
+    return pImpl_->repository_->count();
+}
+
+std::unordered_map<std::string, int64_t> SearchEngine::getCountByType() {
+    if (!pImpl_->repository_) return {};
+    return pImpl_->repository_->countByType();
+}
+
+std::string SearchEngine::getStatistics() {
+    json stats;
+    if (pImpl_->repository_) {
+        stats["database"] = json::parse(pImpl_->repository_->getStatistics());
+    }
+    stats["cache_stats"] = getCacheStats();
+    stats["recommendation_stats"] = getRecommendationEngineStats();
+    return stats.dump(2);
+}
+
+void SearchEngine::optimizeDatabase() {
+    if (pImpl_->repository_) {
+        pImpl_->repository_->optimize();
+    }
+}
+
+void SearchEngine::clearAllData(bool includeHistory) {
+    pImpl_->clearCache();
+    if (pImpl_->repository_) {
+        pImpl_->repository_->clearAll(includeHistory);
+    }
+}
+
+}  // namespace lithium::target

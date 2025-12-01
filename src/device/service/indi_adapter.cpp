@@ -13,7 +13,7 @@ Description: INDI protocol adapter implementation
 *************************************************/
 
 #include "indi_adapter.hpp"
-#include "client/indi/indi_client.hpp"
+#include "client/indi-manager/manager_client.hpp"
 
 #include <thread>
 

@@ -241,7 +241,25 @@ void DeviceTask::setRetryStrategy(const std::string& name,
                                   RetryStrategy strategy) {
     spdlog::debug("Setting retry strategy for device {}: {}", name,
                   static_cast<int>(strategy));
-    deviceManager_->setDeviceRetryStrategy(name, strategy);
+
+    // Convert task RetryStrategy to DeviceRetryConfig
+    lithium::DeviceRetryConfig config;
+    switch (strategy) {
+        case RetryStrategy::None:
+            config.strategy = lithium::DeviceRetryConfig::Strategy::None;
+            config.maxRetries = 0;
+            break;
+        case RetryStrategy::Linear:
+            config.strategy = lithium::DeviceRetryConfig::Strategy::Linear;
+            config.maxRetries = 3;
+            break;
+        case RetryStrategy::Exponential:
+            config.strategy = lithium::DeviceRetryConfig::Strategy::Exponential;
+            config.maxRetries = 3;
+            break;
+    }
+
+    deviceManager_->setDeviceRetryConfig(name, config);
     addHistoryEntry("Set retry strategy for device " + name);
 }
 

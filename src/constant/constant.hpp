@@ -123,6 +123,18 @@ public:
     DEFINE_LITHIUM_CONSTANT(ASYNC_IO)
 #endif
 
+    // Configuration Registry
+    DEFINE_LITHIUM_CONSTANT(CONFIG_REGISTRY)
+
+    // Configuration Paths (for unified config system)
+    DEFINE_CONSTANT(CONFIG_PATH_ROOT, "/lithium")
+    DEFINE_CONSTANT(CONFIG_PATH_LOGGING, "/lithium/logging")
+    DEFINE_CONSTANT(CONFIG_PATH_SERVER, "/lithium/server")
+    DEFINE_CONSTANT(CONFIG_PATH_DEVICE, "/lithium/device")
+    DEFINE_CONSTANT(CONFIG_PATH_SCRIPT, "/lithium/script")
+    DEFINE_CONSTANT(CONFIG_PATH_TARGET, "/lithium/target")
+    DEFINE_CONSTANT(CONFIG_PATH_TERMINAL, "/lithium/terminal")
+
     static std::vector<std::string> LITHIUM_RESOURCES;
     static std::vector<std::string_view> LITHIUM_RESOURCES_SHA256;
 };

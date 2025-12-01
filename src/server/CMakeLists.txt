@@ -26,6 +26,7 @@ set(PROJECT_SOURCES
     command/focuser.cpp
     command/filterwheel.cpp
     command/device.cpp
+    command/device_manager.cpp
     command/dome.cpp
     command/guider.cpp
     command/solver.cpp

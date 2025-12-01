@@ -16,6 +16,15 @@ project(lithium.client.ascom LANGUAGES CXX)
 set(ASCOM_SOURCES
     alpaca_client.cpp
     ascom_client.cpp
+    ascom_device_base.cpp
+    ascom_camera.cpp
+    ascom_focuser.cpp
+    ascom_filterwheel.cpp
+    ascom_telescope.cpp
+    ascom_rotator.cpp
+    ascom_dome.cpp
+    ascom_observingconditions.cpp
+    ascom_device_factory.cpp
 )
 
 # Header files
@@ -23,6 +32,15 @@ set(ASCOM_HEADERS
     alpaca_client.hpp
     ascom_client.hpp
     ascom_types.hpp
+    ascom_device_base.hpp
+    ascom_camera.hpp
+    ascom_focuser.hpp
+    ascom_filterwheel.hpp
+    ascom_telescope.hpp
+    ascom_rotator.hpp
+    ascom_dome.hpp
+    ascom_observingconditions.hpp
+    ascom_device_factory.hpp
 )
 
 # Create library

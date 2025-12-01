@@ -3,8 +3,8 @@
 # ============================================================================
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Lithium INDI Client
-# Description: INDI server and driver management client
+# Project Name: Lithium INDI Device Client
+# Description: INDI device implementations (Camera, Focuser, FilterWheel, Telescope)
 # Author: Max Qian
 # License: GPL3
 # ============================================================================
@@ -17,32 +17,29 @@ project(lithium_client_indi)
 # ============================================================================
 
 set(SOURCE_FILES
-    async_system_command.cpp
-    driverlist.cpp
-    database.cpp
-    indiserver.cpp
-    collection.cpp
-    iconnector.cpp
-    indihub_agent.cpp
-    server_manager.cpp
-    fifo_channel.cpp
-    property_utils.cpp
+    indi_device_base.cpp
+    indi_camera.cpp
+    indi_focuser.cpp
+    indi_filterwheel.cpp
+    indi_telescope.cpp
+    indi_rotator.cpp
+    indi_dome.cpp
+    indi_weather.cpp
+    indi_gps.cpp
+    indi_device_factory.cpp
 )
 
 set(HEADER_FILES
-    async_system_command.hpp
-    collection.hpp
-    connector.hpp
-    container.hpp
-    driverlist.hpp
-    database.hpp
-    indiserver.hpp
-    iconnector.hpp
-    indihub_agent.hpp
-    indi_client.hpp
-    server_manager.hpp
-    fifo_channel.hpp
-    property_utils.hpp
+    indi_device_base.hpp
+    indi_camera.hpp
+    indi_focuser.hpp
+    indi_filterwheel.hpp
+    indi_telescope.hpp
+    indi_rotator.hpp
+    indi_dome.hpp
+    indi_weather.hpp
+    indi_gps.hpp
+    indi_device_factory.hpp
 )
 
 # ============================================================================
@@ -51,11 +48,7 @@ set(HEADER_FILES
 
 set(PROJECT_LIBRARIES
     lithium_client_common
-    lithium_tools
-    loguru
-    atom-system
-    atom-io
-    tinyxml2
+    lithium_client_indi_manager
     atom-component
     atom-error
     atom-utils
@@ -76,7 +69,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES} ${HEADER_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/..
-    ${CMAKE_SOURCE_DIR}/src/tools
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_LIBRARIES})

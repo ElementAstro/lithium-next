@@ -12,42 +12,20 @@
 lithium_component_begin(lithium_device 1.0.0)
 
 # ============================================================================
-# Source Files
+# Note: This is a header-only compatibility layer
+# The actual implementation is in the manager/ subdirectory
 # ============================================================================
 
-set(PROJECT_SOURCES
-    manager.cpp
+# Create interface library for header-only compatibility
+add_library(${PROJECT_NAME} INTERFACE)
+
+target_include_directories(${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
 )
-
-# ============================================================================
-# Library Dependencies
-# ============================================================================
-
-set(PROJECT_LIBRARIES
-    atom
-    lithium_config
-    loguru
-    yaml-cpp
-)
-
-# ============================================================================
-# Build Library
-# ============================================================================
-
-lithium_add_library(
-    NAME ${PROJECT_NAME}
-    SOURCES ${PROJECT_SOURCES}
-    LIBRARIES ${PROJECT_LIBRARIES}
-    VERSION ${PROJECT_VERSION}
-    TYPE STATIC
-    DESCRIPTION "Device management and abstraction layer"
-)
-
-# Apply standard compiler flags
-lithium_apply_compiler_flags(${PROJECT_NAME})
 
 # Set IDE folder
-lithium_set_target_folder(${PROJECT_NAME} "Core/Device")
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "Core/Device")
 
 lithium_component_end(${PROJECT_NAME})
 
@@ -63,11 +41,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/atom/atom)
 # Add service layer subdirectory
 add_subdirectory(service)
 
+# Add manager subdirectory (modular device manager)
+add_subdirectory(manager)
+
 # Recursively discover and add device implementation subdirectories
-# Note: service is excluded as it was already added above
+# Note: service and manager are excluded as they were already added above
 lithium_message(INFO "Discovering device implementations...")
 lithium_add_subdirectories_recursive(
     ${CMAKE_CURRENT_SOURCE_DIR}
     MESSAGE_PREFIX "  ├─ Device impl"
-    EXCLUDE_DIRS service
+    EXCLUDE_DIRS service manager
 )

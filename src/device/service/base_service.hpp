@@ -370,6 +370,79 @@ protected:
         return deviceTypeName_;
     }
 
+    /**
+     * @brief Execute operation with automatic retry using DeviceManager
+     */
+    template <typename Func>
+    auto withRetry(const std::string& deviceId,
+                   const std::string& operationName, Func&& operation) -> json {
+        auto deviceManager = getDeviceManager();
+        if (!deviceManager) {
+            return makeErrorResponse(ErrorCode::INTERNAL_ERROR,
+                                     "DeviceManager not available");
+        }
+
+        auto future = deviceManager->executeWithRetry(
+            deviceId,
+            [&](std::shared_ptr<AtomDriver> driver) -> bool {
+                auto typedDevice = std::dynamic_pointer_cast<DeviceT>(driver);
+                if (!typedDevice) return false;
+                try {
+                    auto result = operation(typedDevice);
+                    return result.contains("status") &&
+                           result["status"] == "success";
+                } catch (...) {
+                    return false;
+                }
+            },
+            operationName);
+
+        auto result = future.get();
+        if (result.success) {
+            return makeSuccessResponse(result.data);
+        }
+        return makeErrorResponse(ErrorCode::OPERATION_FAILED,
+                                 result.errorMessage);
+    }
+
+    /**
+     * @brief Update device health after operation
+     */
+    void reportOperationResult(const std::string& deviceId, bool success) {
+        auto deviceManager = getDeviceManager();
+        if (deviceManager) {
+            deviceManager->updateDeviceHealth(deviceId, success);
+        }
+    }
+
+    /**
+     * @brief Get device state from DeviceManager
+     */
+    auto getDeviceState(const std::string& deviceId)
+        -> std::optional<DeviceState> {
+        auto deviceManager = getDeviceManager();
+        if (deviceManager) {
+            return deviceManager->getDeviceState(deviceId);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Publish device event through DeviceManager
+     */
+    void emitDeviceEvent(DeviceEventType eventType,
+                         const std::string& deviceId,
+                         const json& data = {}) {
+        auto deviceManager = getDeviceManager();
+        if (deviceManager) {
+            // Use message bus for broader event distribution
+            publishEvent("device." + deviceTypeName_,
+                        json{{"event", static_cast<int>(eventType)},
+                             {"deviceId", deviceId},
+                             {"data", data}}.dump());
+        }
+    }
+
 private:
     std::string deviceTypeName_;
     const char* primaryDeviceConstant_;

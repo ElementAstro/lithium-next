@@ -24,3 +24,17 @@ lithium_add_test(
     SOURCES test_guider_service.cpp
     LIBS lithium_device_service lithium_phd2_guider atom
 )
+
+# Test for Base service
+lithium_add_test(
+    NAME test_base_service
+    SOURCES test_base_service.cpp
+    LIBS lithium_device_service lithium_device atom
+)
+
+# Test for Device Backend
+lithium_add_test(
+    NAME test_device_backend
+    SOURCES test_device_backend.cpp
+    LIBS lithium_device_service lithium.client.indi lithium.client.ascom atom
+)

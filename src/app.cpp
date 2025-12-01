@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -14,6 +15,8 @@
 #include "script/shell/script_manager.hpp"
 
 #include "config/config.hpp"
+#include "config/core/config_registry.hpp"
+#include "config/sections/sections.hpp"
 #include "constant/constant.hpp"
 #include "server/command.hpp"
 #include "server/controller/controller.hpp"
@@ -43,6 +46,7 @@
 #include "server/websocket.hpp"
 
 using namespace std::string_literals;
+namespace fs = std::filesystem;
 
 void registerControllers(
     crow::SimpleApp &app,
@@ -53,10 +57,40 @@ void registerControllers(
 }
 
 /**
- * @brief Initialize logging system with spdlog
- * @note This is called in main function
+ * @brief Initialize logging system from unified configuration
+ * @param loggingConfig Unified logging configuration
  */
-void setupLogging() {
+void setupLoggingFromConfig(const lithium::config::LoggingConfig& loggingConfig) {
+    lithium::log::LogConfig config;
+    config.log_dir = loggingConfig.logDir;
+    config.log_filename = loggingConfig.logFilename;
+    config.max_file_size = loggingConfig.maxFileSize;
+    config.max_files = loggingConfig.maxFiles;
+
+    // Convert string levels to enum
+    auto parseLevel = [](const std::string& level) -> lithium::log::Level {
+        if (level == "trace") return lithium::log::Level::Trace;
+        if (level == "debug") return lithium::log::Level::Debug;
+        if (level == "info") return lithium::log::Level::Info;
+        if (level == "warn" || level == "warning") return lithium::log::Level::Warn;
+        if (level == "error" || level == "err") return lithium::log::Level::Error;
+        if (level == "critical" || level == "fatal") return lithium::log::Level::Critical;
+        return lithium::log::Level::Info;
+    };
+
+    config.console_level = parseLevel(loggingConfig.consoleLevel);
+    config.file_level = parseLevel(loggingConfig.fileLevel);
+    config.async_mode = loggingConfig.asyncMode;
+    config.main_thread_name = loggingConfig.mainThreadName;
+
+    lithium::log::init(config);
+}
+
+/**
+ * @brief Initialize logging system with default configuration
+ * @note This is called before ConfigRegistry is available
+ */
+void setupLoggingDefault() {
     lithium::log::LogConfig config;
     config.log_dir = "logs";
     config.log_filename = "lithium";
@@ -134,11 +168,10 @@ int main(int argc, char *argv[]) {
     textdomain("lithium");
 #endif
 
-    // Initialize logging system
-    setupLogging();
+    // Step 1: Initialize with default logging (before config is loaded)
+    setupLoggingDefault();
 
-    injectPtr();
-
+    // Step 2: Parse command line arguments first
     atom::utils::ArgumentParser program("Lithium Server"s);
 
     // NOTE: The command arguments' priority is higher than the config file
@@ -147,7 +180,7 @@ int main(int argc, char *argv[]) {
     program.addArgument("host", atom::utils::ArgumentParser::ArgType::STRING,
                         false, "0.0.0.0"s, "Host of the server", {"h"});
     program.addArgument("config", atom::utils::ArgumentParser::ArgType::STRING,
-                        false, "config.json"s, "Path to the config file",
+                        false, "config.yaml"s, "Path to the config file",
                         {"c"});
     program.addArgument("module-path",
                         atom::utils::ArgumentParser::ArgType::STRING, false,
@@ -157,9 +190,9 @@ int main(int argc, char *argv[]) {
                         true, "Enable web panel", {"w"});
     program.addArgument("debug", atom::utils::ArgumentParser::ArgType::BOOLEAN,
                         false, false, "Enable debug mode", {"d"});
-    program.addArgument("log-file",
+    program.addArgument("log-level",
                         atom::utils::ArgumentParser::ArgType::STRING, false,
-                        ""s, "Path to the log file", {"l"});
+                        "info"s, "Log level (trace/debug/info/warn/error)", {"l"});
 
     program.addDescription("Lithium Command Line Interface:");
     program.addEpilog("End.");
@@ -167,51 +200,94 @@ int main(int argc, char *argv[]) {
     std::vector<std::string> args(argv, argv + argc);
     program.parse(argc, args);
 
-    // Parse arguments
+    // Step 3: Create ConfigManager and ConfigRegistry
+    auto configManager = atom::memory::makeShared<lithium::ConfigManager>();
+    AddPtr<lithium::ConfigManager>(Constants::CONFIG_MANAGER, configManager);
+
+    auto& registry = lithium::config::ConfigRegistry::instance();
+    registry.setConfigManager(configManager);
+
+    // Step 4: Register all configuration sections
+    lithium::config::registerAllSections(registry);
+
+    // Step 5: Apply default values
+    registry.applyDefaults();
+
+    // Step 6: Load configuration file if exists
+    try {
+        auto cmdConfigPath = program.get<std::string>("config");
+        fs::path configPath = cmdConfigPath.value_or("config.yaml"s);
+
+        // Try multiple config file locations
+        std::vector<fs::path> configPaths = {
+            configPath,
+            "config.json",
+            "config.yaml",
+            "config/config.yaml",
+            "config/config.json"
+        };
+
+        bool configLoaded = false;
+        for (const auto& path : configPaths) {
+            if (fs::exists(path)) {
+                LOG_INFO("Loading configuration from: {}", path.string());
+                lithium::config::ConfigLoadOptions options;
+                options.strict = true;  // Strict validation mode
+                options.mergeWithExisting = true;
+
+                if (registry.loadFromFile(path, options)) {
+                    configLoaded = true;
+                    break;
+                }
+            }
+        }
+
+        if (!configLoaded) {
+            LOG_WARN("No configuration file found, using defaults");
+        }
+
+    } catch (const lithium::config::ConfigValidationException& e) {
+        LOG_ERROR("Configuration validation failed:\n{}", e.what());
+        atom::system::saveCrashLog(e.what());
+        return 1;
+    } catch (const std::exception& e) {
+        LOG_ERROR("Failed to load configuration: {}", e.what());
+        // Continue with defaults
+    }
+
+    // Step 7: Apply command line overrides (highest priority)
     try {
         auto cmdHost = program.get<std::string>("host");
         auto cmdPort = program.get<int>("port");
-        auto cmdConfigPath = program.get<std::string>("config");
         auto cmdModulePath = program.get<std::string>("module-path");
         auto cmdWebPanel = program.get<bool>("web-panel");
         auto cmdDebug = program.get<bool>("debug");
+        auto cmdLogLevel = program.get<std::string>("log-level");
 
-        auto configManager =
-            GetPtr<lithium::ConfigManager>(Constants::CONFIG_MANAGER);
-
-        if (cmdHost && !cmdHost->empty()) {
-            configManager.value()->set("/lithium/server/host", cmdHost.value());
-            DLOG_INFO("Set server host to {}", cmdHost.value());
+        if (cmdHost && !cmdHost->empty() && *cmdHost != "0.0.0.0") {
+            registry.updateValue("/lithium/server/host", *cmdHost);
+            LOG_DEBUG("CLI override: server host = {}", *cmdHost);
         }
-        if (cmdPort != 8000) {
-            DLOG_INFO("Command line server port : {}", cmdPort.value());
-
-            auto port = configManager.value()->get("/lithium/server/port");
-            if (port && port.value() != cmdPort) {
-                configManager.value()->set("/lithium/server/port",
-                                           cmdPort.value());
-                DLOG_INFO("Set server port to {}", cmdPort.value());
-            }
+        if (cmdPort && *cmdPort != 8000) {
+            registry.updateValue("/lithium/server/port", *cmdPort);
+            LOG_DEBUG("CLI override: server port = {}", *cmdPort);
         }
-        if (cmdConfigPath && !cmdConfigPath->empty()) {
-            configManager.value()->set("/lithium/config/path", *cmdConfigPath);
-            DLOG_INFO("Set config path to {}", *cmdConfigPath);
+        if (cmdModulePath && !cmdModulePath->empty() && *cmdModulePath != "modules") {
+            registry.updateValue("/lithium/module/path", *cmdModulePath);
+            LOG_DEBUG("CLI override: module path = {}", *cmdModulePath);
         }
-        if (cmdModulePath && !cmdModulePath->empty()) {
-            configManager.value()->set("/lithium/module/path", *cmdModulePath);
-            DLOG_INFO("Set module path to {}", *cmdModulePath);
+        if (cmdWebPanel.has_value()) {
+            registry.updateValue("/lithium/server/enableWebPanel", *cmdWebPanel);
+            LOG_DEBUG("CLI override: web panel = {}", *cmdWebPanel);
         }
-        if (cmdWebPanel) {
-            configManager.value()->set("/lithium/web-panel/enabled",
-                                       *cmdWebPanel);
-            DLOG_INFO("Set web panel to {}", *cmdWebPanel);
+        if (cmdDebug.has_value() && *cmdDebug) {
+            registry.updateValue("/lithium/debug/enabled", *cmdDebug);
+            LOG_DEBUG("CLI override: debug mode = {}", *cmdDebug);
         }
-        if (cmdDebug) {
-            configManager.value()->set("/lithium/debug/enabled", *cmdDebug);
-            DLOG_INFO("Set debug mode to {}", *cmdDebug);
+        if (cmdLogLevel && !cmdLogLevel->empty() && *cmdLogLevel != "info") {
+            registry.updateValue("/lithium/logging/consoleLevel", *cmdLogLevel);
+            LOG_DEBUG("CLI override: log level = {}", *cmdLogLevel);
         }
-        // Note: Custom log file path is handled by LogConfig in setupLogging()
-        // The --log-file argument is deprecated with spdlog migration
 
     } catch (const std::bad_any_cast &e) {
         LOG_ERROR("Invalid args format! Error: {}", e.what());
@@ -219,14 +295,27 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Step 8: Reinitialize logging with configuration (if changed)
+    auto loggingConfig = registry.getSectionOrDefault<lithium::config::LoggingConfig>();
+    lithium::log::shutdown();
+    setupLoggingFromConfig(loggingConfig);
+    LOG_INFO("Logging system initialized with configuration");
+
+    // Step 9: Inject other global pointers
+    injectPtr();
+
+    // Step 10: Get server configuration
+    auto serverConfig = registry.getSectionOrDefault<lithium::config::ServerConfig>();
+
     crow::SimpleApp app;
 
-    // Enable GZIP compression
-    app.use_compression(crow::compression::algorithm::GZIP);
+    // Enable GZIP compression based on configuration
+    if (serverConfig.enableCompression) {
+        app.use_compression(crow::compression::algorithm::GZIP);
+    }
 
     std::vector<std::shared_ptr<Controller>> controllers;
     controllers.push_back(atom::memory::makeShared<ConfigController>());
-    // controllers.push_back(atom::memory::makeShared<PythonController>());
     controllers.push_back(atom::memory::makeShared<ScriptController>());
     controllers.push_back(atom::memory::makeShared<SearchController>());
     controllers.push_back(atom::memory::makeShared<SequenceController>());
@@ -238,23 +327,11 @@ int main(int argc, char *argv[]) {
     controllers.push_back(atom::memory::makeShared<ToolRegistryController>());
     controllers.push_back(atom::memory::makeShared<VenvController>());
 
-    AddPtr<lithium::ConfigManager>(
-        Constants::CONFIG_MANAGER,
-        atom::memory::makeShared<lithium::ConfigManager>());
-
-    std::thread serverThread([&app, &controllers]() {
+    std::thread serverThread([&app, &controllers, &serverConfig]() {
         registerControllers(app, controllers);
 
-        auto configManager =
-            GetPtr<lithium::ConfigManager>(Constants::CONFIG_MANAGER);
-        if (!configManager) {
-            LOG_ERROR("Failed to get ConfigManager instance");
-            return;
-        }
-        int port =
-            configManager.value()->get("/lithium/server/port").value_or(8080);
-        LOG_INFO("Server is running on {}", port);
-        app.port(port).multithreaded().run();
+        LOG_INFO("Server starting on {}:{}", serverConfig.host, serverConfig.port);
+        app.port(serverConfig.port).multithreaded().run();
     });
 
     WebSocketServer ws_server(

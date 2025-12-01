@@ -1,8 +1,10 @@
 #ifndef LITHIUM_TARGET_ENGINE_HPP
 #define LITHIUM_TARGET_ENGINE_HPP
 
+#include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -12,8 +14,38 @@
 #include "atom/type/json_fwd.hpp"
 
 #include "reader.hpp"
+#include "celestial_model.hpp"
+#include "celestial_repository.hpp"
 
 namespace lithium::target {
+
+// Forward declarations
+class CelestialRepository;
+
+/**
+ * @brief Configuration for the search engine with database integration
+ */
+struct EngineConfig {
+    std::string databasePath = "data/celestial.db";
+    std::string nameJsonPath = "data/name.json";
+    std::string celestialJsonPath = "data/celestial.json";
+    std::string modelPath = "data/recommendation_model.json";
+    bool useDatabase = true;
+    bool syncOnStartup = true;
+    size_t cacheSize = 1000;
+    int defaultSearchLimit = 100;
+    int fuzzyTolerance = 2;
+};
+
+/**
+ * @brief Search result with relevance scoring
+ */
+struct ScoredSearchResult {
+    CelestialObjectModel object;
+    double relevanceScore = 0.0;
+    std::string matchType;  // "exact", "fuzzy", "alias", "coordinate"
+    int editDistance = 0;
+};
 
 /**
  * @brief Represents a celestial astronomical object with detailed properties
@@ -567,10 +599,233 @@ public:
      */
     bool importRecommendationDataFromCSV(const std::string& filename);
 
+    // ==================== Enhanced Database Integration ====================
+
+    /**
+     * @brief Initialize with database configuration
+     * @param config Engine configuration
+     * @return true if successful
+     */
+    bool initializeWithConfig(const EngineConfig& config);
+
+    /**
+     * @brief Set repository for database operations
+     * @param repository Shared repository instance
+     */
+    void setRepository(std::shared_ptr<CelestialRepository> repository);
+
+    /**
+     * @brief Get underlying repository
+     * @return Shared pointer to repository
+     */
+    std::shared_ptr<CelestialRepository> getRepository();
+
+    /**
+     * @brief Sync data from JSON files to database
+     * @return Number of objects synced
+     */
+    int syncFromJsonFiles();
+
+    /**
+     * @brief Search with relevance scoring
+     * @param query Search query
+     * @param limit Maximum results
+     * @return Scored search results
+     */
+    std::vector<ScoredSearchResult> scoredSearch(const std::string& query,
+                                                  int limit = 50);
+
+    /**
+     * @brief Fuzzy search with scoring
+     * @param query Search query
+     * @param tolerance Maximum edit distance
+     * @param limit Maximum results
+     * @return Scored search results
+     */
+    std::vector<ScoredSearchResult> scoredFuzzySearch(const std::string& query,
+                                                       int tolerance = 2,
+                                                       int limit = 50);
+
+    /**
+     * @brief Search by celestial coordinates
+     * @param ra Right ascension (degrees)
+     * @param dec Declination (degrees)
+     * @param radius Search radius (degrees)
+     * @param limit Maximum results
+     * @return Matching objects
+     */
+    std::vector<CelestialObjectModel> searchByCoordinates(
+        double ra, double dec, double radius, int limit = 50);
+
+    /**
+     * @brief Advanced search with filter
+     * @param filter Search filter criteria
+     * @return Matching objects
+     */
+    std::vector<CelestialObjectModel> advancedSearch(
+        const CelestialSearchFilter& filter);
+
+    /**
+     * @brief Get object by identifier from database
+     * @param identifier Object identifier (e.g., "M31", "NGC 224")
+     * @return Object if found
+     */
+    std::optional<CelestialObjectModel> getObjectModel(
+        const std::string& identifier);
+
+    /**
+     * @brief Get objects by type from database
+     * @param type Object type
+     * @param limit Maximum results
+     * @return Matching objects
+     */
+    std::vector<CelestialObjectModel> getByType(const std::string& type,
+                                                 int limit = 100);
+
+    /**
+     * @brief Get objects by magnitude range from database
+     * @param minMag Minimum magnitude
+     * @param maxMag Maximum magnitude
+     * @param limit Maximum results
+     * @return Matching objects
+     */
+    std::vector<CelestialObjectModel> getByMagnitude(double minMag, double maxMag,
+                                                      int limit = 100);
+
+    /**
+     * @brief Get personalized recommendations with object models
+     * @param userId User identifier
+     * @param topN Number of recommendations
+     * @return Recommended objects with scores
+     */
+    std::vector<std::pair<CelestialObjectModel, double>> getModelRecommendations(
+        const std::string& userId, int topN = 10);
+
+    /**
+     * @brief Import from JSON file to database
+     * @param filename Path to JSON file
+     * @return Import result
+     */
+    ImportResult importFromJsonToDb(const std::string& filename);
+
+    /**
+     * @brief Import from CSV file to database
+     * @param filename Path to CSV file
+     * @return Import result
+     */
+    ImportResult importFromCsvToDb(const std::string& filename);
+
+    /**
+     * @brief Export to JSON file from database
+     * @param filename Output file path
+     * @param filter Optional filter
+     * @return Number of exported objects
+     */
+    int exportToJsonFromDb(const std::string& filename,
+                           const CelestialSearchFilter& filter = {});
+
+    /**
+     * @brief Export to CSV file from database
+     * @param filename Output file path
+     * @param filter Optional filter
+     * @return Number of exported objects
+     */
+    int exportToCsvFromDb(const std::string& filename,
+                          const CelestialSearchFilter& filter = {});
+
+    /**
+     * @brief Add or update celestial object in database
+     * @param obj Object to add/update
+     * @return Object ID
+     */
+    int64_t upsertObject(const CelestialObjectModel& obj);
+
+    /**
+     * @brief Batch add/update objects in database
+     * @param objects Objects to add/update
+     * @return Number of affected objects
+     */
+    int batchUpsert(const std::vector<CelestialObjectModel>& objects);
+
+    /**
+     * @brief Remove object by identifier from database
+     * @param identifier Object identifier
+     * @return true if removed
+     */
+    bool removeObject(const std::string& identifier);
+
+    /**
+     * @brief Record click on object (for popularity ranking)
+     * @param identifier Object identifier
+     */
+    void recordClick(const std::string& identifier);
+
+    /**
+     * @brief Record search query
+     * @param userId User identifier
+     * @param query Search query
+     * @param searchType Type of search
+     * @param resultCount Number of results
+     */
+    void recordSearch(const std::string& userId, const std::string& query,
+                      const std::string& searchType, int resultCount);
+
+    /**
+     * @brief Get user search history
+     * @param userId User identifier
+     * @param limit Maximum entries
+     * @return Search history
+     */
+    std::vector<SearchHistoryModel> getSearchHistory(const std::string& userId,
+                                                      int limit = 50);
+
+    /**
+     * @brief Get popular searches
+     * @param limit Maximum entries
+     * @return Popular queries with counts
+     */
+    std::vector<std::pair<std::string, int>> getPopularSearches(int limit = 20);
+
+    /**
+     * @brief Get most popular objects from database
+     * @param limit Maximum objects
+     * @return Popular objects
+     */
+    std::vector<CelestialObjectModel> getMostPopular(int limit = 20);
+
+    /**
+     * @brief Get total object count in database
+     */
+    int64_t getObjectCount();
+
+    /**
+     * @brief Get count by type in database
+     */
+    std::unordered_map<std::string, int64_t> getCountByType();
+
+    /**
+     * @brief Get engine statistics as JSON
+     */
+    std::string getStatistics();
+
+    /**
+     * @brief Optimize database
+     */
+    void optimizeDatabase();
+
+    /**
+     * @brief Clear all database data
+     * @param includeHistory Also clear history and ratings
+     */
+    void clearAllData(bool includeHistory = false);
+
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl_;  ///< Implementation details (PIMPL idiom)
 };
+
+// Type alias for backward compatibility
+using EnhancedEngineConfig = EngineConfig;
 
 }  // namespace lithium::target
 
