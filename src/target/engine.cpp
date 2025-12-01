@@ -955,7 +955,7 @@ bool SearchEngine::initializeWithConfig(const EngineConfig& config) {
     spdlog::info("Initializing SearchEngine with database config: {}", config.databasePath);
     try {
         pImpl_->config_ = config;
-        
+
         // Create repository if using database
         if (config.useDatabase) {
             pImpl_->repository_ = std::make_shared<CelestialRepository>(config.databasePath);
@@ -964,12 +964,12 @@ bool SearchEngine::initializeWithConfig(const EngineConfig& config) {
                 return false;
             }
         }
-        
+
         // Sync from JSON files if configured
         if (config.syncOnStartup && config.useDatabase) {
             syncFromJsonFiles();
         }
-        
+
         // Load legacy data
         if (!config.nameJsonPath.empty()) {
             loadFromNameJson(config.nameJsonPath);
@@ -980,7 +980,7 @@ bool SearchEngine::initializeWithConfig(const EngineConfig& config) {
         if (!config.modelPath.empty()) {
             initializeRecommendationEngine(config.modelPath);
         }
-        
+
         pImpl_->dbInitialized_ = true;
         spdlog::info("SearchEngine initialization complete");
         return true;
@@ -1003,7 +1003,7 @@ int SearchEngine::syncFromJsonFiles() {
         spdlog::warn("No repository configured for sync");
         return 0;
     }
-    
+
     int synced = 0;
     try {
         if (!pImpl_->config_.celestialJsonPath.empty()) {
@@ -1014,19 +1014,19 @@ int SearchEngine::syncFromJsonFiles() {
                 spdlog::info("Synced {} objects from celestial JSON", result.successCount);
             }
         }
-        
+
         if (!pImpl_->config_.nameJsonPath.empty()) {
             std::ifstream file(pImpl_->config_.nameJsonPath);
             if (file.is_open()) {
                 json data;
                 file >> data;
-                
+
                 for (const auto& item : data) {
                     if (!item.is_array() || item.size() < 1) continue;
-                    
+
                     std::string name = item[0].get<std::string>();
                     auto existing = pImpl_->repository_->findByIdentifier(name);
-                    
+
                     if (existing && item.size() >= 2 && !item[1].is_null()) {
                         existing->aliases = item[1].get<std::string>();
                         pImpl_->repository_->update(*existing);
@@ -1045,7 +1045,7 @@ std::vector<ScoredSearchResult> SearchEngine::scoredSearch(const std::string& qu
         spdlog::warn("No repository configured for scored search");
         return {};
     }
-    
+
     std::vector<ScoredSearchResult> results;
     try {
         auto exactMatches = pImpl_->repository_->searchByName(query, limit);
@@ -1054,7 +1054,7 @@ std::vector<ScoredSearchResult> SearchEngine::scoredSearch(const std::string& qu
             result.object = obj;
             result.matchType = "exact";
             result.editDistance = 0;
-            
+
             if (obj.identifier == query) {
                 result.relevanceScore = 1.0;
             } else if (obj.identifier.find(query) == 0) {
@@ -1065,11 +1065,11 @@ std::vector<ScoredSearchResult> SearchEngine::scoredSearch(const std::string& qu
             result.relevanceScore += std::min(0.2, obj.clickCount * 0.001);
             results.push_back(result);
         }
-        
+
         if (static_cast<int>(results.size()) < limit) {
             auto fuzzyMatches = pImpl_->repository_->fuzzySearch(
                 query, pImpl_->config_.fuzzyTolerance, limit - results.size());
-            
+
             for (const auto& [obj, dist] : fuzzyMatches) {
                 bool found = false;
                 for (const auto& r : results) {
@@ -1079,7 +1079,7 @@ std::vector<ScoredSearchResult> SearchEngine::scoredSearch(const std::string& qu
                     }
                 }
                 if (found) continue;
-                
+
                 ScoredSearchResult result;
                 result.object = obj;
                 result.matchType = "fuzzy";
@@ -1089,12 +1089,12 @@ std::vector<ScoredSearchResult> SearchEngine::scoredSearch(const std::string& qu
                 results.push_back(result);
             }
         }
-        
+
         std::sort(results.begin(), results.end(),
             [](const auto& a, const auto& b) {
                 return a.relevanceScore > b.relevanceScore;
             });
-        
+
         if (static_cast<int>(results.size()) > limit) {
             results.resize(limit);
         }
@@ -1107,7 +1107,7 @@ std::vector<ScoredSearchResult> SearchEngine::scoredSearch(const std::string& qu
 std::vector<ScoredSearchResult> SearchEngine::scoredFuzzySearch(
     const std::string& query, int tolerance, int limit) {
     if (!pImpl_->repository_) return {};
-    
+
     std::vector<ScoredSearchResult> results;
     try {
         auto matches = pImpl_->repository_->fuzzySearch(query, tolerance, limit);

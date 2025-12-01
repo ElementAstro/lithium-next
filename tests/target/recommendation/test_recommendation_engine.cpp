@@ -12,11 +12,11 @@ class RecommendationEngineTest : public ::testing::Test {
 protected:
     void SetUp() override {
         engine_ = std::make_unique<RecommendationEngine>();
-        
+
         engine_->addItem("M31", {"NGC224", "Andromeda"});
         engine_->addItem("M42", {"Orion Nebula"});
         engine_->addItem("M45", {"Pleiades"});
-        
+
         engine_->addRating("user1", "M31", 5.0);
         engine_->addRating("user1", "M42", 4.0);
     }
@@ -56,10 +56,10 @@ TEST_F(RecommendationEngineTest, Train) {
 TEST_F(RecommendationEngineTest, SaveAndLoadModel) {
     std::string modelPath = "test_model.json";
     engine_->saveModel(modelPath);
-    
+
     auto newEngine = std::make_unique<RecommendationEngine>();
     newEngine->loadModel(modelPath);
-    
+
     // Cleanup
     std::filesystem::remove(modelPath);
 }
@@ -81,10 +81,10 @@ TEST_F(RecommendationEngineTest, AddImplicitFeedback) {
 TEST_F(RecommendationEngineTest, ExportImportCSV) {
     std::string csvPath = "test_ratings.csv";
     engine_->exportToCSV(csvPath);
-    
+
     auto newEngine = std::make_unique<RecommendationEngine>();
     newEngine->importFromCSV(csvPath);
-    
+
     // Cleanup
     std::filesystem::remove(csvPath);
 }

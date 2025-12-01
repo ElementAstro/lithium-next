@@ -24,15 +24,15 @@ using json = nlohmann::json;
 static int levenshteinDistance(const std::string& s1, const std::string& s2) {
     const size_t m = s1.size();
     const size_t n = s2.size();
-    
+
     if (m == 0) return static_cast<int>(n);
     if (n == 0) return static_cast<int>(m);
-    
+
     std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1));
-    
+
     for (size_t i = 0; i <= m; ++i) dp[i][0] = static_cast<int>(i);
     for (size_t j = 0; j <= n; ++j) dp[0][j] = static_cast<int>(j);
-    
+
     for (size_t i = 1; i <= m; ++i) {
         for (size_t j = 1; j <= n; ++j) {
             int cost = (std::tolower(s1[i-1]) == std::tolower(s2[j-1])) ? 0 : 1;
@@ -51,7 +51,7 @@ class CelestialRepository::Impl {
 public:
     std::shared_ptr<database::core::Database> db_;
     bool ownsDatabase_ = false;
-    
+
     // Prepared statement cache
     std::unique_ptr<database::core::Statement> insertStmt_;
     std::unique_ptr<database::core::Statement> updateStmt_;
@@ -59,20 +59,20 @@ public:
     std::unique_ptr<database::core::Statement> findByIdentifierStmt_;
     std::unique_ptr<database::core::Statement> searchByNameStmt_;
     std::unique_ptr<database::core::Statement> incrementClickStmt_;
-    
-    explicit Impl(const std::string& dbPath) 
+
+    explicit Impl(const std::string& dbPath)
         : db_(std::make_shared<database::core::Database>(dbPath)),
           ownsDatabase_(true) {
         spdlog::info("CelestialRepository: Opening database at {}", dbPath);
     }
-    
+
     explicit Impl(std::shared_ptr<database::core::Database> db)
         : db_(std::move(db)), ownsDatabase_(false) {
         spdlog::info("CelestialRepository: Using existing database connection");
     }
-    
+
     ~Impl() = default;
-    
+
     bool initializeSchema() {
         try {
             // Create celestial_objects table
@@ -110,7 +110,7 @@ public:
                     updated_at INTEGER DEFAULT (strftime('%s', 'now'))
                 )
             )");
-            
+
             // Create user_ratings table
             db_->execute(R"(
                 CREATE TABLE IF NOT EXISTS user_ratings (
@@ -122,7 +122,7 @@ public:
                     UNIQUE(user_id, object_id)
                 )
             )");
-            
+
             // Create search_history table
             db_->execute(R"(
                 CREATE TABLE IF NOT EXISTS search_history (
@@ -134,10 +134,10 @@ public:
                     result_count INTEGER DEFAULT 0
                 )
             )");
-            
+
             // Create indexes
             createIndexes();
-            
+
             spdlog::info("CelestialRepository: Schema initialized successfully");
             return true;
         } catch (const std::exception& e) {
@@ -145,7 +145,7 @@ public:
             return false;
         }
     }
-    
+
     void createIndexes() {
         const std::vector<std::string> indexSqls = {
             "CREATE INDEX IF NOT EXISTS idx_celestial_identifier ON celestial_objects(identifier)",
@@ -160,7 +160,7 @@ public:
             "CREATE INDEX IF NOT EXISTS idx_history_user ON search_history(user_id)",
             "CREATE INDEX IF NOT EXISTS idx_history_query ON search_history(query)",
         };
-        
+
         for (const auto& sql : indexSqls) {
             try {
                 db_->execute(sql);
@@ -169,7 +169,7 @@ public:
             }
         }
     }
-    
+
     int64_t insert(const CelestialObjectModel& obj) {
         try {
             auto stmt = db_->prepare(R"(
@@ -182,7 +182,7 @@ public:
                     position_angle, detailed_description, brief_description, aliases, click_count
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             )");
-            
+
             stmt->bind(1, obj.identifier)
                 .bind(2, obj.mIdentifier)
                 .bind(3, obj.extensionName)
@@ -210,9 +210,9 @@ public:
                 .bind(25, obj.briefDescription)
                 .bind(26, obj.aliases)
                 .bind(27, obj.clickCount);
-            
+
             stmt->execute();
-            
+
             // Get last insert ID
             auto idStmt = db_->prepare("SELECT last_insert_rowid()");
             if (idStmt->step()) {
@@ -224,7 +224,7 @@ public:
             return -1;
         }
     }
-    
+
     bool update(const CelestialObjectModel& obj) {
         try {
             auto stmt = db_->prepare(R"(
@@ -239,7 +239,7 @@ public:
                     aliases = ?, click_count = ?, updated_at = strftime('%s', 'now')
                 WHERE id = ?
             )");
-            
+
             stmt->bind(1, obj.mIdentifier)
                 .bind(2, obj.extensionName)
                 .bind(3, obj.component)
@@ -267,14 +267,14 @@ public:
                 .bind(25, obj.aliases)
                 .bind(26, obj.clickCount)
                 .bind(27, obj.id);
-            
+
             return stmt->execute();
         } catch (const std::exception& e) {
             spdlog::error("CelestialRepository: Update failed: {}", e.what());
             return false;
         }
     }
-    
+
     bool remove(int64_t id) {
         try {
             auto stmt = db_->prepare("DELETE FROM celestial_objects WHERE id = ?");
@@ -285,7 +285,7 @@ public:
             return false;
         }
     }
-    
+
     CelestialObjectModel modelFromStatement(database::core::Statement& stmt) {
         CelestialObjectModel obj;
         obj.id = stmt.getInt64(0);
@@ -318,7 +318,7 @@ public:
         obj.clickCount = stmt.getInt(27);
         return obj;
     }
-    
+
     std::optional<CelestialObjectModel> findById(int64_t id) {
         try {
             auto stmt = db_->prepare("SELECT * FROM celestial_objects WHERE id = ?");
@@ -332,7 +332,7 @@ public:
             return std::nullopt;
         }
     }
-    
+
     std::optional<CelestialObjectModel> findByIdentifier(const std::string& identifier) {
         try {
             auto stmt = db_->prepare(
@@ -348,7 +348,7 @@ public:
             return std::nullopt;
         }
     }
-    
+
     std::vector<CelestialObjectModel> searchByName(const std::string& pattern, int limit) {
         std::vector<CelestialObjectModel> results;
         try {
@@ -358,9 +358,9 @@ public:
             if (searchPattern.find('%') == std::string::npos) {
                 searchPattern = "%" + searchPattern + "%";
             }
-            
+
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE identifier LIKE ? OR chinese_name LIKE ? OR aliases LIKE ?
                 ORDER BY click_count DESC
                 LIMIT ?
@@ -369,7 +369,7 @@ public:
             stmt->bind(2, searchPattern);
             stmt->bind(3, searchPattern);
             stmt->bind(4, limit);
-            
+
             while (stmt->step()) {
                 results.push_back(modelFromStatement(*stmt));
             }
@@ -378,18 +378,18 @@ public:
         }
         return results;
     }
-    
+
     std::vector<std::pair<CelestialObjectModel, int>> fuzzySearch(
         const std::string& name, int tolerance, int limit) {
         std::vector<std::pair<CelestialObjectModel, int>> results;
         try {
             // Get all objects and compute Levenshtein distance
             auto stmt = db_->prepare("SELECT * FROM celestial_objects");
-            
+
             while (stmt->step()) {
                 auto obj = modelFromStatement(*stmt);
                 int dist = levenshteinDistance(name, obj.identifier);
-                
+
                 // Also check aliases
                 if (dist > tolerance && !obj.aliases.empty()) {
                     std::istringstream iss(obj.aliases);
@@ -402,16 +402,16 @@ public:
                         dist = std::min(dist, aliasDist);
                     }
                 }
-                
+
                 if (dist <= tolerance) {
                     results.emplace_back(obj, dist);
                 }
             }
-            
+
             // Sort by distance
             std::sort(results.begin(), results.end(),
                 [](const auto& a, const auto& b) { return a.second < b.second; });
-            
+
             // Limit results
             if (static_cast<int>(results.size()) > limit) {
                 results.resize(limit);
@@ -421,13 +421,13 @@ public:
         }
         return results;
     }
-    
+
     std::vector<CelestialObjectModel> search(const CelestialSearchFilter& filter) {
         std::vector<CelestialObjectModel> results;
         try {
             std::ostringstream sql;
             sql << "SELECT * FROM celestial_objects WHERE 1=1";
-            
+
             if (!filter.namePattern.empty()) {
                 sql << " AND (identifier LIKE '%" << filter.namePattern << "%'"
                     << " OR chinese_name LIKE '%" << filter.namePattern << "%'"
@@ -461,12 +461,12 @@ public:
             if (filter.maxDec < 90.0) {
                 sql << " AND dec_d_j2000 <= " << filter.maxDec;
             }
-            
+
             sql << " ORDER BY " << filter.orderBy;
             sql << (filter.ascending ? " ASC" : " DESC");
             sql << " LIMIT " << filter.limit;
             sql << " OFFSET " << filter.offset;
-            
+
             auto stmt = db_->prepare(sql.str());
             while (stmt->step()) {
                 results.push_back(modelFromStatement(*stmt));
@@ -476,19 +476,19 @@ public:
         }
         return results;
     }
-    
+
     std::vector<std::string> autocomplete(const std::string& prefix, int limit) {
         std::vector<std::string> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT DISTINCT identifier FROM celestial_objects 
-                WHERE identifier LIKE ? 
+                SELECT DISTINCT identifier FROM celestial_objects
+                WHERE identifier LIKE ?
                 ORDER BY click_count DESC, identifier ASC
                 LIMIT ?
             )");
             stmt->bind(1, prefix + "%");
             stmt->bind(2, limit);
-            
+
             while (stmt->step()) {
                 results.push_back(stmt->getText(0));
             }
@@ -497,7 +497,7 @@ public:
         }
         return results;
     }
-    
+
     std::vector<CelestialObjectModel> searchByCoordinates(
         double ra, double dec, double radius, int limit) {
         std::vector<CelestialObjectModel> results;
@@ -507,9 +507,9 @@ public:
             double raMax = ra + radius;
             double decMin = dec - radius;
             double decMax = dec + radius;
-            
+
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE rad_j2000 BETWEEN ? AND ?
                   AND dec_d_j2000 BETWEEN ? AND ?
                 LIMIT ?
@@ -519,14 +519,14 @@ public:
             stmt->bind(3, decMin);
             stmt->bind(4, decMax);
             stmt->bind(5, limit * 2);  // Get more for filtering
-            
+
             while (stmt->step()) {
                 auto obj = modelFromStatement(*stmt);
                 // Calculate angular distance
                 double dRa = (obj.radJ2000 - ra) * std::cos(dec * M_PI / 180.0);
                 double dDec = obj.decDJ2000 - dec;
                 double dist = std::sqrt(dRa * dRa + dDec * dDec);
-                
+
                 if (dist <= radius) {
                     results.push_back(obj);
                     if (static_cast<int>(results.size()) >= limit) break;
@@ -537,19 +537,19 @@ public:
         }
         return results;
     }
-    
+
     std::vector<CelestialObjectModel> getByType(const std::string& type, int limit) {
         std::vector<CelestialObjectModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE type = ?
                 ORDER BY click_count DESC
                 LIMIT ?
             )");
             stmt->bind(1, type);
             stmt->bind(2, limit);
-            
+
             while (stmt->step()) {
                 results.push_back(modelFromStatement(*stmt));
             }
@@ -558,13 +558,13 @@ public:
         }
         return results;
     }
-    
+
     std::vector<CelestialObjectModel> getByMagnitudeRange(
         double minMag, double maxMag, int limit) {
         std::vector<CelestialObjectModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE visual_magnitude_v BETWEEN ? AND ?
                 ORDER BY visual_magnitude_v ASC
                 LIMIT ?
@@ -572,7 +572,7 @@ public:
             stmt->bind(1, minMag);
             stmt->bind(2, maxMag);
             stmt->bind(3, limit);
-            
+
             while (stmt->step()) {
                 results.push_back(modelFromStatement(*stmt));
             }
@@ -581,7 +581,7 @@ public:
         }
         return results;
     }
-    
+
     int batchInsert(const std::vector<CelestialObjectModel>& objects, size_t chunkSize) {
         int successCount = 0;
         try {
@@ -605,7 +605,7 @@ public:
         }
         return successCount;
     }
-    
+
     int batchUpdate(const std::vector<CelestialObjectModel>& objects, size_t chunkSize) {
         int successCount = 0;
         try {
@@ -629,7 +629,7 @@ public:
         }
         return successCount;
     }
-    
+
     int upsert(const std::vector<CelestialObjectModel>& objects) {
         int affectedCount = 0;
         try {
@@ -655,7 +655,7 @@ public:
         }
         return affectedCount;
     }
-    
+
     ImportResult importFromJson(const std::string& filename, const ImportExportOptions& options) {
         ImportResult result;
         try {
@@ -664,10 +664,10 @@ public:
                 result.errors.push_back("Failed to open file: " + filename);
                 return result;
             }
-            
+
             json data;
             file >> data;
-            
+
             auto transaction = db_->beginTransaction();
             try {
                 for (const auto& item : data) {
@@ -699,7 +699,7 @@ public:
                         obj.positionAngle = item.value("PositionAngle", item.value("position_angle", 0.0));
                         obj.detailedDescription = item.value("DetailedDescription", item.value("detailed_description", ""));
                         obj.briefDescription = item.value("BriefDescription", item.value("brief_description", ""));
-                        
+
                         if (options.includeAliases && item.contains("aliases")) {
                             if (item["aliases"].is_array()) {
                                 std::ostringstream oss;
@@ -712,13 +712,13 @@ public:
                                 obj.aliases = item["aliases"].get<std::string>();
                             }
                         }
-                        
+
                         if (obj.identifier.empty()) {
                             result.errors.push_back("Record " + std::to_string(result.totalRecords) + ": Missing identifier");
                             ++result.errorCount;
                             continue;
                         }
-                        
+
                         // Check for duplicate
                         auto existing = findByIdentifier(obj.identifier);
                         if (existing) {
@@ -746,7 +746,7 @@ public:
                 transaction->rollback();
                 throw;
             }
-            
+
             spdlog::info("CelestialRepository: Imported {} objects from JSON ({} success, {} errors, {} duplicates)",
                 result.totalRecords, result.successCount, result.errorCount, result.duplicateCount);
         } catch (const std::exception& e) {
@@ -755,7 +755,7 @@ public:
         }
         return result;
     }
-    
+
     ImportResult importFromCsv(const std::string& filename, const ImportExportOptions& options) {
         ImportResult result;
         try {
@@ -764,10 +764,10 @@ public:
                 result.errors.push_back("Failed to open file: " + filename);
                 return result;
             }
-            
+
             std::string line;
             std::vector<std::string> headers;
-            
+
             // Read header
             if (options.hasHeader && std::getline(file, line)) {
                 std::istringstream iss(line);
@@ -779,7 +779,7 @@ public:
                     headers.push_back(field);
                 }
             }
-            
+
             auto transaction = db_->beginTransaction();
             try {
                 while (std::getline(file, line)) {
@@ -793,12 +793,12 @@ public:
                             field.erase(field.find_last_not_of(" \t\"") + 1);
                             values.push_back(field);
                         }
-                        
+
                         CelestialObjectModel obj;
                         for (size_t i = 0; i < headers.size() && i < values.size(); ++i) {
                             const auto& h = headers[i];
                             const auto& v = values[i];
-                            
+
                             if (h == "identifier" || h == "Identifier") obj.identifier = v;
                             else if (h == "type" || h == "Type") obj.type = v;
                             else if (h == "morphology" || h == "Morphology") obj.morphology = v;
@@ -811,12 +811,12 @@ public:
                             else if (h == "visual_magnitude_v" || h == "VisualMagnitudeV") obj.visualMagnitudeV = std::stod(v);
                             else if (h == "aliases") obj.aliases = v;
                         }
-                        
+
                         if (obj.identifier.empty()) {
                             ++result.errorCount;
                             continue;
                         }
-                        
+
                         auto existing = findByIdentifier(obj.identifier);
                         if (existing) {
                             obj.id = existing->id;
@@ -843,7 +843,7 @@ public:
                 transaction->rollback();
                 throw;
             }
-            
+
             spdlog::info("CelestialRepository: Imported {} records from CSV", result.successCount);
         } catch (const std::exception& e) {
             result.errors.push_back("Import failed: " + std::string(e.what()));
@@ -851,13 +851,13 @@ public:
         }
         return result;
     }
-    
+
     int exportToJson(const std::string& filename, const CelestialSearchFilter& filter,
                      const ImportExportOptions& options) {
         try {
             auto objects = search(filter);
             json data = json::array();
-            
+
             for (const auto& obj : objects) {
                 json item;
                 item["identifier"] = obj.identifier;
@@ -886,7 +886,7 @@ public:
                 item["detailed_description"] = obj.detailedDescription;
                 item["brief_description"] = obj.briefDescription;
                 item["click_count"] = obj.clickCount;
-                
+
                 if (options.includeAliases && !obj.aliases.empty()) {
                     json aliases = json::array();
                     std::istringstream iss(obj.aliases);
@@ -898,13 +898,13 @@ public:
                     }
                     item["aliases"] = aliases;
                 }
-                
+
                 data.push_back(item);
             }
-            
+
             std::ofstream file(filename);
             file << data.dump(2);
-            
+
             spdlog::info("CelestialRepository: Exported {} objects to JSON", objects.size());
             return static_cast<int>(objects.size());
         } catch (const std::exception& e) {
@@ -912,13 +912,13 @@ public:
             return 0;
         }
     }
-    
+
     int exportToCsv(const std::string& filename, const CelestialSearchFilter& filter,
                     const ImportExportOptions& options) {
         try {
             auto objects = search(filter);
             std::ofstream file(filename);
-            
+
             // Write header
             file << "identifier" << options.delimiter
                  << "type" << options.delimiter
@@ -935,7 +935,7 @@ public:
                 file << options.delimiter << "aliases";
             }
             file << "\n";
-            
+
             for (const auto& obj : objects) {
                 file << obj.identifier << options.delimiter
                      << obj.type << options.delimiter
@@ -953,7 +953,7 @@ public:
                 }
                 file << "\n";
             }
-            
+
             spdlog::info("CelestialRepository: Exported {} objects to CSV", objects.size());
             return static_cast<int>(objects.size());
         } catch (const std::exception& e) {
@@ -961,12 +961,12 @@ public:
             return 0;
         }
     }
-    
+
     bool addRating(const std::string& userId, const std::string& objectId, double rating) {
         try {
             auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::system_clock::now().time_since_epoch()).count();
-            
+
             auto stmt = db_->prepare(R"(
                 INSERT OR REPLACE INTO user_ratings (user_id, object_id, rating, timestamp)
                 VALUES (?, ?, ?, ?)
@@ -981,18 +981,18 @@ public:
             return false;
         }
     }
-    
+
     std::vector<UserRatingModel> getUserRatings(const std::string& userId, int limit) {
         std::vector<UserRatingModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT id, user_id, object_id, rating, timestamp 
+                SELECT id, user_id, object_id, rating, timestamp
                 FROM user_ratings WHERE user_id = ?
                 ORDER BY timestamp DESC LIMIT ?
             )");
             stmt->bind(1, userId);
             stmt->bind(2, limit);
-            
+
             while (stmt->step()) {
                 UserRatingModel rating;
                 rating.id = stmt->getInt64(0);
@@ -1007,7 +1007,7 @@ public:
         }
         return results;
     }
-    
+
     std::optional<double> getAverageRating(const std::string& objectId) {
         try {
             auto stmt = db_->prepare(
@@ -1022,13 +1022,13 @@ public:
             return std::nullopt;
         }
     }
-    
+
     void recordSearch(const std::string& userId, const std::string& query,
                       const std::string& searchType, int resultCount) {
         try {
             auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::system_clock::now().time_since_epoch()).count();
-            
+
             auto stmt = db_->prepare(R"(
                 INSERT INTO search_history (user_id, query, search_type, timestamp, result_count)
                 VALUES (?, ?, ?, ?, ?)
@@ -1043,7 +1043,7 @@ public:
             spdlog::error("CelestialRepository: RecordSearch failed: {}", e.what());
         }
     }
-    
+
     std::vector<SearchHistoryModel> getSearchHistory(const std::string& userId, int limit) {
         std::vector<SearchHistoryModel> results;
         try {
@@ -1054,7 +1054,7 @@ public:
             )");
             stmt->bind(1, userId);
             stmt->bind(2, limit);
-            
+
             while (stmt->step()) {
                 SearchHistoryModel entry;
                 entry.id = stmt->getInt64(0);
@@ -1070,7 +1070,7 @@ public:
         }
         return results;
     }
-    
+
     std::vector<std::pair<std::string, int>> getPopularSearches(int limit) {
         std::vector<std::pair<std::string, int>> results;
         try {
@@ -1079,7 +1079,7 @@ public:
                 GROUP BY query ORDER BY cnt DESC LIMIT ?
             )");
             stmt->bind(1, limit);
-            
+
             while (stmt->step()) {
                 results.emplace_back(stmt->getText(0), stmt->getInt(1));
             }
@@ -1088,7 +1088,7 @@ public:
         }
         return results;
     }
-    
+
     int64_t count() {
         try {
             auto stmt = db_->prepare("SELECT COUNT(*) FROM celestial_objects");
@@ -1101,7 +1101,7 @@ public:
             return 0;
         }
     }
-    
+
     std::unordered_map<std::string, int64_t> countByType() {
         std::unordered_map<std::string, int64_t> results;
         try {
@@ -1115,11 +1115,11 @@ public:
         }
         return results;
     }
-    
+
     bool incrementClickCount(const std::string& identifier) {
         try {
             auto stmt = db_->prepare(R"(
-                UPDATE celestial_objects 
+                UPDATE celestial_objects
                 SET click_count = click_count + 1, updated_at = strftime('%s', 'now')
                 WHERE identifier = ?
             )");
@@ -1130,16 +1130,16 @@ public:
             return false;
         }
     }
-    
+
     std::vector<CelestialObjectModel> getMostPopular(int limit) {
         std::vector<CelestialObjectModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 ORDER BY click_count DESC LIMIT ?
             )");
             stmt->bind(1, limit);
-            
+
             while (stmt->step()) {
                 results.push_back(modelFromStatement(*stmt));
             }
@@ -1148,7 +1148,7 @@ public:
         }
         return results;
     }
-    
+
     void optimize() {
         try {
             db_->execute("VACUUM");
@@ -1158,7 +1158,7 @@ public:
             spdlog::error("CelestialRepository: Optimize failed: {}", e.what());
         }
     }
-    
+
     void clearAll(bool includeHistory) {
         try {
             db_->execute("DELETE FROM celestial_objects");
@@ -1171,23 +1171,23 @@ public:
             spdlog::error("CelestialRepository: ClearAll failed: {}", e.what());
         }
     }
-    
+
     std::string getStatistics() {
         json stats;
         try {
             stats["total_objects"] = count();
             stats["objects_by_type"] = countByType();
-            
+
             auto ratingStmt = db_->prepare("SELECT COUNT(*) FROM user_ratings");
             if (ratingStmt->step()) {
                 stats["total_ratings"] = ratingStmt->getInt64(0);
             }
-            
+
             auto historyStmt = db_->prepare("SELECT COUNT(*) FROM search_history");
             if (historyStmt->step()) {
                 stats["total_searches"] = historyStmt->getInt64(0);
             }
-            
+
             stats["popular_searches"] = json::array();
             for (const auto& [query, cnt] : getPopularSearches(5)) {
                 stats["popular_searches"].push_back({{"query", query}, {"count", cnt}});

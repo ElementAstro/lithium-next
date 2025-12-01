@@ -25,4 +25,3 @@ namespace lithium::target::repository {
 // - MemoryRepository: In-memory volatile storage
 // - CachedRepository: LRU caching decorator
 }  // namespace lithium::target::repository
-

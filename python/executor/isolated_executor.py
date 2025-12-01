@@ -29,6 +29,7 @@ HEADER_SIZE = 16
 
 class MessageType:
     """Message types matching C++ enum"""
+
     HANDSHAKE = 0x01
     HANDSHAKE_ACK = 0x02
     SHUTDOWN = 0x03
@@ -52,6 +53,7 @@ class MessageType:
 @dataclass
 class MessageHeader:
     """Message header structure"""
+
     magic: int = MAGIC
     version: int = VERSION
     msg_type: int = 0
@@ -63,24 +65,25 @@ class MessageHeader:
     def serialize(self) -> bytes:
         """Serialize header to bytes"""
         return struct.pack(
-            '>IBBIIBB',
+            ">IBBIIBB",
             self.magic,
             self.version,
             self.msg_type,
             self.payload_size,
             self.sequence_id,
             self.flags,
-            self.reserved
+            self.reserved,
         )
 
     @classmethod
-    def deserialize(cls, data: bytes) -> 'MessageHeader':
+    def deserialize(cls, data: bytes) -> "MessageHeader":
         """Deserialize header from bytes"""
         if len(data) < HEADER_SIZE:
             raise ValueError("Insufficient data for header")
 
-        magic, version, msg_type, payload_size, sequence_id, flags, reserved = \
-            struct.unpack('>IBBIIBB', data[:HEADER_SIZE])
+        magic, version, msg_type, payload_size, sequence_id, flags, reserved = (
+            struct.unpack(">IBBIIBB", data[:HEADER_SIZE])
+        )
 
         if magic != MAGIC:
             raise ValueError(f"Invalid magic: {magic:#x}")
@@ -92,24 +95,23 @@ class MessageHeader:
             payload_size=payload_size,
             sequence_id=sequence_id,
             flags=flags,
-            reserved=reserved
+            reserved=reserved,
         )
 
 
 @dataclass
 class Message:
     """IPC Message"""
+
     header: MessageHeader
     payload: bytes
 
     @classmethod
-    def create(cls, msg_type: int, payload: dict, sequence_id: int = 0) -> 'Message':
+    def create(cls, msg_type: int, payload: dict, sequence_id: int = 0) -> "Message":
         """Create a message from JSON payload"""
-        payload_bytes = json.dumps(payload).encode('utf-8')
+        payload_bytes = json.dumps(payload).encode("utf-8")
         header = MessageHeader(
-            msg_type=msg_type,
-            payload_size=len(payload_bytes),
-            sequence_id=sequence_id
+            msg_type=msg_type, payload_size=len(payload_bytes), sequence_id=sequence_id
         )
         return cls(header=header, payload=payload_bytes)
 
@@ -121,7 +123,7 @@ class Message:
         """Get payload as JSON"""
         if not self.payload:
             return {}
-        return json.loads(self.payload.decode('utf-8'))
+        return json.loads(self.payload.decode("utf-8"))
 
 
 class IPCChannel:
@@ -163,7 +165,7 @@ class IPCChannel:
             if payload is None:
                 return None
         else:
-            payload = b''
+            payload = b""
 
         return Message(header=header, payload=payload)
 
@@ -171,7 +173,7 @@ class IPCChannel:
         """Read exactly size bytes"""
         import select
 
-        data = b''
+        data = b""
         while len(data) < size:
             if timeout is not None:
                 ready, _, _ = select.select([self.read_fd], [], [], timeout)
@@ -270,12 +272,15 @@ class IsolatedExecutor:
             raise RuntimeError("Handshake failed: no request received")
 
         # Send handshake acknowledgment
-        self.channel.send_json(MessageType.HANDSHAKE_ACK, {
-            'version': '1.0',
-            'python_version': sys.version,
-            'capabilities': ['execute', 'progress', 'cancel'],
-            'pid': os.getpid()
-        })
+        self.channel.send_json(
+            MessageType.HANDSHAKE_ACK,
+            {
+                "version": "1.0",
+                "python_version": sys.version,
+                "capabilities": ["execute", "progress", "cancel"],
+                "pid": os.getpid(),
+            },
+        )
 
     def _handle_message(self, msg: Message) -> None:
         """Handle incoming message"""
@@ -300,27 +305,27 @@ class IsolatedExecutor:
         self.start_time = time.time()
 
         payload = msg.get_payload_json()
-        script_content = payload.get('script_content', '')
-        script_path = payload.get('script_path', '')
-        function_name = payload.get('function_name', '')
-        arguments = payload.get('arguments', {})
-        working_directory = payload.get('working_directory', '')
-        self.allowed_imports = payload.get('allowed_imports', [])
+        script_content = payload.get("script_content", "")
+        script_path = payload.get("script_path", "")
+        function_name = payload.get("function_name", "")
+        arguments = payload.get("arguments", {})
+        working_directory = payload.get("working_directory", "")
+        self.allowed_imports = payload.get("allowed_imports", [])
 
         # Change working directory if specified
         if working_directory:
             os.chdir(working_directory)
 
         result = {
-            'success': False,
-            'result': None,
-            'output': '',
-            'error_output': '',
-            'exception': '',
-            'exception_type': '',
-            'traceback': '',
-            'execution_time_ms': 0,
-            'peak_memory_bytes': 0
+            "success": False,
+            "result": None,
+            "output": "",
+            "error_output": "",
+            "exception": "",
+            "exception_type": "",
+            "traceback": "",
+            "execution_time_ms": 0,
+            "peak_memory_bytes": 0,
         }
 
         try:
@@ -330,32 +335,32 @@ class IsolatedExecutor:
                     exec_result = self._execute_script(script_content, arguments)
                 elif function_name:
                     exec_result = self._execute_function(
-                        payload.get('module_name', ''),
-                        function_name,
-                        arguments
+                        payload.get("module_name", ""), function_name, arguments
                     )
                 else:
                     raise ValueError("No script content or function specified")
 
-            result['success'] = True
-            result['result'] = self._make_serializable(exec_result)
-            result['output'] = capture.get_stdout()
-            result['error_output'] = capture.get_stderr()
+            result["success"] = True
+            result["result"] = self._make_serializable(exec_result)
+            result["output"] = capture.get_stdout()
+            result["error_output"] = capture.get_stderr()
 
         except Exception as e:
-            result['success'] = False
-            result['exception'] = str(e)
-            result['exception_type'] = type(e).__name__
-            result['traceback'] = traceback.format_exc()
+            result["success"] = False
+            result["exception"] = str(e)
+            result["exception_type"] = type(e).__name__
+            result["traceback"] = traceback.format_exc()
 
         finally:
-            result['execution_time_ms'] = int((time.time() - self.start_time) * 1000)
+            result["execution_time_ms"] = int((time.time() - self.start_time) * 1000)
 
             # Try to get memory usage
             try:
                 import resource
-                result['peak_memory_bytes'] = resource.getrusage(
-                    resource.RUSAGE_SELF).ru_maxrss * 1024
+
+                result["peak_memory_bytes"] = (
+                    resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+                )
             except:
                 pass
 
@@ -365,22 +370,23 @@ class IsolatedExecutor:
         """Execute a script string"""
         # Create namespace with arguments
         namespace = {
-            '__name__': '__main__',
-            '__args__': arguments,
-            'args': arguments,
-            'report_progress': self._report_progress,
-            'log': self._log
+            "__name__": "__main__",
+            "__args__": arguments,
+            "args": arguments,
+            "report_progress": self._report_progress,
+            "log": self._log,
         }
 
         # Compile and execute
-        code = compile(script_content, '<script>', 'exec')
+        code = compile(script_content, "<script>", "exec")
         exec(code, namespace)
 
         # Return result if defined
-        return namespace.get('result', None)
+        return namespace.get("result", None)
 
-    def _execute_function(self, module_name: str, function_name: str,
-                          arguments: dict) -> Any:
+    def _execute_function(
+        self, module_name: str, function_name: str, arguments: dict
+    ) -> Any:
         """Execute a function from a module"""
         import importlib
 
@@ -398,31 +404,31 @@ class IsolatedExecutor:
         else:
             return func(arguments)
 
-    def _report_progress(self, percentage: float, message: str = '',
-                         current_step: str = '') -> None:
+    def _report_progress(
+        self, percentage: float, message: str = "", current_step: str = ""
+    ) -> None:
         """Report progress to parent process"""
-        elapsed_ms = int((time.time() - self.start_time) * 1000) if self.start_time else 0
+        elapsed_ms = (
+            int((time.time() - self.start_time) * 1000) if self.start_time else 0
+        )
 
-        self.channel.send_json(MessageType.PROGRESS, {
-            'percentage': percentage,
-            'message': message,
-            'current_step': current_step,
-            'elapsed_ms': elapsed_ms
-        })
+        self.channel.send_json(
+            MessageType.PROGRESS,
+            {
+                "percentage": percentage,
+                "message": message,
+                "current_step": current_step,
+                "elapsed_ms": elapsed_ms,
+            },
+        )
 
     def _log(self, level: str, message: str) -> None:
         """Send log message to parent process"""
-        self.channel.send_json(MessageType.LOG, {
-            'level': level,
-            'message': message
-        })
+        self.channel.send_json(MessageType.LOG, {"level": level, "message": message})
 
-    def _send_error(self, message: str, tb: str = '') -> None:
+    def _send_error(self, message: str, tb: str = "") -> None:
         """Send error message"""
-        self.channel.send_json(MessageType.ERROR, {
-            'message': message,
-            'traceback': tb
-        })
+        self.channel.send_json(MessageType.ERROR, {"message": message, "traceback": tb})
 
     def _make_serializable(self, obj: Any) -> Any:
         """Convert object to JSON-serializable form"""
@@ -434,12 +440,13 @@ class IsolatedExecutor:
             return [self._make_serializable(item) for item in obj]
         if isinstance(obj, dict):
             return {str(k): self._make_serializable(v) for k, v in obj.items()}
-        if hasattr(obj, '__dict__'):
+        if hasattr(obj, "__dict__"):
             return self._make_serializable(obj.__dict__)
 
         # Try numpy array
         try:
             import numpy as np
+
             if isinstance(obj, np.ndarray):
                 return obj.tolist()
             if isinstance(obj, (np.integer, np.floating)):
@@ -450,8 +457,9 @@ class IsolatedExecutor:
         # Try pandas
         try:
             import pandas as pd
+
             if isinstance(obj, pd.DataFrame):
-                return obj.to_dict(orient='records')
+                return obj.to_dict(orient="records")
             if isinstance(obj, pd.Series):
                 return obj.to_list()
         except ImportError:
@@ -479,5 +487,5 @@ def main():
     executor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

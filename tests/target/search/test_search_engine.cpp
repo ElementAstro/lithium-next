@@ -13,7 +13,7 @@ protected:
     void SetUp() override {
         auto repository = std::make_shared<CelestialRepository>(":memory:");
         repository->initializeSchema();
-        
+
         // Add test data
         CelestialObjectModel obj;
         obj.identifier = "M31";
@@ -21,7 +21,7 @@ protected:
         obj.radJ2000 = 10.6847;
         obj.decDJ2000 = 41.2689;
         repository->insert(obj);
-        
+
         engine_ = std::make_unique<SearchEngine>(repository);
         engine_->initialize();
     }
@@ -62,7 +62,7 @@ TEST_F(SearchEngineModuleTest, AdvancedSearch) {
     CelestialSearchFilter filter;
     filter.type = "Galaxy";
     filter.limit = 10;
-    
+
     auto results = engine_->advancedSearch(filter);
     EXPECT_GE(results.size(), 1);
 }
