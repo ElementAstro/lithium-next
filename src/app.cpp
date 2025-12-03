@@ -11,8 +11,13 @@
 #include "device/manager.hpp"
 
 #include "script/check.hpp"
+#include "script/interpreter_pool.hpp"
 #include "script/python_caller.hpp"
+#include "script/script_service.hpp"
 #include "script/shell/script_manager.hpp"
+#include "script/tools/tool_registry.hpp"
+#include "script/venv/venv_manager.hpp"
+#include "script/isolated/runner.hpp"
 
 #include "config/config.hpp"
 #include "config/core/config_registry.hpp"
@@ -31,18 +36,25 @@
 
 #include "debug/terminal.hpp"
 
-#include "server/controller/config.hpp"
-// #include "server/controller/python.hpp"
-#include "server/controller/camera.hpp"
-#include "server/controller/filterwheel.hpp"
-#include "server/controller/focuser.hpp"
-#include "server/controller/isolated.hpp"
-#include "server/controller/mount.hpp"
-#include "server/controller/script.hpp"
-#include "server/controller/search.hpp"
+// System Controllers
+#include "server/controller/system/config.hpp"
+#include "server/controller/system/search.hpp"
+
+// Device Controllers
+#include "server/controller/device/camera.hpp"
+#include "server/controller/device/filterwheel.hpp"
+#include "server/controller/device/focuser.hpp"
+#include "server/controller/device/mount.hpp"
+
+// Script Controllers
+#include "server/controller/script/python.hpp"
+#include "server/controller/script/isolated.hpp"
+#include "server/controller/script/shell.hpp"
+#include "server/controller/script/tool_registry.hpp"
+#include "server/controller/script/venv.hpp"
+
+// Sequencer
 #include "server/controller/sequencer.hpp"
-#include "server/controller/tool_registry.hpp"
-#include "server/controller/venv.hpp"
 #include "server/websocket.hpp"
 
 using namespace std::string_literals;
@@ -138,18 +150,49 @@ void injectPtr() {
         Constants::DEVICE_MANAGER,
         atom::memory::makeShared<lithium::DeviceManager>());
 
+    // Initialize unified ScriptService (integrates all script components)
+    auto scriptAnalysisPath = env->getEnv("LITHIUM_SCRIPT_ANALYSIS_PATH");
+    auto toolsDir = env->getEnv("LITHIUM_TOOLS_DIR");
+
+    lithium::ScriptServiceConfig scriptConfig;
+    scriptConfig.analysisConfigPath = scriptAnalysisPath.empty()
+        ? "./config/script/analysis.json"s : scriptAnalysisPath;
+    scriptConfig.toolsDirectory = toolsDir.empty()
+        ? "./python/tools"s : toolsDir;
+    scriptConfig.poolSize = 4;
+    scriptConfig.autoDiscoverTools = true;
+    scriptConfig.enableSecurityAnalysis = true;
+
+    auto scriptService = atom::memory::makeShared<lithium::ScriptService>(scriptConfig);
+    auto initResult = scriptService->initialize();
+    if (!initResult) {
+        LOG_ERROR("Failed to initialize ScriptService: {}",
+                  lithium::scriptServiceErrorToString(initResult.error()));
+    }
+    AddPtr<lithium::ScriptService>(Constants::SCRIPT_SERVICE, scriptService);
+
+    // Also expose individual components for backward compatibility
     AddPtr<lithium::PythonWrapper>(
         Constants::PYTHON_WRAPPER,
-        atom::memory::makeShared<lithium::PythonWrapper>());
-    AddPtr<lithium::ScriptManager>(
+        scriptService->getPythonWrapper());
+    AddPtr<lithium::shell::ScriptManager>(
         Constants::SCRIPT_MANAGER,
-        atom::memory::makeShared<lithium::ScriptManager>());
-
-    auto scriptDir = env->getEnv("LITHIUM_SCRIPT_ANALYSIS_PATH");
+        scriptService->getScriptManager());
     AddPtr<lithium::ScriptAnalyzer>(
         Constants::SCRIPT_ANALYZER,
-        atom::memory::makeShared<lithium::ScriptAnalyzer>(
-            scriptDir.empty() ? "./config/script/analysis.json"s : scriptDir));
+        scriptService->getScriptAnalyzer());
+    AddPtr<lithium::InterpreterPool>(
+        Constants::INTERPRETER_POOL,
+        scriptService->getInterpreterPool());
+    AddPtr<lithium::tools::PythonToolRegistry>(
+        Constants::PYTHON_TOOL_REGISTRY,
+        scriptService->getToolRegistry());
+    AddPtr<lithium::venv::VenvManager>(
+        Constants::VENV_MANAGER,
+        scriptService->getVenvManager());
+    AddPtr<lithium::isolated::PythonRunner>(
+        Constants::ISOLATED_PYTHON_RUNNER,
+        scriptService->getIsolatedRunner());
 
     LOG_INFO("Global pointers injected.");
 }
@@ -326,6 +369,7 @@ int main(int argc, char *argv[]) {
     controllers.push_back(atom::memory::makeShared<IsolatedController>());
     controllers.push_back(atom::memory::makeShared<ToolRegistryController>());
     controllers.push_back(atom::memory::makeShared<VenvController>());
+    controllers.push_back(atom::memory::makeShared<PythonServiceController>());
 
     std::thread serverThread([&app, &controllers, &serverConfig]() {
         registerControllers(app, controllers);

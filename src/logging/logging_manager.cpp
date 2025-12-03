@@ -45,7 +45,8 @@ void LoggingManager::initialize(const LoggingConfig& config) {
 
     // Initialize async logging if enabled
     if (config.async_logging) {
-        spdlog::init_thread_pool(config.async_queue_size, 1);
+        spdlog::init_thread_pool(config.async_queue_size,
+                                 config.async_thread_count);
     }
 
     // Create configured sinks

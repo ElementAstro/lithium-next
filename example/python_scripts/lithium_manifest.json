@@ -1,0 +1,274 @@
+{
+  "module_name": "example_exports",
+  "version": "1.0.0",
+  "description": "Example Python script demonstrating lithium_bridge exports",
+  "author": "Max Qian",
+  "exports": {
+    "controllers": [
+      {
+        "name": "add_numbers",
+        "function": "add_numbers",
+        "endpoint": "/api/math/add",
+        "method": "POST",
+        "description": "Add two numbers together",
+        "parameters": [
+          {
+            "name": "a",
+            "type": "float",
+            "required": true,
+            "description": "First number"
+          },
+          {
+            "name": "b",
+            "type": "float",
+            "required": true,
+            "description": "Second number"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["math", "basic"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "multiply_numbers",
+        "function": "multiply_numbers",
+        "endpoint": "/api/math/multiply",
+        "method": "POST",
+        "description": "Multiply two numbers",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "float",
+            "required": true,
+            "description": "First number"
+          },
+          {
+            "name": "y",
+            "type": "float",
+            "required": true,
+            "description": "Second number"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["math", "basic"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "calculate",
+        "function": "calculate",
+        "endpoint": "/api/math/calculate",
+        "method": "POST",
+        "description": "Perform various mathematical operations",
+        "parameters": [
+          {
+            "name": "a",
+            "type": "float",
+            "required": true,
+            "description": "First operand"
+          },
+          {
+            "name": "b",
+            "type": "float",
+            "required": true,
+            "description": "Second operand"
+          },
+          {
+            "name": "operation",
+            "type": "str",
+            "required": false,
+            "default": "add",
+            "description": "Operation to perform (add, subtract, multiply, divide)"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["math", "advanced"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "reverse_string",
+        "function": "reverse_string",
+        "endpoint": "/api/text/reverse",
+        "method": "POST",
+        "description": "Reverse a string",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "required": true,
+            "description": "String to reverse"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["text", "utility"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "list_statistics",
+        "function": "list_statistics",
+        "endpoint": "/api/list/stats",
+        "method": "POST",
+        "description": "Calculate statistics for a list of numbers",
+        "parameters": [
+          {
+            "name": "numbers",
+            "type": "list",
+            "required": true,
+            "description": "List of numbers to analyze"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["math", "statistics"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "get_module_info",
+        "function": "get_module_info",
+        "endpoint": "/api/info",
+        "method": "GET",
+        "description": "Get module information",
+        "parameters": [],
+        "return_type": "dict",
+        "tags": ["info"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "echo",
+        "function": "echo",
+        "endpoint": "/api/echo",
+        "method": "POST",
+        "description": "Echo a message back",
+        "parameters": [
+          {
+            "name": "message",
+            "type": "str",
+            "required": true,
+            "description": "Message to echo"
+          },
+          {
+            "name": "prefix",
+            "type": "str",
+            "required": false,
+            "default": "",
+            "description": "Optional prefix to add"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["utility"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "legacy_greet",
+        "function": "legacy_greet",
+        "endpoint": "/api/legacy/greet",
+        "method": "GET",
+        "description": "Legacy greeting endpoint",
+        "deprecated": true,
+        "deprecation_message": "Use /api/echo instead",
+        "parameters": [
+          {
+            "name": "name",
+            "type": "str",
+            "required": false,
+            "default": "World",
+            "description": "Name to greet"
+          }
+        ],
+        "return_type": "str",
+        "tags": ["legacy"],
+        "version": "1.0.0"
+      }
+    ],
+    "commands": [
+      {
+        "name": "process_data",
+        "function": "process_data",
+        "command_id": "data.process",
+        "description": "Process input data with various transformations",
+        "priority": 5,
+        "timeout_ms": 10000,
+        "parameters": [
+          {
+            "name": "data",
+            "type": "dict",
+            "required": true,
+            "description": "Input data dictionary"
+          },
+          {
+            "name": "transform",
+            "type": "str",
+            "required": false,
+            "default": "none",
+            "description": "Transformation to apply (none, uppercase, lowercase)"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["data", "processing"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "analyze_file_path",
+        "function": "analyze_file_path",
+        "command_id": "file.analyze",
+        "description": "Analyze file path and return metadata",
+        "priority": 0,
+        "timeout_ms": 5000,
+        "parameters": [
+          {
+            "name": "path",
+            "type": "str",
+            "required": true,
+            "description": "File path to analyze"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["file", "utility"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "batch_execute",
+        "function": "batch_execute",
+        "command_id": "batch.execute",
+        "description": "Execute a batch of operations",
+        "priority": 10,
+        "timeout_ms": 30000,
+        "parameters": [
+          {
+            "name": "operations",
+            "type": "list",
+            "required": true,
+            "description": "List of operation dictionaries with 'type' and 'args'"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["batch", "processing"],
+        "version": "1.0.0"
+      },
+      {
+        "name": "echo",
+        "function": "echo",
+        "command_id": "util.echo",
+        "description": "Echo a message back (command version)",
+        "priority": 0,
+        "timeout_ms": 1000,
+        "parameters": [
+          {
+            "name": "message",
+            "type": "str",
+            "required": true,
+            "description": "Message to echo"
+          },
+          {
+            "name": "prefix",
+            "type": "str",
+            "required": false,
+            "default": "",
+            "description": "Optional prefix to add"
+          }
+        ],
+        "return_type": "dict",
+        "tags": ["utility"],
+        "version": "1.0.0"
+      }
+    ]
+  }
+}

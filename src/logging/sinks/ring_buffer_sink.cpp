@@ -8,6 +8,8 @@
 
 #include <sstream>
 
+#include "../log_statistics.hpp"
+
 namespace lithium::logging {
 
 template <typename Mutex>
@@ -36,6 +38,10 @@ void RingBufferSinkMt<Mutex>::sink_it_(const spdlog::details::log_msg& msg) {
         entry.source_file = msg.source.filename;
         entry.source_line = msg.source.line;
     }
+
+    // Record statistics
+    LogStatistics::getInstance().recordMessage(entry.level, entry.logger_name,
+                                               entry.message.size());
 
     // Add to ring buffer
     {

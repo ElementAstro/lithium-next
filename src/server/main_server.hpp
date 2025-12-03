@@ -17,29 +17,47 @@
 #include "task_manager.hpp"
 #include "websocket.hpp"
 
-// Controllers
-#include "controller/camera.hpp"
-#include "controller/components.hpp"
-#include "controller/config.hpp"
+// Base Controller
 #include "controller/controller.hpp"
-#include "controller/database.hpp"
-#include "controller/dome.hpp"
-#include "controller/filesystem.hpp"
-#include "controller/filterwheel.hpp"
-#include "controller/focuser.hpp"
-#include "controller/guider.hpp"
-#include "controller/logging.hpp"
-#include "controller/mount.hpp"
-#include "controller/python.hpp"
-#include "controller/script.hpp"
-#include "controller/search.hpp"
+
+// Device Controllers
+#include "controller/device/camera.hpp"
+#include "controller/device/dome.hpp"
+#include "controller/device/filterwheel.hpp"
+#include "controller/device/focuser.hpp"
+#include "controller/device/guider.hpp"
+#include "controller/device/mount.hpp"
+#include "controller/device/sky.hpp"
+#include "controller/device/switch.hpp"
+
+// System Controllers
+#include "controller/system/config.hpp"
+#include "controller/system/database.hpp"
+#include "controller/system/filesystem.hpp"
+#include "controller/system/logging.hpp"
+#include "controller/system/os.hpp"
+#include "controller/system/search.hpp"
+#include "controller/system/server_status.hpp"
+
+// Script Controllers
+#include "controller/script/python.hpp"
+#include "controller/script/shell.hpp"
+#include "controller/script/isolated.hpp"
+#include "controller/script/tool_registry.hpp"
+#include "controller/script/venv.hpp"
+
+// Plugin Controllers
+#include "controller/plugin/components.hpp"
+#include "controller/plugin/plugin.hpp"
+
+// Sequencer Controllers
 #include "controller/sequencer/execution.hpp"
 #include "controller/sequencer/management.hpp"
 #include "controller/sequencer/target.hpp"
 #include "controller/sequencer/task.hpp"
-#include "controller/sky.hpp"
-#include "controller/switch.hpp"
-#include "controller/system.hpp"
+
+// Plugin system
+#include "plugin/plugin_manager.hpp"
 
 // Logging system
 #include "logging/logging_manager.hpp"
@@ -73,6 +91,11 @@ public:
 
         // Logging configuration
         logging::LoggingConfig logging_config;
+
+        // Plugin configuration
+        plugin::PluginManagerConfig plugin_config;
+        bool enable_plugins = true;
+        bool auto_load_plugins = true;
     };
 
     /**
@@ -84,12 +107,14 @@ public:
           event_loop_(std::make_shared<app::EventLoop>(config.thread_count)),
           exposure_sequence_(
               std::make_shared<lithium::task::ExposureSequence>()),
-          task_manager_(std::make_shared<TaskManager>(event_loop_)) {
+          task_manager_(std::make_shared<TaskManager>(event_loop_)),
+          plugin_manager_(plugin::PluginManager::createShared(config.plugin_config)) {
         LOG_INFO("Initializing Lithium Server v1.0.0");
         initializeLogging();
         initializeMiddleware();
         initializeControllers();
         initializeWebSocket();
+        initializePlugins();
     }
 
     /**
@@ -113,6 +138,22 @@ public:
             websocket_server_->start();
         }
 
+        // Schedule periodic task cleanup (every 5 minutes, remove tasks older than 1 hour)
+        if (task_manager_) {
+            cleanup_task_id_ = task_manager_->schedulePeriodicTask(
+                "TaskCleanup", std::chrono::minutes(5), [this]() {
+                    if (auto tm = task_manager_) {
+                        auto removed =
+                            tm->cleanupOldTasks(std::chrono::hours(1));
+                        if (removed > 0) {
+                            LOG_INFO("Periodic cleanup: removed {} old tasks",
+                                     removed);
+                        }
+                    }
+                });
+            LOG_INFO("Scheduled periodic task cleanup");
+        }
+
         // Configure Crow app
         app_.port(config_.port).multithreaded().run();
     }
@@ -122,6 +163,11 @@ public:
      */
     void stop() {
         LOG_INFO("Stopping server...");
+
+        // Cancel periodic cleanup task
+        if (task_manager_ && !cleanup_task_id_.empty()) {
+            task_manager_->cancelPeriodicTask(cleanup_task_id_);
+        }
 
         // Stop log streaming first
         LogStreamManager::getInstance().shutdown();
@@ -178,9 +224,12 @@ private:
     std::shared_ptr<lithium::task::ExposureSequence> exposure_sequence_;
     std::shared_ptr<TaskManager> task_manager_;
     std::shared_ptr<WebSocketServer> websocket_server_;
+    std::shared_ptr<plugin::PluginManager> plugin_manager_;
+    std::shared_ptr<app::CommandDispatcher> command_dispatcher_;
     std::vector<std::unique_ptr<Controller>> controllers_;
     asio::io_context message_bus_io_;
     std::thread message_bus_thread_;
+    std::string cleanup_task_id_;  ///< ID of the periodic cleanup task
 
     /**
      * @brief Initialize logging system
@@ -322,6 +371,14 @@ private:
             std::make_unique<controller::TaskManagementController>());
         controllers_.push_back(
             std::make_unique<controller::LoggingController>());
+        controllers_.push_back(
+            std::make_unique<controller::ServerStatusController>());
+        controllers_.push_back(
+            std::make_unique<controller::IsolatedController>());
+        controllers_.push_back(
+            std::make_unique<controller::ToolRegistryController>());
+        controllers_.push_back(
+            std::make_unique<controller::VenvController>());
 
         // Register all controller routes
         for (auto& controller : controllers_) {
@@ -367,6 +424,16 @@ private:
 
         LOG_INFO("WebSocket server initialized at /api/v1/ws");
 
+        // Inject shared components into WebSocket server for command handlers
+        websocket_server_->setTaskManager(task_manager_);
+        websocket_server_->setEventLoop(event_loop_);
+
+        // Inject shared components into ServerStatusController
+        controller::ServerStatusController::setWebSocketServer(
+            websocket_server_);
+        controller::ServerStatusController::setTaskManager(task_manager_);
+        controller::ServerStatusController::setEventLoop(event_loop_);
+
         // Connect TaskManager status updates to WebSocket events
         if (task_manager_ && websocket_server_) {
             std::weak_ptr<WebSocketServer> wsWeak = websocket_server_;
@@ -410,6 +477,12 @@ private:
                     }
 
                     task["cancelRequested"] = info.cancelRequested.load();
+                    task["priority"] = info.priority;
+                    task["progress"] = info.progress;
+
+                    if (!info.progressMessage.empty()) {
+                        task["progressMessage"] = info.progressMessage;
+                    }
 
                     auto toMs = [](auto tp) {
                         return std::chrono::duration_cast<
@@ -430,6 +503,68 @@ private:
                     ws->broadcast(event.dump());
                 });
         }
+
+        // Store command dispatcher for plugin system
+        command_dispatcher_ = command_dispatcher;
+    }
+
+    /**
+     * @brief Initialize plugin system
+     */
+    void initializePlugins() {
+        if (!config_.enable_plugins) {
+            LOG_INFO("Plugin system disabled");
+            return;
+        }
+
+        LOG_INFO("Initializing plugin system...");
+
+        if (!plugin_manager_) {
+            LOG_ERROR("Plugin manager not created");
+            return;
+        }
+
+        // Initialize plugin manager with app and command dispatcher
+        if (!plugin_manager_->initialize(app_, command_dispatcher_)) {
+            LOG_ERROR("Failed to initialize plugin manager");
+            return;
+        }
+
+        // Register plugin controller
+        controllers_.push_back(
+            std::make_unique<controller::PluginController>());
+        controllers_.back()->registerRoutes(app_);
+
+        // Auto-load plugins if configured
+        if (config_.auto_load_plugins) {
+            size_t loaded = plugin_manager_->discoverAndLoadAll();
+            LOG_INFO("Auto-loaded {} plugins", loaded);
+        }
+
+        // Subscribe to plugin events for logging
+        plugin_manager_->subscribeToEvents(
+            [](plugin::PluginEvent event, const std::string& name,
+               const nlohmann::json& data) {
+                switch (event) {
+                    case plugin::PluginEvent::Loaded:
+                        LOG_INFO("Plugin loaded: {}", name);
+                        break;
+                    case plugin::PluginEvent::Unloaded:
+                        LOG_INFO("Plugin unloaded: {}", name);
+                        break;
+                    case plugin::PluginEvent::Reloaded:
+                        LOG_INFO("Plugin reloaded: {}", name);
+                        break;
+                    case plugin::PluginEvent::Error:
+                        LOG_ERROR("Plugin error: {} - {}",
+                                  name, data.value("error", "unknown"));
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+        LOG_INFO("Plugin system initialized");
     }
 };
 

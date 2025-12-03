@@ -202,6 +202,74 @@ Connect to: `ws://server:port/api/v1/ws?apiKey=your-api-key`
 - Guider events: `guider.status_update`, `guider.started`, `guider.stopped`, `guider.dither_finished`
 - Sequence events: `sequence.started`, `sequence.progress`, `sequence.finished`, `sequence.aborted`
 - System events: `notification`, `server.shutdown`, `system.status_update`
+- Task events: `taskUpdated` (includes task status, progress, priority, result)
+
+### WebSocket Commands
+
+The following commands are available via WebSocket:
+
+#### Task Management Commands
+
+- `task.list` - List tasks with optional filters (`status`, `type`, `active`, `limit`, `offset`)
+- `task.get` - Get task details by ID (`taskId`)
+- `task.cancel` - Cancel a task (`taskId`)
+- `task.stats` - Get task manager statistics
+- `task.cleanup` - Clean up old tasks (`maxAgeSeconds`)
+- `task.progress` - Update task progress (`taskId`, `progress`, `message`)
+
+#### Server Status Commands
+
+- `server.health` - Get server health status
+- `server.uptime` - Get server uptime
+- `server.stats` - Get comprehensive server statistics
+- `websocket.stats` - Get WebSocket server statistics
+- `websocket.connections` - Get active connection count
+
+#### Device Commands
+
+- `camera.*` - Camera control commands
+- `mount.*` - Mount control commands
+- `focuser.*` - Focuser control commands
+- `filterwheel.*` - Filter wheel commands
+- `dome.*` - Dome control commands
+- `guider.*` - Guider commands
+- `solver.*` - Plate solving commands
+- `script.*` - Script execution commands
+
+## Server Status Endpoints
+
+### Health Check
+
+```http
+GET /api/v1/health
+GET /api/v1/health/detailed
+```
+
+### Server Uptime
+
+```http
+GET /api/v1/server/uptime
+```
+
+### WebSocket Statistics
+
+```http
+GET /api/v1/websocket/stats
+GET /api/v1/websocket/connections
+```
+
+### Task Management
+
+```http
+GET /api/v1/tasks                    # List all tasks (with pagination)
+GET /api/v1/tasks?status=running     # Filter by status
+GET /api/v1/tasks?type=TakeExposure  # Filter by type
+GET /api/v1/tasks/<id>               # Get task details
+GET /api/v1/tasks/stats              # Get task statistics
+PUT /api/v1/tasks/<id>/progress      # Update task progress
+POST /api/v1/tasks/<id>/cancel       # Cancel a task
+POST /api/v1/tasks/cleanup           # Clean up old tasks
+```
 
 ## Building and Running
 

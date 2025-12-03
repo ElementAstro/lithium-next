@@ -1,0 +1,72 @@
+{
+  "name": "lithium-tools",
+  "version": "1.0.0",
+  "description": "Lithium Python tools with export declarations",
+  "modules": [
+    {
+      "name": "cert_manager",
+      "path": "tools.cert_manager.lithium_exports",
+      "description": "Certificate management tools"
+    },
+    {
+      "name": "compiler_helper",
+      "path": "tools.compiler_helper.lithium_exports",
+      "description": "C++ compilation tools"
+    },
+    {
+      "name": "dotnet_manager",
+      "path": "tools.dotnet_manager.lithium_exports",
+      "description": ".NET Framework management tools"
+    },
+    {
+      "name": "auto_updater",
+      "path": "tools.auto_updater.lithium_exports",
+      "description": "Auto-update tools"
+    },
+    {
+      "name": "build_helper",
+      "path": "tools.build_helper.lithium_exports",
+      "description": "Build system tools (CMake, Meson)"
+    },
+    {
+      "name": "convert_to_header",
+      "path": "tools.convert_to_header.lithium_exports",
+      "description": "File to C++ header conversion tools"
+    },
+    {
+      "name": "executor",
+      "path": "executor.lithium_exports",
+      "description": "Isolated Python execution tools"
+    },
+    {
+      "name": "common",
+      "path": "tools.common.lithium_exports",
+      "description": "Discovery and management tools"
+    },
+    {
+      "name": "git_utils",
+      "path": "tools.git_utils.lithium_exports",
+      "description": "Git repository management tools"
+    },
+    {
+      "name": "nginx_manager",
+      "path": "tools.nginx_manager.lithium_exports",
+      "description": "Nginx web server management tools"
+    },
+    {
+      "name": "hotspot",
+      "path": "tools.hotspot.lithium_exports",
+      "description": "WiFi hotspot management tools"
+    },
+    {
+      "name": "pacman_manager",
+      "path": "tools.pacman_manager.lithium_exports",
+      "description": "Pacman package manager tools"
+    }
+  ],
+  "endpoints": {
+    "discovery": "/api/tools/discover",
+    "manifest": "/api/tools/manifest",
+    "all_exports": "/api/tools/all-exports"
+  }
+}

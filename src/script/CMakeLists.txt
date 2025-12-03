@@ -48,6 +48,8 @@ set(PROJECT_SOURCES
     check.cpp
     interpreter_pool.cpp
     python_caller.cpp
+    script_export.cpp
+    script_service.cpp
 )
 
 # ============================================================================

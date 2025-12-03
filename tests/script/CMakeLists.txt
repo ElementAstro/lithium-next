@@ -50,6 +50,8 @@ set(SCRIPT_TEST_SOURCES
     test_check_enhanced.cpp
     test_tool_registry.cpp
     test_interpreter_pool.cpp
+    test_script_export.cpp
+    test_script_service.cpp
 )
 
 # Create test executable

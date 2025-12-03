@@ -1,0 +1,791 @@
+{
+  "name": "lithium-tools",
+  "version": "1.0.0",
+  "description": "Lithium Python工具集合 - 提供系统管理、网络、安全、构建等功能",
+  "api_version": "1.0",
+  "base_url": "/api",
+  "default_category": "utility",
+  "categories": [
+    {"id": "system", "name": "系统管理", "icon": "settings", "color": "#4CAF50", "description": "系统级管理工具"},
+    {"id": "network", "name": "网络工具", "icon": "wifi", "color": "#2196F3", "description": "网络配置和管理"},
+    {"id": "security", "name": "安全工具", "icon": "shield", "color": "#F44336", "description": "安全和证书管理"},
+    {"id": "build", "name": "构建工具", "icon": "build", "color": "#FF9800", "description": "编译和构建系统"},
+    {"id": "package", "name": "包管理", "icon": "package", "color": "#9C27B0", "description": "软件包管理"},
+    {"id": "development", "name": "开发工具", "icon": "code", "color": "#00BCD4", "description": "开发辅助工具"},
+    {"id": "utility", "name": "实用工具", "icon": "tool", "color": "#607D8B", "description": "通用实用工具"},
+    {"id": "monitoring", "name": "监控工具", "icon": "chart", "color": "#795548", "description": "监控和日志分析"}
+  ],
+  "modules": [
+    {
+      "name": "cert_manager",
+      "display_name": "证书管理器",
+      "version": "1.0.0",
+      "description": "SSL/TLS证书创建、管理和导出工具",
+      "category": "security",
+      "tags": ["certificate", "ssl", "tls", "security", "pkcs12"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "dependencies": ["cryptography", "loguru"],
+      "icon": "certificate",
+      "color": "#F44336",
+      "order": 1,
+      "capabilities": [
+        "自签名证书创建",
+        "PKCS#12格式导出",
+        "多种加密算法支持",
+        "SAN扩展支持"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/cert/create",
+          "method": "POST",
+          "summary": "创建自签名证书",
+          "description": "创建一个新的自签名SSL/TLS证书",
+          "tags": ["certificate"],
+          "parameters": [
+            {"name": "hostname", "type": "string", "required": true, "description": "证书主机名"},
+            {"name": "cert_dir", "type": "string", "required": true, "description": "证书存储目录"},
+            {"name": "key_size", "type": "integer", "required": false, "default": 2048, "description": "RSA密钥大小"},
+            {"name": "valid_days", "type": "integer", "required": false, "default": 365, "description": "有效期天数"}
+          ]
+        },
+        {
+          "path": "/api/cert/export-pkcs12",
+          "method": "POST",
+          "summary": "导出PKCS#12格式",
+          "description": "将证书导出为PKCS#12格式",
+          "tags": ["certificate"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "cert.create",
+          "summary": "创建证书",
+          "priority": 5,
+          "timeout_ms": 30000
+        }
+      ],
+      "examples": [
+        {
+          "title": "创建本地开发证书",
+          "code": "POST /api/cert/create\n{\"hostname\": \"localhost\", \"cert_dir\": \"./certs\"}"
+        }
+      ]
+    },
+    {
+      "name": "compiler_helper",
+      "display_name": "编译助手",
+      "version": "1.0.0",
+      "description": "C/C++编译和构建辅助工具",
+      "category": "build",
+      "tags": ["compiler", "c++", "build", "gcc", "clang", "msvc"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "system_requirements": ["gcc/g++ 或 clang 或 MSVC"],
+      "icon": "code",
+      "color": "#FF9800",
+      "order": 2,
+      "capabilities": [
+        "多编译器支持",
+        "增量编译",
+        "并行构建",
+        "自动依赖检测"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/compiler/compile",
+          "method": "POST",
+          "summary": "编译源文件",
+          "description": "编译单个C/C++源文件",
+          "tags": ["compiler"]
+        },
+        {
+          "path": "/api/compiler/build",
+          "method": "POST",
+          "summary": "构建项目",
+          "description": "构建多文件项目",
+          "tags": ["compiler"]
+        },
+        {
+          "path": "/api/compiler/info",
+          "method": "GET",
+          "summary": "获取编译器信息",
+          "description": "获取可用编译器的详细信息",
+          "tags": ["compiler"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "compiler.compile",
+          "summary": "编译文件",
+          "priority": 5,
+          "timeout_ms": 60000
+        }
+      ]
+    },
+    {
+      "name": "build_helper",
+      "display_name": "构建系统助手",
+      "version": "1.0.0",
+      "description": "CMake、Meson等构建系统的管理工具",
+      "category": "build",
+      "tags": ["cmake", "meson", "bazel", "build", "configure"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "system_requirements": ["CMake >= 3.16", "Meson (可选)", "Ninja (推荐)"],
+      "icon": "build",
+      "color": "#FF5722",
+      "order": 3,
+      "capabilities": [
+        "CMake项目配置和构建",
+        "Meson项目支持",
+        "多生成器支持",
+        "构建类型切换"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/build/cmake/configure",
+          "method": "POST",
+          "summary": "配置CMake项目",
+          "tags": ["cmake"]
+        },
+        {
+          "path": "/api/build/cmake/build",
+          "method": "POST",
+          "summary": "构建CMake项目",
+          "tags": ["cmake"]
+        },
+        {
+          "path": "/api/build/meson/setup",
+          "method": "POST",
+          "summary": "设置Meson项目",
+          "tags": ["meson"]
+        },
+        {
+          "path": "/api/build/meson/compile",
+          "method": "POST",
+          "summary": "编译Meson项目",
+          "tags": ["meson"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "build.cmake.configure",
+          "summary": "配置CMake",
+          "priority": 5,
+          "timeout_ms": 120000
+        },
+        {
+          "command_id": "build.cmake.build",
+          "summary": "构建CMake",
+          "priority": 5,
+          "timeout_ms": 300000
+        }
+      ]
+    },
+    {
+      "name": "git_utils",
+      "display_name": "Git工具",
+      "version": "2.0.0",
+      "description": "Git仓库管理和操作工具",
+      "category": "development",
+      "tags": ["git", "vcs", "repository", "branch", "commit"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "system_requirements": ["Git >= 2.0"],
+      "icon": "git-branch",
+      "color": "#F05032",
+      "order": 4,
+      "capabilities": [
+        "仓库克隆和管理",
+        "分支操作",
+        "提交和推送",
+        "日志查看",
+        "远程仓库管理"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/git/clone",
+          "method": "POST",
+          "summary": "克隆仓库",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/pull",
+          "method": "POST",
+          "summary": "拉取更新",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/push",
+          "method": "POST",
+          "summary": "推送更改",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/commit",
+          "method": "POST",
+          "summary": "提交更改",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/status",
+          "method": "GET",
+          "summary": "查看状态",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/branches",
+          "method": "GET",
+          "summary": "列出分支",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/branch/create",
+          "method": "POST",
+          "summary": "创建分支",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/branch/switch",
+          "method": "POST",
+          "summary": "切换分支",
+          "tags": ["git"]
+        },
+        {
+          "path": "/api/git/log",
+          "method": "GET",
+          "summary": "查看日志",
+          "tags": ["git"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "git.clone",
+          "summary": "克隆仓库",
+          "priority": 5,
+          "timeout_ms": 300000
+        },
+        {
+          "command_id": "git.pull",
+          "summary": "拉取更新",
+          "priority": 5,
+          "timeout_ms": 60000
+        },
+        {
+          "command_id": "git.commit",
+          "summary": "提交更改",
+          "priority": 5,
+          "timeout_ms": 30000
+        },
+        {
+          "command_id": "git.status",
+          "summary": "查看状态",
+          "priority": 5,
+          "timeout_ms": 10000
+        }
+      ]
+    },
+    {
+      "name": "nginx_manager",
+      "display_name": "Nginx管理器",
+      "version": "1.0.0",
+      "description": "Nginx Web服务器管理工具",
+      "category": "network",
+      "tags": ["nginx", "webserver", "proxy", "ssl", "vhost"],
+      "status": "stable",
+      "platforms": ["linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "system_requirements": ["Nginx"],
+      "icon": "server",
+      "color": "#009639",
+      "order": 5,
+      "capabilities": [
+        "服务启停管理",
+        "配置验证",
+        "虚拟主机管理",
+        "SSL配置",
+        "健康检查"
+      ],
+      "limitations": [
+        "仅支持Linux和macOS",
+        "需要root权限进行服务管理"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/nginx/status",
+          "method": "GET",
+          "summary": "获取状态",
+          "tags": ["nginx"]
+        },
+        {
+          "path": "/api/nginx/start",
+          "method": "POST",
+          "summary": "启动服务",
+          "tags": ["nginx"]
+        },
+        {
+          "path": "/api/nginx/stop",
+          "method": "POST",
+          "summary": "停止服务",
+          "tags": ["nginx"]
+        },
+        {
+          "path": "/api/nginx/reload",
+          "method": "POST",
+          "summary": "重载配置",
+          "tags": ["nginx"]
+        },
+        {
+          "path": "/api/nginx/config/check",
+          "method": "GET",
+          "summary": "检查配置",
+          "tags": ["nginx"]
+        },
+        {
+          "path": "/api/nginx/vhosts",
+          "method": "GET",
+          "summary": "列出虚拟主机",
+          "tags": ["nginx"]
+        },
+        {
+          "path": "/api/nginx/health",
+          "method": "GET",
+          "summary": "健康检查",
+          "tags": ["nginx"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "nginx.status",
+          "summary": "获取状态",
+          "priority": 5,
+          "timeout_ms": 10000
+        },
+        {
+          "command_id": "nginx.reload",
+          "summary": "重载配置",
+          "priority": 5,
+          "timeout_ms": 30000
+        }
+      ]
+    },
+    {
+      "name": "hotspot",
+      "display_name": "WiFi热点管理",
+      "version": "1.0.0",
+      "description": "WiFi热点创建和管理工具",
+      "category": "network",
+      "tags": ["wifi", "hotspot", "network", "ap"],
+      "status": "stable",
+      "platforms": ["linux"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "system_requirements": ["NetworkManager", "nmcli"],
+      "icon": "wifi",
+      "color": "#2196F3",
+      "order": 6,
+      "capabilities": [
+        "热点创建和管理",
+        "客户端监控",
+        "多频段支持",
+        "配置保存"
+      ],
+      "limitations": [
+        "仅支持Linux",
+        "需要NetworkManager"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/hotspot/status",
+          "method": "GET",
+          "summary": "获取热点状态",
+          "tags": ["hotspot"]
+        },
+        {
+          "path": "/api/hotspot/start",
+          "method": "POST",
+          "summary": "启动热点",
+          "tags": ["hotspot"]
+        },
+        {
+          "path": "/api/hotspot/stop",
+          "method": "POST",
+          "summary": "停止热点",
+          "tags": ["hotspot"]
+        },
+        {
+          "path": "/api/hotspot/clients",
+          "method": "GET",
+          "summary": "获取连接客户端",
+          "tags": ["hotspot"]
+        },
+        {
+          "path": "/api/hotspot/interfaces",
+          "method": "GET",
+          "summary": "获取网络接口",
+          "tags": ["hotspot"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "hotspot.status",
+          "summary": "获取状态",
+          "priority": 5,
+          "timeout_ms": 10000
+        },
+        {
+          "command_id": "hotspot.start",
+          "summary": "启动热点",
+          "priority": 5,
+          "timeout_ms": 30000
+        }
+      ]
+    },
+    {
+      "name": "pacman_manager",
+      "display_name": "Pacman包管理器",
+      "version": "1.0.0",
+      "description": "ArchLinux/MSYS2 Pacman包管理接口",
+      "category": "package",
+      "tags": ["pacman", "archlinux", "msys2", "package", "aur"],
+      "status": "stable",
+      "platforms": ["windows", "linux"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "system_requirements": ["pacman (ArchLinux或MSYS2)"],
+      "icon": "package",
+      "color": "#1793D1",
+      "order": 7,
+      "capabilities": [
+        "包安装和卸载",
+        "系统升级",
+        "包搜索",
+        "AUR支持"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/pacman/install",
+          "method": "POST",
+          "summary": "安装包",
+          "tags": ["pacman"]
+        },
+        {
+          "path": "/api/pacman/remove",
+          "method": "POST",
+          "summary": "卸载包",
+          "tags": ["pacman"]
+        },
+        {
+          "path": "/api/pacman/search",
+          "method": "GET",
+          "summary": "搜索包",
+          "tags": ["pacman"]
+        },
+        {
+          "path": "/api/pacman/info",
+          "method": "GET",
+          "summary": "包信息",
+          "tags": ["pacman"]
+        },
+        {
+          "path": "/api/pacman/installed",
+          "method": "GET",
+          "summary": "已安装包",
+          "tags": ["pacman"]
+        },
+        {
+          "path": "/api/pacman/upgrade",
+          "method": "POST",
+          "summary": "系统升级",
+          "tags": ["pacman"]
+        },
+        {
+          "path": "/api/pacman/update",
+          "method": "POST",
+          "summary": "更新数据库",
+          "tags": ["pacman"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "pacman.install",
+          "summary": "安装包",
+          "priority": 5,
+          "timeout_ms": 300000
+        },
+        {
+          "command_id": "pacman.search",
+          "summary": "搜索包",
+          "priority": 5,
+          "timeout_ms": 30000
+        },
+        {
+          "command_id": "pacman.upgrade",
+          "summary": "系统升级",
+          "priority": 3,
+          "timeout_ms": 600000
+        }
+      ]
+    },
+    {
+      "name": "dotnet_manager",
+      "display_name": ".NET管理器",
+      "version": "1.0.0",
+      "description": ".NET Framework检测和管理工具",
+      "category": "system",
+      "tags": ["dotnet", "framework", "windows", "runtime"],
+      "status": "stable",
+      "platforms": ["windows"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "icon": "microsoft",
+      "color": "#512BD4",
+      "order": 8,
+      "capabilities": [
+        "版本检测",
+        "安装状态查询",
+        "文件下载"
+      ],
+      "limitations": [
+        "仅支持Windows"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/dotnet/check",
+          "method": "GET",
+          "summary": "检查版本",
+          "tags": ["dotnet"]
+        },
+        {
+          "path": "/api/dotnet/list",
+          "method": "GET",
+          "summary": "列出已安装版本",
+          "tags": ["dotnet"]
+        },
+        {
+          "path": "/api/dotnet/download",
+          "method": "POST",
+          "summary": "下载文件",
+          "tags": ["dotnet"]
+        },
+        {
+          "path": "/api/dotnet/install",
+          "method": "POST",
+          "summary": "安装软件",
+          "tags": ["dotnet"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "dotnet.check",
+          "summary": "检查版本",
+          "priority": 5,
+          "timeout_ms": 5000
+        },
+        {
+          "command_id": "dotnet.list",
+          "summary": "列出版本",
+          "priority": 5,
+          "timeout_ms": 5000
+        }
+      ]
+    },
+    {
+      "name": "auto_updater",
+      "display_name": "自动更新器",
+      "version": "1.0.0",
+      "description": "软件自动更新检查和下载工具",
+      "category": "system",
+      "tags": ["update", "download", "version"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "icon": "download",
+      "color": "#4CAF50",
+      "order": 9,
+      "capabilities": [
+        "版本检查",
+        "更新下载",
+        "校验验证"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/updater/check",
+          "method": "GET",
+          "summary": "检查更新",
+          "tags": ["updater"]
+        },
+        {
+          "path": "/api/updater/download",
+          "method": "POST",
+          "summary": "下载更新",
+          "tags": ["updater"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "updater.check",
+          "summary": "检查更新",
+          "priority": 3,
+          "timeout_ms": 30000
+        }
+      ]
+    },
+    {
+      "name": "convert_to_header",
+      "display_name": "文件转头文件",
+      "version": "1.0.0",
+      "description": "将文件转换为C++头文件的工具",
+      "category": "development",
+      "tags": ["convert", "header", "embed", "c++"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "icon": "file-code",
+      "color": "#00BCD4",
+      "order": 10,
+      "capabilities": [
+        "文件嵌入",
+        "压缩支持",
+        "批量转换"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/convert/file-to-header",
+          "method": "POST",
+          "summary": "转换文件",
+          "tags": ["convert"]
+        },
+        {
+          "path": "/api/convert/dir-to-headers",
+          "method": "POST",
+          "summary": "批量转换",
+          "tags": ["convert"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "convert.file_to_header",
+          "summary": "转换文件",
+          "priority": 5,
+          "timeout_ms": 30000
+        }
+      ]
+    },
+    {
+      "name": "executor",
+      "display_name": "Python执行器",
+      "version": "1.0.0",
+      "description": "隔离环境中执行Python代码",
+      "category": "development",
+      "tags": ["python", "execute", "sandbox", "eval"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "icon": "play",
+      "color": "#3776AB",
+      "order": 11,
+      "capabilities": [
+        "隔离执行",
+        "超时控制",
+        "内存限制"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/executor/run",
+          "method": "POST",
+          "summary": "执行代码",
+          "tags": ["executor"]
+        },
+        {
+          "path": "/api/executor/eval",
+          "method": "POST",
+          "summary": "求值表达式",
+          "tags": ["executor"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "executor.run",
+          "summary": "执行代码",
+          "priority": 3,
+          "timeout_ms": 60000
+        },
+        {
+          "command_id": "executor.eval",
+          "summary": "求值表达式",
+          "priority": 5,
+          "timeout_ms": 15000
+        }
+      ]
+    },
+    {
+      "name": "common",
+      "display_name": "工具发现",
+      "version": "1.0.0",
+      "description": "工具模块发现和管理",
+      "category": "utility",
+      "tags": ["discovery", "management", "registry"],
+      "status": "stable",
+      "platforms": ["windows", "linux", "macos"],
+      "author": "Max Qian",
+      "license": "GPL-3.0-or-later",
+      "icon": "search",
+      "color": "#607D8B",
+      "order": 99,
+      "hidden": false,
+      "capabilities": [
+        "模块发现",
+        "导出列表",
+        "清单管理"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/tools/discover",
+          "method": "GET",
+          "summary": "发现工具模块",
+          "tags": ["tools"]
+        },
+        {
+          "path": "/api/tools/manifest",
+          "method": "GET",
+          "summary": "获取模块清单",
+          "tags": ["tools"]
+        },
+        {
+          "path": "/api/tools/all-exports",
+          "method": "GET",
+          "summary": "获取所有导出",
+          "tags": ["tools"]
+        }
+      ],
+      "commands": [
+        {
+          "command_id": "tools.discover",
+          "summary": "发现工具",
+          "priority": 5,
+          "timeout_ms": 10000
+        },
+        {
+          "command_id": "tools.list_exports",
+          "summary": "列出导出",
+          "priority": 5,
+          "timeout_ms": 10000
+        }
+      ]
+    }
+  ]
+}

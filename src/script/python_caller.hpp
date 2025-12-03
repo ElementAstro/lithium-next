@@ -9,16 +9,16 @@
 
 #include <barrier>
 #include <concepts>
-#include <coroutine>
 #include <future>
 #include <latch>
 #include <memory>
-#include <ranges>
+#include <optional>
 #include <semaphore>
 #include <shared_mutex>
-#include <span>
 #include <string>
 #include <vector>
+
+#include "script_export.hpp"
 
 namespace py = pybind11;
 
@@ -346,116 +346,85 @@ public:
      */
     void set_breakpoint(const std::string& alias, int line_number);
 
-    /**
-     * @brief Installs a Python package.
-     * @param package_name The name of the package to install.
-     * @return Whether the installation was successful.
-     */
-    bool install_package(const std::string& package_name);
+    // NOTE: Virtual environment and package management functions have been
+    // moved to venv::VenvManager. Use ScriptService for unified access.
+
+    // NOTE: Advanced async/generator features are available through
+    // InterpreterPool for pooled execution or isolated::PythonRunner
+    // for subprocess execution. Use ScriptService for unified access.
+
+    // ========================================================================
+    // Export Discovery API
+    // ========================================================================
 
     /**
-     * @brief Uninstalls a Python package.
-     * @param package_name The name of the package to uninstall.
-     * @return Whether the uninstallation was successful.
+     * @brief Discover exports from a loaded script.
+     * @param alias The alias of the script.
+     * @return Script exports if found.
      */
-    bool uninstall_package(const std::string& package_name);
+    std::optional<ScriptExports> discover_exports(const std::string& alias);
 
     /**
-     * @brief Creates a Python virtual environment.
-     * @param env_name The name of the environment to create.
+     * @brief Get cached exports for a script.
+     * @param alias The alias of the script.
+     * @return Script exports if cached.
      */
-    void create_virtual_environment(const std::string& env_name);
+    std::optional<ScriptExports> get_exports(const std::string& alias) const;
 
     /**
-     * @brief Activates a Python virtual environment.
-     * @param env_name The name of the environment to activate.
+     * @brief Invoke an exported function with JSON arguments.
+     * @param alias The alias of the script.
+     * @param function_name The name of the function.
+     * @param args JSON arguments.
+     * @return JSON result.
      */
-    void activate_virtual_environment(const std::string& env_name);
+    py::object invoke_export(const std::string& alias,
+                             const std::string& function_name,
+                             const py::dict& kwargs);
 
     /**
-     * @brief Coroutine generator type for asynchronous operations.
-     * @tparam T The type yielded by the generator.
+     * @brief Find export by endpoint.
+     * @param endpoint The endpoint path.
+     * @return Pair of alias and export info if found.
      */
-    template <typename T>
-    struct AsyncGenerator {
-        struct promise_type {
-            T value;
-            AsyncGenerator get_return_object() {
-                return AsyncGenerator{handle_type::from_promise(*this)};
-            }
-            std::suspend_always initial_suspend() { return {}; }
-            std::suspend_always final_suspend() noexcept { return {}; }
-            void return_void() {}
-            std::suspend_always yield_value(T v) {
-                value = v;
-                return {};
-            }
-            void unhandled_exception() { throw; }
-        };
-
-        using handle_type = std::coroutine_handle<promise_type>;
-        handle_type handle;
-
-        AsyncGenerator(handle_type h) : handle(h) {}
-        ~AsyncGenerator() {
-            if (handle)
-                handle.destroy();
-        }
-
-        /**
-         * @brief Gets the current value of the generator.
-         * @return The current value.
-         */
-        T current_value() { return handle.promise().value; }
-
-        /**
-         * @brief Advances the generator to the next value.
-         * @return Whether there is another value.
-         */
-        bool move_next() {
-            handle.resume();
-            return !handle.done();
-        }
-    };
+    std::optional<std::pair<std::string, ExportInfo>> find_by_endpoint(
+        const std::string& endpoint) const;
 
     /**
-     * @brief Processes a range of elements using a Python function.
-     * @tparam R The range type.
-     * @param alias The alias of the script containing the function.
-     * @param function_name The name of the function to call.
-     * @param range The range of elements to process.
+     * @brief Find export by command ID.
+     * @param command_id The command ID.
+     * @return Pair of alias and export info if found.
      */
-    template <std::ranges::range R>
-        requires PythonConvertible<std::ranges::range_value_t<R>>
-    void batch_process(const std::string& alias,
-                       const std::string& function_name, R&& range);
+    std::optional<std::pair<std::string, ExportInfo>> find_by_command(
+        const std::string& command_id) const;
 
     /**
-     * @brief Processes data using a Python function.
-     * @tparam T The type of the data elements.
-     * @param alias The alias of the script containing the function.
-     * @param function_name The name of the function to call.
-     * @param data The data to process.
+     * @brief Get all exports from all loaded scripts.
+     * @return Map of alias to exports.
      */
-    template <typename T>
-    void process_data(const std::string& alias,
-                      const std::string& function_name, std::span<T> data);
+    std::unordered_map<std::string, ScriptExports> get_all_exports() const;
 
     /**
-     * @brief Gets a shared resource.
-     * @tparam T The type of the resource.
-     * @param resource_name The name of the resource.
-     * @return The shared resource.
+     * @brief Load exports from a manifest file.
+     * @param manifest_path Path to the manifest JSON file.
+     * @param alias Alias to associate with the exports.
+     * @return True if loaded successfully.
      */
-    template <typename T>
-    std::shared_ptr<T> get_shared_resource(const std::string& resource_name);
+    bool load_manifest(const std::string& manifest_path,
+                       const std::string& alias);
 
     /**
-     * @brief Executes a Python script asynchronously.
-     * @param script The script to execute.
-     * @return An async generator that yields the results.
+     * @brief Check if a script has exports.
+     * @param alias The alias of the script.
+     * @return True if the script has exports.
      */
-    AsyncGenerator<py::object> async_execute(const std::string& script);
+    bool has_exports(const std::string& alias) const;
+
+    /**
+     * @brief Get list of all loaded scripts with exports.
+     * @return Vector of script aliases that have exports.
+     */
+    std::vector<std::string> list_scripts_with_exports() const;
 
 private:
     class Impl;

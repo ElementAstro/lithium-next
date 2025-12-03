@@ -9,7 +9,9 @@
 #include "command/device.hpp"
 #include "command/guider.hpp"
 #include "command/script.hpp"
+#include "command/server.hpp"
 #include "command/solver.hpp"
+#include "command/task.hpp"
 #include "middleware/auth.hpp"
 
 using namespace std::chrono_literals;
@@ -369,6 +371,7 @@ void WebSocketServer::setup_command_handlers() {
 
     // Device commands (camera, mount, focuser, filterwheel, etc.) are
     // registered in command module
+    lithium::app::registerDeviceCommands(command_dispatcher_);
     lithium::app::registerCamera(command_dispatcher_);
     lithium::app::registerMount(command_dispatcher_);
     lithium::app::registerFocuser(command_dispatcher_);
@@ -377,6 +380,33 @@ void WebSocketServer::setup_command_handlers() {
     lithium::app::registerGuider(command_dispatcher_);
     lithium::app::registerSolver(command_dispatcher_);
     lithium::app::registerScript(command_dispatcher_);
+}
+
+void WebSocketServer::setTaskManager(
+    std::shared_ptr<lithium::server::TaskManager> task_manager) {
+    task_manager_ = task_manager;
+
+    // Register task commands if task manager is available
+    if (task_manager && command_dispatcher_) {
+        lithium::app::registerTaskCommands(command_dispatcher_, task_manager);
+        spdlog::info("Task management commands registered with WebSocket");
+    }
+}
+
+void WebSocketServer::setEventLoop(
+    std::shared_ptr<lithium::app::EventLoop> event_loop) {
+    event_loop_ = event_loop;
+
+    // Register server status commands
+    if (command_dispatcher_) {
+        // Use weak_ptr to self for server commands
+        // Note: This requires the WebSocketServer to be managed by shared_ptr
+        lithium::app::registerServerCommands(
+            command_dispatcher_,
+            std::weak_ptr<WebSocketServer>(),  // Will be set properly from MainServer
+            task_manager_, event_loop_);
+        spdlog::info("Server status commands registered with WebSocket");
+    }
 }
 
 void WebSocketServer::subscribe_to_topic(const std::string& topic) {

@@ -686,3 +686,122 @@ TEST_F(LevelConversionTest, RoundTripConversion) {
         EXPECT_EQ(restored, level) << "Failed for level: " << str;
     }
 }
+
+// ============================================================================
+// LogSearchQuery Tests
+// ============================================================================
+
+class LogSearchQueryTest : public ::testing::Test {};
+
+TEST_F(LogSearchQueryTest, DefaultConstruction) {
+    LogSearchQuery query;
+    EXPECT_FALSE(query.text_pattern.has_value());
+    EXPECT_FALSE(query.regex_pattern.has_value());
+    EXPECT_FALSE(query.min_level.has_value());
+    EXPECT_FALSE(query.max_level.has_value());
+    EXPECT_FALSE(query.logger_name.has_value());
+    EXPECT_EQ(query.limit, 100);
+    EXPECT_EQ(query.offset, 0);
+    EXPECT_FALSE(query.case_sensitive);
+}
+
+TEST_F(LogSearchQueryTest, FromJsonWithAllFields) {
+    nlohmann::json j = {
+        {"text", "error message"},
+        {"regex", "error.*"},
+        {"min_level", "warn"},
+        {"max_level", "critical"},
+        {"logger", "test_logger"},
+        {"limit", 50},
+        {"offset", 10},
+        {"case_sensitive", true}
+    };
+
+    auto query = LogSearchQuery::fromJson(j);
+    EXPECT_EQ(query.text_pattern.value(), "error message");
+    EXPECT_EQ(query.regex_pattern.value(), "error.*");
+    EXPECT_EQ(query.min_level.value(), spdlog::level::warn);
+    EXPECT_EQ(query.max_level.value(), spdlog::level::critical);
+    EXPECT_EQ(query.logger_name.value(), "test_logger");
+    EXPECT_EQ(query.limit, 50);
+    EXPECT_EQ(query.offset, 10);
+    EXPECT_TRUE(query.case_sensitive);
+}
+
+TEST_F(LogSearchQueryTest, FromJsonWithPartialFields) {
+    nlohmann::json j = {{"text", "search term"}, {"limit", 25}};
+
+    auto query = LogSearchQuery::fromJson(j);
+    EXPECT_EQ(query.text_pattern.value(), "search term");
+    EXPECT_FALSE(query.regex_pattern.has_value());
+    EXPECT_EQ(query.limit, 25);
+    EXPECT_EQ(query.offset, 0);  // Default
+}
+
+TEST_F(LogSearchQueryTest, ToJsonRoundTrip) {
+    LogSearchQuery original;
+    original.text_pattern = "test";
+    original.min_level = spdlog::level::info;
+    original.limit = 200;
+    original.case_sensitive = true;
+
+    auto json = original.toJson();
+    auto restored = LogSearchQuery::fromJson(json);
+
+    EXPECT_EQ(restored.text_pattern, original.text_pattern);
+    EXPECT_EQ(restored.min_level, original.min_level);
+    EXPECT_EQ(restored.limit, original.limit);
+    EXPECT_EQ(restored.case_sensitive, original.case_sensitive);
+}
+
+// ============================================================================
+// LogSearchResult Tests
+// ============================================================================
+
+class LogSearchResultTest : public ::testing::Test {
+protected:
+    LogEntry createTestEntry(const std::string& msg) {
+        LogEntry entry;
+        entry.timestamp = std::chrono::system_clock::now();
+        entry.level = spdlog::level::info;
+        entry.logger_name = "test";
+        entry.message = msg;
+        return entry;
+    }
+};
+
+TEST_F(LogSearchResultTest, DefaultConstruction) {
+    LogSearchResult result;
+    EXPECT_TRUE(result.entries.empty());
+    EXPECT_EQ(result.total_matches, 0);
+    EXPECT_EQ(result.returned_count, 0);
+    EXPECT_FALSE(result.has_more);
+    EXPECT_EQ(result.search_time.count(), 0);
+}
+
+TEST_F(LogSearchResultTest, ToJsonWithEntries) {
+    LogSearchResult result;
+    result.entries.push_back(createTestEntry("Message 1"));
+    result.entries.push_back(createTestEntry("Message 2"));
+    result.total_matches = 10;
+    result.returned_count = 2;
+    result.has_more = true;
+    result.search_time = std::chrono::milliseconds(15);
+
+    auto json = result.toJson();
+    EXPECT_EQ(json["entries"].size(), 2);
+    EXPECT_EQ(json["total_matches"], 10);
+    EXPECT_EQ(json["returned_count"], 2);
+    EXPECT_TRUE(json["has_more"]);
+    EXPECT_EQ(json["search_time_ms"], 15);
+}
+
+TEST_F(LogSearchResultTest, ToJsonEmptyResult) {
+    LogSearchResult result;
+    auto json = result.toJson();
+
+    EXPECT_TRUE(json["entries"].empty());
+    EXPECT_EQ(json["total_matches"], 0);
+    EXPECT_EQ(json["returned_count"], 0);
+    EXPECT_FALSE(json["has_more"]);
+}

@@ -1,0 +1,35 @@
+{
+  "enabled": true,
+  "bridge_module_path": "./python",
+  "sys_paths": [
+    "./python",
+    "./example/python_scripts"
+  ],
+  "watch_dirs": [
+    "./example/python_scripts"
+  ],
+  "router": {
+    "prefix": "/python/api",
+    "enable_cors": true,
+    "enable_metrics": true
+  },
+  "commands": {
+    "prefix": "python.",
+    "enable_async": true,
+    "default_timeout_ms": 5000
+  },
+  "hot_reload": {
+    "enabled": false,
+    "poll_interval_ms": 1000
+  },
+  "scripts": [
+    {
+      "path": "example_exports",
+      "alias": "example",
+      "auto_load": true,
+      "hot_reload": false,
+      "priority": 10,
+      "tags": ["example", "demo"]
+    }
+  ]
+}

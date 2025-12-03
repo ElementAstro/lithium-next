@@ -16,11 +16,15 @@ lithium_component_begin(lithium_server 1.0.0)
 # ============================================================================
 
 set(PROJECT_SOURCES
+    # Core server components
     command.cpp
     eventloop.cpp
     rate_limiter.cpp
+    task_manager.cpp
     websocket.cpp
     websocket/log_stream.cpp
+
+    # Device command handlers
     command/camera.cpp
     command/mount.cpp
     command/focuser.cpp
@@ -30,12 +34,23 @@ set(PROJECT_SOURCES
     command/dome.cpp
     command/guider.cpp
     command/solver.cpp
-    command/telescope.cpp
+
+    # Server management commands
+    command/server.cpp
+    command/task.cpp
+
+    # Configuration and scripting
     command/config_ws.cpp
-    command/indi_server.cpp
     command/gpio.cpp
     command/script.cpp
+
+    # Controllers
     controller/database.cpp
+
+    # Plugin system
+    plugin/plugin_interface.cpp
+    plugin/plugin_loader.cpp
+    plugin/plugin_manager.cpp
 )
 
 # ============================================================================
@@ -44,6 +59,7 @@ set(PROJECT_SOURCES
 
 set(PROJECT_LIBRARIES
     atom
+    lithium_components
     lithium_config
     lithium_database
     lithium_logging

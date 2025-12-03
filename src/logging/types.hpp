@@ -98,6 +98,9 @@ struct SinkConfig {
 
 /**
  * @brief Logging manager configuration
+ *
+ * This configuration is used by LoggingManager to initialize the logging system.
+ * It can be created from JSON or converted from lithium::config::LoggingConfig.
  */
 struct LoggingConfig {
     spdlog::level::level_enum default_level{spdlog::level::info};
@@ -105,7 +108,17 @@ struct LoggingConfig {
     size_t ring_buffer_size{1000};
     bool async_logging{false};
     size_t async_queue_size{8192};
+    size_t async_thread_count{1};
     std::vector<SinkConfig> sinks;
+
+    // Console settings
+    bool enable_console{true};
+    bool console_color{true};
+
+    // File settings
+    bool enable_file{true};
+    std::string log_dir{"logs"};
+    std::string log_filename{"lithium"};
 
     /**
      * @brief Convert config to JSON
@@ -117,6 +130,11 @@ struct LoggingConfig {
      */
     [[nodiscard]] static auto fromJson(const nlohmann::json& j)
         -> LoggingConfig;
+
+    /**
+     * @brief Create default configuration with console and file sinks
+     */
+    [[nodiscard]] static auto createDefault() -> LoggingConfig;
 };
 
 /**
@@ -130,6 +148,38 @@ struct LoggingConfig {
  */
 [[nodiscard]] auto levelToString(spdlog::level::level_enum level)
     -> std::string;
+
+/**
+ * @brief Log search query parameters
+ */
+struct LogSearchQuery {
+    std::optional<std::string> text_pattern;   ///< Text to search for
+    std::optional<std::string> regex_pattern;  ///< Regex pattern
+    std::optional<spdlog::level::level_enum> min_level;
+    std::optional<spdlog::level::level_enum> max_level;
+    std::optional<std::string> logger_name;
+    std::optional<std::chrono::system_clock::time_point> start_time;
+    std::optional<std::chrono::system_clock::time_point> end_time;
+    size_t limit{100};
+    size_t offset{0};
+    bool case_sensitive{false};
+
+    [[nodiscard]] static auto fromJson(const nlohmann::json& j) -> LogSearchQuery;
+    [[nodiscard]] auto toJson() const -> nlohmann::json;
+};
+
+/**
+ * @brief Log search result
+ */
+struct LogSearchResult {
+    std::vector<LogEntry> entries;
+    size_t total_matches{0};
+    size_t returned_count{0};
+    bool has_more{false};
+    std::chrono::milliseconds search_time{0};
+
+    [[nodiscard]] auto toJson() const -> nlohmann::json;
+};
 
 }  // namespace lithium::logging
 

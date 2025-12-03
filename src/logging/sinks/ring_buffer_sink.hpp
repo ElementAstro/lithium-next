@@ -18,7 +18,6 @@ Description: Custom ring buffer sink for in-memory log storage and streaming
 #include <functional>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>

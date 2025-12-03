@@ -16,6 +16,15 @@
 #include "crow.h"
 #include "rate_limiter.hpp"
 
+// Forward declarations
+namespace lithium::server {
+class TaskManager;
+}
+
+namespace lithium::app {
+class EventLoop;
+}
+
 /**
  * @brief WebSocketServer provides a high-level interface for managing WebSocket
  * connections, broadcasting messages, handling commands, authentication, topic
@@ -76,6 +85,21 @@ public:
         std::shared_ptr<atom::async::MessageBus> message_bus,
         std::shared_ptr<lithium::app::CommandDispatcher> command_dispatcher,
         const Config& config);
+
+    /**
+     * @brief Set the TaskManager instance for task-related commands.
+     *
+     * @param task_manager Shared pointer to the TaskManager
+     */
+    void setTaskManager(
+        std::shared_ptr<lithium::server::TaskManager> task_manager);
+
+    /**
+     * @brief Set the EventLoop instance for server status commands.
+     *
+     * @param event_loop Shared pointer to the EventLoop
+     */
+    void setEventLoop(std::shared_ptr<lithium::app::EventLoop> event_loop);
 
     /**
      * @brief Starts the WebSocket server in a background thread.
@@ -357,6 +381,11 @@ private:
     bool compression_enabled_{
         false};                 ///< Whether message compression is enabled.
     int compression_level_{6};  ///< Compression level.
+
+    std::weak_ptr<lithium::server::TaskManager>
+        task_manager_;  ///< Task manager for task commands.
+    std::weak_ptr<lithium::app::EventLoop>
+        event_loop_;  ///< Event loop for server status commands.
 
     /**
      * @brief Tracks the last activity time for each client connection.

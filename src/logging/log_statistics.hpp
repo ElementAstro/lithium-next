@@ -17,7 +17,7 @@ Description: Log statistics and analysis utilities
 
 #include <atomic>
 #include <chrono>
-#include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 
@@ -139,7 +139,7 @@ private:
     LogStatistics(const LogStatistics&) = delete;
     LogStatistics& operator=(const LogStatistics&) = delete;
 
-    mutable std::mutex mutex_;
+    mutable std::shared_mutex mutex_;
     std::chrono::system_clock::time_point start_time_;
 
     // Level statistics
@@ -163,39 +163,6 @@ private:
     std::atomic<uint64_t> total_bytes_{0};
 
     void updateRateWindow();
-};
-
-/**
- * @brief Log search query parameters
- */
-struct LogSearchQuery {
-    std::optional<std::string> text_pattern;   // Text to search for
-    std::optional<std::string> regex_pattern;  // Regex pattern
-    std::optional<spdlog::level::level_enum> min_level;
-    std::optional<spdlog::level::level_enum> max_level;
-    std::optional<std::string> logger_name;
-    std::optional<std::chrono::system_clock::time_point> start_time;
-    std::optional<std::chrono::system_clock::time_point> end_time;
-    size_t limit{100};
-    size_t offset{0};
-    bool case_sensitive{false};
-
-    [[nodiscard]] static auto fromJson(const nlohmann::json& j)
-        -> LogSearchQuery;
-    [[nodiscard]] auto toJson() const -> nlohmann::json;
-};
-
-/**
- * @brief Log search result
- */
-struct LogSearchResult {
-    std::vector<struct LogEntry> entries;
-    size_t total_matches{0};
-    size_t returned_count{0};
-    bool has_more{false};
-    std::chrono::milliseconds search_time{0};
-
-    [[nodiscard]] auto toJson() const -> nlohmann::json;
 };
 
 }  // namespace lithium::logging

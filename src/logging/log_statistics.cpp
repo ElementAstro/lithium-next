@@ -71,7 +71,7 @@ void LogStatistics::recordMessage(spdlog::level::level_enum level,
 
     // Update logger stats
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         auto& stats = logger_stats_[logger_name];
         if (stats.name.empty()) {
             stats.name = logger_name;
@@ -95,7 +95,7 @@ void LogStatistics::updateRateWindow() {
     auto now = std::chrono::system_clock::now();
     auto now_seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
 
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
 
     // Check if we need a new window
     if (rate_windows_.empty() ||
@@ -144,7 +144,7 @@ auto LogStatistics::getLevelStats() const -> nlohmann::json {
 }
 
 auto LogStatistics::getLoggerStats() const -> nlohmann::json {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock lock(mutex_);
 
     nlohmann::json result = nlohmann::json::array();
     for (const auto& [name, stats] : logger_stats_) {
@@ -168,7 +168,7 @@ auto LogStatistics::getSummary() const -> nlohmann::json {
 
     size_t logger_count;
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::shared_lock lock(mutex_);
         logger_count = logger_stats_.size();
     }
 
@@ -184,7 +184,7 @@ auto LogStatistics::getSummary() const -> nlohmann::json {
 }
 
 auto LogStatistics::getMessageRate(int seconds) const -> double {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock lock(mutex_);
 
     if (rate_windows_.empty()) {
         return 0.0;
@@ -226,7 +226,7 @@ auto LogStatistics::getErrorRate() const -> double {
 }
 
 void LogStatistics::reset() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
 
     for (auto& stats : level_stats_) {
         stats.reset();
@@ -251,78 +251,6 @@ auto LogStatistics::getTotalMessages() const -> uint64_t {
 
 auto LogStatistics::getTotalBytes() const -> uint64_t {
     return total_bytes_.load();
-}
-
-// ============================================================================
-// LogSearchQuery Implementation
-// ============================================================================
-
-auto LogSearchQuery::fromJson(const nlohmann::json& j) -> LogSearchQuery {
-    LogSearchQuery query;
-
-    if (j.contains("text")) {
-        query.text_pattern = j["text"].get<std::string>();
-    }
-    if (j.contains("regex")) {
-        query.regex_pattern = j["regex"].get<std::string>();
-    }
-    if (j.contains("min_level")) {
-        query.min_level = levelFromString(j["min_level"].get<std::string>());
-    }
-    if (j.contains("max_level")) {
-        query.max_level = levelFromString(j["max_level"].get<std::string>());
-    }
-    if (j.contains("logger")) {
-        query.logger_name = j["logger"].get<std::string>();
-    }
-    if (j.contains("limit")) {
-        query.limit = j["limit"].get<size_t>();
-    }
-    if (j.contains("offset")) {
-        query.offset = j["offset"].get<size_t>();
-    }
-    if (j.contains("case_sensitive")) {
-        query.case_sensitive = j["case_sensitive"].get<bool>();
-    }
-
-    return query;
-}
-
-auto LogSearchQuery::toJson() const -> nlohmann::json {
-    nlohmann::json j;
-
-    if (text_pattern)
-        j["text"] = *text_pattern;
-    if (regex_pattern)
-        j["regex"] = *regex_pattern;
-    if (min_level)
-        j["min_level"] = levelToString(*min_level);
-    if (max_level)
-        j["max_level"] = levelToString(*max_level);
-    if (logger_name)
-        j["logger"] = *logger_name;
-    j["limit"] = limit;
-    j["offset"] = offset;
-    j["case_sensitive"] = case_sensitive;
-
-    return j;
-}
-
-// ============================================================================
-// LogSearchResult Implementation
-// ============================================================================
-
-auto LogSearchResult::toJson() const -> nlohmann::json {
-    nlohmann::json entries_json = nlohmann::json::array();
-    for (const auto& entry : entries) {
-        entries_json.push_back(entry.toJson());
-    }
-
-    return {{"entries", entries_json},
-            {"total_matches", total_matches},
-            {"returned_count", returned_count},
-            {"has_more", has_more},
-            {"search_time_ms", search_time.count()}};
 }
 
 }  // namespace lithium::logging
