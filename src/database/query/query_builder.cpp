@@ -19,7 +19,7 @@
 
 #include "query_builder.hpp"
 
-#include "atom/error/exception.hpp"
+#include "../core/types.hpp"
 
 namespace lithium::database::query {
 
@@ -100,6 +100,9 @@ QueryBuilder& QueryBuilder::offset(int offset) {
 }
 
 std::string QueryBuilder::build() const {
+    // Validate query parameters before building
+    validate();
+
     std::stringstream sql;
 
     // SELECT clause
@@ -216,14 +219,12 @@ std::string QueryBuilder::buildCount() const {
 
 void QueryBuilder::validate() const {
     if (tableName.empty()) {
-        throw atom::error::Exception("LITHIUM_DATABASE_VALIDATION_ERROR",
-                                    "Table name cannot be empty");
+        THROW_VALIDATION_ERROR("Table name cannot be empty");
     }
 
     // Validate that we don't have both LIMIT and OFFSET without LIMIT
     if (offsetValue > 0 && limitValue < 0) {
-        throw atom::error::Exception("LITHIUM_DATABASE_VALIDATION_ERROR",
-                                    "OFFSET cannot be used without LIMIT");
+        THROW_VALIDATION_ERROR("OFFSET cannot be used without LIMIT");
     }
 }
 

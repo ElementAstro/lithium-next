@@ -357,7 +357,7 @@ bool DeviceManager::connectBackend(const std::string& backend,
 
     if (!backendPtr) {
         LOG_ERROR("DeviceManager: Backend {} not found", backend);
-        return false;
+        THROW_BACKEND_NOT_FOUND("Backend not found: {}", backend);
     }
 
     device::BackendConfig config;
@@ -462,7 +462,8 @@ int DeviceManager::discoverAndRegisterDevices(const std::string& backend,
         device::DiscoveredDevice devInfo;
         devInfo.deviceId = meta.deviceId;
         devInfo.displayName = meta.displayName;
-        devInfo.deviceType = meta.customProperties.value("deviceType", "Unknown");
+        devInfo.deviceType =
+            meta.customProperties.value("deviceType", "Unknown");
         devInfo.driverName = meta.driverName;
         devInfo.driverVersion = meta.driverVersion;
         devInfo.connectionString = meta.connectionString;
@@ -530,9 +531,10 @@ void DeviceManager::stopHealthMonitor() {
 
 json DeviceManager::checkAllDevicesHealth() {
     json report;
-    report["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              std::chrono::system_clock::now().time_since_epoch())
-                              .count();
+    report["timestamp"] =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
 
     json devices = json::array();
     std::shared_lock lock(pimpl_->mtx);
@@ -927,48 +929,56 @@ std::future<DeviceOperationResult> DeviceManager::executeWithRetry(
     const std::string& name,
     std::function<bool(std::shared_ptr<AtomDriver>)> operation,
     const std::string& operationName) {
-    return std::async(std::launch::async,
-                      [this, name, operation, operationName]() -> DeviceOperationResult {
-        DeviceOperationResult result;
-        auto startTime = std::chrono::steady_clock::now();
+    return std::async(
+        std::launch::async,
+        [this, name, operation, operationName]() -> DeviceOperationResult {
+            DeviceOperationResult result;
+            auto startTime = std::chrono::steady_clock::now();
 
-        std::shared_lock lock(pimpl_->mtx);
-        auto device = pimpl_->findDeviceByName(name);
-        if (!device) {
-            result.errorMessage = "Device not found";
-            return result;
-        }
+            std::shared_lock lock(pimpl_->mtx);
+            auto device = pimpl_->findDeviceByName(name);
+            if (!device) {
+                result.errorMessage = "Device not found";
+                return result;
+            }
 
-        auto config = pimpl_->getRetryConfig(name);
-        auto deviceType = pimpl_->findDeviceType(name);
-        lock.unlock();
+            auto config = pimpl_->getRetryConfig(name);
+            auto deviceType = pimpl_->findDeviceType(name);
+            lock.unlock();
 
-        int attempt = 0;
-        while (attempt <= config.maxRetries) {
-            try {
-                if (operation(device)) {
-                    result.success = true;
-                    result.retryCount = attempt;
-                    break;
+            int attempt = 0;
+            while (attempt <= config.maxRetries) {
+                try {
+                    if (operation(device)) {
+                        result.success = true;
+                        result.retryCount = attempt;
+                        break;
+                    }
+                } catch (const std::exception& e) {
+                    result.errorMessage = e.what();
                 }
-            } catch (const std::exception& e) {
-                result.errorMessage = e.what();
+
+                attempt++;
+                if (attempt <= config.maxRetries) {
+                    pimpl_->statistics.totalRetries++;
+                    auto delay = pimpl_->calculateRetryDelay(config, attempt);
+                    std::this_thread::sleep_for(delay);
+                }
             }
 
-            attempt++;
-            if (attempt <= config.maxRetries) {
-                pimpl_->statistics.totalRetries++;
-                auto delay = pimpl_->calculateRetryDelay(config, attempt);
-                std::this_thread::sleep_for(delay);
+            auto endTime = std::chrono::steady_clock::now();
+            result.duration =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    endTime - startTime);
+
+            if (!result.success && result.retryCount >= config.maxRetries) {
+                LOG_ERROR(
+                    "DeviceManager: Operation failed after {} retries: {}",
+                    result.retryCount, result.errorMessage);
             }
-        }
 
-        auto endTime = std::chrono::steady_clock::now();
-        result.duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            endTime - startTime);
-
-        return result;
-    });
+            return result;
+        });
 }
 
 std::vector<std::pair<std::string, bool>> DeviceManager::connectDevicesBatch(
@@ -976,7 +986,8 @@ std::vector<std::pair<std::string, bool>> DeviceManager::connectDevicesBatch(
     std::vector<std::future<std::pair<std::string, bool>>> futures;
 
     for (const auto& name : names) {
-        futures.push_back(std::async(std::launch::async,
+        futures.push_back(std::async(
+            std::launch::async,
             [this, name, timeoutMs]() -> std::pair<std::string, bool> {
                 try {
                     return {name, connectDeviceByName(name, timeoutMs)};
@@ -998,8 +1009,8 @@ std::vector<std::pair<std::string, bool>> DeviceManager::disconnectDevicesBatch(
     std::vector<std::future<std::pair<std::string, bool>>> futures;
 
     for (const auto& name : names) {
-        futures.push_back(std::async(std::launch::async,
-            [this, name]() -> std::pair<std::string, bool> {
+        futures.push_back(std::async(
+            std::launch::async, [this, name]() -> std::pair<std::string, bool> {
                 try {
                     return {name, disconnectDeviceByName(name)};
                 } catch (...) {
