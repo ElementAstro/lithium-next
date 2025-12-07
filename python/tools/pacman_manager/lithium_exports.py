@@ -15,7 +15,7 @@ from .manager import PacmanManager
     method="POST",
     description="Install a package",
     tags=["pacman", "package"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def install_package(package: str, aur: bool = False) -> dict:
     """
@@ -52,7 +52,7 @@ def install_package(package: str, aur: bool = False) -> dict:
     method="POST",
     description="Remove a package",
     tags=["pacman", "package"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def remove_package(package: str, cascade: bool = False) -> dict:
     """
@@ -86,7 +86,7 @@ def remove_package(package: str, cascade: bool = False) -> dict:
     method="GET",
     description="Search for packages",
     tags=["pacman", "package"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def search_packages(query: str, aur: bool = False) -> dict:
     """
@@ -132,7 +132,7 @@ def search_packages(query: str, aur: bool = False) -> dict:
     method="GET",
     description="Get package information",
     tags=["pacman", "package"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_package_info(package: str) -> dict:
     """
@@ -171,7 +171,7 @@ def get_package_info(package: str) -> dict:
     method="GET",
     description="List installed packages",
     tags=["pacman", "package"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def list_installed() -> dict:
     """
@@ -207,7 +207,7 @@ def list_installed() -> dict:
     method="POST",
     description="Upgrade system packages",
     tags=["pacman", "system"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def upgrade_system() -> dict:
     """
@@ -237,7 +237,7 @@ def upgrade_system() -> dict:
     method="POST",
     description="Update package database",
     tags=["pacman", "system"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def update_database() -> dict:
     """
@@ -267,7 +267,7 @@ def update_database() -> dict:
     method="POST",
     description="Clean package cache",
     tags=["pacman", "maintenance"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def clean_cache() -> dict:
     """
@@ -297,7 +297,7 @@ def clean_cache() -> dict:
     description="Install package (command)",
     priority=5,
     timeout_ms=300000,
-    tags=["pacman"]
+    tags=["pacman"],
 )
 def cmd_install(package: str) -> dict:
     """Install package via command dispatcher."""
@@ -309,7 +309,7 @@ def cmd_install(package: str) -> dict:
     description="Search packages (command)",
     priority=5,
     timeout_ms=30000,
-    tags=["pacman"]
+    tags=["pacman"],
 )
 def cmd_search(query: str) -> dict:
     """Search packages via command dispatcher."""
@@ -321,7 +321,7 @@ def cmd_search(query: str) -> dict:
     description="Upgrade system (command)",
     priority=3,
     timeout_ms=600000,
-    tags=["pacman"]
+    tags=["pacman"],
 )
 def cmd_upgrade() -> dict:
     """Upgrade system via command dispatcher."""

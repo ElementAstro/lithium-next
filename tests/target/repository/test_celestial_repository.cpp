@@ -109,7 +109,7 @@ TEST_F(CelestialRepositoryTest, SearchByCoordinates) {
 
 TEST_F(CelestialRepositoryTest, GetByType) {
     repository_->insert(createTestObject("M31"));
-    
+
     auto obj2 = createTestObject("M42");
     obj2.type = "Nebula";
     repository_->insert(obj2);
@@ -149,7 +149,7 @@ TEST_F(CelestialRepositoryTest, Count) {
 
 TEST_F(CelestialRepositoryTest, CountByType) {
     repository_->insert(createTestObject("M31"));
-    
+
     auto obj2 = createTestObject("M42");
     obj2.type = "Nebula";
     repository_->insert(obj2);
@@ -163,7 +163,7 @@ TEST_F(CelestialRepositoryTest, IncrementClickCount) {
     repository_->insert(obj);
 
     EXPECT_TRUE(repository_->incrementClickCount("M31"));
-    
+
     auto found = repository_->findByIdentifier("M31");
     ASSERT_TRUE(found.has_value());
     EXPECT_EQ(found->clickCount, 1);

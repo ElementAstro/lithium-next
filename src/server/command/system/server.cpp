@@ -141,13 +141,14 @@ void registerServerCommands(
     // websocket.stats - Get WebSocket server statistics
     dispatcher->registerCommand<nlohmann::json>(
         "websocket.stats",
-        [websocket_server](const nlohmann::json& /*payload*/) -> nlohmann::json {
+        [websocket_server](
+            const nlohmann::json& /*payload*/) -> nlohmann::json {
             auto ws = websocket_server.lock();
             if (!ws) {
-                return {
-                    {"status", "error"},
-                    {"error", {{"code", "unavailable"},
-                               {"message", "WebSocket server not available"}}}};
+                return {{"status", "error"},
+                        {"error",
+                         {{"code", "unavailable"},
+                          {"message", "WebSocket server not available"}}}};
             }
 
             nlohmann::json result = ws->get_stats();
@@ -161,13 +162,14 @@ void registerServerCommands(
     // websocket.connections - Get active WebSocket connections count
     dispatcher->registerCommand<nlohmann::json>(
         "websocket.connections",
-        [websocket_server](const nlohmann::json& /*payload*/) -> nlohmann::json {
+        [websocket_server](
+            const nlohmann::json& /*payload*/) -> nlohmann::json {
             auto ws = websocket_server.lock();
             if (!ws) {
-                return {
-                    {"status", "error"},
-                    {"error", {{"code", "unavailable"},
-                               {"message", "WebSocket server not available"}}}};
+                return {{"status", "error"},
+                        {"error",
+                         {{"code", "unavailable"},
+                          {"message", "WebSocket server not available"}}}};
             }
 
             return {{"status", "success"},
@@ -181,4 +183,3 @@ void registerServerCommands(
 }
 
 }  // namespace lithium::app
-

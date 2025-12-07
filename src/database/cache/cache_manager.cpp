@@ -33,8 +33,14 @@ CacheManager::CacheManager() : defaultTTL(300), stopPurgeThread(false) {
 }
 
 CacheManager::~CacheManager() {
-    // Stop the purge thread
-    stopPurgeThread.store(true);
+    // Signal the purge thread to stop
+    {
+        std::lock_guard<std::mutex> lock(stopMutex);
+        stopPurgeThread.store(true);
+    }
+    stopCond.notify_one();
+
+    // Wait for purge thread to finish
     if (purgeThread.joinable()) {
         purgeThread.join();
     }
@@ -121,10 +127,17 @@ void CacheManager::purgePeriodically() {
     using namespace std::chrono_literals;
 
     try {
-        while (!stopPurgeThread.load()) {
-            // Sleep for a while
-            std::this_thread::sleep_for(60s);  // Check every minute
+        while (true) {
+            // Wait for stop signal or timeout (60 seconds)
+            std::unique_lock<std::mutex> lock(stopMutex);
+            if (stopCond.wait_for(lock, 60s,
+                                  [this] { return stopPurgeThread.load(); })) {
+                // Stop signal received
+                break;
+            }
 
+            // Timeout - perform purge
+            lock.unlock();
             size_t removed = purgeExpired();
             if (removed > 0) {
                 spdlog::info("Cache purge: removed {} expired entries",

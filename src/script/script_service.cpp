@@ -74,8 +74,7 @@ public:
 
             // Initialize ToolRegistry
             toolRegistry_ = std::make_shared<tools::PythonToolRegistry>();
-            if (config_.autoDiscoverTools &&
-                !config_.toolsDirectory.empty()) {
+            if (config_.autoDiscoverTools && !config_.toolsDirectory.empty()) {
                 toolRegistry_->setSearchPath(config_.toolsDirectory);
                 auto discoverResult = toolRegistry_->discoverTools();
                 if (discoverResult) {
@@ -147,11 +146,9 @@ public:
         return initialized_;
     }
 
-    ScriptExecutionResult executePython(
-        std::string_view code,
-        const nlohmann::json& args,
-        const ScriptExecutionConfig& config) {
-
+    ScriptExecutionResult executePython(std::string_view code,
+                                        const nlohmann::json& args,
+                                        const ScriptExecutionConfig& config) {
         ScriptExecutionResult result;
         auto startTime = std::chrono::steady_clock::now();
 
@@ -195,18 +192,17 @@ public:
             result.errorMessage = e.what();
         }
 
-        result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime);
+        result.executionTime =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - startTime);
 
         updateStatistics(result);
         return result;
     }
 
     ScriptExecutionResult executePythonFile(
-        const std::filesystem::path& path,
-        const nlohmann::json& args,
+        const std::filesystem::path& path, const nlohmann::json& args,
         const ScriptExecutionConfig& config) {
-
         if (!std::filesystem::exists(path)) {
             ScriptExecutionResult result;
             result.errorMessage = "File not found: " + path.string();
@@ -222,11 +218,8 @@ public:
     }
 
     ScriptExecutionResult executePythonFunction(
-        std::string_view moduleName,
-        std::string_view functionName,
-        const nlohmann::json& args,
-        const ScriptExecutionConfig& config) {
-
+        std::string_view moduleName, std::string_view functionName,
+        const nlohmann::json& args, const ScriptExecutionConfig& config) {
         ScriptExecutionResult result;
         auto startTime = std::chrono::steady_clock::now();
 
@@ -237,7 +230,8 @@ public:
 
         ExecutionMode mode = config.mode;
         if (mode == ExecutionMode::Auto) {
-            mode = ExecutionMode::Isolated;  // Default to isolated for functions
+            mode =
+                ExecutionMode::Isolated;  // Default to isolated for functions
         }
 
         result.actualMode = mode;
@@ -257,7 +251,7 @@ public:
             } else {
                 // Use PythonWrapper for in-process execution
                 pythonWrapper_->load_script(std::string(moduleName),
-                                           std::string(moduleName));
+                                            std::string(moduleName));
                 auto pyResult = pythonWrapper_->invoke_export(
                     std::string(moduleName), std::string(functionName),
                     py::cast(args));
@@ -269,18 +263,17 @@ public:
             result.errorMessage = e.what();
         }
 
-        result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime);
+        result.executionTime =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - startTime);
 
         updateStatistics(result);
         return result;
     }
 
     std::future<ScriptExecutionResult> executePythonAsync(
-        std::string_view code,
-        const nlohmann::json& args,
+        std::string_view code, const nlohmann::json& args,
         const ScriptExecutionConfig& config) {
-
         std::string codeCopy(code);
         return std::async(std::launch::async, [this, codeCopy, args, config] {
             return executePython(codeCopy, args, config);
@@ -289,9 +282,7 @@ public:
 
     ScriptResult<std::pair<std::string, int>> executeShellScript(
         const std::string& scriptName,
-        const std::unordered_map<std::string, std::string>& args,
-        bool safe) {
-
+        const std::unordered_map<std::string, std::string>& args, bool safe) {
         if (!scriptManager_) {
             return std::unexpected(ScriptServiceError::NotInitialized);
         }
@@ -318,11 +309,9 @@ public:
         return scripts;
     }
 
-    ScriptResult<nlohmann::json> invokeTool(
-        const std::string& toolName,
-        const std::string& functionName,
-        const nlohmann::json& args) {
-
+    ScriptResult<nlohmann::json> invokeTool(const std::string& toolName,
+                                            const std::string& functionName,
+                                            const nlohmann::json& args) {
         if (!toolRegistry_) {
             return std::unexpected(ScriptServiceError::NotInitialized);
         }
@@ -356,9 +345,7 @@ public:
     }
 
     ScriptResult<nlohmann::json> createVirtualEnv(
-        const std::filesystem::path& path,
-        const std::string& pythonVersion) {
-
+        const std::filesystem::path& path, const std::string& pythonVersion) {
         if (!venvManager_) {
             return std::unexpected(ScriptServiceError::NotInitialized);
         }
@@ -400,7 +387,8 @@ public:
         return {};
     }
 
-    ScriptResult<void> installPackage(const std::string& package, bool upgrade) {
+    ScriptResult<void> installPackage(const std::string& package,
+                                      bool upgrade) {
         if (!venvManager_) {
             return std::unexpected(ScriptServiceError::NotInitialized);
         }
@@ -448,7 +436,8 @@ public:
         options.async_mode = false;
         options.deep_analysis = true;
 
-        auto analysisResult = scriptAnalyzer_->analyzeWithOptions(script, options);
+        auto analysisResult =
+            scriptAnalyzer_->analyzeWithOptions(script, options);
 
         result["valid"] = analysisResult.dangers.empty();
         result["complexity"] = analysisResult.complexity;
@@ -483,11 +472,9 @@ public:
         return scriptAnalyzer_->getSafeVersion(script);
     }
 
-    ScriptResult<nlohmann::json> executeNumpyOp(
-        const std::string& operation,
-        const nlohmann::json& arrays,
-        const nlohmann::json& params) {
-
+    ScriptResult<nlohmann::json> executeNumpyOp(const std::string& operation,
+                                                const nlohmann::json& arrays,
+                                                const nlohmann::json& params) {
         if (!pythonWrapper_) {
             return std::unexpected(ScriptServiceError::NotInitialized);
         }
@@ -583,13 +570,27 @@ result = execute_numpy_op(op, arrays, params)
     }
 
     // Getters for subsystems
-    std::shared_ptr<PythonWrapper> getPythonWrapper() const { return pythonWrapper_; }
-    std::shared_ptr<InterpreterPool> getInterpreterPool() const { return interpreterPool_; }
-    std::shared_ptr<isolated::PythonRunner> getIsolatedRunner() const { return isolatedRunner_; }
-    std::shared_ptr<shell::ScriptManager> getScriptManager() const { return scriptManager_; }
-    std::shared_ptr<tools::PythonToolRegistry> getToolRegistry() const { return toolRegistry_; }
-    std::shared_ptr<venv::VenvManager> getVenvManager() const { return venvManager_; }
-    std::shared_ptr<ScriptAnalyzer> getScriptAnalyzer() const { return scriptAnalyzer_; }
+    std::shared_ptr<PythonWrapper> getPythonWrapper() const {
+        return pythonWrapper_;
+    }
+    std::shared_ptr<InterpreterPool> getInterpreterPool() const {
+        return interpreterPool_;
+    }
+    std::shared_ptr<isolated::PythonRunner> getIsolatedRunner() const {
+        return isolatedRunner_;
+    }
+    std::shared_ptr<shell::ScriptManager> getScriptManager() const {
+        return scriptManager_;
+    }
+    std::shared_ptr<tools::PythonToolRegistry> getToolRegistry() const {
+        return toolRegistry_;
+    }
+    std::shared_ptr<venv::VenvManager> getVenvManager() const {
+        return venvManager_;
+    }
+    std::shared_ptr<ScriptAnalyzer> getScriptAnalyzer() const {
+        return scriptAnalyzer_;
+    }
 
     void setProgressCallback(ScriptProgressCallback callback) {
         progressCallback_ = std::move(callback);
@@ -627,10 +628,8 @@ private:
     }
 
     ScriptExecutionResult executeInProcess(
-        std::string_view code,
-        const nlohmann::json& args,
+        std::string_view code, const nlohmann::json& args,
         const ScriptExecutionConfig& /*config*/) {
-
         ScriptExecutionResult result;
 
         try {
@@ -658,18 +657,16 @@ private:
         return result;
     }
 
-    ScriptExecutionResult executePooled(
-        std::string_view code,
-        const nlohmann::json& args,
-        const ScriptExecutionConfig& config) {
-
+    ScriptExecutionResult executePooled(std::string_view code,
+                                        const nlohmann::json& args,
+                                        const ScriptExecutionConfig& config) {
         ScriptExecutionResult result;
 
-        auto future = interpreterPool_->executeScript(
-            code,
-            py::dict(),  // globals
-            py::cast(args),  // locals with args
-            TaskPriority::Normal);
+        auto future =
+            interpreterPool_->executeScript(code,
+                                            py::dict(),      // globals
+                                            py::cast(args),  // locals with args
+                                            TaskPriority::Normal);
 
         auto taskResult = future.get();
 
@@ -687,11 +684,9 @@ private:
         return result;
     }
 
-    ScriptExecutionResult executeIsolated(
-        std::string_view code,
-        const nlohmann::json& args,
-        const ScriptExecutionConfig& config) {
-
+    ScriptExecutionResult executeIsolated(std::string_view code,
+                                          const nlohmann::json& args,
+                                          const ScriptExecutionConfig& config) {
         ScriptExecutionResult result;
 
         // Configure isolation
@@ -774,9 +769,7 @@ ScriptService::~ScriptService() = default;
 ScriptService::ScriptService(ScriptService&&) noexcept = default;
 ScriptService& ScriptService::operator=(ScriptService&&) noexcept = default;
 
-ScriptResult<void> ScriptService::initialize() {
-    return pImpl_->initialize();
-}
+ScriptResult<void> ScriptService::initialize() { return pImpl_->initialize(); }
 
 void ScriptService::shutdown(bool waitForPending) {
     pImpl_->shutdown(waitForPending);
@@ -787,38 +780,33 @@ bool ScriptService::isInitialized() const noexcept {
 }
 
 ScriptExecutionResult ScriptService::executePython(
-    std::string_view code,
-    const nlohmann::json& args,
+    std::string_view code, const nlohmann::json& args,
     const ScriptExecutionConfig& config) {
     return pImpl_->executePython(code, args, config);
 }
 
 ScriptExecutionResult ScriptService::executePythonFile(
-    const std::filesystem::path& path,
-    const nlohmann::json& args,
+    const std::filesystem::path& path, const nlohmann::json& args,
     const ScriptExecutionConfig& config) {
     return pImpl_->executePythonFile(path, args, config);
 }
 
 ScriptExecutionResult ScriptService::executePythonFunction(
-    std::string_view moduleName,
-    std::string_view functionName,
-    const nlohmann::json& args,
-    const ScriptExecutionConfig& config) {
-    return pImpl_->executePythonFunction(moduleName, functionName, args, config);
+    std::string_view moduleName, std::string_view functionName,
+    const nlohmann::json& args, const ScriptExecutionConfig& config) {
+    return pImpl_->executePythonFunction(moduleName, functionName, args,
+                                         config);
 }
 
 std::future<ScriptExecutionResult> ScriptService::executePythonAsync(
-    std::string_view code,
-    const nlohmann::json& args,
+    std::string_view code, const nlohmann::json& args,
     const ScriptExecutionConfig& config) {
     return pImpl_->executePythonAsync(code, args, config);
 }
 
 ScriptResult<std::pair<std::string, int>> ScriptService::executeShellScript(
     const std::string& scriptName,
-    const std::unordered_map<std::string, std::string>& args,
-    bool safe) {
+    const std::unordered_map<std::string, std::string>& args, bool safe) {
     return pImpl_->executeShellScript(scriptName, args, safe);
 }
 
@@ -827,8 +815,7 @@ std::vector<std::string> ScriptService::listShellScripts() const {
 }
 
 ScriptResult<nlohmann::json> ScriptService::invokeTool(
-    const std::string& toolName,
-    const std::string& functionName,
+    const std::string& toolName, const std::string& functionName,
     const nlohmann::json& args) {
     return pImpl_->invokeTool(toolName, functionName, args);
 }
@@ -842,8 +829,7 @@ ScriptResult<size_t> ScriptService::discoverTools() {
 }
 
 ScriptResult<nlohmann::json> ScriptService::createVirtualEnv(
-    const std::filesystem::path& path,
-    const std::string& pythonVersion) {
+    const std::filesystem::path& path, const std::string& pythonVersion) {
     return pImpl_->createVirtualEnv(path, pythonVersion);
 }
 
@@ -856,9 +842,8 @@ ScriptResult<void> ScriptService::deactivateVirtualEnv() {
     return pImpl_->deactivateVirtualEnv();
 }
 
-ScriptResult<void> ScriptService::installPackage(
-    const std::string& package,
-    bool upgrade) {
+ScriptResult<void> ScriptService::installPackage(const std::string& package,
+                                                 bool upgrade) {
     return pImpl_->installPackage(package, upgrade);
 }
 
@@ -879,8 +864,7 @@ std::string ScriptService::getSafeScript(const std::string& script) {
 }
 
 ScriptResult<nlohmann::json> ScriptService::executeNumpyOp(
-    const std::string& operation,
-    const nlohmann::json& arrays,
+    const std::string& operation, const nlohmann::json& arrays,
     const nlohmann::json& params) {
     return pImpl_->executeNumpyOp(operation, arrays, params);
 }
@@ -893,7 +877,8 @@ std::shared_ptr<InterpreterPool> ScriptService::getInterpreterPool() const {
     return pImpl_->getInterpreterPool();
 }
 
-std::shared_ptr<isolated::PythonRunner> ScriptService::getIsolatedRunner() const {
+std::shared_ptr<isolated::PythonRunner> ScriptService::getIsolatedRunner()
+    const {
     return pImpl_->getIsolatedRunner();
 }
 
@@ -901,7 +886,8 @@ std::shared_ptr<shell::ScriptManager> ScriptService::getScriptManager() const {
     return pImpl_->getScriptManager();
 }
 
-std::shared_ptr<tools::PythonToolRegistry> ScriptService::getToolRegistry() const {
+std::shared_ptr<tools::PythonToolRegistry> ScriptService::getToolRegistry()
+    const {
     return pImpl_->getToolRegistry();
 }
 
@@ -925,8 +911,6 @@ nlohmann::json ScriptService::getStatistics() const {
     return pImpl_->getStatistics();
 }
 
-void ScriptService::resetStatistics() {
-    pImpl_->resetStatistics();
-}
+void ScriptService::resetStatistics() { pImpl_->resetStatistics(); }
 
 }  // namespace lithium

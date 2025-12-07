@@ -17,7 +17,7 @@ from lithium_bridge.exporter import get_export_manifest
     method="GET",
     description="Discover all available tool modules with exports",
     tags=["tools", "discovery"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def discover_tools() -> dict:
     """
@@ -43,7 +43,9 @@ def discover_tools() -> dict:
                 manifest = get_export_manifest(module)
                 discovered[item.name] = {
                     "module": module_name,
-                    "controllers": len(manifest.get("exports", {}).get("controllers", [])),
+                    "controllers": len(
+                        manifest.get("exports", {}).get("controllers", [])
+                    ),
                     "commands": len(manifest.get("exports", {}).get("commands", [])),
                 }
             except Exception as e:
@@ -63,7 +65,7 @@ def discover_tools() -> dict:
     method="GET",
     description="Get the full export manifest for a tool module",
     tags=["tools", "discovery"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_tool_manifest(tool_name: str) -> dict:
     """
@@ -97,7 +99,7 @@ def get_tool_manifest(tool_name: str) -> dict:
     method="GET",
     description="Get all exports from all tool modules",
     tags=["tools", "discovery"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_all_exports() -> dict:
     """
@@ -149,7 +151,7 @@ def get_all_exports() -> dict:
     description="Discover tool modules (command)",
     priority=5,
     timeout_ms=10000,
-    tags=["tools"]
+    tags=["tools"],
 )
 def cmd_discover_tools() -> dict:
     """Discover tools via command dispatcher."""
@@ -161,7 +163,7 @@ def cmd_discover_tools() -> dict:
     description="List all exports (command)",
     priority=5,
     timeout_ms=10000,
-    tags=["tools"]
+    tags=["tools"],
 )
 def cmd_list_exports() -> dict:
     """List all exports via command dispatcher."""

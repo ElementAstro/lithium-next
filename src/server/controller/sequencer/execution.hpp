@@ -13,7 +13,7 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include "task/sequencer.hpp"
+#include "task/core/sequencer.hpp"
 
 namespace lithium::server::controller {
 

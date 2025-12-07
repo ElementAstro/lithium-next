@@ -39,6 +39,9 @@
 #include <memory>
 #include <string>
 
+// Common module (error handling, exceptions, result types)
+#include "common/common.hpp"
+
 // Manager module
 #include "manager/exceptions.hpp"
 #include "manager/manager.hpp"
@@ -57,6 +60,16 @@
 #include "service/device_factory.hpp"
 #include "service/device_registry.hpp"
 #include "service/device_types.hpp"
+#include "service/device_type_registry.hpp"
+
+// Plugin module
+#include "plugin/plugin.hpp"
+
+// Bridge module (device-component integration)
+#include "bridge/bridge.hpp"
+
+// Events module (event bus)
+#include "events/events.hpp"
 
 namespace lithium {
 
@@ -67,7 +80,7 @@ namespace lithium {
 /**
  * @brief Device module version.
  */
-inline constexpr const char* DEVICE_VERSION = "1.1.0";
+inline constexpr const char* DEVICE_VERSION = "2.0.0";
 
 /**
  * @brief Get device module version string.
@@ -200,6 +213,59 @@ using DevicePtr = std::shared_ptr<AtomDriver>;
  */
 [[nodiscard]] inline bool isDeviceBusy(const DeviceState& state) {
     return state.isBusy;
+}
+
+// ============================================================================
+// Device Subsystem Initialization
+// ============================================================================
+
+/**
+ * @brief Initialize the device subsystem
+ *
+ * This function initializes all device-related singletons and systems:
+ * - DeviceTypeRegistry (with built-in types)
+ * - DeviceEventBus
+ * - DevicePluginLoader
+ *
+ * @param config Optional configuration JSON
+ * @return true if initialization successful
+ */
+inline bool initializeDeviceSubsystem(const nlohmann::json& config = {}) {
+    using namespace device;
+
+    // Initialize type registry with built-in types
+    DeviceTypeRegistry::getInstance().initializeBuiltInTypes();
+
+    // Initialize event bus
+    DeviceEventBus::getInstance().initialize(
+        config.contains("events") ? config["events"] : nlohmann::json{});
+
+    // Initialize plugin loader
+    DevicePluginLoader::getInstance().initialize(
+        config.contains("plugins") ? config["plugins"] : nlohmann::json{});
+
+    // Connect plugin loader to type registry and factory
+    DevicePluginLoader::getInstance().setTypeRegistry(
+        &DeviceTypeRegistry::getInstance());
+    DevicePluginLoader::getInstance().setDeviceFactory(
+        &DeviceFactory::getInstance());
+
+    return true;
+}
+
+/**
+ * @brief Shutdown the device subsystem
+ *
+ * This function shuts down all device-related systems in reverse order.
+ */
+inline void shutdownDeviceSubsystem() {
+    using namespace device;
+
+    // Shutdown in reverse order
+    DevicePluginLoader::getInstance().shutdown();
+    DeviceEventBus::getInstance().shutdown();
+    DeviceTypeRegistry::getInstance().clear();
+    DeviceFactory::getInstance().clear();
 }
 
 }  // namespace lithium

@@ -89,6 +89,44 @@ private:
     std::unique_ptr<Impl> impl_;  ///< Pointer to the implementation.
 };
 
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * @brief Create a parser configuration for dependency analysis.
+ * @return ParserConfig with dependency analysis enabled.
+ */
+[[nodiscard]] inline ParserConfig createDependencyAnalysisConfig() {
+    ParserConfig config;
+    config.analyze_dependencies = true;
+    config.verify_libraries = true;
+    return config;
+}
+
+/**
+ * @brief Create a parser configuration with caching disabled.
+ * @return ParserConfig with caching disabled.
+ */
+[[nodiscard]] inline ParserConfig createNoCacheConfig() {
+    ParserConfig config;
+    config.use_cache = false;
+    return config;
+}
+
+/**
+ * @brief Create a parser configuration for JSON output.
+ * @param filename Output filename.
+ * @return ParserConfig with JSON output enabled.
+ */
+[[nodiscard]] inline ParserConfig createJsonOutputConfig(
+    const std::string& filename) {
+    ParserConfig config;
+    config.json_output = true;
+    config.output_filename = filename;
+    return config;
+}
+
 }  // namespace lithium::addon
 
 #endif  // LITHIUM_ADDON_DEBUG_DYNAMIC_HPP

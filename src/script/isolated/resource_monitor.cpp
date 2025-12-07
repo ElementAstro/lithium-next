@@ -10,8 +10,8 @@
 #include <string>
 
 #ifdef _WIN32
-#include <windows.h>
 #include <psapi.h>
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif
@@ -19,7 +19,8 @@
 namespace lithium::isolated {
 
 std::optional<size_t> ResourceMonitor::getMemoryUsage(int processId) {
-    if (processId <= 0) return std::nullopt;
+    if (processId <= 0)
+        return std::nullopt;
 
 #ifdef _WIN32
     HANDLE process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
@@ -52,7 +53,8 @@ std::optional<double> ResourceMonitor::getCpuUsage(int processId) {
 }
 
 bool ResourceMonitor::isMemoryLimitExceeded(int processId, size_t limitMB) {
-    if (limitMB == 0) return false;  // No limit
+    if (limitMB == 0)
+        return false;  // No limit
 
     auto memUsage = getMemoryUsage(processId);
     if (memUsage) {
@@ -62,7 +64,8 @@ bool ResourceMonitor::isMemoryLimitExceeded(int processId, size_t limitMB) {
 }
 
 std::optional<size_t> ResourceMonitor::getPeakMemoryUsage(int processId) {
-    if (processId <= 0) return std::nullopt;
+    if (processId <= 0)
+        return std::nullopt;
 
 #ifdef _WIN32
     HANDLE process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,

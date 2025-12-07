@@ -16,11 +16,11 @@
 #include <vector>
 
 #include "atom/type/json.hpp"
-#include "components/dependency.hpp"
-#include "components/loader.hpp"
-#include "components/manager.hpp"
-#include "components/tracker.hpp"
-#include "components/version.hpp"
+#include "components/core/dependency.hpp"
+#include "components/core/loader.hpp"
+#include "components/core/tracker.hpp"
+#include "components/core/version.hpp"
+#include "components/manager/manager.hpp"
 
 #include "components/system/dependency_manager.hpp"
 #include "components/system/package_manager.hpp"

@@ -157,7 +157,7 @@ TEST_F(DeviceManagerTest, FindDeviceByName_NotFound) {
     EXPECT_EQ(found, nullptr);
 }
 
-TEST_F(DeviceManagerTest, FindDevicesByType_Found) {
+TEST_F(DeviceManagerTest, GetDevicesByType_Found) {
     auto device1 = std::make_shared<MockAtomDriver>("Camera1");
     auto device2 = std::make_shared<MockAtomDriver>("Camera2");
     EXPECT_CALL(*device1, isConnected()).WillRepeatedly(Return(false));
@@ -166,12 +166,12 @@ TEST_F(DeviceManagerTest, FindDevicesByType_Found) {
     manager_->addDevice("camera", device1);
     manager_->addDevice("camera", device2);
 
-    auto devices = manager_->findDevicesByType("camera");
+    auto devices = manager_->getDevicesByType("camera");
     EXPECT_EQ(devices.size(), 2);
 }
 
-TEST_F(DeviceManagerTest, FindDevicesByType_NotFound) {
-    auto devices = manager_->findDevicesByType("nonexistent");
+TEST_F(DeviceManagerTest, GetDevicesByType_NotFound) {
+    auto devices = manager_->getDevicesByType("nonexistent");
     EXPECT_TRUE(devices.empty());
 }
 
@@ -294,10 +294,9 @@ TEST_F(DeviceManagerTest, GetDeviceState_AfterAdd) {
     manager_->addDeviceWithMetadata("camera", device, metadata);
 
     auto state = manager_->getDeviceState("TestCamera");
-    ASSERT_TRUE(state.has_value());
-    EXPECT_TRUE(state->isConnected);
-    EXPECT_TRUE(state->isInitialized);
-    EXPECT_FLOAT_EQ(state->healthScore, 1.0f);
+    EXPECT_TRUE(state.isConnected);
+    EXPECT_TRUE(state.isInitialized);
+    EXPECT_FLOAT_EQ(state.healthScore, 1.0f);
 }
 
 TEST_F(DeviceManagerTest, GetDevicesWithState_Success) {
@@ -399,26 +398,38 @@ TEST_F(DeviceManagerTest, SetRetryConfig_Success) {
     EXPECT_EQ(retrieved.initialDelay.count(), 200);
 }
 
-TEST_F(DeviceManagerTest, RetryConfig_CalculateDelay_Exponential) {
+TEST_F(DeviceManagerTest, RetryConfig_Serialization) {
     DeviceRetryConfig config;
     config.strategy = DeviceRetryConfig::Strategy::Exponential;
-    config.initialDelay = std::chrono::milliseconds(100);
-    config.multiplier = 2.0f;
-    config.maxDelay = std::chrono::milliseconds(5000);
+    config.maxRetries = 5;
+    config.initialDelay = std::chrono::milliseconds(200);
+    config.maxDelay = std::chrono::milliseconds(10000);
+    config.multiplier = 3.0f;
 
-    EXPECT_EQ(config.calculateDelay(1).count(), 100);
-    EXPECT_EQ(config.calculateDelay(2).count(), 200);
-    EXPECT_EQ(config.calculateDelay(3).count(), 400);
+    auto json = config.toJson();
+
+    EXPECT_EQ(json["strategy"], static_cast<int>(DeviceRetryConfig::Strategy::Exponential));
+    EXPECT_EQ(json["maxRetries"], 5);
+    EXPECT_EQ(json["initialDelayMs"], 200);
+    EXPECT_EQ(json["maxDelayMs"], 10000);
+    EXPECT_FLOAT_EQ(json["multiplier"].get<float>(), 3.0f);
 }
 
-TEST_F(DeviceManagerTest, RetryConfig_CalculateDelay_Linear) {
-    DeviceRetryConfig config;
-    config.strategy = DeviceRetryConfig::Strategy::Linear;
-    config.initialDelay = std::chrono::milliseconds(100);
+TEST_F(DeviceManagerTest, RetryConfig_Deserialization) {
+    json j;
+    j["strategy"] = static_cast<int>(DeviceRetryConfig::Strategy::Linear);
+    j["maxRetries"] = 10;
+    j["initialDelayMs"] = 500;
+    j["maxDelayMs"] = 20000;
+    j["multiplier"] = 1.5f;
 
-    EXPECT_EQ(config.calculateDelay(1).count(), 100);
-    EXPECT_EQ(config.calculateDelay(2).count(), 100);
-    EXPECT_EQ(config.calculateDelay(3).count(), 100);
+    auto config = DeviceRetryConfig::fromJson(j);
+
+    EXPECT_EQ(config.strategy, DeviceRetryConfig::Strategy::Linear);
+    EXPECT_EQ(config.maxRetries, 10);
+    EXPECT_EQ(config.initialDelay.count(), 500);
+    EXPECT_EQ(config.maxDelay.count(), 20000);
+    EXPECT_FLOAT_EQ(config.multiplier, 1.5f);
 }
 
 // ========== Event System Tests ==========
@@ -429,15 +440,15 @@ TEST_F(DeviceManagerTest, SubscribeToEvents_ReceivesEvents) {
 
     std::vector<DeviceEventType> receivedEvents;
     auto callbackId = manager_->subscribeToEvents(
-        [&](DeviceEventType type, const std::string&, const std::string&, const json&) {
-            receivedEvents.push_back(type);
+        [&](const DeviceEvent& event) {
+            receivedEvents.push_back(event.type);
         });
 
     DeviceMetadata metadata;
     manager_->addDeviceWithMetadata("camera", device, metadata);
 
     EXPECT_FALSE(receivedEvents.empty());
-    EXPECT_EQ(receivedEvents[0], DeviceEventType::DEVICE_ADDED);
+    EXPECT_EQ(receivedEvents[0], DeviceEventType::StateChanged);
 
     manager_->unsubscribeFromEvents(callbackId);
 }
@@ -448,15 +459,15 @@ TEST_F(DeviceManagerTest, SubscribeToSpecificEvents_FiltersEvents) {
 
     std::vector<DeviceEventType> receivedEvents;
     auto callbackId = manager_->subscribeToEvents(
-        [&](DeviceEventType type, const std::string&, const std::string&, const json&) {
-            receivedEvents.push_back(type);
+        [&](const DeviceEvent& event) {
+            receivedEvents.push_back(event.type);
         },
-        {DeviceEventType::DEVICE_CONNECTED});
+        {DeviceEventType::Connected});
 
     DeviceMetadata metadata;
     manager_->addDeviceWithMetadata("camera", device, metadata);
 
-    // Should not receive DEVICE_ADDED since we only subscribed to DEVICE_CONNECTED
+    // Should not receive StateChanged since we only subscribed to Connected
     EXPECT_TRUE(receivedEvents.empty());
 
     manager_->unsubscribeFromEvents(callbackId);

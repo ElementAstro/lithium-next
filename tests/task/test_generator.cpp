@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "atom/type/json.hpp"
-#include "task/generator.hpp"
+#include "task/core/generator.hpp"
 
 using namespace lithium;
 

@@ -24,6 +24,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <optional>
 #include <shared_mutex>
 #include <string>
@@ -117,6 +119,8 @@ private:
     // Automatically purge expired entries periodically
     std::thread purgeThread;
     std::atomic<bool> stopPurgeThread{false};
+    std::mutex stopMutex;              ///< Mutex for condition variable.
+    std::condition_variable stopCond;  ///< Condition variable for shutdown.
 
     void purgePeriodically();
 };

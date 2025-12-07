@@ -74,7 +74,8 @@ public:
      */
     void registerCreator(const std::string& backend, const std::string& typeStr,
                          DeviceCreator creator) {
-        registerCreator(backend, stringToDeviceType(typeStr), std::move(creator));
+        registerCreator(backend, stringToDeviceType(typeStr),
+                        std::move(creator));
     }
 
     /**
@@ -131,9 +132,9 @@ public:
      * @brief Create a device with explicit type
      */
     std::shared_ptr<AtomDriver> createDevice(const std::string& backend,
-                                              DeviceType type,
-                                              const std::string& name,
-                                              const DiscoveredDevice& info) {
+                                             DeviceType type,
+                                             const std::string& name,
+                                             const DiscoveredDevice& info) {
         std::lock_guard<std::mutex> lock(mutex_);
 
         std::string key = makeKey(backend, type);
@@ -156,8 +157,8 @@ public:
      * @param devices List of discovered devices
      * @return Map of device ID to created device
      */
-    std::unordered_map<std::string, std::shared_ptr<AtomDriver>>
-    createDevices(const std::vector<DiscoveredDevice>& devices) {
+    std::unordered_map<std::string, std::shared_ptr<AtomDriver>> createDevices(
+        const std::vector<DiscoveredDevice>& devices) {
         std::unordered_map<std::string, std::shared_ptr<AtomDriver>> result;
 
         for (const auto& info : devices) {

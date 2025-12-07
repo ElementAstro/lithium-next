@@ -7,6 +7,55 @@
 
 namespace lithium::addon {
 
+// ============================================================================
+// Analysis Options
+// ============================================================================
+
+/**
+ * @brief Configuration options for core dump analysis.
+ */
+struct CoreDumpAnalysisOptions {
+    bool includeMemory{true};     ///< Include memory usage analysis.
+    bool includeThreads{true};    ///< Include thread information.
+    bool includeStack{true};      ///< Include stack trace analysis.
+    bool includeRegisters{true};  ///< Include register snapshots.
+    bool includeModules{true};    ///< Include loaded modules.
+    bool includeResources{true};  ///< Include resource usage.
+    int analysisDepth{10};        ///< Depth of stack trace analysis.
+    std::vector<std::string> symbolSearchPaths;  ///< Symbol search paths.
+};
+
+/**
+ * @brief Create default analysis options.
+ * @return Default CoreDumpAnalysisOptions.
+ */
+[[nodiscard]] inline CoreDumpAnalysisOptions createDefaultAnalysisOptions() {
+    return CoreDumpAnalysisOptions{};
+}
+
+/**
+ * @brief Create minimal analysis options (fast analysis).
+ * @return Minimal CoreDumpAnalysisOptions.
+ */
+[[nodiscard]] inline CoreDumpAnalysisOptions createMinimalAnalysisOptions() {
+    CoreDumpAnalysisOptions options;
+    options.includeMemory = false;
+    options.includeResources = false;
+    options.analysisDepth = 5;
+    return options;
+}
+
+/**
+ * @brief Create comprehensive analysis options (full analysis).
+ * @return Comprehensive CoreDumpAnalysisOptions.
+ */
+[[nodiscard]] inline CoreDumpAnalysisOptions
+createComprehensiveAnalysisOptions() {
+    CoreDumpAnalysisOptions options;
+    options.analysisDepth = 50;
+    return options;
+}
+
 /**
  * @brief Analyzes core dump files.
  *
@@ -130,6 +179,13 @@ public:
     void setAnalysisOptions(bool includeMemory = true,
                             bool includeThreads = true,
                             bool includeStack = true);
+
+    /**
+     * @brief Sets the analysis options using a CoreDumpAnalysisOptions struct.
+     *
+     * @param options The analysis options to apply.
+     */
+    void setAnalysisOptions(const CoreDumpAnalysisOptions& options);
 
     // 新增方法
     [[nodiscard]] auto getProcessInfo() const -> std::string;

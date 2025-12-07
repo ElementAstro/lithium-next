@@ -12,10 +12,10 @@
 #ifndef LITHIUM_TARGET_ONLINE_PARSER_VOTABLE_PARSER_HPP
 #define LITHIUM_TARGET_ONLINE_PARSER_VOTABLE_PARSER_HPP
 
-#include "response_parser.hpp"
-#include <unordered_map>
 #include <functional>
 #include <optional>
+#include <unordered_map>
+#include "response_parser.hpp"
 
 namespace lithium::target::online {
 
@@ -47,11 +47,11 @@ public:
 
     [[nodiscard]] auto parse(std::string_view content)
         -> atom::type::Expected<std::vector<CelestialObjectModel>,
-                               ParseError> override;
+                                ParseError> override;
 
     [[nodiscard]] auto parseEphemeris(std::string_view content)
         -> atom::type::Expected<std::vector<EphemerisPoint>,
-                               ParseError> override;
+                                ParseError> override;
 
     [[nodiscard]] auto format() const noexcept -> ResponseFormat override {
         return ResponseFormat::VOTable;

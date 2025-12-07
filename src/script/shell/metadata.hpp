@@ -35,7 +35,7 @@ struct ScriptMetadata {
     std::vector<std::string> tags;                    ///< Categorization tags
     std::chrono::system_clock::time_point createdAt;  ///< Creation timestamp
     std::chrono::system_clock::time_point lastModified;  ///< Last modification
-    size_t version{1};                                ///< Version number
+    size_t version{1};                                   ///< Version number
     std::unordered_map<std::string, std::string> parameters;  ///< Parameters
     ScriptLanguage language{ScriptLanguage::Auto};    ///< Script language
     std::string author;                               ///< Script author
@@ -76,7 +76,8 @@ public:
      * @param scriptName Script identifier
      * @param metadata Metadata to store
      */
-    void setMetadata(std::string_view scriptName, const ScriptMetadata& metadata);
+    void setMetadata(std::string_view scriptName,
+                     const ScriptMetadata& metadata);
 
     /**
      * @brief Get metadata for a script

@@ -11,21 +11,19 @@
 namespace lithium::server::plugin {
 
 auto PluginMetadata::toJson() const -> json {
-    return json{
-        {"name", name},
-        {"version", version},
-        {"description", description},
-        {"author", author},
-        {"license", license},
-        {"homepage", homepage},
-        {"repository", repository},
-        {"priority", priority},
-        {"dependencies", dependencies},
-        {"optionalDeps", optionalDeps},
-        {"conflicts", conflicts},
-        {"tags", tags},
-        {"capabilities", capabilities}
-    };
+    return json{{"name", name},
+                {"version", version},
+                {"description", description},
+                {"author", author},
+                {"license", license},
+                {"homepage", homepage},
+                {"repository", repository},
+                {"priority", priority},
+                {"dependencies", dependencies},
+                {"optionalDeps", optionalDeps},
+                {"conflicts", conflicts},
+                {"tags", tags},
+                {"capabilities", capabilities}};
 }
 
 auto PluginMetadata::fromJson(const json& j) -> PluginMetadata {

@@ -27,8 +27,7 @@ namespace lithium::shell {
 class VersionManager::Impl {
 public:
     /// Storage structure: scriptName -> list of versions
-    std::unordered_map<std::string, std::vector<ScriptVersion>>
-        versionStorage_;
+    std::unordered_map<std::string, std::vector<ScriptVersion>> versionStorage_;
 
     /// Maximum versions to keep per script
     size_t maxVersions_{10};
@@ -66,8 +65,8 @@ public:
      * @return Next version number
      * @pre mutex_ must be locked
      */
-    [[nodiscard]] auto getNextVersionNumber(const std::string& scriptName)
-        const noexcept -> size_t {
+    [[nodiscard]] auto getNextVersionNumber(
+        const std::string& scriptName) const noexcept -> size_t {
         auto it = versionStorage_.find(scriptName);
         if (it == versionStorage_.end() || it->second.empty()) {
             return 1;
@@ -79,7 +78,8 @@ public:
 VersionManager::VersionManager(size_t maxVersions) noexcept
     : pImpl_(std::make_unique<Impl>()) {
     pImpl_->maxVersions_ = maxVersions;
-    spdlog::debug("VersionManager: initialized with maxVersions={}", maxVersions);
+    spdlog::debug("VersionManager: initialized with maxVersions={}",
+                  maxVersions);
 }
 
 VersionManager::~VersionManager() noexcept {
@@ -87,9 +87,9 @@ VersionManager::~VersionManager() noexcept {
 }
 
 auto VersionManager::saveVersion(std::string_view scriptName,
-                                  std::string_view content,
-                                  std::string_view author,
-                                  std::string_view changeDescription) -> size_t {
+                                 std::string_view content,
+                                 std::string_view author,
+                                 std::string_view changeDescription) -> size_t {
     std::unique_lock<std::shared_mutex> lock(pImpl_->mutex_);
 
     std::string scriptNameStr(scriptName);
@@ -119,7 +119,7 @@ auto VersionManager::saveVersion(std::string_view scriptName,
 }
 
 auto VersionManager::getVersion(std::string_view scriptName,
-                                 size_t versionNumber) const
+                                size_t versionNumber) const
     -> std::optional<ScriptVersion> {
     std::shared_lock<std::shared_mutex> lock(pImpl_->mutex_);
 
@@ -130,11 +130,10 @@ auto VersionManager::getVersion(std::string_view scriptName,
     }
 
     const auto& versions = it->second;
-    auto versionIt =
-        std::find_if(versions.begin(), versions.end(),
-                     [versionNumber](const ScriptVersion& v) {
-                         return v.versionNumber == versionNumber;
-                     });
+    auto versionIt = std::find_if(versions.begin(), versions.end(),
+                                  [versionNumber](const ScriptVersion& v) {
+                                      return v.versionNumber == versionNumber;
+                                  });
 
     if (versionIt != versions.end()) {
         spdlog::debug("VersionManager: retrieved version {} of script '{}'",
@@ -168,24 +167,22 @@ auto VersionManager::getLatestVersion(std::string_view scriptName) const
 }
 
 auto VersionManager::rollback(std::string_view scriptName,
-                               size_t versionNumber) const
+                              size_t versionNumber) const
     -> std::optional<std::string> {
     std::shared_lock<std::shared_mutex> lock(pImpl_->mutex_);
 
     auto it = pImpl_->versionStorage_.find(std::string(scriptName));
     if (it == pImpl_->versionStorage_.end()) {
-        spdlog::warn(
-            "VersionManager: cannot rollback - script '{}' not found",
-            scriptName);
+        spdlog::warn("VersionManager: cannot rollback - script '{}' not found",
+                     scriptName);
         return std::nullopt;
     }
 
     const auto& versions = it->second;
-    auto versionIt =
-        std::find_if(versions.begin(), versions.end(),
-                     [versionNumber](const ScriptVersion& v) {
-                         return v.versionNumber == versionNumber;
-                     });
+    auto versionIt = std::find_if(versions.begin(), versions.end(),
+                                  [versionNumber](const ScriptVersion& v) {
+                                      return v.versionNumber == versionNumber;
+                                  });
 
     if (versionIt != versions.end()) {
         spdlog::info("VersionManager: rolled back script '{}' to version {}",
@@ -211,9 +208,10 @@ auto VersionManager::getVersionHistory(std::string_view scriptName) const
         return {};
     }
 
-    spdlog::debug("VersionManager: retrieved version history for script '{}' "
-                  "({} versions)",
-                  scriptName, it->second.size());
+    spdlog::debug(
+        "VersionManager: retrieved version history for script '{}' "
+        "({} versions)",
+        scriptName, it->second.size());
     return it->second;
 }
 
@@ -279,9 +277,10 @@ void VersionManager::clearAllVersionHistory() noexcept {
 
     pImpl_->versionStorage_.clear();
 
-    spdlog::info("VersionManager: cleared all version history ({} total "
-                 "versions removed)",
-                 totalCount);
+    spdlog::info(
+        "VersionManager: cleared all version history ({} total "
+        "versions removed)",
+        totalCount);
 }
 
 auto VersionManager::hasVersions(std::string_view scriptName) const noexcept
@@ -292,7 +291,8 @@ auto VersionManager::hasVersions(std::string_view scriptName) const noexcept
     return it != pImpl_->versionStorage_.end() && !it->second.empty();
 }
 
-auto VersionManager::getAllVersionedScripts() const -> std::vector<std::string> {
+auto VersionManager::getAllVersionedScripts() const
+    -> std::vector<std::string> {
     std::shared_lock<std::shared_mutex> lock(pImpl_->mutex_);
 
     std::vector<std::string> scripts;

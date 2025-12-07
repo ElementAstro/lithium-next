@@ -33,16 +33,15 @@ public:
         return {};
     }
 
-    auto searchByCoordinates(
-        double ra, double dec, double radiusDeg, int limit = 100)
+    auto searchByCoordinates(double ra, double dec, double radiusDeg,
+                             int limit = 100)
         -> std::vector<std::string> override {
         // Stub implementation
         return {};
     }
 
-    auto getEphemeris(
-        const std::string& objectName,
-        std::chrono::system_clock::time_point time)
+    auto getEphemeris(const std::string& objectName,
+                      std::chrono::system_clock::time_point time)
         -> std::optional<EphemerisPoint> override {
         // Stub implementation
         return std::nullopt;
@@ -63,9 +62,8 @@ private:
  */
 class DefaultResultMerger : public ResultMerger {
 public:
-    auto mergeResults(
-        const std::vector<std::string>& localResults,
-        const std::vector<std::string>& onlineResults)
+    auto mergeResults(const std::vector<std::string>& localResults,
+                      const std::vector<std::string>& onlineResults)
         -> std::vector<std::string> override {
         // Merge and deduplicate results
         std::vector<std::string> merged = localResults;

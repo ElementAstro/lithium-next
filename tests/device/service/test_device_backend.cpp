@@ -351,6 +351,178 @@ TEST_F(BackendIntegrationTest, EventCallbackRegistration) {
     EXPECT_NO_THROW(registry.unregisterGlobalEventCallback());
 }
 
+// ==================== BackendEventType Tests ====================
+
+class BackendEventTypeTest : public ::testing::Test {};
+
+TEST_F(BackendEventTypeTest, AllEventTypesExist) {
+    // Verify all event types can be used
+    BackendEvent event1;
+    event1.type = BackendEventType::SERVER_CONNECTED;
+
+    BackendEvent event2;
+    event2.type = BackendEventType::SERVER_DISCONNECTED;
+
+    BackendEvent event3;
+    event3.type = BackendEventType::DEVICE_CONNECTED;
+
+    BackendEvent event4;
+    event4.type = BackendEventType::DEVICE_DISCONNECTED;
+
+    BackendEvent event5;
+    event5.type = BackendEventType::PROPERTY_CHANGED;
+
+    BackendEvent event6;
+    event6.type = BackendEventType::ERROR;
+
+    SUCCEED();
+}
+
+// ==================== DiscoveredDevice Edge Cases ====================
+
+class DiscoveredDeviceEdgeCaseTest : public ::testing::Test {};
+
+TEST_F(DiscoveredDeviceEdgeCaseTest, EmptyFields) {
+    DiscoveredDevice dev;
+    // Default values should be empty or zero
+    EXPECT_TRUE(dev.deviceId.empty());
+    EXPECT_TRUE(dev.displayName.empty());
+    EXPECT_TRUE(dev.deviceType.empty());
+    EXPECT_TRUE(dev.driverName.empty());
+    EXPECT_TRUE(dev.driverVersion.empty());
+    EXPECT_TRUE(dev.connectionString.empty());
+    EXPECT_EQ(dev.priority, 0);
+    EXPECT_FALSE(dev.isConnected);
+}
+
+TEST_F(DiscoveredDeviceEdgeCaseTest, FromJsonWithMissingFields) {
+    nlohmann::json j;
+    j["deviceId"] = "test-id";
+    // Other fields are missing
+
+    auto dev = DiscoveredDevice::fromJson(j);
+
+    EXPECT_EQ(dev.deviceId, "test-id");
+    // Missing fields should have default values
+    EXPECT_TRUE(dev.displayName.empty());
+    EXPECT_EQ(dev.priority, 0);
+}
+
+TEST_F(DiscoveredDeviceEdgeCaseTest, RoundTripSerialization) {
+    DiscoveredDevice original;
+    original.deviceId = "unique-123";
+    original.displayName = "Test Device";
+    original.deviceType = "Camera";
+    original.driverName = "TestDriver";
+    original.driverVersion = "2.0.0";
+    original.connectionString = "tcp://localhost:1234";
+    original.priority = 10;
+    original.isConnected = true;
+    original.customProperties["key1"] = "value1";
+    original.customProperties["key2"] = 42;
+
+    auto json = original.toJson();
+    auto restored = DiscoveredDevice::fromJson(json);
+
+    EXPECT_EQ(restored.deviceId, original.deviceId);
+    EXPECT_EQ(restored.displayName, original.displayName);
+    EXPECT_EQ(restored.deviceType, original.deviceType);
+    EXPECT_EQ(restored.driverName, original.driverName);
+    EXPECT_EQ(restored.driverVersion, original.driverVersion);
+    EXPECT_EQ(restored.connectionString, original.connectionString);
+    EXPECT_EQ(restored.priority, original.priority);
+    EXPECT_EQ(restored.isConnected, original.isConnected);
+}
+
+// ==================== BackendConfig Edge Cases ====================
+
+class BackendConfigEdgeCaseTest : public ::testing::Test {};
+
+TEST_F(BackendConfigEdgeCaseTest, FromJsonWithMissingFields) {
+    nlohmann::json j;
+    j["host"] = "192.168.1.1";
+    // Other fields are missing
+
+    auto config = BackendConfig::fromJson(j);
+
+    EXPECT_EQ(config.host, "192.168.1.1");
+    // Missing fields should have default values
+    EXPECT_EQ(config.port, 0);
+    EXPECT_EQ(config.timeout, 5000);
+}
+
+TEST_F(BackendConfigEdgeCaseTest, RoundTripSerialization) {
+    BackendConfig original;
+    original.host = "example.com";
+    original.port = 8080;
+    original.timeout = 30000;
+    original.options["opt1"] = "val1";
+    original.options["opt2"] = "val2";
+
+    auto json = original.toJson();
+    auto restored = BackendConfig::fromJson(json);
+
+    EXPECT_EQ(restored.host, original.host);
+    EXPECT_EQ(restored.port, original.port);
+    EXPECT_EQ(restored.timeout, original.timeout);
+}
+
+// ==================== Backend Registry Edge Cases ====================
+
+class BackendRegistryEdgeCaseTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        BackendRegistry::getInstance().clear();
+    }
+
+    void TearDown() override {
+        BackendRegistry::getInstance().clear();
+    }
+};
+
+TEST_F(BackendRegistryEdgeCaseTest, GetNonExistentBackend) {
+    auto& registry = BackendRegistry::getInstance();
+
+    auto backend = registry.getBackend("NonExistent");
+    EXPECT_EQ(backend, nullptr);
+}
+
+TEST_F(BackendRegistryEdgeCaseTest, UnregisterNonExistentBackend) {
+    auto& registry = BackendRegistry::getInstance();
+
+    // Should not throw
+    EXPECT_NO_THROW(registry.unregisterBackend("NonExistent"));
+}
+
+TEST_F(BackendRegistryEdgeCaseTest, DoubleRegisterBackend) {
+    auto& registry = BackendRegistry::getInstance();
+
+    auto backend1 = std::make_shared<INDIBackend>();
+    auto backend2 = std::make_shared<INDIBackend>();
+
+    registry.registerBackend(backend1);
+    registry.registerBackend(backend2);
+
+    // Second registration should replace the first
+    EXPECT_TRUE(registry.hasBackend("INDI"));
+    EXPECT_EQ(registry.getBackendNames().size(), 1);
+}
+
+TEST_F(BackendRegistryEdgeCaseTest, ClearRemovesAllBackends) {
+    auto& registry = BackendRegistry::getInstance();
+
+    registry.registerBackend(std::make_shared<INDIBackend>());
+    registry.registerBackend(std::make_shared<ASCOMBackend>());
+
+    EXPECT_EQ(registry.getBackendNames().size(), 2);
+
+    registry.clear();
+
+    EXPECT_EQ(registry.getBackendNames().size(), 0);
+    EXPECT_FALSE(registry.hasBackend("INDI"));
+    EXPECT_FALSE(registry.hasBackend("ASCOM"));
+}
+
 // ==================== Main ====================
 
 int main(int argc, char** argv) {

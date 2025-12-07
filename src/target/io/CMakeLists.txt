@@ -10,11 +10,14 @@
 set(IO_SOURCES
     csv_handler.cpp
     json_handler.cpp
+    reader.cpp
 )
 
 set(IO_HEADERS
     csv_handler.hpp
     json_handler.hpp
+    reader.hpp
+    io.hpp
 )
 
 # Create object library for IO module

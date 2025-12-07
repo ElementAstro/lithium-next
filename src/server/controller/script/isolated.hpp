@@ -43,13 +43,15 @@ private:
     static auto handleRunnerAction(
         const crow::request& req, const nlohmann::json& body,
         const std::string& command,
-        std::function<crow::response(std::shared_ptr<lithium::isolated::PythonRunner>)>
+        std::function<
+            crow::response(std::shared_ptr<lithium::isolated::PythonRunner>)>
             func) -> crow::response {
         try {
             auto runner = mRunner.lock();
             if (!runner) {
                 spdlog::error(
-                    "IsolatedPythonRunner instance is null. Unable to proceed with "
+                    "IsolatedPythonRunner instance is null. Unable to proceed "
+                    "with "
                     "command: {}",
                     command);
                 return ResponseBuilder::internalError(
@@ -80,7 +82,8 @@ public:
                                Constants::ISOLATED_PYTHON_RUNNER);
 
         // NOTE: Execution endpoints removed - use /api/python/execute* instead
-        // PythonServiceController provides unified execution with mode selection
+        // PythonServiceController provides unified execution with mode
+        // selection
 
         // Control endpoints - for managing running processes
         CROW_ROUTE(app, "/isolated/cancel")
@@ -124,12 +127,12 @@ public:
 
     // Kill subprocess
     void killProcess(const crow::request& req, crow::response& res) {
-        res = handleRunnerAction(
-            req, nlohmann::json{}, "kill",
-            [&](auto runner) -> crow::response {
-                runner->kill();
-                return ResponseBuilder::success(nlohmann::json{{"killed", true}});
-            });
+        res = handleRunnerAction(req, nlohmann::json{}, "kill",
+                                 [&](auto runner) -> crow::response {
+                                     runner->kill();
+                                     return ResponseBuilder::success(
+                                         nlohmann::json{{"killed", true}});
+                                 });
     }
 
     // Get running status
@@ -139,8 +142,7 @@ public:
             [&](auto runner) -> crow::response {
                 nlohmann::json data = {
                     {"running", runner->isRunning()},
-                    {"processId", runner->getProcessId().value_or(-1)}
-                };
+                    {"processId", runner->getProcessId().value_or(-1)}};
                 return ResponseBuilder::success(data);
             });
     }
@@ -154,24 +156,21 @@ public:
                 nlohmann::json data = {
                     {"available", memUsage.has_value()},
                     {"bytes", memUsage.value_or(0)},
-                    {"megabytes", memUsage.value_or(0) / (1024.0 * 1024.0)}
-                };
+                    {"megabytes", memUsage.value_or(0) / (1024.0 * 1024.0)}};
                 return ResponseBuilder::success(data);
             });
     }
 
     // Get process ID
     void getProcessId(const crow::request& req, crow::response& res) {
-        res = handleRunnerAction(
-            req, nlohmann::json{}, "processId",
-            [&](auto runner) -> crow::response {
-                auto pid = runner->getProcessId();
-                nlohmann::json data = {
-                    {"available", pid.has_value()},
-                    {"processId", pid.value_or(-1)}
-                };
-                return ResponseBuilder::success(data);
-            });
+        res = handleRunnerAction(req, nlohmann::json{}, "processId",
+                                 [&](auto runner) -> crow::response {
+                                     auto pid = runner->getProcessId();
+                                     nlohmann::json data = {
+                                         {"available", pid.has_value()},
+                                         {"processId", pid.value_or(-1)}};
+                                     return ResponseBuilder::success(data);
+                                 });
     }
 
     // Validate configuration
@@ -182,9 +181,11 @@ public:
                 auto result = runner->validateConfig();
                 nlohmann::json data = {
                     {"valid", result.has_value()},
-                    {"error", result.has_value() ? "" :
-                        std::string(lithium::isolated::runnerErrorToString(result.error()))}
-                };
+                    {"error",
+                     result.has_value()
+                         ? ""
+                         : std::string(lithium::isolated::runnerErrorToString(
+                               result.error()))}};
                 return ResponseBuilder::success(data);
             });
     }
@@ -197,8 +198,7 @@ public:
                 auto version = runner->getPythonVersion();
                 nlohmann::json data = {
                     {"available", version.has_value()},
-                    {"version", version.value_or("unknown")}
-                };
+                    {"version", version.value_or("unknown")}};
                 return ResponseBuilder::success(data);
             });
     }
@@ -208,14 +208,14 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handleRunnerAction(
-                req, body, "setConfig",
-                [&](auto runner) -> crow::response {
+                req, body, "setConfig", [&](auto runner) -> crow::response {
                     lithium::isolated::IsolationConfig config;
 
                     // Parse configuration from JSON
                     if (body.contains("level")) {
-                        config.level = static_cast<lithium::isolated::IsolationLevel>(
-                            body["level"].get<int>());
+                        config.level =
+                            static_cast<lithium::isolated::IsolationLevel>(
+                                body["level"].get<int>());
                     }
                     if (body.contains("maxMemoryMB")) {
                         config.maxMemoryMB = body["maxMemoryMB"].get<size_t>();
@@ -231,23 +231,29 @@ public:
                         config.allowNetwork = body["allowNetwork"].get<bool>();
                     }
                     if (body.contains("allowFilesystem")) {
-                        config.allowFilesystem = body["allowFilesystem"].get<bool>();
+                        config.allowFilesystem =
+                            body["allowFilesystem"].get<bool>();
                     }
                     if (body.contains("pythonExecutable")) {
-                        config.pythonExecutable = body["pythonExecutable"].get<std::string>();
+                        config.pythonExecutable =
+                            body["pythonExecutable"].get<std::string>();
                     }
                     if (body.contains("executorScript")) {
-                        config.executorScript = body["executorScript"].get<std::string>();
+                        config.executorScript =
+                            body["executorScript"].get<std::string>();
                     }
                     if (body.contains("workingDirectory")) {
-                        config.workingDirectory = body["workingDirectory"].get<std::string>();
+                        config.workingDirectory =
+                            body["workingDirectory"].get<std::string>();
                     }
                     if (body.contains("captureOutput")) {
-                        config.captureOutput = body["captureOutput"].get<bool>();
+                        config.captureOutput =
+                            body["captureOutput"].get<bool>();
                     }
 
                     runner->setConfig(config);
-                    return ResponseBuilder::success(nlohmann::json{{"configured", true}});
+                    return ResponseBuilder::success(
+                        nlohmann::json{{"configured", true}});
                 });
         } catch (const nlohmann::json::exception& e) {
             res = ResponseBuilder::invalidJson(e.what());
@@ -255,7 +261,8 @@ public:
     }
 };
 
-inline std::weak_ptr<lithium::isolated::PythonRunner> IsolatedController::mRunner;
+inline std::weak_ptr<lithium::isolated::PythonRunner>
+    IsolatedController::mRunner;
 
 }  // namespace lithium::server::controller
 

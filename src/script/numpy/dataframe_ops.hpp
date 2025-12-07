@@ -36,7 +36,7 @@ namespace lithium::numpy {
 
 // Forward declarations
 enum class NumpyError;
-template<typename T>
+template <typename T>
 using NumpyResult = std::expected<T, NumpyError>;
 
 /**
@@ -79,7 +79,8 @@ public:
     /**
      * @brief Convert DataFrame to JSON string
      * @param df Pandas DataFrame object
-     * @param orient JSON orientation ("records", "index", "columns", "values", etc.)
+     * @param orient JSON orientation ("records", "index", "columns", "values",
+     * etc.)
      * @return JSON string on success, error on failure
      */
     [[nodiscard]] static NumpyResult<std::string> dataFrameToJson(
@@ -111,8 +112,8 @@ public:
      * @param df Pandas DataFrame object
      * @return Vector of column names on success, error on failure
      */
-    [[nodiscard]] static NumpyResult<std::vector<std::string>> getDataFrameColumns(
-        const py::object& df);
+    [[nodiscard]] static NumpyResult<std::vector<std::string>>
+    getDataFrameColumns(const py::object& df);
 
 private:
     static inline bool pandas_available_ = false;

@@ -31,23 +31,18 @@ TEST_F(CoordinateSearcherTest, AngularDistanceKnownValue) {
 
 TEST_F(CoordinateSearcherTest, SearchWithinRadius) {
     std::vector<CoordinatePoint> points = {
-        {10.0, 41.0, "M31"},
-        {10.5, 41.5, "M32"},
-        {100.0, -20.0, "FarObject"}
-    };
-    
+        {10.0, 41.0, "M31"}, {10.5, 41.5, "M32"}, {100.0, -20.0, "FarObject"}};
+
     auto results = searcher_->searchWithinRadius(points, 10.0, 41.0, 5.0);
     EXPECT_EQ(results.size(), 2);
 }
 
 TEST_F(CoordinateSearcherTest, NearestNeighbors) {
-    std::vector<CoordinatePoint> points = {
-        {10.0, 41.0, "M31"},
-        {10.5, 41.5, "M32"},
-        {11.0, 42.0, "M33"},
-        {100.0, -20.0, "FarObject"}
-    };
-    
+    std::vector<CoordinatePoint> points = {{10.0, 41.0, "M31"},
+                                           {10.5, 41.5, "M32"},
+                                           {11.0, 42.0, "M33"},
+                                           {100.0, -20.0, "FarObject"}};
+
     auto results = searcher_->nearestNeighbors(points, 10.0, 41.0, 2);
     EXPECT_EQ(results.size(), 2);
 }
@@ -56,7 +51,7 @@ TEST_F(CoordinateSearcherTest, ValidateCoordinates) {
     EXPECT_TRUE(searcher_->validateCoordinates(180.0, 45.0));
     EXPECT_TRUE(searcher_->validateCoordinates(0.0, -90.0));
     EXPECT_TRUE(searcher_->validateCoordinates(359.99, 90.0));
-    
+
     EXPECT_FALSE(searcher_->validateCoordinates(-1.0, 0.0));
     EXPECT_FALSE(searcher_->validateCoordinates(360.1, 0.0));
     EXPECT_FALSE(searcher_->validateCoordinates(0.0, -91.0));
@@ -83,10 +78,8 @@ TEST_F(CoordinateSearcherTest, EmptyPointList) {
 }
 
 TEST_F(CoordinateSearcherTest, ZeroRadius) {
-    std::vector<CoordinatePoint> points = {
-        {10.0, 41.0, "M31"}
-    };
-    
+    std::vector<CoordinatePoint> points = {{10.0, 41.0, "M31"}};
+
     auto results = searcher_->searchWithinRadius(points, 10.0, 41.0, 0.0);
-    EXPECT_EQ(results.size(), 1); // Exact match
+    EXPECT_EQ(results.size(), 1);  // Exact match
 }

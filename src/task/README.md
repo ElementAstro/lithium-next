@@ -1,6 +1,50 @@
 # Lithium Task System
 
-A comprehensive framework for managing, executing, and sequencing astronomical imaging tasks.
+High-performance task management library with split architecture for astronomical imaging.
+
+## Directory Structure
+
+```text
+src/task/
+├── task.hpp                    # Main aggregated header (entry point)
+│
+├── core/                       # Core manager submodule
+│   ├── task.hpp/cpp            # Task base class
+│   ├── target.hpp/cpp          # Target with astronomical data
+│   ├── sequencer.hpp/cpp       # ExposureSequence with scheduling
+│   ├── generator.hpp/cpp       # TaskGenerator for macros
+│   ├── factory.hpp/cpp         # TaskFactory singleton
+│   ├── registration.hpp/cpp    # Task registration
+│   ├── exception.hpp           # Task exception types
+│   └── types.hpp               # Aggregated header
+│
+├── components/                 # Component submodule
+│   ├── common/                 # Shared components
+│   │   ├── task_base.hpp       # Base class for device tasks
+│   │   ├── types.hpp           # Common types and enums
+│   │   └── validation.hpp      # Parameter validation
+│   ├── camera/                 # Camera tasks
+│   ├── focuser/                # Focuser tasks
+│   ├── filterwheel/            # Filter wheel tasks
+│   ├── guider/                 # Autoguiding tasks
+│   ├── astrometry/             # Plate solving tasks
+│   ├── observatory/            # Observatory control tasks
+│   ├── workflow/               # Workflow tasks
+│   ├── script/                 # Script execution tasks
+│   └── components.hpp          # Aggregated header
+│
+├── utils/                      # Utilities submodule
+│   ├── imagepath.hpp/cpp       # Image filename parsing
+│   ├── integration_utils.hpp/cpp # Integration helpers
+│   └── utils.hpp               # Aggregated header
+│
+├── adapters/                   # Adapters submodule
+│   ├── api_adapter.hpp/cpp     # API types and converters
+│   └── adapters.hpp            # Aggregated header
+│
+├── CMakeLists.txt
+└── README.md
+```
 
 ## Architecture Overview
 
@@ -28,16 +72,20 @@ A comprehensive framework for managing, executing, and sequencing astronomical i
 └───────────────┘         └───────────────┘
 ```
 
-## Core Components
+## Core Module
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| Task | `task.hpp/cpp` | Base class for all executable tasks |
-| Target | `target.hpp/cpp` | Groups tasks, manages astronomical target data |
-| ExposureSequence | `sequencer.hpp/cpp` | Orchestrates targets with observability scheduling |
-| TaskFactory | `custom/factory.hpp/cpp` | Dynamic task creation |
-| TaskGenerator | `generator.hpp/cpp` | Macro processing and script generation |
-| AstroTypes | `tools/astronomy/types.hpp` | Astronomical data structures (coordinates, observability, exposure plans) |
+The `core/` submodule provides the main task management classes:
+
+| File | Description |
+|------|-------------|
+| `task.hpp` | Base `Task` class with execution, timeout, dependencies |
+| `target.hpp` | `Target` class with astronomical data and task groups |
+| `sequencer.hpp` | `ExposureSequence` with scheduling strategies |
+| `generator.hpp` | `TaskGenerator` for macro processing |
+| `factory.hpp` | `TaskFactory` singleton for task creation |
+| `registration.hpp` | Built-in task registration |
+| `exception.hpp` | Task exception types |
+| `types.hpp` | Aggregated header with all core types |
 
 ## Astronomical Features
 
@@ -94,9 +142,25 @@ std::string targetNeedingFlip = sequence.checkMeridianFlips();
 target->markMeridianFlipCompleted();
 ```
 
-## Task Categories (42 Tasks Total)
+## Components Module
 
-### Camera Tasks (`custom/camera/`)
+The `components/` submodule provides device-specific tasks:
+
+| Module | Namespace | Description |
+|--------|-----------|-------------|
+| common | `lithium::task` | Shared base classes and utilities |
+| camera | `lithium::task::camera` | Camera exposure and imaging |
+| focuser | `lithium::task::focuser` | Focus control and autofocus |
+| filterwheel | `lithium::task::filterwheel` | Filter wheel and sequences |
+| guider | `lithium::task::guider` | Autoguiding and dithering |
+| astrometry | `lithium::task::astrometry` | Plate solving and centering |
+| observatory | `lithium::task::observatory` | Safety and dome control |
+| workflow | `lithium::task::workflow` | High-level workflow tasks |
+| script | `lithium::task::script` | Script execution tasks |
+
+## Task Categories (42+ Tasks Total)
+
+### Camera Tasks (`components/camera/`)
 
 - **basic_exposure**: TakeExposure, TakeManyExposure, SubframeExposure, CameraSettings, CameraPreview
 - **sequence_tasks**: SmartExposure, DeepSkySequence, PlanetaryImaging, Timelapse
@@ -107,22 +171,22 @@ target->markMeridianFlipCompleted();
 - **safety_tasks**: WeatherMonitor, CloudDetection, SafetyShutdown
 - **platesolve_tasks**: PlateSolveExposure, Centering, Mosaic
 
-### Device Tasks
+### Device Tasks (`components/`)
 
 - **DeviceConnect**: Connect to astronomical equipment
 - **DeviceDisconnect**: Safely disconnect devices
 
-### Configuration Tasks
+### Configuration Tasks (`components/`)
 
 - **LoadConfig**: Load configuration from file
 - **SaveConfig**: Save configuration to file
 
-### Script Tasks
+### Script Tasks (`components/script/`)
 
 - **RunScript**: Execute Python or shell scripts
 - **RunWorkflow**: Execute multi-step workflows
 
-### Search Tasks
+### Search Tasks (`components/`)
 
 - **TargetSearch**: Search celestial object catalogs
 
@@ -132,11 +196,11 @@ target->markMeridianFlipCompleted();
 - **MountPark**: Park mount at position
 - **MountTrack**: Control mount tracking
 
-### Focuser Tasks
+### Focuser Tasks (`components/focuser/`)
 
 - **FocuserMove**: Move focuser to position
 
-### Workflow Tasks (`custom/workflow/`)
+### Workflow Tasks (`components/workflow/`)
 
 - **TargetAcquisition**: Complete target acquisition (slew, plate solve, center, guide, focus)
 - **ExposureSequence**: Single target exposure sequence with filter changes and dithering
@@ -149,11 +213,38 @@ target->markMeridianFlipCompleted();
 
 ## Usage
 
+### Quick Start
+
+For most use cases, include the main header:
+
+```cpp
+#include "task/task.hpp"
+
+// All functionality is available under lithium::task namespace
+using namespace lithium::task;
+
+// Initialize task system
+initializeTaskSystem();
+
+// Create and execute a simple task
+auto task = createTask("TakeExposure", "my_exposure", {
+    {"exposure", 30.0},
+    {"binning", 1},
+    {"gain", 100}
+});
+task->execute({});
+
+// Create a sequence
+auto sequence = createSequence();
+sequence->addTarget(createTarget("M31", tasksJson));
+sequence->executeAll();
+```
+
 ### Creating Tasks via Factory
 
 ```cpp
-#include "task/custom/factory.hpp"
-#include "task/registration.hpp"
+#include "task/core/factory.hpp"
+#include "task/core/registration.hpp"
 
 // Initialize task registration
 lithium::task::registerBuiltInTasks();
@@ -173,8 +264,8 @@ task->execute(params);
 ### Creating Sequences
 
 ```cpp
-#include "task/sequencer.hpp"
-#include "task/target.hpp"
+#include "task/core/sequencer.hpp"
+#include "task/core/target.hpp"
 
 // Create sequence
 lithium::task::ExposureSequence sequence;
@@ -208,7 +299,7 @@ The task system integrates with the server through controller layer. API data ty
 and utilities are provided by `api_adapter.hpp`:
 
 ```cpp
-#include "task/api_adapter.hpp"
+#include "task/adapters/api_adapter.hpp"
 
 // Use API data types
 lithium::task::api::ApiResponse response =
@@ -232,46 +323,24 @@ auto target = lithium::task::api::SequenceConverter::fromApiJson(sequenceJson);
 - `POST /api/v1/sequences/{id}/resume` - Resume sequence
 - `DELETE /api/v1/sequences/{id}` - Stop sequence
 
-## File Structure
+## Features
 
-```text
-src/task/
-├── lithium_task.hpp       # Unified header (entry point)
-├── task.hpp/cpp           # Base Task class
-├── target.hpp/cpp         # Target with astronomical data
-├── sequencer.hpp/cpp      # ExposureSequence with observability scheduling
-├── generator.hpp/cpp      # TaskGenerator
-├── (astro_types moved to tools/astronomy/)
-├── imagepath.hpp/cpp      # Image filename parsing
-├── registration.hpp/cpp   # Task registration (50+ tasks)
-├── integration_utils.hpp/cpp  # Integration helpers
-├── api_adapter.hpp/cpp    # API types, converters, utilities
-├── CMakeLists.txt
-├── README.md
-└── custom/
-    ├── factory.hpp/cpp    # TaskFactory singleton
-    ├── common/            # Common task utilities
-    │   └── task_base.hpp  # Base class for derived tasks
-    ├── camera/            # Camera tasks
-    │   ├── exposure/      # Exposure tasks
-    │   ├── settings/      # Camera settings tasks
-    │   ├── calibration/   # Calibration tasks
-    │   └── imaging/       # Imaging workflow tasks
-    ├── focuser/           # Focuser tasks
-    │   └── focuser_tasks.hpp/cpp
-    ├── workflow/          # Astronomical workflow tasks (NEW)
-    │   └── workflow_tasks.hpp/cpp  # Session, acquisition, dither, etc.
-    ├── script/            # Script subsystem
-    │   ├── base.hpp/cpp
-    │   ├── python.hpp/cpp
-    │   ├── shell.hpp/cpp
-    │   └── workflow.hpp/cpp
-    ├── device_task.hpp/cpp
-    ├── config_task.hpp/cpp
-    ├── script_task.hpp/cpp
-    ├── search_task.hpp/cpp
-    └── solver_task.hpp
-```
+- **High-performance task execution** with timeout and cancellation support
+- **Astronomical scheduling** with observability-based target ordering
+- **Macro processing** for dynamic task generation
+- **Multi-format serialization** (JSON, YAML)
+- **Database persistence** for sequence storage
+- **Thread-safe operations** with optimized locking
+- **Performance monitoring** and metrics collection
+- **Comprehensive error handling** and logging
+
+## Thread Safety
+
+All public operations in `ExposureSequence` and components are thread-safe:
+- Read operations use shared locks
+- Write operations use exclusive locks
+- Callbacks are invoked asynchronously
+- Background execution is handled in dedicated threads
 
 ## Building
 

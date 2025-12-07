@@ -7,10 +7,10 @@
 #ifndef LITHIUM_TARGET_ONLINE_PROVIDER_JPL_HORIZONS_PROVIDER_HPP
 #define LITHIUM_TARGET_ONLINE_PROVIDER_JPL_HORIZONS_PROVIDER_HPP
 
-#include "provider_interface.hpp"
-#include "../client/http_client.hpp"
 #include "../cache/query_cache.hpp"
+#include "../client/http_client.hpp"
 #include "../rate_limiter/api_rate_limiter.hpp"
+#include "provider_interface.hpp"
 
 namespace lithium::target::online {
 
@@ -115,7 +115,8 @@ public:
      * @return Future that will be resolved with result or error
      */
     [[nodiscard]] auto queryAsync(const OnlineQueryParams& params)
-        -> std::future<atom::type::Expected<OnlineQueryResult, OnlineQueryError>> override;
+        -> std::future<
+            atom::type::Expected<OnlineQueryResult, OnlineQueryError>> override;
 
     /**
      * @brief Get the provider name
@@ -142,7 +143,8 @@ public:
      *
      * @return Vector of supported QueryType values
      */
-    [[nodiscard]] auto supportedQueryTypes() const -> std::vector<QueryType> override {
+    [[nodiscard]] auto supportedQueryTypes() const
+        -> std::vector<QueryType> override {
         return {QueryType::ByName, QueryType::Ephemeris};
     }
 
@@ -173,7 +175,8 @@ public:
         std::chrono::system_clock::time_point startTime,
         std::chrono::system_clock::time_point endTime,
         std::chrono::minutes stepSize,
-        const std::optional<OnlineQueryParams::ObserverLocation>& observer = std::nullopt)
+        const std::optional<OnlineQueryParams::ObserverLocation>& observer =
+            std::nullopt)
         -> atom::type::Expected<std::vector<EphemerisPoint>, OnlineQueryError>;
 
     /**

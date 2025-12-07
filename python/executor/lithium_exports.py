@@ -15,7 +15,7 @@ from lithium_bridge import expose_command, expose_controller
     method="POST",
     description="Execute Python code in isolated environment",
     tags=["executor", "python"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def execute_code(
     code: str,
@@ -61,7 +61,7 @@ def execute_code(
     method="POST",
     description="Evaluate a Python expression",
     tags=["executor", "python"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def evaluate_expression(
     expression: str,
@@ -101,7 +101,7 @@ def evaluate_expression(
     description="Execute Python code (command)",
     priority=3,
     timeout_ms=60000,
-    tags=["executor"]
+    tags=["executor"],
 )
 def cmd_execute_code(code: str, timeout: int = 30) -> dict:
     """Execute Python code via command dispatcher."""
@@ -113,7 +113,7 @@ def cmd_execute_code(code: str, timeout: int = 30) -> dict:
     description="Evaluate Python expression (command)",
     priority=5,
     timeout_ms=15000,
-    tags=["executor"]
+    tags=["executor"],
 )
 def cmd_evaluate(expression: str) -> dict:
     """Evaluate expression via command dispatcher."""

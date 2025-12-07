@@ -2,8 +2,8 @@
 #define LITHIUM_SERVER_CONTROLLER_SWITCH_HPP
 
 #include <crow/json.h>
-#include "atom/log/spdlog_logger.hpp"
 #include "../controller.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "server/command/gpio.hpp"
 #include "server/utils/response.hpp"
 
@@ -56,4 +56,3 @@ public:
 }  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SWITCH_HPP
-

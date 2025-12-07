@@ -22,8 +22,8 @@
 #include <memory>
 #include <optional>
 
-#include <nlohmann/json.hpp>
 #include <Python.h>
+#include <nlohmann/json.hpp>
 
 namespace lithium::tools {
 
@@ -38,13 +38,13 @@ class PythonToolRegistry;
  * execution metrics.
  */
 struct ToolInvocationResult {
-    bool success{false};                           ///< Whether invocation succeeded
-    nlohmann::json data;                           ///< Returned data from tool
-    std::optional<std::string> error;              ///< Error message if failed
-    std::optional<std::string> errorType;          ///< Type of error (e.g., ValueError)
-    std::optional<std::string> traceback;          ///< Python traceback if available
-    nlohmann::json metadata;                       ///< Additional metadata
-    std::chrono::milliseconds executionTime{0};    ///< Time taken to execute
+    bool success{false};                   ///< Whether invocation succeeded
+    nlohmann::json data;                   ///< Returned data from tool
+    std::optional<std::string> error;      ///< Error message if failed
+    std::optional<std::string> errorType;  ///< Type of error (e.g., ValueError)
+    std::optional<std::string> traceback;  ///< Python traceback if available
+    nlohmann::json metadata;               ///< Additional metadata
+    std::chrono::milliseconds executionTime{0};  ///< Time taken to execute
 
     /**
      * @brief Convert invocation result to JSON
@@ -64,7 +64,8 @@ struct ToolInvocationResult {
  * @brief RAII guard for GIL acquisition when invoking tools
  *
  * Automatically acquires and releases the Python Global Interpreter Lock (GIL)
- * for thread-safe Python C API calls. Follows RAII pattern for exception safety.
+ * for thread-safe Python C API calls. Follows RAII pattern for exception
+ * safety.
  *
  * Example usage:
  * @code

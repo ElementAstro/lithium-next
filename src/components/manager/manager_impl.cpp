@@ -532,7 +532,21 @@ void ComponentManagerImpl::handleFileChange(const fs::path& path,
 void ComponentManagerImpl::updateComponentState(const std::string& name,
                                                 ComponentState newState) {
     std::lock_guard lock(mutex_);
+
+    // Validate state transition if component already has a state
+    if (componentStates_.contains(name)) {
+        ComponentState currentState = componentStates_[name];
+        if (!isValidStateTransition(currentState, newState)) {
+            LOG_WARN("Invalid state transition for {}: {} -> {}", name,
+                     componentStateToString(currentState),
+                     componentStateToString(newState));
+            // Allow transition anyway but log warning
+        }
+    }
+
     componentStates_[name] = newState;
+    LOG_DEBUG("Component {} state changed to {}", name,
+              componentStateToString(newState));
 }
 
 bool ComponentManagerImpl::validateComponentOperation(const std::string& name) {

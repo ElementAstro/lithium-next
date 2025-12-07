@@ -26,7 +26,7 @@
 #include "column_base.hpp"
 #include "column_value.hpp"
 
-// Statement is already brought into lithium::database namespace by column_base.hpp
+// Statement type alias is defined in column_base.hpp
 
 namespace lithium::database::orm {
 
@@ -90,7 +90,7 @@ public:
      * @param index The parameter index to bind at.
      * @param model A pointer to the model containing the column value.
      */
-    void bindToStatement(lithium::database::Statement& stmt, int index,
+    void bindToStatement(Statement& stmt, int index,
                          const void* model) const override;
 
     /**
@@ -100,7 +100,7 @@ public:
      * @param index The column index to read from.
      * @param model A pointer to the model to set the column value in.
      */
-    void readFromStatement(const lithium::database::Statement& stmt, int index,
+    void readFromStatement(const Statement& stmt, int index,
                            void* model) const override;
 
 private:
@@ -158,15 +158,15 @@ void Column<T, Model>::fromSQLValue(void* model,
 }
 
 template <typename T, typename Model>
-void Column<T, Model>::bindToStatement(lithium::database::Statement& stmt,
-                                       int index, const void* model) const {
+void Column<T, Model>::bindToStatement(Statement& stmt, int index,
+                                       const void* model) const {
     const Model* m = static_cast<const Model*>(model);
     ColumnValue<T>::bindToStatement(stmt, index, m->*ptr);
 }
 
 template <typename T, typename Model>
-void Column<T, Model>::readFromStatement(const lithium::database::Statement& stmt,
-                                         int index, void* model) const {
+void Column<T, Model>::readFromStatement(const Statement& stmt, int index,
+                                         void* model) const {
     Model* m = static_cast<Model*>(model);
     m->*ptr = ColumnValue<T>::readFromStatement(stmt, index);
 }

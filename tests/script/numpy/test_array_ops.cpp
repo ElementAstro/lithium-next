@@ -58,10 +58,8 @@ TEST_F(ArrayOpsTest, CreateArrayFromVectorInt) {
 }
 
 TEST_F(ArrayOpsTest, CreateArray2D) {
-    std::vector<std::vector<float>> data = {
-        {1.0f, 2.0f, 3.0f},
-        {4.0f, 5.0f, 6.0f}
-    };
+    std::vector<std::vector<float>> data = {{1.0f, 2.0f, 3.0f},
+                                            {4.0f, 5.0f, 6.0f}};
     auto arr = ArrayOps::createArray2D(data);
 
     auto shape = ArrayOps::getShape(arr);
@@ -107,10 +105,7 @@ TEST_F(ArrayOpsTest, ToVector) {
 }
 
 TEST_F(ArrayOpsTest, ToVector2D) {
-    std::vector<std::vector<double>> original = {
-        {1.0, 2.0},
-        {3.0, 4.0}
-    };
+    std::vector<std::vector<double>> original = {{1.0, 2.0}, {3.0, 4.0}};
     auto arr = ArrayOps::createArray2D(original);
     auto result = ArrayOps::toVector2D(arr);
 
@@ -143,10 +138,8 @@ TEST_F(ArrayOpsTest, GetShape1D) {
 }
 
 TEST_F(ArrayOpsTest, GetShape2D) {
-    std::vector<std::vector<float>> data = {
-        {1.0f, 2.0f, 3.0f},
-        {4.0f, 5.0f, 6.0f}
-    };
+    std::vector<std::vector<float>> data = {{1.0f, 2.0f, 3.0f},
+                                            {4.0f, 5.0f, 6.0f}};
     auto arr = ArrayOps::createArray2D(data);
     auto shape = ArrayOps::getShape(arr);
 
@@ -191,15 +184,13 @@ TEST_F(ArrayOpsTest, ReshapeInvalidShape) {
     std::vector<float> data = {1.0f, 2.0f, 3.0f, 4.0f};
     auto arr = ArrayOps::createArray(data);
 
-    auto result = ArrayOps::reshape(arr, {2, 3}); // 2*3 != 4
+    auto result = ArrayOps::reshape(arr, {2, 3});  // 2*3 != 4
     EXPECT_FALSE(result.has_value());
 }
 
 TEST_F(ArrayOpsTest, TransposeArray) {
-    std::vector<std::vector<float>> data = {
-        {1.0f, 2.0f, 3.0f},
-        {4.0f, 5.0f, 6.0f}
-    };
+    std::vector<std::vector<float>> data = {{1.0f, 2.0f, 3.0f},
+                                            {4.0f, 5.0f, 6.0f}};
     auto arr = ArrayOps::createArray2D(data);
 
     auto result = ArrayOps::transpose(arr);

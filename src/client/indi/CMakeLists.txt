@@ -81,3 +81,9 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "Client/INDI")
 
 message(STATUS "  ├─ Client lib: lithium_client_indi configured")
+
+# ============================================================================
+# INDI Device Plugin Subdirectory
+# ============================================================================
+
+add_subdirectory(plugin)

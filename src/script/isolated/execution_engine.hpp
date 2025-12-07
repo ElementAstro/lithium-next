@@ -7,14 +7,14 @@
 #ifndef LITHIUM_SCRIPT_ISOLATED_EXECUTION_ENGINE_HPP
 #define LITHIUM_SCRIPT_ISOLATED_EXECUTION_ENGINE_HPP
 
-#include "types.hpp"
-#include "config_discovery.hpp"
-#include "process_spawning.hpp"
-#include "resource_monitor.hpp"
-#include "message_handlers.hpp"
-#include "lifecycle.hpp"
 #include "../ipc/channel.hpp"
 #include "../ipc/message.hpp"
+#include "config_discovery.hpp"
+#include "lifecycle.hpp"
+#include "message_handlers.hpp"
+#include "process_spawning.hpp"
+#include "resource_monitor.hpp"
+#include "types.hpp"
 
 #include <memory>
 #include <string_view>
@@ -71,9 +71,8 @@ public:
      * @param args Arguments as JSON
      * @return Execution result
      */
-    [[nodiscard]] ExecutionResult execute(
-        std::string_view scriptContent,
-        const nlohmann::json& args);
+    [[nodiscard]] ExecutionResult execute(std::string_view scriptContent,
+                                          const nlohmann::json& args);
 
     /**
      * @brief Execute a Python script from file
@@ -82,8 +81,7 @@ public:
      * @return Execution result
      */
     [[nodiscard]] ExecutionResult executeFile(
-        const std::filesystem::path& scriptPath,
-        const nlohmann::json& args);
+        const std::filesystem::path& scriptPath, const nlohmann::json& args);
 
     /**
      * @brief Execute a Python function
@@ -92,10 +90,9 @@ public:
      * @param args Arguments as JSON
      * @return Execution result
      */
-    [[nodiscard]] ExecutionResult executeFunction(
-        std::string_view moduleName,
-        std::string_view functionName,
-        const nlohmann::json& args);
+    [[nodiscard]] ExecutionResult executeFunction(std::string_view moduleName,
+                                                  std::string_view functionName,
+                                                  const nlohmann::json& args);
 
     /**
      * @brief Cancel current execution
@@ -126,12 +123,11 @@ private:
     /**
      * @brief Internal execution implementation
      */
-    ExecutionResult executeInternal(
-        std::string_view scriptContent,
-        const std::string& scriptPath,
-        const std::string& moduleName,
-        const std::string& functionName,
-        const nlohmann::json& args);
+    ExecutionResult executeInternal(std::string_view scriptContent,
+                                    const std::string& scriptPath,
+                                    const std::string& moduleName,
+                                    const std::string& functionName,
+                                    const nlohmann::json& args);
 
     IsolationConfig config_;
     std::shared_ptr<ipc::BidirectionalChannel> channel_;

@@ -122,4 +122,3 @@ auto toggleSwitch(int id) -> json {
 }
 
 }  // namespace lithium::middleware
-

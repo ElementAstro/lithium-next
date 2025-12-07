@@ -47,7 +47,7 @@ class DeviceOperationException : public atom::error::Exception {
     using Exception::Exception;
 };
 
-#define THROW_DEVICE_OPERATION_ERROR(...)                              \
+#define THROW_DEVICE_OPERATION_ERROR(...)                          \
     throw DeviceOperationException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                    ATOM_FUNC_NAME, __VA_ARGS__)
 

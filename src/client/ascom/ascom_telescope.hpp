@@ -161,8 +161,8 @@ public:
     auto abortSlew() -> bool;
     [[nodiscard]] auto isSlewing() -> bool;
 
-    auto waitForSlew(std::chrono::milliseconds timeout = std::chrono::minutes(5))
-        -> bool;
+    auto waitForSlew(
+        std::chrono::milliseconds timeout = std::chrono::minutes(5)) -> bool;
 
     // ==================== Sync ====================
 

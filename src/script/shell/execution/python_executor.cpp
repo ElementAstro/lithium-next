@@ -27,8 +27,8 @@ public:
     std::vector<std::filesystem::path> sysPaths_;
     std::filesystem::path pythonExecutable_{"python3"};
 
-    auto buildPythonCommand(const Script& script,
-                           const ExecutionContext& ctx) -> std::string {
+    auto buildPythonCommand(const Script& script, const ExecutionContext& ctx)
+        -> std::string {
         std::stringstream cmd;
 
         // Use specified Python executable
@@ -49,7 +49,8 @@ public:
     }
 
     auto buildEnvironmentPrefix(
-        const std::unordered_map<std::string, std::string>& env) -> std::string {
+        const std::unordered_map<std::string, std::string>& env)
+        -> std::string {
         std::string prefix;
         for (const auto& [key, value] : env) {
 #ifdef _WIN32
@@ -149,8 +150,9 @@ auto PythonExecutor::execute(const Script& script, const ExecutionContext& ctx)
     }
 
     auto endTime = std::chrono::steady_clock::now();
-    result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-        endTime - startTime);
+    result.executionTime =
+        std::chrono::duration_cast<std::chrono::milliseconds>(endTime -
+                                                              startTime);
 
     pImpl_->running_ = false;
     return result;
@@ -164,9 +166,7 @@ auto PythonExecutor::primaryLanguage() const noexcept -> ScriptLanguage {
     return ScriptLanguage::Python;
 }
 
-void PythonExecutor::abort() {
-    pImpl_->abortFlag_ = true;
-}
+void PythonExecutor::abort() { pImpl_->abortFlag_ = true; }
 
 auto PythonExecutor::isRunning() const noexcept -> bool {
     return pImpl_->running_.load();
@@ -206,7 +206,8 @@ void PythonExecutor::addSysPath(const std::filesystem::path& path) {
 
 void PythonExecutor::setPythonExecutable(const std::filesystem::path& path) {
     pImpl_->pythonExecutable_ = path;
-    spdlog::debug("PythonExecutor: set Python executable to '{}'", path.string());
+    spdlog::debug("PythonExecutor: set Python executable to '{}'",
+                  path.string());
 }
 
 auto PythonExecutor::isPythonAvailable() const -> bool {

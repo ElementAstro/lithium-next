@@ -4,13 +4,13 @@
  */
 
 #include <gtest/gtest.h>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <thread>
-#include <chrono>
 
-#include "config/core/manager.hpp"
 #include "atom/type/json.hpp"
+#include "config/core/manager.hpp"
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -196,7 +196,8 @@ TEST_F(ConfigManagerTest, SetWithMoveSemantics) {
 }
 
 TEST_F(ConfigManagerTest, SetValueTemplate) {
-    EXPECT_TRUE(manager_->set_value("test/template", std::string("template_value")));
+    EXPECT_TRUE(
+        manager_->set_value("test/template", std::string("template_value")));
     auto value = manager_->get_as<std::string>("test/template");
     ASSERT_TRUE(value.has_value());
     EXPECT_EQ(*value, "template_value");
@@ -324,10 +325,8 @@ TEST_F(ConfigManagerTest, LoadFromDirectoryRecursive) {
 }
 
 TEST_F(ConfigManagerTest, LoadFromFiles) {
-    std::vector<fs::path> paths = {
-        testDir_ / "basic.json",
-        testDir_ / "merge.json"
-    };
+    std::vector<fs::path> paths = {testDir_ / "basic.json",
+                                   testDir_ / "merge.json"};
     size_t loaded = manager_->loadFromFiles(paths);
     EXPECT_EQ(loaded, 2);
 }
@@ -497,10 +496,8 @@ TEST_F(ConfigManagerTest, ResetMetrics) {
 // ============================================================================
 
 TEST_F(ConfigManagerTest, SetSchema) {
-    json schema = {
-        {"type", "object"},
-        {"properties", {{"name", {{"type", "string"}}}}}
-    };
+    json schema = {{"type", "object"},
+                   {"properties", {{"name", {{"type", "string"}}}}}};
     EXPECT_TRUE(manager_->setSchema("test", schema));
 }
 
@@ -509,10 +506,8 @@ TEST_F(ConfigManagerTest, LoadSchema) {
 }
 
 TEST_F(ConfigManagerTest, Validate) {
-    json schema = {
-        {"type", "object"},
-        {"properties", {{"name", {{"type", "string"}}}}}
-    };
+    json schema = {{"type", "object"},
+                   {"properties", {{"name", {{"type", "string"}}}}}};
     manager_->setSchema("test", schema);
     manager_->set("test/name", "John");
 
@@ -554,9 +549,7 @@ TEST_F(ConfigManagerTest, AddHook) {
     bool hookCalled = false;
     size_t hookId = manager_->addHook(
         [&](ConfigManager::ConfigEvent event, std::string_view path,
-            const std::optional<json>& value) {
-            hookCalled = true;
-        });
+            const std::optional<json>& value) { hookCalled = true; });
 
     manager_->set("test/hook", "value");
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -566,25 +559,26 @@ TEST_F(ConfigManagerTest, AddHook) {
 }
 
 TEST_F(ConfigManagerTest, RemoveHook) {
-    size_t hookId = manager_->addHook(
-        [](ConfigManager::ConfigEvent, std::string_view, const std::optional<json>&) {});
+    size_t hookId =
+        manager_->addHook([](ConfigManager::ConfigEvent, std::string_view,
+                             const std::optional<json>&) {});
     EXPECT_TRUE(manager_->removeHook(hookId));
     EXPECT_FALSE(manager_->removeHook(hookId));
 }
 
 TEST_F(ConfigManagerTest, ClearHooks) {
-    manager_->addHook(
-        [](ConfigManager::ConfigEvent, std::string_view, const std::optional<json>&) {});
-    manager_->addHook(
-        [](ConfigManager::ConfigEvent, std::string_view, const std::optional<json>&) {});
+    manager_->addHook([](ConfigManager::ConfigEvent, std::string_view,
+                         const std::optional<json>&) {});
+    manager_->addHook([](ConfigManager::ConfigEvent, std::string_view,
+                         const std::optional<json>&) {});
     manager_->clearHooks();
     EXPECT_EQ(manager_->getHookCount(), 0);
 }
 
 TEST_F(ConfigManagerTest, GetHookCount) {
     EXPECT_EQ(manager_->getHookCount(), 0);
-    manager_->addHook(
-        [](ConfigManager::ConfigEvent, std::string_view, const std::optional<json>&) {});
+    manager_->addHook([](ConfigManager::ConfigEvent, std::string_view,
+                         const std::optional<json>&) {});
     EXPECT_EQ(manager_->getHookCount(), 1);
 }
 
@@ -601,10 +595,8 @@ TEST_F(ConfigManagerTest, Flatten) {
 }
 
 TEST_F(ConfigManagerTest, Unflatten) {
-    std::unordered_map<std::string, json> flatConfig = {
-        {"a/b", "value1"},
-        {"c/d", "value2"}
-    };
+    std::unordered_map<std::string, json> flatConfig = {{"a/b", "value1"},
+                                                        {"c/d", "value2"}};
 
     size_t imported = manager_->unflatten(flatConfig);
     EXPECT_EQ(imported, 2);
@@ -635,7 +627,8 @@ TEST_F(ConfigManagerTest, Diff) {
 
 TEST_F(ConfigManagerTest, ApplyPatch) {
     manager_->set("key", "old_value");
-    json patch = {{{"op", "replace"}, {"path", "/key"}, {"value", "new_value"}}};
+    json patch = {
+        {{"op", "replace"}, {"path", "/key"}, {"value", "new_value"}}};
     EXPECT_TRUE(manager_->applyPatch(patch));
 }
 
@@ -687,7 +680,8 @@ TEST_F(ConfigManagerTest, ConcurrentSetGet) {
     for (int i = 0; i < NUM_THREADS; ++i) {
         threads.emplace_back([this, i]() {
             for (int j = 0; j < OPS_PER_THREAD; ++j) {
-                std::string key = "thread" + std::to_string(i) + "/key" + std::to_string(j);
+                std::string key =
+                    "thread" + std::to_string(i) + "/key" + std::to_string(j);
                 manager_->set(key, j);
                 auto value = manager_->get(key);
                 EXPECT_TRUE(value.has_value());

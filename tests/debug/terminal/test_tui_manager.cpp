@@ -458,9 +458,8 @@ protected:
 };
 
 TEST_F(TuiManagerStatusTest, SetStatusItems) {
-    std::vector<StatusItem> items = {
-        {"Mode", "Normal", Color::Green},
-        {"Line", "1", Color::Default}};
+    std::vector<StatusItem> items = {{"Mode", "Normal", Color::Green},
+                                     {"Line", "1", Color::Default}};
 
     EXPECT_NO_THROW(tui->setStatusItems(items));
 }
@@ -556,9 +555,7 @@ TEST_F(TuiManagerOutputTest, Println) {
     EXPECT_NO_THROW(tui->println("Test line"));
 }
 
-TEST_F(TuiManagerOutputTest, PrintlnEmpty) {
-    EXPECT_NO_THROW(tui->println());
-}
+TEST_F(TuiManagerOutputTest, PrintlnEmpty) { EXPECT_NO_THROW(tui->println()); }
 
 TEST_F(TuiManagerOutputTest, PrintStyled) {
     EXPECT_NO_THROW(tui->printStyled("Styled text", Color::Red, Style::Bold));
@@ -635,17 +632,11 @@ protected:
     std::unique_ptr<TuiManager> tui;
 };
 
-TEST_F(TuiManagerRenderTest, Refresh) {
-    EXPECT_NO_THROW(tui->refresh());
-}
+TEST_F(TuiManagerRenderTest, Refresh) { EXPECT_NO_THROW(tui->refresh()); }
 
-TEST_F(TuiManagerRenderTest, Redraw) {
-    EXPECT_NO_THROW(tui->redraw());
-}
+TEST_F(TuiManagerRenderTest, Redraw) { EXPECT_NO_THROW(tui->redraw()); }
 
-TEST_F(TuiManagerRenderTest, Clear) {
-    EXPECT_NO_THROW(tui->clear());
-}
+TEST_F(TuiManagerRenderTest, Clear) { EXPECT_NO_THROW(tui->clear()); }
 
 // ============================================================================
 // TuiManager Help System Tests
@@ -665,19 +656,13 @@ protected:
     std::unique_ptr<TuiManager> tui;
 };
 
-TEST_F(TuiManagerHelpTest, ShowHelp) {
-    EXPECT_NO_THROW(tui->showHelp());
-}
+TEST_F(TuiManagerHelpTest, ShowHelp) { EXPECT_NO_THROW(tui->showHelp()); }
 
-TEST_F(TuiManagerHelpTest, HideHelp) {
-    EXPECT_NO_THROW(tui->hideHelp());
-}
+TEST_F(TuiManagerHelpTest, HideHelp) { EXPECT_NO_THROW(tui->hideHelp()); }
 
 TEST_F(TuiManagerHelpTest, SetHelpContent) {
     std::vector<std::pair<std::string, std::string>> shortcuts = {
-        {"Ctrl+C", "Exit"},
-        {"Ctrl+H", "Help"},
-        {"Tab", "Complete"}};
+        {"Ctrl+C", "Exit"}, {"Ctrl+H", "Help"}, {"Tab", "Complete"}};
 
     EXPECT_NO_THROW(tui->setHelpContent(shortcuts));
 }

@@ -11,16 +11,15 @@
 
 #include "filter_evaluator.hpp"
 
+#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <cmath>
 #include <format>
-#include <spdlog/spdlog.h>
 
 namespace lithium::target::search {
 
 auto FilterEvaluator::matches(const CelestialObjectModel& obj,
-                              const CelestialSearchFilter& filter)
-    -> bool {
+                              const CelestialSearchFilter& filter) -> bool {
     // Short-circuit on failed constraints for efficiency
 
     if (!filter.namePattern.empty()) {
@@ -64,8 +63,7 @@ auto FilterEvaluator::matches(const CelestialObjectModel& obj,
 
 auto FilterEvaluator::filterResults(
     const std::vector<CelestialObjectModel>& results,
-    const CelestialSearchFilter& filter)
-    -> std::vector<CelestialObjectModel> {
+    const CelestialSearchFilter& filter) -> std::vector<CelestialObjectModel> {
     std::vector<CelestialObjectModel> filtered;
 
     for (const auto& result : results) {
@@ -77,8 +75,8 @@ auto FilterEvaluator::filterResults(
     return filtered;
 }
 
-auto FilterEvaluator::validateFilter(
-    const CelestialSearchFilter& filter) -> std::string {
+auto FilterEvaluator::validateFilter(const CelestialSearchFilter& filter)
+    -> std::string {
     if (filter.minMagnitude > filter.maxMagnitude) {
         return "Min magnitude cannot be greater than max magnitude";
     }
@@ -94,34 +92,34 @@ auto FilterEvaluator::validateFilter(
     return "";
 }
 
-auto FilterEvaluator::explainMismatch(
-    const CelestialObjectModel& obj,
-    const CelestialSearchFilter& filter) -> std::string {
+auto FilterEvaluator::explainMismatch(const CelestialObjectModel& obj,
+                                      const CelestialSearchFilter& filter)
+    -> std::string {
     // Check each constraint and report first failure
 
     if (!filter.namePattern.empty()) {
         if (!matchesNamePattern(obj, filter)) {
             return std::format("Name '{}' does not match pattern '{}'",
-                             obj.identifier, filter.namePattern);
+                               obj.identifier, filter.namePattern);
         }
     }
 
     if (!filter.type.empty()) {
         if (obj.type != filter.type) {
             return std::format("Type '{}' does not match '{}'", obj.type,
-                             filter.type);
+                               filter.type);
         }
     }
 
     if (!matchesMagnitude(obj, filter)) {
-        return std::format(
-            "Magnitude {:.2f} not in range [{:.2f}, {:.2f}]",
-            obj.visualMagnitudeV, filter.minMagnitude, filter.maxMagnitude);
+        return std::format("Magnitude {:.2f} not in range [{:.2f}, {:.2f}]",
+                           obj.visualMagnitudeV, filter.minMagnitude,
+                           filter.maxMagnitude);
     }
 
     if (!matchesSize(obj, filter)) {
-        return std::format(
-            "Major axis {:.2f} outside range", obj.visualMagnitudeV);
+        return std::format("Major axis {:.2f} outside range",
+                           obj.visualMagnitudeV);
     }
 
     if (!matchesCoordinates(obj, filter)) {
@@ -135,52 +133,50 @@ auto FilterEvaluator::explainMismatch(
     return "";  // Matches all constraints
 }
 
-auto FilterEvaluator::sortResults(
-    std::vector<CelestialObjectModel> results,
-    const CelestialSearchFilter& filter)
+auto FilterEvaluator::sortResults(std::vector<CelestialObjectModel> results,
+                                  const CelestialSearchFilter& filter)
     -> std::vector<CelestialObjectModel> {
     std::string orderBy = filter.orderBy;
     bool ascending = filter.ascending;
 
     std::sort(results.begin(), results.end(),
-             [&orderBy, ascending](const auto& a, const auto& b) {
-                 int cmp = 0;
+              [&orderBy, ascending](const auto& a, const auto& b) {
+                  int cmp = 0;
 
-                 if (orderBy == "identifier") {
-                     cmp = a.identifier.compare(b.identifier);
-                 } else if (orderBy == "magnitude") {
-                     if (a.visualMagnitudeV < b.visualMagnitudeV) {
-                         cmp = -1;
-                     } else if (a.visualMagnitudeV > b.visualMagnitudeV) {
-                         cmp = 1;
-                     }
-                 } else if (orderBy == "ra") {
-                     if (a.radJ2000 < b.radJ2000) {
-                         cmp = -1;
-                     } else if (a.radJ2000 > b.radJ2000) {
-                         cmp = 1;
-                     }
-                 } else if (orderBy == "dec") {
-                     if (a.decDJ2000 < b.decDJ2000) {
-                         cmp = -1;
-                     } else if (a.decDJ2000 > b.decDJ2000) {
-                         cmp = 1;
-                     }
-                 } else {
-                     // Default to identifier
-                     cmp = a.identifier.compare(b.identifier);
-                 }
+                  if (orderBy == "identifier") {
+                      cmp = a.identifier.compare(b.identifier);
+                  } else if (orderBy == "magnitude") {
+                      if (a.visualMagnitudeV < b.visualMagnitudeV) {
+                          cmp = -1;
+                      } else if (a.visualMagnitudeV > b.visualMagnitudeV) {
+                          cmp = 1;
+                      }
+                  } else if (orderBy == "ra") {
+                      if (a.radJ2000 < b.radJ2000) {
+                          cmp = -1;
+                      } else if (a.radJ2000 > b.radJ2000) {
+                          cmp = 1;
+                      }
+                  } else if (orderBy == "dec") {
+                      if (a.decDJ2000 < b.decDJ2000) {
+                          cmp = -1;
+                      } else if (a.decDJ2000 > b.decDJ2000) {
+                          cmp = 1;
+                      }
+                  } else {
+                      // Default to identifier
+                      cmp = a.identifier.compare(b.identifier);
+                  }
 
-                 return ascending ? (cmp < 0) : (cmp > 0);
-             });
+                  return ascending ? (cmp < 0) : (cmp > 0);
+              });
 
     return results;
 }
 
-auto FilterEvaluator::paginate(
-    const std::vector<CelestialObjectModel>& results,
-    int offset,
-    int limit) -> std::vector<CelestialObjectModel> {
+auto FilterEvaluator::paginate(const std::vector<CelestialObjectModel>& results,
+                               int offset, int limit)
+    -> std::vector<CelestialObjectModel> {
     if (offset < 0 || limit <= 0) {
         return {};
     }
@@ -194,8 +190,8 @@ auto FilterEvaluator::paginate(
                                              results.begin() + end);
 }
 
-auto FilterEvaluator::getFilterStats(
-    const CelestialSearchFilter& filter) -> std::string {
+auto FilterEvaluator::getFilterStats(const CelestialSearchFilter& filter)
+    -> std::string {
     int activeConstraints = 0;
 
     if (!filter.namePattern.empty()) {
@@ -220,14 +216,14 @@ auto FilterEvaluator::getFilterStats(
         activeConstraints++;
     }
 
-    return std::format("Filter Statistics:\n"
-                      "  Active Constraints: {}\n"
-                      "  Limit: {}\n"
-                      "  Offset: {}\n"
-                      "  Sort By: {} ({})\n",
-                      activeConstraints, filter.limit, filter.offset,
-                      filter.orderBy,
-                      filter.ascending ? "ascending" : "descending");
+    return std::format(
+        "Filter Statistics:\n"
+        "  Active Constraints: {}\n"
+        "  Limit: {}\n"
+        "  Offset: {}\n"
+        "  Sort By: {} ({})\n",
+        activeConstraints, filter.limit, filter.offset, filter.orderBy,
+        filter.ascending ? "ascending" : "descending");
 }
 
 auto FilterEvaluator::matchesNamePattern(const CelestialObjectModel& obj,
@@ -249,8 +245,7 @@ auto FilterEvaluator::matchesMagnitude(const CelestialObjectModel& obj,
 }
 
 auto FilterEvaluator::matchesSize(const CelestialObjectModel& obj,
-                                  const CelestialSearchFilter& filter)
-    -> bool {
+                                  const CelestialSearchFilter& filter) -> bool {
     // For now, just check magnitude as size data may not be available
     return true;
 }

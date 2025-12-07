@@ -55,8 +55,8 @@ struct ManagerDriverInfo : public DriverInfo {
 
     // Convert to DeviceContainer
     auto toContainer() const -> std::shared_ptr<DeviceContainer> {
-        return std::make_shared<DeviceContainer>(name, label, version, binary,
-                                                  manufacturer, skeleton, custom);
+        return std::make_shared<DeviceContainer>(
+            name, label, version, binary, manufacturer, skeleton, custom);
     }
 };
 

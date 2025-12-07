@@ -17,7 +17,7 @@ from .api import build_project, compile_file, get_compiler
     method="POST",
     description="Compile a single source file",
     tags=["compiler", "build"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def compile_source(
     source_file: str,
@@ -73,7 +73,7 @@ def compile_source(
     method="POST",
     description="Build a project from multiple source files",
     tags=["compiler", "build"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def build_sources(
     source_files: List[str],
@@ -139,7 +139,7 @@ def build_sources(
     method="GET",
     description="Get compiler information",
     tags=["compiler"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_compiler_info(compiler_name: str = None) -> dict:
     """
@@ -172,7 +172,7 @@ def get_compiler_info(compiler_name: str = None) -> dict:
     description="Compile source file (command)",
     priority=5,
     timeout_ms=60000,
-    tags=["compiler"]
+    tags=["compiler"],
 )
 def cmd_compile(
     source_file: str,

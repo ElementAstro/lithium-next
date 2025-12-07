@@ -505,6 +505,17 @@ void CoreDumpAnalyzer::setAnalysisOptions(bool includeMemory,
     pImpl_->setAnalysisOptions(includeMemory, includeThreads, includeStack);
 }
 
+void CoreDumpAnalyzer::setAnalysisOptions(
+    const CoreDumpAnalysisOptions& options) {
+    pImpl_->setAnalysisOptions(options.includeMemory, options.includeThreads,
+                               options.includeStack);
+    setAnalysisDepth(options.analysisDepth);
+    setSymbolSearchPaths(options.symbolSearchPaths);
+    enableMemoryAnalysis(options.includeMemory);
+    enableThreadAnalysis(options.includeThreads);
+    enableResourceAnalysis(options.includeResources);
+}
+
 std::string CoreDumpAnalyzer::getDetailedMemoryInfo() const {
     return pImpl_->getDetailedMemoryInfo();
 }

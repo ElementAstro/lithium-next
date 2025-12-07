@@ -131,8 +131,8 @@ public:
      * @param timeout Maximum wait time
      * @return true if movement completed
      */
-    auto waitForMove(std::chrono::milliseconds timeout = std::chrono::seconds(60))
-        -> bool;
+    auto waitForMove(
+        std::chrono::milliseconds timeout = std::chrono::seconds(60)) -> bool;
 
     /**
      * @brief Get current position

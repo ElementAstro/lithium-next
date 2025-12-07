@@ -121,7 +121,7 @@ public:
         setState(TcpConnectionState::Connecting);
 
         // Resolve hostname
-        struct addrinfo hints {};
+        struct addrinfo hints{};
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_protocol = IPPROTO_TCP;
@@ -129,8 +129,8 @@ public:
         struct addrinfo* result = nullptr;
         std::string portStr = std::to_string(config_.port);
 
-        int ret = getaddrinfo(config_.host.c_str(), portStr.c_str(), &hints,
-                              &result);
+        int ret =
+            getaddrinfo(config_.host.c_str(), portStr.c_str(), &hints, &result);
         if (ret != 0) {
             spdlog::error("Failed to resolve host {}: {}", config_.host,
                           gai_strerror(ret));
@@ -164,10 +164,8 @@ public:
                 FD_SET(socket_, &writefds);
 
                 struct timeval tv;
-                tv.tv_sec =
-                    static_cast<long>(timeout.count() / 1000);
-                tv.tv_usec =
-                    static_cast<long>((timeout.count() % 1000) * 1000);
+                tv.tv_sec = static_cast<long>(timeout.count() / 1000);
+                tv.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
 
                 ret = select(static_cast<int>(socket_) + 1, nullptr, &writefds,
                              nullptr, &tv);
@@ -247,9 +245,8 @@ public:
 
         size_t totalSent = 0;
         while (totalSent < data.size()) {
-            auto sent =
-                ::send(socket_, data.data() + totalSent,
-                       static_cast<int>(data.size() - totalSent), 0);
+            auto sent = ::send(socket_, data.data() + totalSent,
+                               static_cast<int>(data.size() - totalSent), 0);
             if (sent <= 0) {
                 setError(TcpError::SendFailed);
                 return atom::type::unexpected(TcpError::SendFailed);
@@ -264,23 +261,24 @@ public:
         return totalSent;
     }
 
-    auto sendLine(std::string_view line) -> atom::type::expected<size_t, TcpError> {
+    auto sendLine(std::string_view line)
+        -> atom::type::expected<size_t, TcpError> {
         std::string data(line);
         data += "\r\n";
         return send(data);
     }
 
-    auto receive(size_t maxBytes) -> atom::type::expected<std::string, TcpError> {
+    auto receive(size_t maxBytes)
+        -> atom::type::expected<std::string, TcpError> {
         if (!isConnected()) {
             return atom::type::unexpected(TcpError::Disconnected);
         }
 
-        size_t bufSize =
-            maxBytes > 0 ? maxBytes : config_.receiveBufferSize;
+        size_t bufSize = maxBytes > 0 ? maxBytes : config_.receiveBufferSize;
         std::vector<char> buffer(bufSize);
 
-        auto received = ::recv(socket_, buffer.data(),
-                               static_cast<int>(buffer.size()), 0);
+        auto received =
+            ::recv(socket_, buffer.data(), static_cast<int>(buffer.size()), 0);
 
         if (received < 0) {
             if (wouldBlock()) {
@@ -359,7 +357,7 @@ public:
 
             while (!st.stop_requested() && isConnected()) {
                 auto received = ::recv(socket_, buffer.data(),
-                                        static_cast<int>(buffer.size()), 0);
+                                       static_cast<int>(buffer.size()), 0);
 
                 if (received > 0) {
                     stats_.bytesReceived += static_cast<size_t>(received);
@@ -575,8 +573,7 @@ void TcpConnectionGuard::release() noexcept { released_ = true; }
 LineProtocol::LineProtocol(TcpConnection& connection) : conn_(connection) {}
 
 auto LineProtocol::sendAndReceive(
-    std::string_view request,
-    std::optional<std::chrono::milliseconds> timeout)
+    std::string_view request, std::optional<std::chrono::milliseconds> timeout)
     -> atom::type::expected<std::string, TcpError> {
     auto sendResult = conn_.sendLine(request);
     if (!sendResult.has_value()) {

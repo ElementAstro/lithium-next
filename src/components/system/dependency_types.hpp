@@ -150,6 +150,70 @@ struct PackageManagerInfo {
         getSearchCommand;  ///< Generates a command to search for a dependency.
 };
 
+// ============================================================================
+// Version Parsing and Formatting Utilities
+// ============================================================================
+
+/**
+ * @brief Parse a version string into VersionInfo.
+ * @param version Version string in format "major.minor.patch[-prerelease]".
+ * @return Parsed VersionInfo structure.
+ *
+ * Supports formats like "1.2.3", "1.2.3-beta", "1.2", "1".
+ */
+[[nodiscard]] VersionInfo parseVersion(const std::string& version);
+
+/**
+ * @brief Convert VersionInfo to string representation.
+ * @param version The VersionInfo to convert.
+ * @return String in format "major.minor.patch[-prerelease]".
+ */
+[[nodiscard]] std::string versionToString(const VersionInfo& version);
+
+/**
+ * @brief Check if a version string is valid.
+ * @param version Version string to validate.
+ * @return True if the version string can be parsed, false otherwise.
+ */
+[[nodiscard]] bool isValidVersion(const std::string& version);
+
+/**
+ * @brief Compare two version strings.
+ * @param v1 First version string.
+ * @param v2 Second version string.
+ * @return -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2.
+ */
+[[nodiscard]] int compareVersions(const std::string& v1, const std::string& v2);
+
+/**
+ * @brief Check if a version satisfies a minimum requirement.
+ * @param version The version to check.
+ * @param minVersion The minimum required version.
+ * @return True if version >= minVersion.
+ */
+[[nodiscard]] bool satisfiesMinVersion(const VersionInfo& version,
+                                       const VersionInfo& minVersion);
+
+/**
+ * @brief Check if a version satisfies a maximum requirement.
+ * @param version The version to check.
+ * @param maxVersion The maximum allowed version.
+ * @return True if version <= maxVersion.
+ */
+[[nodiscard]] bool satisfiesMaxVersion(const VersionInfo& version,
+                                       const VersionInfo& maxVersion);
+
+/**
+ * @brief Check if a version is within a range.
+ * @param version The version to check.
+ * @param minVersion The minimum required version (empty string means no min).
+ * @param maxVersion The maximum allowed version (empty string means no max).
+ * @return True if version is within the specified range.
+ */
+[[nodiscard]] bool isVersionInRange(const VersionInfo& version,
+                                    const std::string& minVersion,
+                                    const std::string& maxVersion);
+
 }  // namespace lithium::system
 
 #endif  // LITHIUM_SYSTEM_DEPENDENCY_TYPES_HPP

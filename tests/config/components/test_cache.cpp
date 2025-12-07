@@ -4,13 +4,13 @@
  */
 
 #include <gtest/gtest.h>
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <vector>
-#include <atomic>
 
-#include "config/components/cache.hpp"
 #include "atom/type/json.hpp"
+#include "config/components/cache.hpp"
 
 using json = nlohmann::json;
 using namespace lithium::config;
@@ -28,9 +28,7 @@ protected:
         cache_ = std::make_unique<ConfigCache>(config);
     }
 
-    void TearDown() override {
-        cache_.reset();
-    }
+    void TearDown() override { cache_.reset(); }
 
     std::unique_ptr<ConfigCache> cache_;
 };
@@ -139,7 +137,7 @@ TEST_F(ConfigCacheTest, OverwriteExisting) {
 TEST_F(ConfigCacheTest, PutWithCustomTtl) {
     cache_->put("ttl_key", json("value"), 100ms);
     EXPECT_TRUE(cache_->contains("ttl_key"));
-    
+
     std::this_thread::sleep_for(150ms);
     auto value = cache_->get("ttl_key");
     EXPECT_FALSE(value.has_value());
@@ -282,8 +280,8 @@ TEST_F(ConfigCacheTest, StatisticsMisses) {
 
 TEST_F(ConfigCacheTest, StatisticsHitRatio) {
     cache_->put("key", json("value"));
-    cache_->get("key");  // hit
-    cache_->get("key");  // hit
+    cache_->get("key");          // hit
+    cache_->get("key");          // hit
     cache_->get("nonexistent");  // miss
 
     auto stats = cache_->getStatistics();
@@ -407,9 +405,8 @@ TEST_F(ConfigCacheTest, GetOrComputeNonExistent) {
 }
 
 TEST_F(ConfigCacheTest, GetOrComputeWithTtl) {
-    auto value = cache_->getOrCompute("key", []() {
-        return json("value");
-    }, 50ms);
+    auto value =
+        cache_->getOrCompute("key", []() { return json("value"); }, 50ms);
 
     EXPECT_TRUE(cache_->contains("key"));
     std::this_thread::sleep_for(100ms);
@@ -434,11 +431,9 @@ TEST_F(ConfigCacheTest, GetBatch) {
 }
 
 TEST_F(ConfigCacheTest, PutBatch) {
-    std::unordered_map<std::string, json> entries = {
-        {"key1", json("value1")},
-        {"key2", json("value2")},
-        {"key3", json("value3")}
-    };
+    std::unordered_map<std::string, json> entries = {{"key1", json("value1")},
+                                                     {"key2", json("value2")},
+                                                     {"key3", json("value3")}};
 
     cache_->putBatch(entries);
 
@@ -448,10 +443,8 @@ TEST_F(ConfigCacheTest, PutBatch) {
 }
 
 TEST_F(ConfigCacheTest, PutBatchWithTtl) {
-    std::unordered_map<std::string, json> entries = {
-        {"key1", json("value1")},
-        {"key2", json("value2")}
-    };
+    std::unordered_map<std::string, json> entries = {{"key1", json("value1")},
+                                                     {"key2", json("value2")}};
 
     cache_->putBatch(entries, 50ms);
 
@@ -468,9 +461,9 @@ TEST_F(ConfigCacheTest, AddHook) {
     bool hookCalled = false;
     ConfigCache::CacheEvent receivedEvent;
 
-    size_t hookId = cache_->addHook(
-        [&](ConfigCache::CacheEvent event, std::string_view key,
-            const std::optional<json>& value) {
+    size_t hookId =
+        cache_->addHook([&](ConfigCache::CacheEvent event, std::string_view key,
+                            const std::optional<json>& value) {
             hookCalled = true;
             receivedEvent = event;
         });
@@ -488,9 +481,7 @@ TEST_F(ConfigCacheTest, HookOnGet) {
 
     size_t hookId = cache_->addHook(
         [&](ConfigCache::CacheEvent event, std::string_view key,
-            const std::optional<json>& value) {
-            receivedEvent = event;
-        });
+            const std::optional<json>& value) { receivedEvent = event; });
 
     cache_->get("key");
     EXPECT_EQ(receivedEvent, ConfigCache::CacheEvent::GET);
@@ -503,9 +494,7 @@ TEST_F(ConfigCacheTest, HookOnRemove) {
 
     size_t hookId = cache_->addHook(
         [&](ConfigCache::CacheEvent event, std::string_view key,
-            const std::optional<json>& value) {
-            receivedEvent = event;
-        });
+            const std::optional<json>& value) { receivedEvent = event; });
 
     cache_->remove("key");
     EXPECT_EQ(receivedEvent, ConfigCache::CacheEvent::REMOVE);
@@ -518,9 +507,7 @@ TEST_F(ConfigCacheTest, HookOnClear) {
 
     size_t hookId = cache_->addHook(
         [&](ConfigCache::CacheEvent event, std::string_view key,
-            const std::optional<json>& value) {
-            receivedEvent = event;
-        });
+            const std::optional<json>& value) { receivedEvent = event; });
 
     cache_->clear();
     EXPECT_EQ(receivedEvent, ConfigCache::CacheEvent::CLEAR);
@@ -528,26 +515,25 @@ TEST_F(ConfigCacheTest, HookOnClear) {
 }
 
 TEST_F(ConfigCacheTest, RemoveHook) {
-    size_t hookId = cache_->addHook(
-        [](ConfigCache::CacheEvent, std::string_view, const std::optional<json>&) {});
+    size_t hookId =
+        cache_->addHook([](ConfigCache::CacheEvent, std::string_view,
+                           const std::optional<json>&) {});
     EXPECT_TRUE(cache_->removeHook(hookId));
     EXPECT_FALSE(cache_->removeHook(hookId));
 }
 
 TEST_F(ConfigCacheTest, ClearHooks) {
-    cache_->addHook(
-        [](ConfigCache::CacheEvent, std::string_view, const std::optional<json>&) {});
-    cache_->addHook(
-        [](ConfigCache::CacheEvent, std::string_view, const std::optional<json>&) {});
+    cache_->addHook([](ConfigCache::CacheEvent, std::string_view,
+                       const std::optional<json>&) {});
+    cache_->addHook([](ConfigCache::CacheEvent, std::string_view,
+                       const std::optional<json>&) {});
 
     cache_->clearHooks();
 
     // After clearing, hooks should not be called
     bool hookCalled = false;
-    cache_->addHook(
-        [&](ConfigCache::CacheEvent, std::string_view, const std::optional<json>&) {
-            hookCalled = true;
-        });
+    cache_->addHook([&](ConfigCache::CacheEvent, std::string_view,
+                        const std::optional<json>&) { hookCalled = true; });
     cache_->clearHooks();
     cache_->put("key", json("value"));
     EXPECT_FALSE(hookCalled);
@@ -565,7 +551,8 @@ TEST_F(ConfigCacheTest, ConcurrentPutGet) {
     for (int i = 0; i < NUM_THREADS; ++i) {
         threads.emplace_back([this, i]() {
             for (int j = 0; j < OPS_PER_THREAD; ++j) {
-                std::string key = "thread" + std::to_string(i) + "_key" + std::to_string(j);
+                std::string key =
+                    "thread" + std::to_string(i) + "_key" + std::to_string(j);
                 cache_->put(key, json(j));
                 auto value = cache_->get(key);
                 EXPECT_TRUE(value.has_value());

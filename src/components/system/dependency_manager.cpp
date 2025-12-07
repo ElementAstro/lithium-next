@@ -28,12 +28,6 @@
 
 namespace lithium::system {
 
-static std::string versionToString(const VersionInfo& vi) {
-    std::ostringstream oss;
-    oss << vi;
-    return oss.str();
-}
-
 using json = nlohmann::json;
 using LRUCacheType = atom::search::ThreadSafeLRUCache<std::string, bool>;
 
@@ -105,7 +99,29 @@ public:
         initializeCache();
     }
 
-    ~Impl() { saveCacheToFile(); }
+    ~Impl() {
+        // Drain all async futures before destruction
+        drainAsyncFutures();
+        saveCacheToFile();
+    }
+
+    /**
+     * @brief Wait for all pending async operations to complete.
+     */
+    void drainAsyncFutures() {
+        std::lock_guard lock(asyncMutex_);
+        for (auto& fut : asyncFutures_) {
+            if (fut.valid()) {
+                try {
+                    fut.wait();
+                } catch (const std::exception& e) {
+                    spdlog::error("Error waiting for async future: {}",
+                                  e.what());
+                }
+            }
+        }
+        asyncFutures_.clear();
+    }
 
     void checkAndInstallDependencies() {
         auto threadPool =
@@ -209,12 +225,24 @@ public:
     }
 
     void addDependency(const DependencyInfo& dep) {
+        DependencyInfo depCopy = dep;
+
+        // Set default package manager if not specified
+        if (depCopy.packageManager.empty()) {
+            depCopy.packageManager =
+                platformDetector_.getDefaultPackageManager();
+            spdlog::debug(
+                "Using default package manager '{}' for dependency {}",
+                depCopy.packageManager, depCopy.name);
+        }
+
         {
             std::unique_lock lock(cacheMutex_);
-            dependencies_.emplace_back(dep);
-            installedCache_.emplace(dep.name, false);
+            dependencies_.emplace_back(depCopy);
+            installedCache_.emplace(depCopy.name, false);
         }
-        spdlog::info("Added dependency: {}", dep.name);
+        spdlog::info("Added dependency: {} (package manager: {})", depCopy.name,
+                     depCopy.packageManager);
     }
 
     void removeDependency(const std::string& depName) {
@@ -399,6 +427,14 @@ public:
                                    const std::string& version)
         -> DependencyResult<bool> {
         try {
+            // Validate version string first
+            if (!isValidVersion(version)) {
+                return DependencyResult<bool>{
+                    false,
+                    DependencyError{DependencyErrorCode::INVALID_VERSION,
+                                    "Invalid version format: " + version}};
+            }
+
             auto it = std::ranges::find_if(
                 dependencies_,
                 [&](const DependencyInfo& dep) { return dep.name == name; });
@@ -411,8 +447,16 @@ public:
             }
 
             auto reqVersion = parseVersion(version);
-            return DependencyResult<bool>{it->version >= reqVersion,
-                                          std::nullopt};
+
+            // Use satisfiesMinVersion for proper version comparison
+            bool compatible = satisfiesMinVersion(it->version, reqVersion);
+
+            spdlog::debug("Version compatibility check: {} {} >= {} = {}", name,
+                          versionToString(it->version),
+                          versionToString(reqVersion),
+                          compatible ? "true" : "false");
+
+            return DependencyResult<bool>{compatible, std::nullopt};
         } catch (const std::exception& e) {
             return DependencyResult<bool>{
                 false, DependencyError{DependencyErrorCode::INVALID_VERSION,
@@ -487,22 +531,7 @@ public:
         }
     }
 
-    static auto parseVersion(const std::string& version) -> VersionInfo {
-        std::regex version_regex(R"((\d+)\.(\d+)\.(\d+)(?:-(.+))?)");
-        std::smatch matches;
-        VersionInfo info;
-
-        if (std::regex_match(version, matches, version_regex)) {
-            info.major = std::stoi(matches[1]);
-            info.minor = std::stoi(matches[2]);
-            info.patch = std::stoi(matches[3]);
-            if (matches[4].matched) {
-                info.prerelease = matches[4];
-            }
-        }
-
-        return info;
-    }
+    // Use centralized parseVersion from dependency_types.hpp
 
     auto getDependencyGraph() -> std::string {
         json graph;

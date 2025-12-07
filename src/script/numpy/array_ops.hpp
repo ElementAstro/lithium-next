@@ -48,7 +48,7 @@ public:
      * @param data Vector of values
      * @return NumPy array
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static py::array_t<T> createArray(const std::vector<T>& data);
 
     /**
@@ -59,7 +59,7 @@ public:
      * @param copy Whether to copy data (true) or create a view (false)
      * @return NumPy array
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static py::array_t<T> createArray(
         T* data, const std::vector<size_t>& shape, bool copy = true);
 
@@ -69,7 +69,7 @@ public:
      * @param data Span of values
      * @return NumPy array
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static py::array_t<T> createArray(std::span<T> data);
 
     /**
@@ -78,7 +78,7 @@ public:
      * @param data Nested vector of values
      * @return 2D NumPy array
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static py::array_t<T> createArray2D(
         const std::vector<std::vector<T>>& data);
 
@@ -88,7 +88,7 @@ public:
      * @param shape Array dimensions
      * @return NumPy array filled with zeros
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static py::array_t<T> zeros(const std::vector<size_t>& shape);
 
     /**
@@ -97,7 +97,7 @@ public:
      * @param shape Array dimensions
      * @return Uninitialized NumPy array
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static py::array_t<T> empty(const std::vector<size_t>& shape);
 
     /**
@@ -107,8 +107,9 @@ public:
      * @param value Fill value
      * @return NumPy array
      */
-    template<NumpyCompatible T>
-    [[nodiscard]] static py::array_t<T> full(const std::vector<size_t>& shape, T value);
+    template <NumpyCompatible T>
+    [[nodiscard]] static py::array_t<T> full(const std::vector<size_t>& shape,
+                                             T value);
 
     // =========================================================================
     // Array Conversion
@@ -120,7 +121,7 @@ public:
      * @param arr NumPy array
      * @return Vector copy of array data
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static std::vector<T> toVector(const py::array_t<T>& arr);
 
     /**
@@ -129,7 +130,7 @@ public:
      * @param arr 2D NumPy array
      * @return Nested vector of array data
      */
-    template<NumpyCompatible T>
+    template <NumpyCompatible T>
     [[nodiscard]] static std::vector<std::vector<T>> toVector2D(
         const py::array_t<T>& arr);
 
@@ -140,8 +141,9 @@ public:
      * @param buffer Destination buffer
      * @param bufferSize Size of buffer in elements
      */
-    template<NumpyCompatible T>
-    static void copyToBuffer(const py::array_t<T>& arr, T* buffer, size_t bufferSize);
+    template <NumpyCompatible T>
+    static void copyToBuffer(const py::array_t<T>& arr, T* buffer,
+                             size_t bufferSize);
 
     /**
      * @brief Get array shape as vector
@@ -200,13 +202,14 @@ public:
 // Template Implementations
 // =========================================================================
 
-template<NumpyCompatible T>
+template <NumpyCompatible T>
 py::array_t<T> ArrayOps::createArray(const std::vector<T>& data) {
     return py::array_t<T>(data.size(), data.data());
 }
 
-template<NumpyCompatible T>
-py::array_t<T> ArrayOps::createArray(T* data, const std::vector<size_t>& shape, bool copy) {
+template <NumpyCompatible T>
+py::array_t<T> ArrayOps::createArray(T* data, const std::vector<size_t>& shape,
+                                     bool copy) {
     std::vector<py::ssize_t> pyShape(shape.begin(), shape.end());
 
     // Calculate strides (C-order)
@@ -221,19 +224,20 @@ py::array_t<T> ArrayOps::createArray(T* data, const std::vector<size_t>& shape, 
         return py::array_t<T>(pyShape, strides, data);
     } else {
         // Return a view (caller must ensure data lifetime)
-        return py::array_t<T>(
-            pyShape, strides, data,
-            py::capsule(data, [](void*) {}));  // No-op capsule for non-owning view
+        return py::array_t<T>(pyShape, strides, data,
+                              py::capsule(data, [](void*) {
+                              }));  // No-op capsule for non-owning view
     }
 }
 
-template<NumpyCompatible T>
+template <NumpyCompatible T>
 py::array_t<T> ArrayOps::createArray(std::span<T> data) {
     return py::array_t<T>(data.size(), data.data());
 }
 
-template<NumpyCompatible T>
-py::array_t<T> ArrayOps::createArray2D(const std::vector<std::vector<T>>& data) {
+template <NumpyCompatible T>
+py::array_t<T> ArrayOps::createArray2D(
+    const std::vector<std::vector<T>>& data) {
     if (data.empty()) {
         return py::array_t<T>({0, 0});
     }
@@ -253,35 +257,38 @@ py::array_t<T> ArrayOps::createArray2D(const std::vector<std::vector<T>>& data) 
     return arr;
 }
 
-template<NumpyCompatible T>
+template <NumpyCompatible T>
 py::array_t<T> ArrayOps::zeros(const std::vector<size_t>& shape) {
     py::module np = py::module::import("numpy");
     std::vector<py::ssize_t> pyShape(shape.begin(), shape.end());
-    return np.attr("zeros")(pyShape, py::dtype::of<T>()).template cast<py::array_t<T>>();
+    return np.attr("zeros")(pyShape, py::dtype::of<T>())
+        .template cast<py::array_t<T>>();
 }
 
-template<NumpyCompatible T>
+template <NumpyCompatible T>
 py::array_t<T> ArrayOps::empty(const std::vector<size_t>& shape) {
     py::module np = py::module::import("numpy");
     std::vector<py::ssize_t> pyShape(shape.begin(), shape.end());
-    return np.attr("empty")(pyShape, py::dtype::of<T>()).template cast<py::array_t<T>>();
+    return np.attr("empty")(pyShape, py::dtype::of<T>())
+        .template cast<py::array_t<T>>();
 }
 
-template<NumpyCompatible T>
+template <NumpyCompatible T>
 py::array_t<T> ArrayOps::full(const std::vector<size_t>& shape, T value) {
     py::module np = py::module::import("numpy");
     std::vector<py::ssize_t> pyShape(shape.begin(), shape.end());
-    return np.attr("full")(pyShape, value, py::dtype::of<T>()).template cast<py::array_t<T>>();
+    return np.attr("full")(pyShape, value, py::dtype::of<T>())
+        .template cast<py::array_t<T>>();
 }
 
-template<NumpyCompatible T>
+template <NumpyCompatible T>
 std::vector<T> ArrayOps::toVector(const py::array_t<T>& arr) {
     auto info = arr.request();
     T* data = static_cast<T*>(info.ptr);
     return std::vector<T>(data, data + arr.size());
 }
 
-template<NumpyCompatible T>
+template <NumpyCompatible T>
 std::vector<std::vector<T>> ArrayOps::toVector2D(const py::array_t<T>& arr) {
     auto info = arr.request();
     if (info.ndim != 2) {
@@ -303,8 +310,9 @@ std::vector<std::vector<T>> ArrayOps::toVector2D(const py::array_t<T>& arr) {
     return result;
 }
 
-template<NumpyCompatible T>
-void ArrayOps::copyToBuffer(const py::array_t<T>& arr, T* buffer, size_t bufferSize) {
+template <NumpyCompatible T>
+void ArrayOps::copyToBuffer(const py::array_t<T>& arr, T* buffer,
+                            size_t bufferSize) {
     auto info = arr.request();
     size_t copySize = std::min(static_cast<size_t>(arr.size()), bufferSize);
     std::memcpy(buffer, info.ptr, copySize * sizeof(T));

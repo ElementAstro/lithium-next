@@ -21,9 +21,9 @@
 #include <fstream>
 #include <memory>
 
-#include "debug/terminal.hpp"
 #include "debug/check.hpp"
 #include "debug/suggestion.hpp"
+#include "debug/terminal.hpp"
 
 namespace lithium::debug::test {
 
@@ -281,8 +281,8 @@ TEST_F(ConsoleTerminalRuleTest, AddCommandCheckRule) {
         [](const std::string& line,
            size_t lineNum) -> std::optional<CommandCheckerErrorProxy::Error> {
             if (line.find("bad") != std::string::npos) {
-                return CommandCheckerErrorProxy::Error{
-                    "Bad word found", lineNum, 0, 1};
+                return CommandCheckerErrorProxy::Error{"Bad word found",
+                                                       lineNum, 0, 1};
             }
             return std::nullopt;
         });
@@ -291,8 +291,7 @@ TEST_F(ConsoleTerminalRuleTest, AddCommandCheckRule) {
 
 TEST_F(ConsoleTerminalRuleTest, RemoveCommandCheckRule) {
     terminal->addCommandCheckRule(
-        "temp_rule",
-        [](const std::string&, size_t) { return std::nullopt; });
+        "temp_rule", [](const std::string&, size_t) { return std::nullopt; });
 
     bool removed = terminal->removeCommandCheckRule("temp_rule");
     EXPECT_TRUE(removed);
@@ -326,9 +325,8 @@ protected:
 };
 
 TEST_F(ConsoleTerminalFilterTest, AddSuggestionFilter) {
-    terminal->addSuggestionFilter([](const std::string& item) {
-        return item != "banana";
-    });
+    terminal->addSuggestionFilter(
+        [](const std::string& item) { return item != "banana"; });
     // Filter should be added
 }
 
@@ -589,8 +587,8 @@ class ConsoleTerminalConfigFileTest : public ::testing::Test {
 protected:
     void SetUp() override {
         terminal = std::make_unique<ConsoleTerminal>();
-        testConfigPath =
-            std::filesystem::temp_directory_path() / "test_terminal_config.json";
+        testConfigPath = std::filesystem::temp_directory_path() /
+                         "test_terminal_config.json";
 
         // Create a simple config file
         std::ofstream file(testConfigPath);

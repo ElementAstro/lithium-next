@@ -305,6 +305,75 @@ public:
      */
     void clearErrors();
 
+    /**
+     * @brief Gets the count of loaded components.
+     * @return Number of currently loaded components.
+     */
+    [[nodiscard]] auto getComponentCount() const -> size_t;
+
+    /**
+     * @brief Checks if any components are currently loaded.
+     * @return True if at least one component is loaded.
+     */
+    [[nodiscard]] auto hasLoadedComponents() const -> bool;
+
+    /**
+     * @brief Gets all components in a specific state.
+     * @param state The state to filter by.
+     * @return Vector of component names in the specified state.
+     */
+    [[nodiscard]] auto getComponentsByState(ComponentState state) const
+        -> std::vector<std::string>;
+
+    /**
+     * @brief Restarts a component (stop + start).
+     * @param name The name of the component.
+     * @return True if restart was successful.
+     */
+    auto restartComponent(const std::string& name) -> bool;
+
+    /**
+     * @brief Enables a disabled component.
+     * @param name The name of the component.
+     * @return True if the component was enabled.
+     */
+    auto enableComponent(const std::string& name) -> bool;
+
+    /**
+     * @brief Disables a component.
+     * @param name The name of the component.
+     * @return True if the component was disabled.
+     */
+    auto disableComponent(const std::string& name) -> bool;
+
+    /**
+     * @brief Checks if a component is enabled.
+     * @param name The name of the component.
+     * @return True if the component is enabled.
+     */
+    [[nodiscard]] auto isComponentEnabled(const std::string& name) const
+        -> bool;
+
+    /**
+     * @brief Gets all available groups.
+     * @return Vector of group names.
+     */
+    [[nodiscard]] auto getGroups() const -> std::vector<std::string>;
+
+    /**
+     * @brief Starts all components in a group.
+     * @param group The group name.
+     * @return True if all components started successfully.
+     */
+    auto startGroup(const std::string& group) -> bool;
+
+    /**
+     * @brief Stops all components in a group.
+     * @param group The group name.
+     * @return True if all components stopped successfully.
+     */
+    auto stopGroup(const std::string& group) -> bool;
+
 private:
     /**
      * @brief Updates the dependency graph for a component.

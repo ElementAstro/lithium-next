@@ -78,4 +78,12 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 # Set IDE folder
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "Client/Solvers")
 
+# Add alias for solver plugin linking
+add_library(lithium::astap_client ALIAS ${PROJECT_NAME})
+
+# Add plugin subdirectory if solver plugins are enabled
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/plugin AND LITHIUM_BUILD_SOLVER_PLUGINS)
+    add_subdirectory(plugin)
+endif()
+
 message(STATUS "  ├─ Client lib: lithium_client_astap configured")

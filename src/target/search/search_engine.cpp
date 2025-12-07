@@ -11,12 +11,12 @@
 
 #include "search_engine.hpp"
 
+#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <cmath>
 #include <format>
 #include <mutex>
 #include <shared_mutex>
-#include <spdlog/spdlog.h>
 #include <utility>
 
 namespace lithium::target::search {
@@ -32,11 +32,10 @@ public:
     /**
      * @brief Construct implementation
      */
-    explicit Impl(
-        std::shared_ptr<CelestialRepository> repository,
-        std::shared_ptr<index::TrieIndex> trieIndex,
-        std::shared_ptr<index::SpatialIndex> spatialIndex,
-        std::shared_ptr<index::FuzzyMatcher> fuzzyMatcher)
+    explicit Impl(std::shared_ptr<CelestialRepository> repository,
+                  std::shared_ptr<index::TrieIndex> trieIndex,
+                  std::shared_ptr<index::SpatialIndex> spatialIndex,
+                  std::shared_ptr<index::FuzzyMatcher> fuzzyMatcher)
         : repository_(std::move(repository)),
           trieIndex_(std::move(trieIndex)),
           spatialIndex_(std::move(spatialIndex)),
@@ -61,8 +60,7 @@ public:
         }
 
         if (!repository_) {
-            return atom::type::make_unexpected(
-                "Repository not available");
+            return atom::type::make_unexpected("Repository not available");
         }
 
         try {
@@ -120,12 +118,12 @@ public:
             objectCount_ = objects.size();
 
             spdlog::info("SearchEngine initialized with {} objects",
-                        objectCount_);
+                         objectCount_);
 
             return {};
         } catch (const std::exception& e) {
-            std::string error = std::format(
-                "Failed to initialize SearchEngine: {}", e.what());
+            std::string error =
+                std::format("Failed to initialize SearchEngine: {}", e.what());
             spdlog::error(error);
             return atom::type::make_unexpected(error);
         }
@@ -142,13 +140,14 @@ public:
     /**
      * @brief Perform general search
      */
-    [[nodiscard]] auto search(
-        const std::string& query,
-        const SearchOptions& options) -> std::vector<CelestialObjectModel> {
+    [[nodiscard]] auto search(const std::string& query,
+                              const SearchOptions& options)
+        -> std::vector<CelestialObjectModel> {
         std::shared_lock lock(indexMutex_);
 
         if (!isInitialized_) {
-            spdlog::warn("SearchEngine not initialized, returning empty results");
+            spdlog::warn(
+                "SearchEngine not initialized, returning empty results");
             return {};
         }
 
@@ -166,7 +165,7 @@ public:
         }
 
         spdlog::debug("Search for '{}' returned {} results", query,
-                     results.size());
+                      results.size());
 
         return results;
     }
@@ -217,11 +216,9 @@ public:
     /**
      * @brief Coordinate search implementation
      */
-    [[nodiscard]] auto searchByCoordinatesImpl(
-        double ra,
-        double dec,
-        double radius,
-        int limit) -> std::vector<CelestialObjectModel> {
+    [[nodiscard]] auto searchByCoordinatesImpl(double ra, double dec,
+                                               double radius, int limit)
+        -> std::vector<CelestialObjectModel> {
         std::vector<CelestialObjectModel> results;
 
         if (!spatialIndex_ || !repository_) {
@@ -255,8 +252,7 @@ public:
     /**
      * @brief Advanced search implementation
      */
-    [[nodiscard]] auto advancedSearchImpl(
-        const CelestialSearchFilter& filter)
+    [[nodiscard]] auto advancedSearchImpl(const CelestialSearchFilter& filter)
         -> std::vector<CelestialObjectModel> {
         if (!repository_) {
             return {};
@@ -321,18 +317,17 @@ public:
             isInitialized_ ? "Yes" : "No", objectCount_);
 
         if (trieIndex_) {
-            stats += std::format("  Trie Index Size: {}\n",
-                               trieIndex_->size());
+            stats += std::format("  Trie Index Size: {}\n", trieIndex_->size());
         }
 
         if (spatialIndex_) {
             stats += std::format("  Spatial Index Objects: {}\n",
-                               spatialIndex_->size());
+                                 spatialIndex_->size());
         }
 
         if (fuzzyMatcher_) {
             stats += std::format("  Fuzzy Matcher Stats:\n{}",
-                               fuzzyMatcher_->getStats());
+                                 fuzzyMatcher_->getStats());
         }
 
         return stats;
@@ -365,14 +360,13 @@ private:
 // SearchEngine Public Implementation
 // ============================================================================
 
-SearchEngine::SearchEngine(
-    std::shared_ptr<CelestialRepository> repository,
-    std::shared_ptr<index::TrieIndex> trieIndex,
-    std::shared_ptr<index::SpatialIndex> spatialIndex,
-    std::shared_ptr<index::FuzzyMatcher> fuzzyMatcher)
-    : pImpl_(std::make_unique<Impl>(
-          std::move(repository), std::move(trieIndex),
-          std::move(spatialIndex), std::move(fuzzyMatcher))) {
+SearchEngine::SearchEngine(std::shared_ptr<CelestialRepository> repository,
+                           std::shared_ptr<index::TrieIndex> trieIndex,
+                           std::shared_ptr<index::SpatialIndex> spatialIndex,
+                           std::shared_ptr<index::FuzzyMatcher> fuzzyMatcher)
+    : pImpl_(std::make_unique<Impl>(std::move(repository), std::move(trieIndex),
+                                    std::move(spatialIndex),
+                                    std::move(fuzzyMatcher))) {
     spdlog::debug("SearchEngine created");
 }
 
@@ -396,7 +390,7 @@ auto SearchEngine::initialize() -> atom::type::Expected<void, std::string> {
 bool SearchEngine::isInitialized() const { return pImpl_->isInitialized(); }
 
 auto SearchEngine::search(const std::string& query,
-                         const SearchOptions& options)
+                          const SearchOptions& options)
     -> std::vector<CelestialObjectModel> {
     return pImpl_->search(query, options);
 }
@@ -411,8 +405,7 @@ auto SearchEngine::exactSearch(const std::string& query, int limit)
 }
 
 auto SearchEngine::fuzzySearch(const std::string& query, int tolerance,
-                               int limit)
-    -> std::vector<CelestialObjectModel> {
+                               int limit) -> std::vector<CelestialObjectModel> {
     auto results = pImpl_->fuzzySearchImpl(query, tolerance);
     if (static_cast<int>(results.size()) > limit) {
         results.resize(limit);
@@ -421,7 +414,7 @@ auto SearchEngine::fuzzySearch(const std::string& query, int tolerance,
 }
 
 auto SearchEngine::searchByCoordinates(double ra, double dec, double radius,
-                                      int limit)
+                                       int limit)
     -> std::vector<CelestialObjectModel> {
     return pImpl_->searchByCoordinatesImpl(ra, dec, radius, limit);
 }
@@ -431,8 +424,7 @@ auto SearchEngine::autocomplete(const std::string& prefix, int limit)
     return pImpl_->autocompleteImpl(prefix, limit);
 }
 
-auto SearchEngine::advancedSearch(
-    const CelestialSearchFilter& filter)
+auto SearchEngine::advancedSearch(const CelestialSearchFilter& filter)
     -> std::vector<CelestialObjectModel> {
     return pImpl_->advancedSearchImpl(filter);
 }

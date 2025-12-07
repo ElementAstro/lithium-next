@@ -4,7 +4,7 @@
 #include <memory>
 #include <thread>
 
-#include "components/loader.hpp"
+#include "components/core/loader.hpp"
 
 namespace fs = std::filesystem;
 

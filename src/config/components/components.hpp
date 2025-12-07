@@ -20,6 +20,7 @@
 #include "serializer.hpp"
 #include "validator.hpp"
 #include "watcher.hpp"
+#include "yaml_parser.hpp"
 
 namespace lithium::config {
 
@@ -27,6 +28,23 @@ namespace lithium::config {
  * @brief Components module version.
  */
 inline constexpr const char* COMPONENTS_VERSION = "1.0.0";
+
+// ============================================================================
+// Convenience Type Aliases
+// ============================================================================
+
+// Cache types
+using CacheConfig = ConfigCache::Config;
+using CacheStatistics = ConfigCache::Statistics;
+using CacheEntry = ConfigCache::CacheEntry;
+
+// Serializer types
+using SerializerConfig = ConfigSerializer::Config;
+using SerializerMetrics = ConfigSerializer::Metrics;
+
+// Watcher types
+using WatcherOptions = ConfigWatcher::WatcherOptions;
+using WatcherStatistics = ConfigWatcher::Statistics;
 
 }  // namespace lithium::config
 

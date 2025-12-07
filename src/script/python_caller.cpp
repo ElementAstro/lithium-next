@@ -285,7 +285,8 @@ template double PythonWrapper::call_function<double>(const std::string&,
 // ============================================================================
 
 template <typename T>
-T PythonWrapper::get_variable(const std::string& alias, const std::string& variable_name) {
+T PythonWrapper::get_variable(const std::string& alias,
+                              const std::string& variable_name) {
     py::gil_scoped_acquire gil;
     auto it = pImpl->scripts_.find(alias);
     if (it == pImpl->scripts_.end()) {
@@ -295,14 +296,18 @@ T PythonWrapper::get_variable(const std::string& alias, const std::string& varia
 }
 
 // Explicit instantiations for get_variable
-template int PythonWrapper::get_variable<int>(const std::string&, const std::string&);
-template double PythonWrapper::get_variable<double>(const std::string&, const std::string&);
-template std::string PythonWrapper::get_variable<std::string>(const std::string&, const std::string&);
-template bool PythonWrapper::get_variable<bool>(const std::string&, const std::string&);
+template int PythonWrapper::get_variable<int>(const std::string&,
+                                              const std::string&);
+template double PythonWrapper::get_variable<double>(const std::string&,
+                                                    const std::string&);
+template std::string PythonWrapper::get_variable<std::string>(
+    const std::string&, const std::string&);
+template bool PythonWrapper::get_variable<bool>(const std::string&,
+                                                const std::string&);
 
 void PythonWrapper::set_variable(const std::string& alias,
-                                  const std::string& variable_name,
-                                  const py::object& value) {
+                                 const std::string& variable_name,
+                                 const py::object& value) {
     py::gil_scoped_acquire gil;
     auto it = pImpl->scripts_.find(alias);
     if (it == pImpl->scripts_.end()) {
@@ -314,8 +319,8 @@ void PythonWrapper::set_variable(const std::string& alias,
 
 template <typename T>
 T PythonWrapper::get_object_attribute(const std::string& alias,
-                                       const std::string& class_name,
-                                       const std::string& attr_name) {
+                                      const std::string& class_name,
+                                      const std::string& attr_name) {
     py::gil_scoped_acquire gil;
     auto it = pImpl->scripts_.find(alias);
     if (it == pImpl->scripts_.end()) {
@@ -327,13 +332,16 @@ T PythonWrapper::get_object_attribute(const std::string& alias,
 }
 
 // Explicit instantiations for get_object_attribute
-template int PythonWrapper::get_object_attribute<int>(const std::string&, const std::string&, const std::string&);
-template std::string PythonWrapper::get_object_attribute<std::string>(const std::string&, const std::string&, const std::string&);
+template int PythonWrapper::get_object_attribute<int>(const std::string&,
+                                                      const std::string&,
+                                                      const std::string&);
+template std::string PythonWrapper::get_object_attribute<std::string>(
+    const std::string&, const std::string&, const std::string&);
 
 void PythonWrapper::set_object_attribute(const std::string& alias,
-                                          const std::string& class_name,
-                                          const std::string& attr_name,
-                                          const py::object& value) {
+                                         const std::string& class_name,
+                                         const std::string& attr_name,
+                                         const py::object& value) {
     py::gil_scoped_acquire gil;
     auto it = pImpl->scripts_.find(alias);
     if (it == pImpl->scripts_.end()) {
@@ -359,10 +367,12 @@ T PythonWrapper::python_to_cpp(const py::object& obj) {
 // Explicit instantiations for conversion helpers
 template py::object PythonWrapper::cpp_to_python<int>(const int&);
 template py::object PythonWrapper::cpp_to_python<double>(const double&);
-template py::object PythonWrapper::cpp_to_python<std::string>(const std::string&);
+template py::object PythonWrapper::cpp_to_python<std::string>(
+    const std::string&);
 template int PythonWrapper::python_to_cpp<int>(const py::object&);
 template double PythonWrapper::python_to_cpp<double>(const py::object&);
-template std::string PythonWrapper::python_to_cpp<std::string>(const py::object&);
+template std::string PythonWrapper::python_to_cpp<std::string>(
+    const py::object&);
 
 // ============================================================================
 // Core Implementation Methods
@@ -385,7 +395,8 @@ void PythonWrapper::add_sys_path(const std::string& path) {
     spdlog::debug("Added '{}' to sys.path", path);
 }
 
-void PythonWrapper::sync_variable_to_python(const std::string& name, py::object value) {
+void PythonWrapper::sync_variable_to_python(const std::string& name,
+                                            py::object value) {
     py::gil_scoped_acquire gil;
     py::module_ main = py::module_::import("__main__");
     main.attr(name.c_str()) = value;
@@ -405,14 +416,16 @@ void PythonWrapper::inject_code(const std::string& code_snippet) {
     py::gil_scoped_acquire gil;
     try {
         py::exec(code_snippet);
-        spdlog::debug("Injected code snippet ({} chars)", code_snippet.length());
+        spdlog::debug("Injected code snippet ({} chars)",
+                      code_snippet.length());
     } catch (const py::error_already_set& e) {
         spdlog::error("Error injecting code: {}", e.what());
         throw;
     }
 }
 
-std::vector<std::string> PythonWrapper::get_function_list(const std::string& alias) {
+std::vector<std::string> PythonWrapper::get_function_list(
+    const std::string& alias) {
     py::gil_scoped_acquire gil;
     std::vector<std::string> functions;
 
@@ -424,8 +437,9 @@ std::vector<std::string> PythonWrapper::get_function_list(const std::string& ali
     py::dict moduleDict = it->second.attr("__dict__");
     for (const auto& item : moduleDict) {
         std::string name = py::str(item.first).cast<std::string>();
-        if (!name.starts_with("_") && 
-            py::isinstance<py::function>(py::reinterpret_borrow<py::object>(item.second))) {
+        if (!name.starts_with("_") &&
+            py::isinstance<py::function>(
+                py::reinterpret_borrow<py::object>(item.second))) {
             functions.push_back(name);
         }
     }
@@ -447,15 +461,16 @@ py::object PythonWrapper::get_memory_usage() {
     }
 }
 
-void PythonWrapper::register_function(const std::string& name, std::function<void()> func) {
+void PythonWrapper::register_function(const std::string& name,
+                                      std::function<void()> func) {
     py::gil_scoped_acquire gil;
     py::module_ main = py::module_::import("__main__");
     main.attr(name.c_str()) = py::cpp_function(func);
     spdlog::debug("Registered C++ function '{}' in Python", name);
 }
 
-void PythonWrapper::execute_script_with_logging(const std::string& script_content,
-                                                 const std::string& log_file) {
+void PythonWrapper::execute_script_with_logging(
+    const std::string& script_content, const std::string& log_file) {
     py::gil_scoped_acquire gil;
     try {
         // Redirect stdout/stderr to file
@@ -474,7 +489,8 @@ class LogToFile:
         sys.stdout = self.original
         self.file.close()
 
-_log_handler = LogToFile(')" + log_file + R"(')
+_log_handler = LogToFile(')" + log_file +
+                                 R"(')
 sys.stdout = _log_handler
 sys.stderr = _log_handler
 )";
@@ -522,12 +538,13 @@ void PythonWrapper::enable_debug_mode(bool enable) {
     py::gil_scoped_acquire gil;
     py::module_ sys = py::module_::import("sys");
     if (enable) {
-        sys.attr("settrace")(py::cpp_function([](py::object frame, py::str event, py::object /*arg*/) {
-            spdlog::debug("[Python Debug] {} at line {}",
-                          event.cast<std::string>(),
-                          frame.attr("f_lineno").cast<int>());
-            return py::none();
-        }));
+        sys.attr("settrace")(py::cpp_function(
+            [](py::object frame, py::str event, py::object /*arg*/) {
+                spdlog::debug("[Python Debug] {} at line {}",
+                              event.cast<std::string>(),
+                              frame.attr("f_lineno").cast<int>());
+                return py::none();
+            }));
     } else {
         sys.attr("settrace")(py::none());
     }
@@ -540,9 +557,9 @@ void PythonWrapper::set_breakpoint(const std::string& alias, int line_number) {
 }
 
 py::object PythonWrapper::call_method(const std::string& alias,
-                                       const std::string& class_name,
-                                       const std::string& method_name,
-                                       const py::args& args) {
+                                      const std::string& class_name,
+                                      const std::string& method_name,
+                                      const py::args& args) {
     py::gil_scoped_acquire gil;
     auto it = pImpl->scripts_.find(alias);
     if (it == pImpl->scripts_.end()) {
@@ -555,7 +572,7 @@ py::object PythonWrapper::call_method(const std::string& alias,
 }
 
 py::object PythonWrapper::eval_expression(const std::string& alias,
-                                           const std::string& expression) {
+                                          const std::string& expression) {
     py::gil_scoped_acquire gil;
     auto it = pImpl->scripts_.find(alias);
     if (it == pImpl->scripts_.end()) {
@@ -580,7 +597,8 @@ std::vector<int> PythonWrapper::call_function_with_list_return(
     return result.cast<std::vector<int>>();
 }
 
-void PythonWrapper::execute_script_multithreaded(const std::vector<std::string>& scripts) {
+void PythonWrapper::execute_script_multithreaded(
+    const std::vector<std::string>& scripts) {
     std::vector<std::future<void>> futures;
     futures.reserve(scripts.size());
 
@@ -606,7 +624,8 @@ void PythonWrapper::manage_object_lifecycle(const std::string& alias,
     // Object lifecycle management is handled automatically by Python's GC
     // This is a placeholder for explicit control if needed
     if (auto_cleanup) {
-        spdlog::debug("Object '{}' in '{}' marked for auto-cleanup", object_name, alias);
+        spdlog::debug("Object '{}' in '{}' marked for auto-cleanup",
+                      object_name, alias);
     }
 }
 
@@ -676,7 +695,8 @@ std::optional<ScriptExports> PythonWrapper::discover_exports(
             py::object manifestObj = getManifest(module);
 
             py::module_ json = py::module_::import("json");
-            std::string jsonStr = json.attr("dumps")(manifestObj).cast<std::string>();
+            std::string jsonStr =
+                json.attr("dumps")(manifestObj).cast<std::string>();
 
             auto manifest = nlohmann::json::parse(jsonStr);
             exports = ScriptExports::fromJson(manifest);
@@ -694,20 +714,25 @@ std::optional<ScriptExports> PythonWrapper::discover_exports(
         py::dict moduleDict = module.attr("__dict__");
         for (const auto& item : moduleDict) {
             std::string name = py::str(item.first).cast<std::string>();
-            if (name.starts_with("_")) continue;
+            if (name.starts_with("_"))
+                continue;
 
             py::object obj = py::reinterpret_borrow<py::object>(item.second);
-            if (!py::hasattr(obj, "__lithium_exports__")) continue;
+            if (!py::hasattr(obj, "__lithium_exports__"))
+                continue;
 
             py::object funcExports = obj.attr("__lithium_exports__");
-            if (!py::isinstance<py::list>(funcExports)) continue;
+            if (!py::isinstance<py::list>(funcExports))
+                continue;
 
             for (const auto& exportItem : funcExports) {
-                if (!py::hasattr(exportItem, "to_dict")) continue;
+                if (!py::hasattr(exportItem, "to_dict"))
+                    continue;
 
                 py::module_ json = py::module_::import("json");
                 py::object dictObj = exportItem.attr("to_dict")();
-                std::string jsonStr = json.attr("dumps")(dictObj).cast<std::string>();
+                std::string jsonStr =
+                    json.attr("dumps")(dictObj).cast<std::string>();
 
                 auto exportJson = nlohmann::json::parse(jsonStr);
                 ExportInfo info = ExportInfo::fromJson(exportJson);
@@ -725,7 +750,8 @@ std::optional<ScriptExports> PythonWrapper::discover_exports(
         return exports;
 
     } catch (const std::exception& e) {
-        spdlog::error("Error discovering exports for '{}': {}", alias, e.what());
+        spdlog::error("Error discovering exports for '{}': {}", alias,
+                      e.what());
         return std::nullopt;
     }
 }
@@ -757,11 +783,12 @@ py::object PythonWrapper::invoke_export(const std::string& alias,
     }
 }
 
-std::optional<std::pair<std::string, ExportInfo>> PythonWrapper::find_by_endpoint(
-    const std::string& endpoint) const {
+std::optional<std::pair<std::string, ExportInfo>>
+PythonWrapper::find_by_endpoint(const std::string& endpoint) const {
     for (const auto& [alias, module] : pImpl->scripts_) {
         auto exports = get_exports(alias);
-        if (!exports) continue;
+        if (!exports)
+            continue;
 
         for (const auto& ctrl : exports->controllers) {
             if (ctrl.endpoint == endpoint) {
@@ -772,11 +799,12 @@ std::optional<std::pair<std::string, ExportInfo>> PythonWrapper::find_by_endpoin
     return std::nullopt;
 }
 
-std::optional<std::pair<std::string, ExportInfo>> PythonWrapper::find_by_command(
-    const std::string& command_id) const {
+std::optional<std::pair<std::string, ExportInfo>>
+PythonWrapper::find_by_command(const std::string& command_id) const {
     for (const auto& [alias, module] : pImpl->scripts_) {
         auto exports = get_exports(alias);
-        if (!exports) continue;
+        if (!exports)
+            continue;
 
         for (const auto& cmd : exports->commands) {
             if (cmd.commandId == command_id) {
@@ -814,8 +842,8 @@ bool PythonWrapper::load_manifest(const std::string& manifest_path,
         exports.moduleFile = manifest_path;
 
         // Cache the exports (would need to add a cache map to Impl)
-        spdlog::info("Loaded manifest for '{}' with {} exports",
-                     alias, exports.count());
+        spdlog::info("Loaded manifest for '{}' with {} exports", alias,
+                     exports.count());
         return true;
 
     } catch (const std::exception& e) {

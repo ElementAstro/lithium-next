@@ -6,16 +6,16 @@
 
 #include "simbad_provider.hpp"
 
-#include <chrono>
-#include <sstream>
-#include <thread>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <iomanip>
 #include <optional>
+#include <sstream>
+#include <thread>
 
-#include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
+#include <spdlog/spdlog.h>
 
 namespace lithium::target::online {
 
@@ -64,7 +64,8 @@ auto normalizeObjectName(std::string name) -> std::string {
  * @param result Output query result
  * @return True on success
  */
-auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result) -> bool {
+auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result)
+    -> bool {
     try {
         // Find the TABLEDATA section
         size_t tableStart = xml.find("<TABLEDATA>");
@@ -75,7 +76,8 @@ auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result) -> 
             return true;  // Return empty result, not an error
         }
 
-        std::string tableContent = xml.substr(tableStart + 11, tableEnd - tableStart - 11);
+        std::string tableContent =
+            xml.substr(tableStart + 11, tableEnd - tableStart - 11);
 
         // Find all TR (table row) elements
         size_t pos = 0;
@@ -85,12 +87,14 @@ auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result) -> 
                 break;
             }
 
-            std::string rowContent = tableContent.substr(pos + 4, rowEnd - pos - 4);
+            std::string rowContent =
+                tableContent.substr(pos + 4, rowEnd - pos - 4);
 
             // Extract TD (table data) values
             std::vector<std::string> fields;
             size_t tdPos = 0;
-            while ((tdPos = rowContent.find("<TD>", tdPos)) != std::string::npos) {
+            while ((tdPos = rowContent.find("<TD>", tdPos)) !=
+                   std::string::npos) {
                 size_t tdEnd = rowContent.find("</TD>", tdPos);
                 if (tdEnd == std::string::npos) {
                     break;
@@ -163,7 +167,8 @@ auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result) -> 
                     try {
                         obj.visualMagnitudeV = std::stod(fields[6]);
                     } catch (const std::exception& e) {
-                        spdlog::debug("Failed to parse magnitude V: {}", fields[6]);
+                        spdlog::debug("Failed to parse magnitude V: {}",
+                                      fields[6]);
                     }
                 }
 
@@ -171,7 +176,8 @@ auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result) -> 
                     try {
                         obj.photographicMagnitudeB = std::stod(fields[7]);
                     } catch (const std::exception& e) {
-                        spdlog::debug("Failed to parse magnitude B: {}", fields[7]);
+                        spdlog::debug("Failed to parse magnitude B: {}",
+                                      fields[7]);
                     }
                 }
 
@@ -179,7 +185,8 @@ auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result) -> 
                     try {
                         obj.majorAxis = std::stod(fields[8]);
                     } catch (const std::exception& e) {
-                        spdlog::debug("Failed to parse major axis: {}", fields[8]);
+                        spdlog::debug("Failed to parse major axis: {}",
+                                      fields[8]);
                     }
                 }
 
@@ -187,7 +194,8 @@ auto parseVotableResponse(const std::string& xml, OnlineQueryResult& result) -> 
                     try {
                         obj.minorAxis = std::stod(fields[9]);
                     } catch (const std::exception& e) {
-                        spdlog::debug("Failed to parse minor axis: {}", fields[9]);
+                        spdlog::debug("Failed to parse minor axis: {}",
+                                      fields[9]);
                     }
                 }
 
@@ -227,13 +235,12 @@ public:
 };
 
 // Constructor
-SimbadProvider::SimbadProvider(
-    std::shared_ptr<AsyncHttpClient> httpClient,
-    std::shared_ptr<QueryCache> cache,
-    std::shared_ptr<ApiRateLimiter> rateLimiter,
-    const SimbadProviderConfig& config)
+SimbadProvider::SimbadProvider(std::shared_ptr<AsyncHttpClient> httpClient,
+                               std::shared_ptr<QueryCache> cache,
+                               std::shared_ptr<ApiRateLimiter> rateLimiter,
+                               const SimbadProviderConfig& config)
     : pImpl_(std::make_unique<Impl>(std::move(httpClient), std::move(cache),
-                                   std::move(rateLimiter), config)) {
+                                    std::move(rateLimiter), config)) {
     spdlog::info("Initializing SIMBAD provider");
 }
 
@@ -261,7 +268,8 @@ auto SimbadProvider::isAvailable() const -> bool {
 
         auto adql = buildAdqlQuery(params);
         HttpRequest request;
-        request.url = std::string(BASE_URL) + "?request=doQuery&lang=adql&format=votable&query=" +
+        request.url = std::string(BASE_URL) +
+                      "?request=doQuery&lang=adql&format=votable&query=" +
                       urlEncode(adql);
         request.method = "GET";
         request.timeout = std::chrono::milliseconds{5000};
@@ -280,7 +288,8 @@ auto SimbadProvider::isAvailable() const -> bool {
     }
 }
 
-auto SimbadProvider::buildAdqlQuery(const OnlineQueryParams& params) const -> std::string {
+auto SimbadProvider::buildAdqlQuery(const OnlineQueryParams& params) const
+    -> std::string {
     std::ostringstream query;
 
     // Base SELECT clause with SIMBAD columns
@@ -288,82 +297,89 @@ auto SimbadProvider::buildAdqlQuery(const OnlineQueryParams& params) const -> st
              "flux_V, flux_B, galdim_majaxis, galdim_minaxis FROM basic ";
 
     switch (params.type) {
-    case QueryType::ByName: {
-        if (params.query.empty()) {
-            throw std::invalid_argument("Query string required for ByName search");
+        case QueryType::ByName: {
+            if (params.query.empty()) {
+                throw std::invalid_argument(
+                    "Query string required for ByName search");
+            }
+
+            // Normalize the name for SIMBAD
+            auto normalizedName = normalizeObjectName(params.query);
+
+            // SIMBAD supports prefix matching and exact matching
+            // Use LIKE for flexibility
+            query << "WHERE main_id LIKE '" << normalizedName << "%'";
+
+            if (params.limit > 0) {
+                query << " LIMIT " << params.limit;
+            }
+            break;
         }
 
-        // Normalize the name for SIMBAD
-        auto normalizedName = normalizeObjectName(params.query);
+        case QueryType::ByCoordinates: {
+            if (!params.ra.has_value() || !params.dec.has_value()) {
+                throw std::invalid_argument(
+                    "RA and Dec required for ByCoordinates search");
+            }
 
-        // SIMBAD supports prefix matching and exact matching
-        // Use LIKE for flexibility
-        query << "WHERE main_id LIKE '" << normalizedName << "%'";
+            double radius = params.radius.value_or(0.5);  // Default 0.5 degrees
 
-        if (params.limit > 0) {
-            query << " LIMIT " << params.limit;
+            // Use SIMBAD's CONTAINS function for cone search
+            query << "WHERE CONTAINS(POINT('ICRS', ra, dec), "
+                  << "CIRCLE('ICRS', " << std::fixed << std::setprecision(6)
+                  << params.ra.value() << ", " << params.dec.value() << ", "
+                  << radius << ")) = 1";
+
+            // Optional magnitude filtering
+            if (params.minMagnitude.has_value() ||
+                params.maxMagnitude.has_value()) {
+                if (params.minMagnitude.has_value()) {
+                    query << " AND flux_V >= " << std::fixed
+                          << std::setprecision(2)
+                          << params.minMagnitude.value();
+                }
+                if (params.maxMagnitude.has_value()) {
+                    query << " AND flux_V <= " << std::fixed
+                          << std::setprecision(2)
+                          << params.maxMagnitude.value();
+                }
+            }
+
+            // Optional object type filtering
+            if (params.objectType.has_value() &&
+                !params.objectType.value().empty()) {
+                query << " AND otype = '" << params.objectType.value() << "'";
+            }
+
+            if (params.limit > 0) {
+                query << " LIMIT " << params.limit;
+            }
+            break;
         }
-        break;
-    }
 
-    case QueryType::ByCoordinates: {
-        if (!params.ra.has_value() || !params.dec.has_value()) {
+        case QueryType::Catalog: {
+            if (!params.catalog.has_value() || params.catalog.value().empty()) {
+                throw std::invalid_argument(
+                    "Catalog name required for Catalog search");
+            }
+
+            // Query objects from specific catalog
+            // Note: SIMBAD aliases table contains catalog identifiers
+            query << "WHERE main_id IN (SELECT main_id FROM alias WHERE alias "
+                     "LIKE '"
+                  << params.catalog.value() << "%')";
+
+            if (params.limit > 0) {
+                query << " LIMIT " << params.limit;
+            }
+            break;
+        }
+
+        case QueryType::ByConstellation:
+        case QueryType::Ephemeris:
+        default:
             throw std::invalid_argument(
-                "RA and Dec required for ByCoordinates search");
-        }
-
-        double radius = params.radius.value_or(0.5);  // Default 0.5 degrees
-
-        // Use SIMBAD's CONTAINS function for cone search
-        query << "WHERE CONTAINS(POINT('ICRS', ra, dec), "
-              << "CIRCLE('ICRS', " << std::fixed << std::setprecision(6)
-              << params.ra.value() << ", " << params.dec.value() << ", "
-              << radius << ")) = 1";
-
-        // Optional magnitude filtering
-        if (params.minMagnitude.has_value() || params.maxMagnitude.has_value()) {
-            if (params.minMagnitude.has_value()) {
-                query << " AND flux_V >= " << std::fixed << std::setprecision(2)
-                      << params.minMagnitude.value();
-            }
-            if (params.maxMagnitude.has_value()) {
-                query << " AND flux_V <= " << std::fixed << std::setprecision(2)
-                      << params.maxMagnitude.value();
-            }
-        }
-
-        // Optional object type filtering
-        if (params.objectType.has_value() && !params.objectType.value().empty()) {
-            query << " AND otype = '" << params.objectType.value() << "'";
-        }
-
-        if (params.limit > 0) {
-            query << " LIMIT " << params.limit;
-        }
-        break;
-    }
-
-    case QueryType::Catalog: {
-        if (!params.catalog.has_value() || params.catalog.value().empty()) {
-            throw std::invalid_argument("Catalog name required for Catalog search");
-        }
-
-        // Query objects from specific catalog
-        // Note: SIMBAD aliases table contains catalog identifiers
-        query << "WHERE main_id IN (SELECT main_id FROM alias WHERE alias LIKE '"
-              << params.catalog.value() << "%')";
-
-        if (params.limit > 0) {
-            query << " LIMIT " << params.limit;
-        }
-        break;
-    }
-
-    case QueryType::ByConstellation:
-    case QueryType::Ephemeris:
-    default:
-        throw std::invalid_argument(
-            "Query type not supported by SIMBAD provider");
+                "Query type not supported by SIMBAD provider");
     }
 
     return query.str();
@@ -373,16 +389,16 @@ auto SimbadProvider::query(const OnlineQueryParams& params)
     -> atom::type::Expected<OnlineQueryResult, OnlineQueryError> {
     try {
         if (!pImpl_ || !pImpl_->httpClient_) {
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::ServiceUnavailable,
-                "SIMBAD provider not properly initialized",
-                std::string(PROVIDER_NAME)
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::ServiceUnavailable,
+                 "SIMBAD provider not properly initialized",
+                 std::string(PROVIDER_NAME)});
         }
 
         // Check cache first
         if (pImpl_->cache_ && pImpl_->config_.useCache) {
-            auto cacheKey = QueryCache::generateKey(std::string(PROVIDER_NAME), params);
+            auto cacheKey =
+                QueryCache::generateKey(std::string(PROVIDER_NAME), params);
 
             if (auto cached = pImpl_->cache_->get(cacheKey)) {
                 spdlog::debug("SIMBAD query cache hit for: {}", params.query);
@@ -395,12 +411,9 @@ auto SimbadProvider::query(const OnlineQueryParams& params)
         if (pImpl_->rateLimiter_) {
             if (!pImpl_->rateLimiter_->allowRequest()) {
                 spdlog::warn("SIMBAD query rate limited");
-                return atom::type::Error<OnlineQueryError>({
-                    OnlineQueryError::Code::RateLimited,
-                    "Rate limit exceeded",
-                    std::string(PROVIDER_NAME),
-                    std::chrono::seconds{1}
-                });
+                return atom::type::Error<OnlineQueryError>(
+                    {OnlineQueryError::Code::RateLimited, "Rate limit exceeded",
+                     std::string(PROVIDER_NAME), std::chrono::seconds{1}});
             }
         }
 
@@ -410,23 +423,23 @@ auto SimbadProvider::query(const OnlineQueryParams& params)
 
         // Prepare HTTP request
         HttpRequest request;
-        request.url = std::string(BASE_URL) + "?request=doQuery&lang=adql&format=votable&query=" +
+        request.url = std::string(BASE_URL) +
+                      "?request=doQuery&lang=adql&format=votable&query=" +
                       urlEncode(adql);
         request.method = "GET";
         request.timeout = pImpl_->config_.timeout;
 
-        spdlog::info("Sending SIMBAD query to: {}", request.url.substr(0, 100) << "...");
+        spdlog::info("Sending SIMBAD query to: {}", request.url.substr(0, 100)
+                                                        << "...");
 
         // Execute request
         auto response = pImpl_->httpClient_->request(request);
 
         if (!response) {
             spdlog::error("SIMBAD HTTP request failed: {}", response.error());
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::NetworkError,
-                response.error(),
-                std::string(PROVIDER_NAME)
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::NetworkError, response.error(),
+                 std::string(PROVIDER_NAME)});
         }
 
         const auto& httpResp = response.value();
@@ -435,7 +448,8 @@ auto SimbadProvider::query(const OnlineQueryParams& params)
         if (httpResp.statusCode != 200) {
             std::string errMsg = "HTTP " + std::to_string(httpResp.statusCode);
 
-            OnlineQueryError::Code errCode = OnlineQueryError::Code::NetworkError;
+            OnlineQueryError::Code errCode =
+                OnlineQueryError::Code::NetworkError;
             if (httpResp.statusCode >= 400 && httpResp.statusCode < 500) {
                 errCode = OnlineQueryError::Code::InvalidQuery;
             } else if (httpResp.statusCode == 429) {
@@ -444,16 +458,12 @@ auto SimbadProvider::query(const OnlineQueryParams& params)
                 errCode = OnlineQueryError::Code::ServiceUnavailable;
             }
 
-            spdlog::error("SIMBAD query failed with status {}: {}", httpResp.statusCode,
-                         httpResp.body.substr(0, 200));
+            spdlog::error("SIMBAD query failed with status {}: {}",
+                          httpResp.statusCode, httpResp.body.substr(0, 200));
 
-            return atom::type::Error<OnlineQueryError>({
-                errCode,
-                errMsg,
-                std::string(PROVIDER_NAME),
-                std::nullopt,
-                httpResp.body
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {errCode, errMsg, std::string(PROVIDER_NAME), std::nullopt,
+                 httpResp.body});
         }
 
         // Parse VOTable response
@@ -464,44 +474,40 @@ auto SimbadProvider::query(const OnlineQueryParams& params)
 
         if (!parseVotableResponse(httpResp.body, result)) {
             spdlog::error("Failed to parse SIMBAD VOTable response");
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::ParseError,
-                "Failed to parse VOTable response",
-                std::string(PROVIDER_NAME),
-                std::nullopt,
-                httpResp.body
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::ParseError,
+                 "Failed to parse VOTable response", std::string(PROVIDER_NAME),
+                 std::nullopt, httpResp.body});
         }
 
-        spdlog::info("SIMBAD query successful, found {} objects", result.objects.size());
+        spdlog::info("SIMBAD query successful, found {} objects",
+                     result.objects.size());
 
         // Cache result
         if (pImpl_->cache_ && pImpl_->config_.useCache) {
-            auto cacheKey = QueryCache::generateKey(std::string(PROVIDER_NAME), params);
+            auto cacheKey =
+                QueryCache::generateKey(std::string(PROVIDER_NAME), params);
             pImpl_->cache_->put(cacheKey, result, pImpl_->config_.cacheTTL);
         }
 
         return result;
     } catch (const std::invalid_argument& e) {
         spdlog::error("SIMBAD invalid query parameters: {}", e.what());
-        return atom::type::Error<OnlineQueryError>({
-            OnlineQueryError::Code::InvalidQuery,
-            e.what(),
-            std::string(PROVIDER_NAME)
-        });
+        return atom::type::Error<OnlineQueryError>(
+            {OnlineQueryError::Code::InvalidQuery, e.what(),
+             std::string(PROVIDER_NAME)});
     } catch (const std::exception& e) {
         spdlog::error("SIMBAD query error: {}", e.what());
-        return atom::type::Error<OnlineQueryError>({
-            OnlineQueryError::Code::Unknown,
-            e.what(),
-            std::string(PROVIDER_NAME)
-        });
+        return atom::type::Error<OnlineQueryError>(
+            {OnlineQueryError::Code::Unknown, e.what(),
+             std::string(PROVIDER_NAME)});
     }
 }
 
 auto SimbadProvider::queryAsync(const OnlineQueryParams& params)
     -> std::future<atom::type::Expected<OnlineQueryResult, OnlineQueryError>> {
-    return std::async(std::launch::async, [this, params]() { return query(params); });
+    return std::async(std::launch::async,
+                      [this, params]() { return query(params); });
 }
 
 void SimbadProvider::setConfig(const SimbadProviderConfig& config) {

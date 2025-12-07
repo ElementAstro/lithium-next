@@ -5,7 +5,7 @@
 #include "device/template/camera.hpp"
 #include "usb.hpp"
 
-#include "components/manager.hpp"
+#include "components/manager/manager.hpp"
 #include "config/config.hpp"
 #include "device/manager.hpp"
 

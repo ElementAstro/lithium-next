@@ -1,9 +1,23 @@
+/*
+ * solver.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-12
+
+Description: Solver command handlers - Multi-solver support via plugin system
+
+**************************************************/
+
 #include "solver.hpp"
 
-#include "atom/log/spdlog_logger.hpp"
-#include "client/astap/astap.hpp"
 #include "../command.hpp"
 #include "../response.hpp"
+#include "atom/log/spdlog_logger.hpp"
+#include "client/solver/service/solver_manager.hpp"
 #include "server/models/api.hpp"
 
 #include <mutex>
@@ -12,40 +26,41 @@
 namespace lithium::middleware {
 
 using json = nlohmann::json;
+using solver::SolverManager;
 
 namespace {
 std::mutex solverMutex;
-std::unique_ptr<AstapSolver> solverInstance;
+bool initialized = false;
 
-auto ensureSolverConnected() -> bool {
-    if (!solverInstance) {
-        solverInstance = std::make_unique<AstapSolver>("server_astap");
+auto ensureSolverInitialized() -> bool {
+    if (initialized) {
+        return true;
     }
 
-    if (!solverInstance->isConnected()) {
-        auto candidates = solverInstance->scan();
-        if (candidates.empty()) {
-            LOG_ERROR("ASTAP solver not found on system");
-            return false;
-        }
-
-        if (!solverInstance->connect(candidates.front(), 5, 1)) {
-            LOG_ERROR("Failed to connect to ASTAP at %s",
-                      candidates.front().c_str());
-            return false;
-        }
+    auto& manager = SolverManager::getInstance();
+    if (!manager.initialize({})) {
+        LOG_ERROR("Failed to initialize SolverManager");
+        return false;
     }
 
+    // Auto-select best available solver
+    if (!manager.autoSelectSolver()) {
+        LOG_WARN("No solvers available for auto-selection");
+    }
+
+    initialized = true;
     return true;
 }
 
-auto buildResponseFromResult(const PlateSolveResult& result) -> json {
+auto buildResponseFromResult(const client::PlateSolveResult& result) -> json {
     json response;
     response["status"] = result.success ? "success" : "error";
 
     if (!result.success) {
         response["error"] = {{"code", "solver_failed"},
-                             {"message", "Plate solving failed"}};
+                             {"message", result.errorMessage.empty()
+                                             ? "Plate solving failed"
+                                             : result.errorMessage}};
         return response;
     }
 
@@ -53,8 +68,9 @@ auto buildResponseFromResult(const PlateSolveResult& result) -> json {
                         {"ra", result.coordinates.ra},
                         {"dec", result.coordinates.dec},
                         {"orientation", result.positionAngle},
-                        {"pixelScale", result.pixscale},
-                        {"radius", result.radius}};
+                        {"pixelScale", result.pixelScale},
+                        {"radius", result.radius},
+                        {"solveTime", result.solveTime}};
 
     return response;
 }
@@ -62,50 +78,142 @@ auto buildResponseFromResult(const PlateSolveResult& result) -> json {
 
 auto solveImage(const std::string& filePath, double raHint, double decHint,
                 double scaleHint, double radiusHint) -> json {
-    LOG_INFO("solveImage: Solving %s (RA: %f, Dec: %f, Radius: %f)",
-             filePath.c_str(), raHint, decHint, radiusHint);
+    LOG_INFO("solveImage: Solving {} (RA: {}, Dec: {}, Radius: {})",
+             filePath, raHint, decHint, radiusHint);
 
     std::scoped_lock lock(solverMutex);
 
-    if (!ensureSolverConnected()) {
-        json response;
-        response["status"] = "error";
-        response["error"] = {
-            {"code", "solver_unavailable"},
-            {"message", "ASTAP solver not available on this system"}};
-        return response;
+    if (!ensureSolverInitialized()) {
+        return {{"status", "error"},
+                {"error",
+                 {{"code", "solver_unavailable"},
+                  {"message", "Solver system not initialized"}}}};
     }
 
-    std::optional<Coordinates> coords;
+    auto& manager = SolverManager::getInstance();
+    auto activeSolver = manager.getActiveSolver();
+
+    if (!activeSolver) {
+        return {{"status", "error"},
+                {"error",
+                 {{"code", "no_active_solver"},
+                  {"message", "No active solver configured"}}}};
+    }
+
+    // Build solve request
+    solver::SolveRequest request;
+    request.imagePath = filePath;
+
     if (raHint != 0.0 || decHint != 0.0) {
-        coords = Coordinates{raHint, decHint};
+        request.raHint = raHint;
+        request.decHint = decHint;
     }
 
-    // Use radius hint to derive approximate FOV height (ASTAP expects degrees)
-    double fov = radiusHint > 0.0 ? radiusHint * 2.0 : 5.0;
-    // Fallback to scale-derived FOV if radius not provided
-    if (radiusHint <= 0.0 && scaleHint > 0.0) {
-        // Assume 1024px reference frame
-        constexpr double referencePixels = 1024.0;
-        fov = (scaleHint / 3600.0) * referencePixels;
+    if (scaleHint > 0.0) {
+        request.scaleHint = scaleHint;
+    }
+
+    if (radiusHint > 0.0 && radiusHint < 180.0) {
+        request.radiusHint = radiusHint;
     }
 
     try {
-        auto result = solverInstance->solve(filePath, coords, fov, fov, 0, 0);
+        auto result = manager.solve(request);
         return buildResponseFromResult(result);
     } catch (const std::exception& ex) {
-        LOG_ERROR("solveImage: Exception while solving %s - %s",
-                  filePath.c_str(), ex.what());
-        json response;
-        response["status"] = "error";
-        response["error"] = {{"code", "solver_exception"},
-                             {"message", ex.what()}};
-        return response;
+        LOG_ERROR("solveImage: Exception while solving {} - {}", filePath,
+                  ex.what());
+        return {{"status", "error"},
+                {"error", {{"code", "solver_exception"}, {"message", ex.what()}}}};
     }
 }
 
 auto blindSolve(const std::string& filePath) -> json {
-    return solveImage(filePath, 0, 0, 0, 180);
+    LOG_INFO("blindSolve: Blind solving {}", filePath);
+
+    std::scoped_lock lock(solverMutex);
+
+    if (!ensureSolverInitialized()) {
+        return {{"status", "error"},
+                {"error",
+                 {{"code", "solver_unavailable"},
+                  {"message", "Solver system not initialized"}}}};
+    }
+
+    auto& manager = SolverManager::getInstance();
+
+    try {
+        auto result = manager.blindSolve(filePath);
+        return buildResponseFromResult(result);
+    } catch (const std::exception& ex) {
+        LOG_ERROR("blindSolve: Exception while solving {} - {}", filePath,
+                  ex.what());
+        return {{"status", "error"},
+                {"error", {{"code", "solver_exception"}, {"message", ex.what()}}}};
+    }
+}
+
+auto getSolverStatus() -> json {
+    std::scoped_lock lock(solverMutex);
+
+    if (!ensureSolverInitialized()) {
+        return {{"available", false},
+                {"message", "Solver system not initialized"}};
+    }
+
+    return SolverManager::getInstance().getStatus();
+}
+
+auto listAvailableSolvers() -> json {
+    std::scoped_lock lock(solverMutex);
+
+    if (!ensureSolverInitialized()) {
+        return json::array();
+    }
+
+    auto solvers = SolverManager::getInstance().getAvailableSolvers();
+    json result = json::array();
+
+    for (const auto& solver : solvers) {
+        result.push_back({{"typeName", solver.typeName},
+                          {"displayName", solver.displayName},
+                          {"version", solver.version},
+                          {"priority", solver.priority},
+                          {"enabled", solver.enabled}});
+    }
+
+    return result;
+}
+
+auto selectSolver(const std::string& solverType) -> bool {
+    std::scoped_lock lock(solverMutex);
+
+    if (!ensureSolverInitialized()) {
+        return false;
+    }
+
+    return SolverManager::getInstance().setActiveSolver(solverType);
+}
+
+auto configureSolver(const json& config) -> bool {
+    std::scoped_lock lock(solverMutex);
+
+    if (!ensureSolverInitialized()) {
+        return false;
+    }
+
+    return SolverManager::getInstance().configure(config);
+}
+
+auto abortSolve() -> bool {
+    std::scoped_lock lock(solverMutex);
+
+    auto& manager = SolverManager::getInstance();
+    if (manager.isSolving()) {
+        manager.abort();
+        return true;
+    }
+    return false;
 }
 
 }  // namespace lithium::middleware
@@ -190,15 +298,12 @@ void registerSolver(std::shared_ptr<CommandDispatcher> dispatcher) {
     });
     LOG_INFO("Registered command handler for 'solver.blind_solve'");
 
-    // solver.status - Get solver status
+    // solver.status - Get comprehensive solver status
     dispatcher->registerCommand<json>("solver.status", [](json& payload) {
         LOG_DEBUG("Executing solver.status");
         try {
-            json statusInfo = {
-                {"available", true},
-                {"solver_type", "ASTAP"},
-                {"message", "ASTAP plate solver integration available"}};
-            payload = CommandResponse::success(statusInfo);
+            auto status = middleware::getSolverStatus();
+            payload = CommandResponse::success(status);
         } catch (const std::exception& e) {
             LOG_ERROR("solver.status exception: {}", e.what());
             payload = CommandResponse::operationFailed("status", e.what());
@@ -206,14 +311,58 @@ void registerSolver(std::shared_ptr<CommandDispatcher> dispatcher) {
     });
     LOG_INFO("Registered command handler for 'solver.status'");
 
+    // solver.list - List all available solvers
+    dispatcher->registerCommand<json>("solver.list", [](json& payload) {
+        LOG_DEBUG("Executing solver.list");
+        try {
+            auto solvers = middleware::listAvailableSolvers();
+            payload = CommandResponse::success({{"solvers", solvers}});
+        } catch (const std::exception& e) {
+            LOG_ERROR("solver.list exception: {}", e.what());
+            payload = CommandResponse::operationFailed("list", e.what());
+        }
+    });
+    LOG_INFO("Registered command handler for 'solver.list'");
+
+    // solver.select - Select active solver type
+    dispatcher->registerCommand<json>("solver.select", [](json& payload) {
+        LOG_INFO("Executing solver.select");
+        try {
+            if (!payload.contains("solverType") ||
+                !payload["solverType"].is_string()) {
+                payload = CommandResponse::missingParameter("solverType");
+                return;
+            }
+
+            std::string solverType = payload["solverType"].get<std::string>();
+            bool success = middleware::selectSolver(solverType);
+
+            if (success) {
+                payload = CommandResponse::success(
+                    {{"selected", true}, {"solverType", solverType}});
+            } else {
+                payload = {{"status", "error"},
+                           {"error",
+                            {{"code", "solver_not_found"},
+                             {"message",
+                              "Solver type '" + solverType + "' not available"}}}};
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("solver.select exception: {}", e.what());
+            payload = CommandResponse::operationFailed("select", e.what());
+        }
+    });
+    LOG_INFO("Registered command handler for 'solver.select'");
+
     // solver.abort - Abort ongoing solve operation
     dispatcher->registerCommand<json>("solver.abort", [](json& payload) {
         LOG_INFO("Executing solver.abort");
         try {
-            // TODO: Implement abort logic when needed
-            json abortInfo = {{"aborted", false},
-                              {"message", "Solver abort not yet implemented"}};
-            payload = CommandResponse::success(abortInfo);
+            bool aborted = middleware::abortSolve();
+            payload = CommandResponse::success(
+                {{"aborted", aborted},
+                 {"message", aborted ? "Solve operation aborted"
+                                     : "No solve operation in progress"}});
         } catch (const std::exception& e) {
             LOG_ERROR("solver.abort exception: {}", e.what());
             payload = CommandResponse::operationFailed("abort", e.what());
@@ -230,17 +379,53 @@ void registerSolver(std::shared_ptr<CommandDispatcher> dispatcher) {
                 return;
             }
 
-            // TODO: Apply configuration to ASTAP solver
-            json configInfo = {{"applied", true},
-                               {"message", "Solver configuration accepted"}};
-            payload = CommandResponse::success(configInfo);
+            bool success = middleware::configureSolver(payload["settings"]);
+
+            if (success) {
+                payload = CommandResponse::success(
+                    {{"applied", true},
+                     {"message", "Solver configuration applied"}});
+            } else {
+                payload = {
+                    {"status", "error"},
+                    {"error",
+                     {{"code", "config_failed"},
+                      {"message", "Failed to apply solver configuration"}}}};
+            }
         } catch (const std::exception& e) {
             LOG_ERROR("solver.configure exception: {}", e.what());
             payload = CommandResponse::operationFailed("configure", e.what());
         }
     });
     LOG_INFO("Registered command handler for 'solver.configure'");
+
+    // solver.options - Get/set solver-specific options
+    dispatcher->registerCommand<json>("solver.options", [](json& payload) {
+        LOG_DEBUG("Executing solver.options");
+        try {
+            std::string solverType = payload.value("solverType", "");
+            auto& manager = solver::SolverManager::getInstance();
+
+            if (payload.contains("set") && payload["set"].is_object()) {
+                // Set options
+                bool success = manager.configure(payload["set"]);
+                payload = CommandResponse::success(
+                    {{"applied", success},
+                     {"message", success ? "Options applied"
+                                         : "Failed to apply options"}});
+            } else {
+                // Get options schema
+                auto schema = manager.getOptionsSchema(solverType);
+                auto config = manager.getConfiguration();
+                payload = CommandResponse::success(
+                    {{"schema", schema}, {"current", config}});
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("solver.options exception: {}", e.what());
+            payload = CommandResponse::operationFailed("options", e.what());
+        }
+    });
+    LOG_INFO("Registered command handler for 'solver.options'");
 }
 
 }  // namespace lithium::app
-

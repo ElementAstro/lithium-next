@@ -110,16 +110,16 @@ protected:
 };
 
 TEST_F(CommandCheckerRuleTest, AddRule) {
-    checker->addRule("custom_rule",
-                     [](const std::string& line,
-                        size_t lineNum) -> std::optional<CommandChecker::Error> {
-                         if (line.find("forbidden") != std::string::npos) {
-                             return CommandChecker::Error{
-                                 "Forbidden word detected", lineNum, 0,
-                                 ErrorSeverity::ERROR};
-                         }
-                         return std::nullopt;
-                     });
+    checker->addRule(
+        "custom_rule",
+        [](const std::string& line,
+           size_t lineNum) -> std::optional<CommandChecker::Error> {
+            if (line.find("forbidden") != std::string::npos) {
+                return CommandChecker::Error{"Forbidden word detected", lineNum,
+                                             0, ErrorSeverity::ERROR};
+            }
+            return std::nullopt;
+        });
 
     auto rules = checker->listRules();
     bool found = false;
@@ -133,9 +133,8 @@ TEST_F(CommandCheckerRuleTest, AddRule) {
 }
 
 TEST_F(CommandCheckerRuleTest, RemoveRule) {
-    checker->addRule(
-        "temp_rule",
-        [](const std::string&, size_t) { return std::nullopt; });
+    checker->addRule("temp_rule",
+                     [](const std::string&, size_t) { return std::nullopt; });
 
     bool removed = checker->removeRule("temp_rule");
     EXPECT_TRUE(removed);
@@ -163,16 +162,16 @@ TEST_F(CommandCheckerRuleTest, ListRules) {
 }
 
 TEST_F(CommandCheckerRuleTest, CustomRuleTriggered) {
-    checker->addRule("test_rule",
-                     [](const std::string& line,
-                        size_t lineNum) -> std::optional<CommandChecker::Error> {
-                         if (line.find("trigger") != std::string::npos) {
-                             return CommandChecker::Error{
-                                 "Trigger word found", lineNum, 0,
-                                 ErrorSeverity::WARNING};
-                         }
-                         return std::nullopt;
-                     });
+    checker->addRule(
+        "test_rule",
+        [](const std::string& line,
+           size_t lineNum) -> std::optional<CommandChecker::Error> {
+            if (line.find("trigger") != std::string::npos) {
+                return CommandChecker::Error{"Trigger word found", lineNum, 0,
+                                             ErrorSeverity::WARNING};
+            }
+            return std::nullopt;
+        });
 
     auto errors = checker->check("echo trigger");
     bool found = false;
@@ -712,8 +711,7 @@ protected:
 };
 
 TEST_F(CommandCheckerTimeoutTest, SetTimeoutLimit) {
-    EXPECT_NO_THROW(
-        checker->setTimeoutLimit(std::chrono::milliseconds(10000)));
+    EXPECT_NO_THROW(checker->setTimeoutLimit(std::chrono::milliseconds(10000)));
 }
 
 // ============================================================================

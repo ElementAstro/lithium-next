@@ -16,7 +16,7 @@ from .models import BandType
     method="GET",
     description="Get WiFi hotspot status",
     tags=["hotspot", "wifi"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_hotspot_status() -> dict:
     """
@@ -47,7 +47,7 @@ def get_hotspot_status() -> dict:
     method="POST",
     description="Start WiFi hotspot",
     tags=["hotspot", "wifi"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def start_hotspot(
     ssid: str,
@@ -98,7 +98,7 @@ def start_hotspot(
     method="POST",
     description="Stop WiFi hotspot",
     tags=["hotspot", "wifi"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def stop_hotspot() -> dict:
     """
@@ -128,7 +128,7 @@ def stop_hotspot() -> dict:
     method="GET",
     description="Get connected clients",
     tags=["hotspot", "wifi"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_connected_clients() -> dict:
     """
@@ -165,7 +165,7 @@ def get_connected_clients() -> dict:
     method="GET",
     description="Get available network interfaces",
     tags=["hotspot", "wifi"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_interfaces() -> dict:
     """
@@ -195,7 +195,7 @@ def get_interfaces() -> dict:
     method="GET",
     description="Get available WiFi channels",
     tags=["hotspot", "wifi"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_channels(interface: str = None, band: str = "2.4GHz") -> dict:
     """
@@ -230,7 +230,7 @@ def get_channels(interface: str = None, band: str = "2.4GHz") -> dict:
     description="Get hotspot status (command)",
     priority=5,
     timeout_ms=10000,
-    tags=["hotspot"]
+    tags=["hotspot"],
 )
 def cmd_hotspot_status() -> dict:
     """Get hotspot status via command dispatcher."""
@@ -242,7 +242,7 @@ def cmd_hotspot_status() -> dict:
     description="Start hotspot (command)",
     priority=5,
     timeout_ms=30000,
-    tags=["hotspot"]
+    tags=["hotspot"],
 )
 def cmd_hotspot_start(ssid: str, password: str) -> dict:
     """Start hotspot via command dispatcher."""
@@ -254,7 +254,7 @@ def cmd_hotspot_start(ssid: str, password: str) -> dict:
     description="Stop hotspot (command)",
     priority=5,
     timeout_ms=15000,
-    tags=["hotspot"]
+    tags=["hotspot"],
 )
 def cmd_hotspot_stop() -> dict:
     """Stop hotspot via command dispatcher."""

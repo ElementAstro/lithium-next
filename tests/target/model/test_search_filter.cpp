@@ -32,9 +32,7 @@ TEST_F(SearchFilterTest, NamePatternFilter) {
     EXPECT_EQ(filter_.namePattern, "M*");
 }
 
-TEST_F(SearchFilterTest, TypeFilter) {
-    EXPECT_EQ(filter_.type, "Galaxy");
-}
+TEST_F(SearchFilterTest, TypeFilter) { EXPECT_EQ(filter_.type, "Galaxy"); }
 
 TEST_F(SearchFilterTest, MagnitudeRange) {
     EXPECT_DOUBLE_EQ(filter_.minMagnitude, 0.0);
@@ -78,7 +76,7 @@ TEST_F(SearchFilterTest, ValidCoordinateRange) {
     filter_.maxRA = 180.0;
     filter_.minDec = 0.0;
     filter_.maxDec = 45.0;
-    
+
     EXPECT_GE(filter_.minRA, 0.0);
     EXPECT_LE(filter_.maxRA, 360.0);
     EXPECT_GE(filter_.minDec, -90.0);

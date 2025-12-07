@@ -17,7 +17,7 @@ from .converter import convert_file, convert_directory
     method="POST",
     description="Convert a file to C++ header",
     tags=["convert", "header"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def convert_to_header(
     input_file: str,
@@ -65,7 +65,7 @@ def convert_to_header(
     method="POST",
     description="Convert all files in a directory to C++ headers",
     tags=["convert", "header"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def convert_dir_to_headers(
     input_dir: str,
@@ -115,7 +115,7 @@ def convert_dir_to_headers(
     description="Convert file to header (command)",
     priority=5,
     timeout_ms=30000,
-    tags=["convert"]
+    tags=["convert"],
 )
 def cmd_convert_to_header(input_file: str, output_file: str = None) -> dict:
     """Convert file to header via command dispatcher."""

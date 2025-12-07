@@ -39,7 +39,8 @@ protected:
         }
     }
 
-    void createTestScript(const std::string& filename, const std::string& content) {
+    void createTestScript(const std::string& filename,
+                          const std::string& content) {
         std::ofstream file(testDir_ / filename);
         file << content;
         file.close();
@@ -88,17 +89,15 @@ TEST_F(ExecutionEngineTest, SetConfig) {
 
 TEST_F(ExecutionEngineTest, SetProgressCallback) {
     bool called = false;
-    engine_->setProgressCallback([&](float progress, const std::string& msg) {
-        called = true;
-    });
+    engine_->setProgressCallback(
+        [&](float progress, const std::string& msg) { called = true; });
     SUCCEED();
 }
 
 TEST_F(ExecutionEngineTest, SetLogCallback) {
     bool called = false;
-    engine_->setLogCallback([&](LogLevel level, const std::string& msg) {
-        called = true;
-    });
+    engine_->setLogCallback(
+        [&](LogLevel level, const std::string& msg) { called = true; });
     SUCCEED();
 }
 
@@ -204,7 +203,8 @@ TEST_F(ExecutionEngineTest, ExecuteWithRuntimeError) {
 
     auto result = engine_->execute(script, args);
     if (!result.success) {
-        EXPECT_TRUE(result.exception.find("ZeroDivision") != std::string::npos ||
+        EXPECT_TRUE(result.exception.find("ZeroDivision") !=
+                        std::string::npos ||
                     !result.exception.empty());
     }
 }
@@ -233,7 +233,7 @@ time.sleep(10)
 
 TEST_F(ExecutionEngineTest, ExecuteWithMemoryLimit) {
     IsolationConfig config;
-    config.memoryLimitMB = 10; // Very low limit
+    config.memoryLimitMB = 10;  // Very low limit
     engine_->setConfig(config);
 
     std::string script = R"(

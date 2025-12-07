@@ -7,8 +7,8 @@
 #ifndef LITHIUM_SERVER_CONTROLLER_PLUGIN_HPP
 #define LITHIUM_SERVER_CONTROLLER_PLUGIN_HPP
 
-#include "../utils/response.hpp"
 #include "../controller.hpp"
+#include "../utils/response.hpp"
 
 #include <memory>
 #include <string>
@@ -82,7 +82,8 @@ public:
             .methods("GET"_method)(&PluginController::listPlugins, this);
 
         CROW_ROUTE(app, "/api/v1/plugins/available")
-            .methods("GET"_method)(&PluginController::listAvailablePlugins, this);
+            .methods("GET"_method)(&PluginController::listAvailablePlugins,
+                                   this);
 
         // Plugin info
         CROW_ROUTE(app, "/api/v1/plugins/<string>")
@@ -172,7 +173,8 @@ public:
             .methods("GET"_method)(&PluginController::searchPlugins, this);
 
         CROW_ROUTE(app, "/api/v1/plugins/by-capability/<string>")
-            .methods("GET"_method)(&PluginController::getPluginsByCapability, this);
+            .methods("GET"_method)(&PluginController::getPluginsByCapability,
+                                   this);
 
         CROW_ROUTE(app, "/api/v1/plugins/by-tag/<string>")
             .methods("GET"_method)(&PluginController::getPluginsByTag, this);
@@ -198,21 +200,25 @@ public:
             .methods("GET"_method)(&PluginController::getOpenApiSpec, this);
 
         CROW_ROUTE(app, "/api/v1/plugins/openapi")
-            .methods("GET"_method)(&PluginController::getCombinedOpenApiSpec, this);
+            .methods("GET"_method)(&PluginController::getCombinedOpenApiSpec,
+                                   this);
 
         // Extended API - Statistics
         CROW_ROUTE(app, "/api/v1/plugins/<string>/statistics")
-            .methods("GET"_method)(&PluginController::getPluginStatistics, this);
+            .methods("GET"_method)(&PluginController::getPluginStatistics,
+                                   this);
 
         CROW_ROUTE(app, "/api/v1/plugins/statistics")
             .methods("GET"_method)(&PluginController::getAllStatistics, this);
 
         // Extended API - Dependencies
         CROW_ROUTE(app, "/api/v1/plugins/<string>/dependencies")
-            .methods("GET"_method)(&PluginController::getPluginDependencies, this);
+            .methods("GET"_method)(&PluginController::getPluginDependencies,
+                                   this);
 
         CROW_ROUTE(app, "/api/v1/plugins/<string>/dependents")
-            .methods("GET"_method)(&PluginController::getDependentPlugins, this);
+            .methods("GET"_method)(&PluginController::getDependentPlugins,
+                                   this);
 
         CROW_ROUTE(app, "/api/v1/plugins/<string>/conflicts")
             .methods("GET"_method)(&PluginController::getPluginConflicts, this);
@@ -228,22 +234,19 @@ public:
 
                 for (const auto& plugin : plugins) {
                     auto metadata = plugin.instance->getMetadata();
-                    pluginList.push_back({
-                        {"name", plugin.name},
-                        {"version", metadata.version},
-                        {"description", metadata.description},
-                        {"author", metadata.author},
-                        {"type", static_cast<int>(plugin.type)},
-                        {"state", pluginStateToString(plugin.state)},
-                        {"enabled", manager->isPluginEnabled(plugin.name)},
-                        {"healthy", plugin.instance->isHealthy()}
-                    });
+                    pluginList.push_back(
+                        {{"name", plugin.name},
+                         {"version", metadata.version},
+                         {"description", metadata.description},
+                         {"author", metadata.author},
+                         {"type", static_cast<int>(plugin.type)},
+                         {"state", pluginStateToString(plugin.state)},
+                         {"enabled", manager->isPluginEnabled(plugin.name)},
+                         {"healthy", plugin.instance->isHealthy()}});
                 }
 
-                nlohmann::json data = {
-                    {"plugins", pluginList},
-                    {"count", plugins.size()}
-                };
+                nlohmann::json data = {{"plugins", pluginList},
+                                       {"count", plugins.size()}};
                 return ResponseBuilder::success(data);
             });
     }
@@ -257,17 +260,14 @@ public:
                 nlohmann::json pathList = nlohmann::json::array();
 
                 for (const auto& path : available) {
-                    pathList.push_back({
-                        {"path", path.string()},
-                        {"name", path.stem().string()},
-                        {"loaded", manager->isPluginLoaded(path.stem().string())}
-                    });
+                    pathList.push_back({{"path", path.string()},
+                                        {"name", path.stem().string()},
+                                        {"loaded", manager->isPluginLoaded(
+                                                       path.stem().string())}});
                 }
 
-                nlohmann::json data = {
-                    {"available", pathList},
-                    {"count", available.size()}
-                };
+                nlohmann::json data = {{"available", pathList},
+                                       {"count", available.size()}};
                 return ResponseBuilder::success(data);
             });
     }
@@ -296,8 +296,7 @@ public:
                     {"type", static_cast<int>(pluginInfo->type)},
                     {"state", pluginStateToString(pluginInfo->state)},
                     {"enabled", manager->isPluginEnabled(name)},
-                    {"healthy", pluginInfo->instance->isHealthy()}
-                };
+                    {"healthy", pluginInfo->instance->isHealthy()}};
 
                 // Add command IDs if command plugin
                 if (auto cmdPlugin = pluginInfo->asCommandPlugin()) {
@@ -324,11 +323,11 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "loadPlugin",
-                [&](auto manager) -> crow::response {
+                req, body, "loadPlugin", [&](auto manager) -> crow::response {
                     std::string name = body.value("name", "");
                     std::string path = body.value("path", "");
-                    nlohmann::json config = body.value("config", nlohmann::json::object());
+                    nlohmann::json config =
+                        body.value("config", nlohmann::json::object());
 
                     PluginResult<LoadedPluginInfo> result;
 
@@ -337,7 +336,8 @@ public:
                     } else if (!name.empty()) {
                         result = manager->loadPlugin(name, config);
                     } else {
-                        return ResponseBuilder::missingParameter("name or path");
+                        return ResponseBuilder::missingParameter(
+                            "name or path");
                     }
 
                     if (!result) {
@@ -347,11 +347,9 @@ public:
                     }
 
                     auto metadata = result->instance->getMetadata();
-                    nlohmann::json data = {
-                        {"name", result->name},
-                        {"version", metadata.version},
-                        {"loaded", true}
-                    };
+                    nlohmann::json data = {{"name", result->name},
+                                           {"version", metadata.version},
+                                           {"loaded", true}};
                     return ResponseBuilder::success(data);
                 });
         } catch (const nlohmann::json::exception& e) {
@@ -364,8 +362,7 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "unloadPlugin",
-                [&](auto manager) -> crow::response {
+                req, body, "unloadPlugin", [&](auto manager) -> crow::response {
                     std::string name = body.value("name", "");
                     if (name.empty()) {
                         return ResponseBuilder::missingParameter("name");
@@ -378,10 +375,7 @@ public:
                             pluginLoadErrorToString(result.error()));
                     }
 
-                    nlohmann::json data = {
-                        {"name", name},
-                        {"unloaded", true}
-                    };
+                    nlohmann::json data = {{"name", name}, {"unloaded", true}};
                     return ResponseBuilder::success(data);
                 });
         } catch (const nlohmann::json::exception& e) {
@@ -394,8 +388,7 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "reloadPlugin",
-                [&](auto manager) -> crow::response {
+                req, body, "reloadPlugin", [&](auto manager) -> crow::response {
                     std::string name = body.value("name", "");
                     if (name.empty()) {
                         return ResponseBuilder::missingParameter("name");
@@ -409,11 +402,9 @@ public:
                     }
 
                     auto metadata = result->instance->getMetadata();
-                    nlohmann::json data = {
-                        {"name", result->name},
-                        {"version", metadata.version},
-                        {"reloaded", true}
-                    };
+                    nlohmann::json data = {{"name", result->name},
+                                           {"version", metadata.version},
+                                           {"reloaded", true}};
                     return ResponseBuilder::success(data);
                 });
         } catch (const nlohmann::json::exception& e) {
@@ -426,18 +417,15 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "enablePlugin",
-                [&](auto manager) -> crow::response {
+                req, body, "enablePlugin", [&](auto manager) -> crow::response {
                     std::string name = body.value("name", "");
                     if (name.empty()) {
                         return ResponseBuilder::missingParameter("name");
                     }
 
                     bool success = manager->enablePlugin(name);
-                    nlohmann::json data = {
-                        {"name", name},
-                        {"enabled", success}
-                    };
+                    nlohmann::json data = {{"name", name},
+                                           {"enabled", success}};
                     return ResponseBuilder::success(data);
                 });
         } catch (const nlohmann::json::exception& e) {
@@ -458,10 +446,8 @@ public:
                     }
 
                     bool success = manager->disablePlugin(name);
-                    nlohmann::json data = {
-                        {"name", name},
-                        {"disabled", success}
-                    };
+                    nlohmann::json data = {{"name", name},
+                                           {"disabled", success}};
                     return ResponseBuilder::success(data);
                 });
         } catch (const nlohmann::json::exception& e) {
@@ -480,10 +466,7 @@ public:
                     return ResponseBuilder::notFound("Plugin configuration");
                 }
 
-                nlohmann::json data = {
-                    {"name", name},
-                    {"config", *config}
-                };
+                nlohmann::json data = {{"name", name}, {"config", *config}};
                 return ResponseBuilder::success(data);
             });
     }
@@ -496,14 +479,12 @@ public:
             res = handlePluginAction(
                 req, body, "updatePluginConfig",
                 [&](auto manager) -> crow::response {
-                    nlohmann::json config = body.value("config", nlohmann::json::object());
+                    nlohmann::json config =
+                        body.value("config", nlohmann::json::object());
 
                     manager->updatePluginConfig(name, config);
 
-                    nlohmann::json data = {
-                        {"name", name},
-                        {"updated", true}
-                    };
+                    nlohmann::json data = {{"name", name}, {"updated", true}};
                     return ResponseBuilder::success(data);
                 });
         } catch (const nlohmann::json::exception& e) {
@@ -527,38 +508,33 @@ public:
 
     // Get system status
     void getSystemStatus(const crow::request& req, crow::response& res) {
-        res = handlePluginAction(
-            req, nlohmann::json{}, "getSystemStatus",
-            [&](auto manager) -> crow::response {
-                auto status = manager->getSystemStatus();
-                return ResponseBuilder::success(status);
-            });
+        res = handlePluginAction(req, nlohmann::json{}, "getSystemStatus",
+                                 [&](auto manager) -> crow::response {
+                                     auto status = manager->getSystemStatus();
+                                     return ResponseBuilder::success(status);
+                                 });
     }
 
     // Discover and load all plugins
     void discoverAndLoad(const crow::request& req, crow::response& res) {
-        res = handlePluginAction(
-            req, nlohmann::json{}, "discoverAndLoad",
-            [&](auto manager) -> crow::response {
-                size_t loaded = manager->discoverAndLoadAll();
-                nlohmann::json data = {
-                    {"loaded", loaded}
-                };
-                return ResponseBuilder::success(data);
-            });
+        res = handlePluginAction(req, nlohmann::json{}, "discoverAndLoad",
+                                 [&](auto manager) -> crow::response {
+                                     size_t loaded =
+                                         manager->discoverAndLoadAll();
+                                     nlohmann::json data = {{"loaded", loaded}};
+                                     return ResponseBuilder::success(data);
+                                 });
     }
 
     // Save configuration
     void saveConfiguration(const crow::request& req, crow::response& res) {
-        res = handlePluginAction(
-            req, nlohmann::json{}, "saveConfiguration",
-            [&](auto manager) -> crow::response {
-                bool success = manager->saveConfiguration();
-                nlohmann::json data = {
-                    {"saved", success}
-                };
-                return ResponseBuilder::success(data);
-            });
+        res = handlePluginAction(req, nlohmann::json{}, "saveConfiguration",
+                                 [&](auto manager) -> crow::response {
+                                     bool success =
+                                         manager->saveConfiguration();
+                                     nlohmann::json data = {{"saved", success}};
+                                     return ResponseBuilder::success(data);
+                                 });
     }
 
     // ========================================================================
@@ -569,9 +545,9 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "batchLoad",
-                [&](auto manager) -> crow::response {
-                    auto names = body.value("names", std::vector<std::string>{});
+                req, body, "batchLoad", [&](auto manager) -> crow::response {
+                    auto names =
+                        body.value("names", std::vector<std::string>{});
                     size_t loaded = manager->batchLoad(names);
                     return ResponseBuilder::success({{"loaded", loaded}});
                 });
@@ -584,9 +560,9 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "batchUnload",
-                [&](auto manager) -> crow::response {
-                    auto names = body.value("names", std::vector<std::string>{});
+                req, body, "batchUnload", [&](auto manager) -> crow::response {
+                    auto names =
+                        body.value("names", std::vector<std::string>{});
                     size_t unloaded = manager->batchUnload(names);
                     return ResponseBuilder::success({{"unloaded", unloaded}});
                 });
@@ -599,9 +575,9 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "batchEnable",
-                [&](auto manager) -> crow::response {
-                    auto names = body.value("names", std::vector<std::string>{});
+                req, body, "batchEnable", [&](auto manager) -> crow::response {
+                    auto names =
+                        body.value("names", std::vector<std::string>{});
                     size_t enabled = manager->batchEnable(names);
                     return ResponseBuilder::success({{"enabled", enabled}});
                 });
@@ -614,9 +590,9 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "batchDisable",
-                [&](auto manager) -> crow::response {
-                    auto names = body.value("names", std::vector<std::string>{});
+                req, body, "batchDisable", [&](auto manager) -> crow::response {
+                    auto names =
+                        body.value("names", std::vector<std::string>{});
                     size_t disabled = manager->batchDisable(names);
                     return ResponseBuilder::success({{"disabled", disabled}});
                 });
@@ -636,12 +612,10 @@ public:
                 auto groups = manager->getAllGroups();
                 nlohmann::json groupList = nlohmann::json::array();
                 for (const auto& group : groups) {
-                    groupList.push_back({
-                        {"name", group.name},
-                        {"description", group.description},
-                        {"plugins", group.plugins},
-                        {"enabled", group.enabled}
-                    });
+                    groupList.push_back({{"name", group.name},
+                                         {"description", group.description},
+                                         {"plugins", group.plugins},
+                                         {"enabled", group.enabled}});
                 }
                 return ResponseBuilder::success({{"groups", groupList}});
             });
@@ -651,12 +625,12 @@ public:
         try {
             auto body = nlohmann::json::parse(req.body);
             res = handlePluginAction(
-                req, body, "createGroup",
-                [&](auto manager) -> crow::response {
+                req, body, "createGroup", [&](auto manager) -> crow::response {
                     PluginGroup group;
                     group.name = body.value("name", "");
                     group.description = body.value("description", "");
-                    group.plugins = body.value("plugins", std::vector<std::string>{});
+                    group.plugins =
+                        body.value("plugins", std::vector<std::string>{});
                     group.enabled = body.value("enabled", true);
 
                     if (group.name.empty()) {
@@ -713,7 +687,8 @@ public:
                 req, body, "executeAction",
                 [&](auto manager) -> crow::response {
                     std::string action = body.value("action", "");
-                    auto params = body.value("params", nlohmann::json::object());
+                    auto params =
+                        body.value("params", nlohmann::json::object());
 
                     if (action.empty()) {
                         return ResponseBuilder::missingParameter("action");
@@ -735,13 +710,15 @@ public:
                 req, body, "executeCommand",
                 [&](auto manager) -> crow::response {
                     std::string commandId = body.value("commandId", "");
-                    auto params = body.value("params", nlohmann::json::object());
+                    auto params =
+                        body.value("params", nlohmann::json::object());
 
                     if (commandId.empty()) {
                         return ResponseBuilder::missingParameter("commandId");
                     }
 
-                    auto result = manager->executeCommand(name, commandId, params);
+                    auto result =
+                        manager->executeCommand(name, commandId, params);
                     return ResponseBuilder::success(result);
                 });
         } catch (const nlohmann::json::exception& e) {
@@ -767,8 +744,9 @@ public:
         res = handlePluginAction(
             req, nlohmann::json{}, "searchPlugins",
             [&](auto manager) -> crow::response {
-                std::string pattern = req.url_params.get("pattern") ?
-                    req.url_params.get("pattern") : "*";
+                std::string pattern = req.url_params.get("pattern")
+                                          ? req.url_params.get("pattern")
+                                          : "*";
                 auto plugins = manager->searchPlugins(pattern);
                 nlohmann::json pluginList = nlohmann::json::array();
                 for (const auto& plugin : plugins) {
@@ -862,12 +840,10 @@ public:
                 auto routes = manager->getRouteInfo(name);
                 nlohmann::json routeList = nlohmann::json::array();
                 for (const auto& route : routes) {
-                    routeList.push_back({
-                        {"path", route.path},
-                        {"method", route.method},
-                        {"description", route.description},
-                        {"requiresAuth", route.requiresAuth}
-                    });
+                    routeList.push_back({{"path", route.path},
+                                         {"method", route.method},
+                                         {"description", route.description},
+                                         {"requiresAuth", route.requiresAuth}});
                 }
                 return ResponseBuilder::success({{"routes", routeList}});
             });
@@ -875,12 +851,11 @@ public:
 
     void getOpenApiSpec(const crow::request& req, crow::response& res,
                         const std::string& name) {
-        res = handlePluginAction(
-            req, nlohmann::json{}, "getOpenApiSpec",
-            [&](auto manager) -> crow::response {
-                auto spec = manager->getOpenApiSpec(name);
-                return ResponseBuilder::success(spec);
-            });
+        res = handlePluginAction(req, nlohmann::json{}, "getOpenApiSpec",
+                                 [&](auto manager) -> crow::response {
+                                     auto spec = manager->getOpenApiSpec(name);
+                                     return ResponseBuilder::success(spec);
+                                 });
     }
 
     void getCombinedOpenApiSpec(const crow::request& req, crow::response& res) {
@@ -905,12 +880,11 @@ public:
                 if (!stats) {
                     return ResponseBuilder::notFound("Plugin");
                 }
-                return ResponseBuilder::success({
-                    {"callCount", stats->callCount},
-                    {"errorCount", stats->errorCount},
-                    {"avgResponseTimeMs", stats->avgResponseTimeMs},
-                    {"memoryUsageBytes", stats->memoryUsageBytes}
-                });
+                return ResponseBuilder::success(
+                    {{"callCount", stats->callCount},
+                     {"errorCount", stats->errorCount},
+                     {"avgResponseTimeMs", stats->avgResponseTimeMs},
+                     {"memoryUsageBytes", stats->memoryUsageBytes}});
             });
     }
 
@@ -954,10 +928,8 @@ public:
             [&](auto manager) -> crow::response {
                 auto conflicts = manager->getConflictingPlugins(name);
                 bool hasConflicts = manager->hasConflicts(name);
-                return ResponseBuilder::success({
-                    {"hasConflicts", hasConflicts},
-                    {"conflicts", conflicts}
-                });
+                return ResponseBuilder::success(
+                    {{"hasConflicts", hasConflicts}, {"conflicts", conflicts}});
             });
     }
 };

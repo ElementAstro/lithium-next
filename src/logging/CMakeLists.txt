@@ -5,25 +5,35 @@ project(lithium_logging LANGUAGES CXX)
 
 # Source files
 set(LOGGING_SOURCES
-    types.cpp
-    logger_registry.cpp
-    logging_manager.cpp
-    log_statistics.cpp
-    log_exporter.cpp
+    # Core module
+    core/types.cpp
+    core/logger_registry.cpp
+    core/logging_manager.cpp
+    # Sinks module
     sinks/ring_buffer_sink.cpp
     sinks/sink_factory.cpp
+    # Utils module
+    utils/log_statistics.cpp
+    utils/log_exporter.cpp
 )
 
 # Header files
 set(LOGGING_HEADERS
-    types.hpp
-    logger_registry.hpp
-    logging_manager.hpp
-    log_statistics.hpp
-    log_exporter.hpp
+    # Main entry point
     logging.hpp
+    # Core module
+    core/core.hpp
+    core/types.hpp
+    core/logger_registry.hpp
+    core/logging_manager.hpp
+    # Sinks module
+    sinks/sinks.hpp
     sinks/ring_buffer_sink.hpp
     sinks/sink_factory.hpp
+    # Utils module
+    utils/utils.hpp
+    utils/log_statistics.hpp
+    utils/log_exporter.hpp
 )
 
 # Create logging library
@@ -51,12 +61,28 @@ target_compile_features(lithium_logging PUBLIC cxx_std_20)
 add_library(lithium::logging ALIAS lithium_logging)
 
 # Install headers
-install(FILES ${LOGGING_HEADERS}
+install(FILES logging.hpp
     DESTINATION include/lithium/logging
 )
 
 install(FILES
+    core/core.hpp
+    core/types.hpp
+    core/logger_registry.hpp
+    core/logging_manager.hpp
+    DESTINATION include/lithium/logging/core
+)
+
+install(FILES
+    sinks/sinks.hpp
     sinks/ring_buffer_sink.hpp
     sinks/sink_factory.hpp
     DESTINATION include/lithium/logging/sinks
+)
+
+install(FILES
+    utils/utils.hpp
+    utils/log_statistics.hpp
+    utils/log_exporter.hpp
+    DESTINATION include/lithium/logging/utils
 )

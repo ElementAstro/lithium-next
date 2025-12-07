@@ -58,22 +58,22 @@ struct ServerConfig {
     std::string dataDir{"/usr/share/indi"};      ///< Data directory
 
     // Server options
-    int maxClients{10};                          ///< Maximum number of clients
+    int maxClients{10};  ///< Maximum number of clients
     ServerStartMode startMode{ServerStartMode::Verbose};
 
     // FIFO options
-    bool enableFifo{true};                       ///< Enable FIFO control
-    bool enableLogging{true};                    ///< Enable logging
+    bool enableFifo{true};     ///< Enable FIFO control
+    bool enableLogging{true};  ///< Enable logging
 
     // Timeouts
-    int startupTimeoutMs{5000};                  ///< Startup timeout
-    int shutdownTimeoutMs{3000};                 ///< Shutdown timeout
-    int restartDelayMs{1000};                    ///< Delay between restart
+    int startupTimeoutMs{5000};   ///< Startup timeout
+    int shutdownTimeoutMs{3000};  ///< Shutdown timeout
+    int restartDelayMs{1000};     ///< Delay between restart
 
     // Health monitoring
-    bool autoRestart{false};                     ///< Auto-restart on crash
-    int healthCheckIntervalMs{5000};             ///< Health check interval
-    int maxRestartAttempts{3};                   ///< Max restart attempts
+    bool autoRestart{false};          ///< Auto-restart on crash
+    int healthCheckIntervalMs{5000};  ///< Health check interval
+    int maxRestartAttempts{3};        ///< Max restart attempts
 
     // Environment variables
     std::unordered_map<std::string, std::string> envVars;

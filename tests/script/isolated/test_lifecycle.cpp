@@ -10,8 +10,8 @@
  */
 
 #include <gtest/gtest.h>
-#include "script/isolated/lifecycle.hpp"
 #include "script/ipc/channel.hpp"
+#include "script/isolated/lifecycle.hpp"
 
 #include <chrono>
 #include <thread>
@@ -24,13 +24,9 @@ using namespace lithium::isolated;
 
 class ProcessLifecycleTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        lifecycle_ = std::make_unique<ProcessLifecycle>();
-    }
+    void SetUp() override { lifecycle_ = std::make_unique<ProcessLifecycle>(); }
 
-    void TearDown() override {
-        lifecycle_.reset();
-    }
+    void TearDown() override { lifecycle_.reset(); }
 
     std::unique_ptr<ProcessLifecycle> lifecycle_;
 };
@@ -165,7 +161,7 @@ TEST_F(ProcessLifecycleTest, KillWithInvalidProcessId) {
 
 TEST_F(ProcessLifecycleTest, KillWithValidProcessId) {
     // Use current process ID for testing (won't actually kill)
-    lifecycle_->setProcessId(1); // PID 1 is typically init/systemd
+    lifecycle_->setProcessId(1);  // PID 1 is typically init/systemd
     lifecycle_->setRunning(true);
 
     // Should not throw even if kill fails
@@ -189,9 +185,10 @@ TEST_F(ProcessLifecycleTest, WaitForExitWithTimeout) {
     lifecycle_->waitForExit(100);
     auto end = std::chrono::steady_clock::now();
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     // Should have waited approximately the timeout duration
-    EXPECT_GE(elapsed.count(), 50); // Allow some tolerance
+    EXPECT_GE(elapsed.count(), 50);  // Allow some tolerance
 }
 
 TEST_F(ProcessLifecycleTest, WaitForExitDefaultTimeout) {

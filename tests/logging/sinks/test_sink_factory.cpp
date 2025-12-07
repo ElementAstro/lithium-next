@@ -15,8 +15,8 @@ Description: Comprehensive tests for SinkFactory
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "logging/core/types.hpp"
 #include "logging/sinks/sink_factory.hpp"
-#include "logging/types.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -28,7 +28,8 @@ class SinkFactoryTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Create test directory
-        test_dir_ = std::filesystem::temp_directory_path() / "sink_factory_test";
+        test_dir_ =
+            std::filesystem::temp_directory_path() / "sink_factory_test";
         std::filesystem::create_directories(test_dir_);
     }
 
@@ -80,8 +81,8 @@ TEST_F(SinkFactoryTest, CreateConsoleSinkWithPattern) {
 
 TEST_F(SinkFactoryTest, CreateConsoleSinkAllLevels) {
     std::vector<spdlog::level::level_enum> levels = {
-        spdlog::level::trace, spdlog::level::debug,    spdlog::level::info,
-        spdlog::level::warn,  spdlog::level::err,      spdlog::level::critical,
+        spdlog::level::trace, spdlog::level::debug, spdlog::level::info,
+        spdlog::level::warn,  spdlog::level::err,   spdlog::level::critical,
         spdlog::level::off};
 
     for (auto level : levels) {
@@ -248,8 +249,8 @@ TEST_F(SinkFactoryTest, CreateRotatingFileSinkDirect) {
 TEST_F(SinkFactoryTest, CreateRotatingFileSinkSmallSize) {
     auto file_path = test_dir_ / "small_rotating.log";
 
-    auto sink = SinkFactory::createRotatingFileSink(
-        file_path.string(), 1024, 2, spdlog::level::info);
+    auto sink = SinkFactory::createRotatingFileSink(file_path.string(), 1024, 2,
+                                                    spdlog::level::info);
 
     EXPECT_NE(sink, nullptr);
 }
@@ -311,8 +312,8 @@ TEST_F(SinkFactoryTest, CreateDailyFileSinkWithPattern) {
 TEST_F(SinkFactoryTest, CreateDailyFileSinkDirect) {
     auto file_path = test_dir_ / "daily_direct.log";
 
-    auto sink = SinkFactory::createDailyFileSink(file_path.string(), 0, 0,
-                                                 spdlog::level::info, "[%l] %v");
+    auto sink = SinkFactory::createDailyFileSink(
+        file_path.string(), 0, 0, spdlog::level::info, "[%l] %v");
 
     EXPECT_NE(sink, nullptr);
 }
@@ -322,9 +323,8 @@ TEST_F(SinkFactoryTest, CreateDailyFileSinkVariousRotationTimes) {
         {0, 0}, {12, 0}, {23, 59}, {6, 30}, {18, 45}};
 
     for (const auto& [hour, minute] : times) {
-        auto file_path =
-            test_dir_ / ("daily_" + std::to_string(hour) + "_" +
-                         std::to_string(minute) + ".log");
+        auto file_path = test_dir_ / ("daily_" + std::to_string(hour) + "_" +
+                                      std::to_string(minute) + ".log");
 
         auto sink = SinkFactory::createDailyFileSink(
             file_path.string(), hour, minute, spdlog::level::info);
@@ -563,8 +563,8 @@ TEST_F(SinkFactoryTest, CreateFileSinkDefaultValues) {
 TEST_F(SinkFactoryTest, CreateRotatingFileSinkDefaultPattern) {
     auto file_path = test_dir_ / "rotating_default.log";
 
-    auto sink = SinkFactory::createRotatingFileSink(file_path.string(),
-                                                    1024 * 1024, 3);
+    auto sink =
+        SinkFactory::createRotatingFileSink(file_path.string(), 1024 * 1024, 3);
 
     EXPECT_NE(sink, nullptr);
 }
@@ -591,8 +591,8 @@ TEST_F(SinkFactoryTest, SinkLevelIsSet) {
 TEST_F(SinkFactoryTest, FileSinkLevelIsSet) {
     auto file_path = test_dir_ / "level_test.log";
 
-    auto sink = SinkFactory::createFileSink(file_path.string(),
-                                            spdlog::level::err);
+    auto sink =
+        SinkFactory::createFileSink(file_path.string(), spdlog::level::err);
 
     EXPECT_NE(sink, nullptr);
     EXPECT_EQ(sink->level(), spdlog::level::err);

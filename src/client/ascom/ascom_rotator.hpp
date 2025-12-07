@@ -49,8 +49,8 @@ public:
     [[nodiscard]] auto getTargetPosition() -> double;
     [[nodiscard]] auto isMoving() -> bool;
 
-    auto waitForMove(std::chrono::milliseconds timeout = std::chrono::seconds(60))
-        -> bool;
+    auto waitForMove(
+        std::chrono::milliseconds timeout = std::chrono::seconds(60)) -> bool;
 
     // ==================== Sync ====================
 

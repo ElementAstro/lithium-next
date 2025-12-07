@@ -13,10 +13,10 @@
 #define LITHIUM_TARGET_ONLINE_ONLINE_HPP
 
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "atom/type/expected.hpp"
 
@@ -91,9 +91,8 @@ public:
      * @param onlineResults Results from online sources
      * @return Merged and deduplicated results
      */
-    virtual auto mergeResults(
-        const std::vector<std::string>& localResults,
-        const std::vector<std::string>& onlineResults)
+    virtual auto mergeResults(const std::vector<std::string>& localResults,
+                              const std::vector<std::string>& onlineResults)
         -> std::vector<std::string> = 0;
 };
 
@@ -132,8 +131,8 @@ public:
      * @param limit Maximum results
      * @return Vector of object identifiers
      */
-    virtual auto searchByCoordinates(
-        double ra, double dec, double radiusDeg, int limit = 100)
+    virtual auto searchByCoordinates(double ra, double dec, double radiusDeg,
+                                     int limit = 100)
         -> std::vector<std::string> = 0;
 
     /**
@@ -143,9 +142,8 @@ public:
      * @param time Time for ephemeris
      * @return Ephemeris point if available
      */
-    virtual auto getEphemeris(
-        const std::string& objectName,
-        std::chrono::system_clock::time_point time)
+    virtual auto getEphemeris(const std::string& objectName,
+                              std::chrono::system_clock::time_point time)
         -> std::optional<EphemerisPoint> = 0;
 
     /**

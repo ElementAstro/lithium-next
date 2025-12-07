@@ -24,9 +24,7 @@ ASCOMDome::ASCOMDome(std::string name, int deviceNumber)
     spdlog::debug("ASCOMDome created: {}", name_);
 }
 
-ASCOMDome::~ASCOMDome() {
-    spdlog::debug("ASCOMDome destroyed: {}", name_);
-}
+ASCOMDome::~ASCOMDome() { spdlog::debug("ASCOMDome destroyed: {}", name_); }
 
 auto ASCOMDome::connect(int timeout) -> bool {
     if (!ASCOMDeviceBase::connect(timeout)) {
@@ -45,9 +43,11 @@ auto ASCOMDome::getCapabilities() -> DomeCapabilities {
 // ==================== Azimuth Control ====================
 
 auto ASCOMDome::slewToAzimuth(double azimuth) -> bool {
-    if (!isConnected() || !capabilities_.canSetAzimuth) return false;
+    if (!isConnected() || !capabilities_.canSetAzimuth)
+        return false;
 
-    auto response = setProperty("slewtoazimuth", {{"Azimuth", std::to_string(azimuth)}});
+    auto response =
+        setProperty("slewtoazimuth", {{"Azimuth", std::to_string(azimuth)}});
     if (response.isSuccess()) {
         domeState_.store(DomeState::Moving);
     }
@@ -55,8 +55,10 @@ auto ASCOMDome::slewToAzimuth(double azimuth) -> bool {
 }
 
 auto ASCOMDome::syncToAzimuth(double azimuth) -> bool {
-    if (!isConnected() || !capabilities_.canSyncAzimuth) return false;
-    return setProperty("synctoazimuth", {{"Azimuth", std::to_string(azimuth)}}).isSuccess();
+    if (!isConnected() || !capabilities_.canSyncAzimuth)
+        return false;
+    return setProperty("synctoazimuth", {{"Azimuth", std::to_string(azimuth)}})
+        .isSuccess();
 }
 
 auto ASCOMDome::getAzimuth() -> double {
@@ -68,7 +70,8 @@ auto ASCOMDome::isSlewing() -> bool {
 }
 
 auto ASCOMDome::abortSlew() -> bool {
-    if (!isConnected()) return false;
+    if (!isConnected())
+        return false;
 
     auto response = setProperty("abortslew", {});
     if (response.isSuccess()) {
@@ -82,7 +85,8 @@ auto ASCOMDome::waitForSlew(std::chrono::milliseconds timeout) -> bool {
 
     while (isSlewing()) {
         auto elapsed = std::chrono::steady_clock::now() - start;
-        if (elapsed > timeout) return false;
+        if (elapsed > timeout)
+            return false;
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 
@@ -93,9 +97,11 @@ auto ASCOMDome::waitForSlew(std::chrono::milliseconds timeout) -> bool {
 // ==================== Altitude Control ====================
 
 auto ASCOMDome::slewToAltitude(double altitude) -> bool {
-    if (!isConnected() || !capabilities_.canSetAltitude) return false;
+    if (!isConnected() || !capabilities_.canSetAltitude)
+        return false;
 
-    auto response = setProperty("slewtoaltitude", {{"Altitude", std::to_string(altitude)}});
+    auto response =
+        setProperty("slewtoaltitude", {{"Altitude", std::to_string(altitude)}});
     if (response.isSuccess()) {
         domeState_.store(DomeState::Moving);
     }
@@ -109,12 +115,14 @@ auto ASCOMDome::getAltitude() -> double {
 // ==================== Shutter Control ====================
 
 auto ASCOMDome::openShutter() -> bool {
-    if (!isConnected() || !capabilities_.canSetShutter) return false;
+    if (!isConnected() || !capabilities_.canSetShutter)
+        return false;
     return setProperty("openshutter", {}).isSuccess();
 }
 
 auto ASCOMDome::closeShutter() -> bool {
-    if (!isConnected() || !capabilities_.canSetShutter) return false;
+    if (!isConnected() || !capabilities_.canSetShutter)
+        return false;
     return setProperty("closeshutter", {}).isSuccess();
 }
 
@@ -129,7 +137,8 @@ auto ASCOMDome::getShutterStatus() -> ShutterState {
 // ==================== Parking ====================
 
 auto ASCOMDome::park() -> bool {
-    if (!isConnected() || !capabilities_.canPark) return false;
+    if (!isConnected() || !capabilities_.canPark)
+        return false;
 
     auto response = setProperty("park", {});
     if (response.isSuccess()) {
@@ -139,7 +148,8 @@ auto ASCOMDome::park() -> bool {
 }
 
 auto ASCOMDome::findHome() -> bool {
-    if (!isConnected() || !capabilities_.canFindHome) return false;
+    if (!isConnected() || !capabilities_.canFindHome)
+        return false;
     return setProperty("findhome", {}).isSuccess();
 }
 
@@ -156,14 +166,16 @@ auto ASCOMDome::isAtHome() -> bool {
 }
 
 auto ASCOMDome::setParkedPosition() -> bool {
-    if (!capabilities_.canSetPark) return false;
+    if (!capabilities_.canSetPark)
+        return false;
     return setProperty("setpark", {}).isSuccess();
 }
 
 // ==================== Slaving ====================
 
 auto ASCOMDome::setSlaved(bool slaved) -> bool {
-    if (!capabilities_.canSlave) return false;
+    if (!capabilities_.canSlave)
+        return false;
     return setBoolProperty("slaved", slaved);
 }
 
@@ -183,12 +195,16 @@ auto ASCOMDome::getStatus() const -> json {
 void ASCOMDome::refreshCapabilities() {
     capabilities_.canFindHome = getBoolProperty("canfindhome").value_or(false);
     capabilities_.canPark = getBoolProperty("canpark").value_or(false);
-    capabilities_.canSetAltitude = getBoolProperty("cansetaltitude").value_or(false);
-    capabilities_.canSetAzimuth = getBoolProperty("cansetazimuth").value_or(false);
+    capabilities_.canSetAltitude =
+        getBoolProperty("cansetaltitude").value_or(false);
+    capabilities_.canSetAzimuth =
+        getBoolProperty("cansetazimuth").value_or(false);
     capabilities_.canSetPark = getBoolProperty("cansetpark").value_or(false);
-    capabilities_.canSetShutter = getBoolProperty("cansetshutter").value_or(false);
+    capabilities_.canSetShutter =
+        getBoolProperty("cansetshutter").value_or(false);
     capabilities_.canSlave = getBoolProperty("canslave").value_or(false);
-    capabilities_.canSyncAzimuth = getBoolProperty("cansyncazimuth").value_or(false);
+    capabilities_.canSyncAzimuth =
+        getBoolProperty("cansyncazimuth").value_or(false);
 }
 
 }  // namespace lithium::client::ascom

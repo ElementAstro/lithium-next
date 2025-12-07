@@ -26,7 +26,6 @@ bool DataFrameOps::isPandasAvailable() {
 
 NumpyResult<py::object> DataFrameOps::createDataFrame(
     const std::unordered_map<std::string, std::vector<py::object>>& data) {
-
     if (!isPandasAvailable()) {
         return std::unexpected(NumpyError::ModuleNotFound);
     }
@@ -54,7 +53,6 @@ NumpyResult<py::object> DataFrameOps::createDataFrame(
 NumpyResult<py::object> DataFrameOps::createDataFrame(
     const std::vector<std::string>& columns,
     const std::vector<std::vector<py::object>>& rows) {
-
     if (!isPandasAvailable()) {
         return std::unexpected(NumpyError::ModuleNotFound);
     }
@@ -86,7 +84,6 @@ NumpyResult<py::object> DataFrameOps::createDataFrame(
 
 NumpyResult<std::string> DataFrameOps::dataFrameToJson(
     const py::object& df, const std::string& orient) {
-
     try {
         py::object json = df.attr("to_json")(py::arg("orient") = orient);
         return json.cast<std::string>();
@@ -99,7 +96,6 @@ NumpyResult<std::string> DataFrameOps::dataFrameToJson(
 
 NumpyResult<py::array> DataFrameOps::getDataFrameColumn(
     const py::object& df, const std::string& columnName) {
-
     try {
         py::object column = df[py::cast(columnName)];
         return column.attr("values").cast<py::array>();
@@ -121,7 +117,6 @@ NumpyResult<size_t> DataFrameOps::getDataFrameRowCount(const py::object& df) {
 
 NumpyResult<std::vector<std::string>> DataFrameOps::getDataFrameColumns(
     const py::object& df) {
-
     try {
         py::object columns = df.attr("columns");
         std::vector<std::string> result;

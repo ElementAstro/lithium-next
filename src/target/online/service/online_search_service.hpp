@@ -12,10 +12,10 @@
 #include <string>
 #include <vector>
 
-#include "atom/type/expected.hpp"
-#include "../provider/provider_interface.hpp"
 #include "../cache/query_cache.hpp"
+#include "../provider/provider_interface.hpp"
 #include "../rate_limiter/api_rate_limiter.hpp"
+#include "atom/type/expected.hpp"
 
 namespace lithium::target::online {
 
@@ -23,11 +23,11 @@ namespace lithium::target::online {
  * @brief Merge strategy for combining results
  */
 enum class MergeStrategy {
-    PreferLocal,      ///< Local data takes precedence
-    PreferOnline,     ///< Online data takes precedence
-    MostRecent,       ///< Use most recently updated
-    MostComplete,     ///< Use entry with most fields populated
-    Union             ///< Include all unique results
+    PreferLocal,   ///< Local data takes precedence
+    PreferOnline,  ///< Online data takes precedence
+    MostRecent,    ///< Use most recently updated
+    MostComplete,  ///< Use entry with most fields populated
+    Union          ///< Include all unique results
 };
 
 /**
@@ -63,9 +63,8 @@ struct OnlineSearchConfig {
     int defaultLimit = 100;
 
     // Provider priority for fallback
-    std::vector<std::string> providerPriority = {
-        "SIMBAD", "VizieR", "NED", "OpenNGC", "JPL_Horizons"
-    };
+    std::vector<std::string> providerPriority = {"SIMBAD", "VizieR", "NED",
+                                                 "OpenNGC", "JPL_Horizons"};
 };
 
 /**
@@ -123,8 +122,8 @@ public:
     /**
      * @brief Query all enabled providers in parallel
      */
-    [[nodiscard]] auto queryAll(const OnlineQueryParams& params)
-        -> std::vector<atom::type::Expected<OnlineQueryResult, OnlineQueryError>>;
+    [[nodiscard]] auto queryAll(const OnlineQueryParams& params) -> std::vector<
+        atom::type::Expected<OnlineQueryResult, OnlineQueryError>>;
 
     /**
      * @brief Auto-select best provider based on query type
@@ -158,9 +157,9 @@ public:
     /**
      * @brief Get ephemeris for solar system object
      */
-    [[nodiscard]] auto getEphemeris(
-        const std::string& target,
-        std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
+    [[nodiscard]] auto getEphemeris(const std::string& target,
+                                    std::chrono::system_clock::time_point time =
+                                        std::chrono::system_clock::now())
         -> atom::type::Expected<EphemerisPoint, OnlineQueryError>;
 
     // ========== Provider Management ==========
@@ -168,12 +167,14 @@ public:
     /**
      * @brief Get list of available providers
      */
-    [[nodiscard]] auto getAvailableProviders() const -> std::vector<std::string>;
+    [[nodiscard]] auto getAvailableProviders() const
+        -> std::vector<std::string>;
 
     /**
      * @brief Check if a provider is available
      */
-    [[nodiscard]] auto isProviderAvailable(const std::string& name) const -> bool;
+    [[nodiscard]] auto isProviderAvailable(const std::string& name) const
+        -> bool;
 
     /**
      * @brief Enable/disable a provider

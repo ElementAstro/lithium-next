@@ -12,16 +12,16 @@ class CollaborativeFilterTest : public ::testing::Test {
 protected:
     void SetUp() override {
         filter_ = std::make_unique<CollaborativeFilter>();
-        
+
         // Add some test ratings
         filter_->addRating("user1", "M31", 5.0);
         filter_->addRating("user1", "M42", 4.0);
         filter_->addRating("user1", "M45", 3.0);
-        
+
         filter_->addRating("user2", "M31", 4.0);
         filter_->addRating("user2", "M42", 5.0);
         filter_->addRating("user2", "NGC224", 4.0);
-        
+
         filter_->addRating("user3", "M31", 5.0);
         filter_->addRating("user3", "M45", 4.0);
     }
@@ -68,9 +68,7 @@ TEST_F(CollaborativeFilterTest, ItemSimilarity) {
     EXPECT_LE(sim, 1.0);
 }
 
-TEST_F(CollaborativeFilterTest, Train) {
-    EXPECT_NO_THROW(filter_->train());
-}
+TEST_F(CollaborativeFilterTest, Train) { EXPECT_NO_THROW(filter_->train()); }
 
 TEST_F(CollaborativeFilterTest, Clear) {
     filter_->clear();

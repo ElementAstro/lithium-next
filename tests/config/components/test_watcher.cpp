@@ -4,11 +4,11 @@
  */
 
 #include <gtest/gtest.h>
+#include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <thread>
-#include <chrono>
-#include <atomic>
 
 #include "config/components/watcher.hpp"
 
@@ -100,9 +100,8 @@ TEST_F(ConfigWatcherTest, WatcherOptionsDefaults) {
 }
 
 TEST_F(ConfigWatcherTest, WatcherOptionsCustomConstruction) {
-    ConfigWatcher::WatcherOptions options(
-        50ms, 100ms, true, false, {".json", ".yaml"}, 50
-    );
+    ConfigWatcher::WatcherOptions options(50ms, 100ms, true, false,
+                                          {".json", ".yaml"}, 50);
 
     EXPECT_EQ(options.poll_interval, 50ms);
     EXPECT_EQ(options.debounce_delay, 100ms);
@@ -120,33 +119,25 @@ TEST_F(ConfigWatcherTest, WatchFile) {
     bool callbackCalled = false;
     fs::path changedPath;
 
-    EXPECT_TRUE(watcher_->watchFile(
-        testDir_ / "config1.json",
-        [&](const fs::path& path, FileEvent event) {
-            callbackCalled = true;
-            changedPath = path;
-        }
-    ));
+    EXPECT_TRUE(watcher_->watchFile(testDir_ / "config1.json",
+                                    [&](const fs::path& path, FileEvent event) {
+                                        callbackCalled = true;
+                                        changedPath = path;
+                                    }));
 
     EXPECT_TRUE(watcher_->isWatching(testDir_ / "config1.json"));
 }
 
 TEST_F(ConfigWatcherTest, WatchNonExistentFile) {
-    EXPECT_FALSE(watcher_->watchFile(
-        testDir_ / "nonexistent.json",
-        [](const fs::path&, FileEvent) {}
-    ));
+    EXPECT_FALSE(watcher_->watchFile(testDir_ / "nonexistent.json",
+                                     [](const fs::path&, FileEvent) {}));
 }
 
 TEST_F(ConfigWatcherTest, WatchMultipleFiles) {
-    EXPECT_TRUE(watcher_->watchFile(
-        testDir_ / "config1.json",
-        [](const fs::path&, FileEvent) {}
-    ));
-    EXPECT_TRUE(watcher_->watchFile(
-        testDir_ / "config2.json",
-        [](const fs::path&, FileEvent) {}
-    ));
+    EXPECT_TRUE(watcher_->watchFile(testDir_ / "config1.json",
+                                    [](const fs::path&, FileEvent) {}));
+    EXPECT_TRUE(watcher_->watchFile(testDir_ / "config2.json",
+                                    [](const fs::path&, FileEvent) {}));
 
     auto paths = watcher_->getWatchedPaths();
     EXPECT_EQ(paths.size(), 2);
@@ -157,19 +148,15 @@ TEST_F(ConfigWatcherTest, WatchMultipleFiles) {
 // ============================================================================
 
 TEST_F(ConfigWatcherTest, WatchDirectory) {
-    EXPECT_TRUE(watcher_->watchDirectory(
-        testDir_,
-        [](const fs::path&, FileEvent) {}
-    ));
+    EXPECT_TRUE(
+        watcher_->watchDirectory(testDir_, [](const fs::path&, FileEvent) {}));
 
     EXPECT_TRUE(watcher_->isWatching(testDir_));
 }
 
 TEST_F(ConfigWatcherTest, WatchNonExistentDirectory) {
-    EXPECT_FALSE(watcher_->watchDirectory(
-        testDir_ / "nonexistent_dir",
-        [](const fs::path&, FileEvent) {}
-    ));
+    EXPECT_FALSE(watcher_->watchDirectory(testDir_ / "nonexistent_dir",
+                                          [](const fs::path&, FileEvent) {}));
 }
 
 // ============================================================================
@@ -177,10 +164,8 @@ TEST_F(ConfigWatcherTest, WatchNonExistentDirectory) {
 // ============================================================================
 
 TEST_F(ConfigWatcherTest, StopWatchingFile) {
-    watcher_->watchFile(
-        testDir_ / "config1.json",
-        [](const fs::path&, FileEvent) {}
-    );
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
 
     EXPECT_TRUE(watcher_->stopWatching(testDir_ / "config1.json"));
     EXPECT_FALSE(watcher_->isWatching(testDir_ / "config1.json"));
@@ -191,8 +176,10 @@ TEST_F(ConfigWatcherTest, StopWatchingNonWatchedPath) {
 }
 
 TEST_F(ConfigWatcherTest, StopAll) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
-    watcher_->watchFile(testDir_ / "config2.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config2.json",
+                        [](const fs::path&, FileEvent) {});
 
     watcher_->stopAll();
     EXPECT_TRUE(watcher_->getWatchedPaths().empty());
@@ -203,7 +190,8 @@ TEST_F(ConfigWatcherTest, StopAll) {
 // ============================================================================
 
 TEST_F(ConfigWatcherTest, IsWatchingTrue) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     EXPECT_TRUE(watcher_->isWatching(testDir_ / "config1.json"));
 }
 
@@ -220,9 +208,12 @@ TEST_F(ConfigWatcherTest, GetWatchedPathsEmpty) {
 }
 
 TEST_F(ConfigWatcherTest, GetWatchedPathsMultiple) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
-    watcher_->watchFile(testDir_ / "config2.json", [](const fs::path&, FileEvent) {});
-    watcher_->watchDirectory(testDir_ / "subdir", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config2.json",
+                        [](const fs::path&, FileEvent) {});
+    watcher_->watchDirectory(testDir_ / "subdir",
+                             [](const fs::path&, FileEvent) {});
 
     auto paths = watcher_->getWatchedPaths();
     EXPECT_EQ(paths.size(), 3);
@@ -233,14 +224,16 @@ TEST_F(ConfigWatcherTest, GetWatchedPathsMultiple) {
 // ============================================================================
 
 TEST_F(ConfigWatcherTest, StartWatching) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     EXPECT_TRUE(watcher_->startWatching());
     EXPECT_TRUE(watcher_->isRunning());
 }
 
 TEST_F(ConfigWatcherTest, IsRunning) {
     EXPECT_FALSE(watcher_->isRunning());
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     watcher_->startWatching();
     EXPECT_TRUE(watcher_->isRunning());
 }
@@ -270,15 +263,18 @@ TEST_F(ConfigWatcherTest, GetOptions) {
 // ============================================================================
 
 TEST_F(ConfigWatcherTest, GetStatistics) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
-    watcher_->watchFile(testDir_ / "config2.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config2.json",
+                        [](const fs::path&, FileEvent) {});
 
     auto stats = watcher_->getStatistics();
     EXPECT_EQ(stats.watched_paths_count, 2);
 }
 
 TEST_F(ConfigWatcherTest, ResetStatistics) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     watcher_->startWatching();
     std::this_thread::sleep_for(100ms);
 
@@ -292,7 +288,8 @@ TEST_F(ConfigWatcherTest, ResetStatistics) {
 // ============================================================================
 
 TEST_F(ConfigWatcherTest, Pause) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     watcher_->startWatching();
 
     watcher_->pause();
@@ -300,7 +297,8 @@ TEST_F(ConfigWatcherTest, Pause) {
 }
 
 TEST_F(ConfigWatcherTest, Resume) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     watcher_->startWatching();
     watcher_->pause();
 
@@ -310,7 +308,8 @@ TEST_F(ConfigWatcherTest, Resume) {
 
 TEST_F(ConfigWatcherTest, IsPaused) {
     EXPECT_FALSE(watcher_->isPaused());
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     watcher_->startWatching();
     watcher_->pause();
     EXPECT_TRUE(watcher_->isPaused());
@@ -325,10 +324,7 @@ TEST_F(ConfigWatcherTest, ForceCheck) {
 
     watcher_->watchFile(
         testDir_ / "config1.json",
-        [&](const fs::path&, FileEvent) {
-            callbackCalled = true;
-        }
-    );
+        [&](const fs::path&, FileEvent) { callbackCalled = true; });
     watcher_->startWatching();
 
     // Modify file and force check
@@ -344,7 +340,8 @@ TEST_F(ConfigWatcherTest, ForceCheck) {
 // ============================================================================
 
 TEST_F(ConfigWatcherTest, GetPendingEventCount) {
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     watcher_->startWatching();
     watcher_->pause();
 
@@ -360,15 +357,15 @@ TEST_F(ConfigWatcherTest, AddHook) {
     bool hookCalled = false;
     ConfigWatcher::WatcherEvent receivedEvent;
 
-    size_t hookId = watcher_->addHook(
-        [&](ConfigWatcher::WatcherEvent event, const fs::path& path,
-            std::optional<FileEvent> fileEvent) {
-            hookCalled = true;
-            receivedEvent = event;
-        }
-    );
+    size_t hookId = watcher_->addHook([&](ConfigWatcher::WatcherEvent event,
+                                          const fs::path& path,
+                                          std::optional<FileEvent> fileEvent) {
+        hookCalled = true;
+        receivedEvent = event;
+    });
 
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
 
     EXPECT_TRUE(hookCalled);
     EXPECT_EQ(receivedEvent, ConfigWatcher::WatcherEvent::PATH_ADDED);
@@ -378,14 +375,12 @@ TEST_F(ConfigWatcherTest, AddHook) {
 TEST_F(ConfigWatcherTest, HookOnPathRemoved) {
     ConfigWatcher::WatcherEvent receivedEvent;
 
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
 
     size_t hookId = watcher_->addHook(
         [&](ConfigWatcher::WatcherEvent event, const fs::path& path,
-            std::optional<FileEvent> fileEvent) {
-            receivedEvent = event;
-        }
-    );
+            std::optional<FileEvent> fileEvent) { receivedEvent = event; });
 
     watcher_->stopWatching(testDir_ / "config1.json");
     EXPECT_EQ(receivedEvent, ConfigWatcher::WatcherEvent::PATH_REMOVED);
@@ -395,16 +390,16 @@ TEST_F(ConfigWatcherTest, HookOnPathRemoved) {
 TEST_F(ConfigWatcherTest, HookOnStarted) {
     ConfigWatcher::WatcherEvent receivedEvent;
 
-    size_t hookId = watcher_->addHook(
-        [&](ConfigWatcher::WatcherEvent event, const fs::path& path,
-            std::optional<FileEvent> fileEvent) {
-            if (event == ConfigWatcher::WatcherEvent::STARTED) {
-                receivedEvent = event;
-            }
+    size_t hookId = watcher_->addHook([&](ConfigWatcher::WatcherEvent event,
+                                          const fs::path& path,
+                                          std::optional<FileEvent> fileEvent) {
+        if (event == ConfigWatcher::WatcherEvent::STARTED) {
+            receivedEvent = event;
         }
-    );
+    });
 
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     watcher_->startWatching();
 
     EXPECT_EQ(receivedEvent, ConfigWatcher::WatcherEvent::STARTED);
@@ -412,28 +407,27 @@ TEST_F(ConfigWatcherTest, HookOnStarted) {
 }
 
 TEST_F(ConfigWatcherTest, RemoveHook) {
-    size_t hookId = watcher_->addHook(
-        [](ConfigWatcher::WatcherEvent, const fs::path&, std::optional<FileEvent>) {});
+    size_t hookId =
+        watcher_->addHook([](ConfigWatcher::WatcherEvent, const fs::path&,
+                             std::optional<FileEvent>) {});
     EXPECT_TRUE(watcher_->removeHook(hookId));
     EXPECT_FALSE(watcher_->removeHook(hookId));
 }
 
 TEST_F(ConfigWatcherTest, ClearHooks) {
-    watcher_->addHook(
-        [](ConfigWatcher::WatcherEvent, const fs::path&, std::optional<FileEvent>) {});
-    watcher_->addHook(
-        [](ConfigWatcher::WatcherEvent, const fs::path&, std::optional<FileEvent>) {});
+    watcher_->addHook([](ConfigWatcher::WatcherEvent, const fs::path&,
+                         std::optional<FileEvent>) {});
+    watcher_->addHook([](ConfigWatcher::WatcherEvent, const fs::path&,
+                         std::optional<FileEvent>) {});
 
     watcher_->clearHooks();
 
     bool hookCalled = false;
-    watcher_->addHook(
-        [&](ConfigWatcher::WatcherEvent, const fs::path&, std::optional<FileEvent>) {
-            hookCalled = true;
-        }
-    );
+    watcher_->addHook([&](ConfigWatcher::WatcherEvent, const fs::path&,
+                          std::optional<FileEvent>) { hookCalled = true; });
     watcher_->clearHooks();
-    watcher_->watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [](const fs::path&, FileEvent) {});
     EXPECT_FALSE(hookCalled);
 }
 
@@ -443,9 +437,8 @@ TEST_F(ConfigWatcherTest, ClearHooks) {
 
 TEST_F(ConfigWatcherTest, SetErrorHandler) {
     bool errorHandlerCalled = false;
-    watcher_->setErrorHandler([&](const std::string& error) {
-        errorHandlerCalled = true;
-    });
+    watcher_->setErrorHandler(
+        [&](const std::string& error) { errorHandlerCalled = true; });
 
     // Error handler is set, but may not be called unless an error occurs
     EXPECT_FALSE(errorHandlerCalled);
@@ -469,13 +462,11 @@ TEST_F(ConfigWatcherTest, DetectFileModification) {
     std::atomic<bool> callbackCalled{false};
     FileEvent receivedEvent;
 
-    watcher_->watchFile(
-        testDir_ / "config1.json",
-        [&](const fs::path& path, FileEvent event) {
-            callbackCalled = true;
-            receivedEvent = event;
-        }
-    );
+    watcher_->watchFile(testDir_ / "config1.json",
+                        [&](const fs::path& path, FileEvent event) {
+                            callbackCalled = true;
+                            receivedEvent = event;
+                        });
 
     watcher_->startWatching();
     std::this_thread::sleep_for(100ms);
@@ -491,14 +482,12 @@ TEST_F(ConfigWatcherTest, DetectFileModification) {
 TEST_F(ConfigWatcherTest, DetectFileCreation) {
     std::atomic<bool> callbackCalled{false};
 
-    watcher_->watchDirectory(
-        testDir_,
-        [&](const fs::path& path, FileEvent event) {
-            if (event == FileEvent::CREATED) {
-                callbackCalled = true;
-            }
-        }
-    );
+    watcher_->watchDirectory(testDir_,
+                             [&](const fs::path& path, FileEvent event) {
+                                 if (event == FileEvent::CREATED) {
+                                     callbackCalled = true;
+                                 }
+                             });
 
     watcher_->startWatching();
     std::this_thread::sleep_for(100ms);
@@ -520,14 +509,12 @@ TEST_F(ConfigWatcherTest, DetectFileDeletion) {
     file << "{}";
     file.close();
 
-    watcher_->watchFile(
-        fileToDelete,
-        [&](const fs::path& path, FileEvent event) {
-            if (event == FileEvent::DELETED) {
-                callbackCalled = true;
-            }
-        }
-    );
+    watcher_->watchFile(fileToDelete,
+                        [&](const fs::path& path, FileEvent event) {
+                            if (event == FileEvent::DELETED) {
+                                callbackCalled = true;
+                            }
+                        });
 
     watcher_->startWatching();
     std::this_thread::sleep_for(100ms);
@@ -557,7 +544,8 @@ TEST_F(ConfigWatcherTest, ExtensionFilter) {
 TEST_F(ConfigWatcherTest, DestructorStopsWatching) {
     {
         ConfigWatcher tempWatcher;
-        tempWatcher.watchFile(testDir_ / "config1.json", [](const fs::path&, FileEvent) {});
+        tempWatcher.watchFile(testDir_ / "config1.json",
+                              [](const fs::path&, FileEvent) {});
         tempWatcher.startWatching();
         EXPECT_TRUE(tempWatcher.isRunning());
     }
@@ -573,7 +561,8 @@ TEST_F(ConfigWatcherTest, ConcurrentWatchOperations) {
 
     for (int i = 0; i < 5; ++i) {
         threads.emplace_back([this, i]() {
-            fs::path filePath = testDir_ / ("concurrent_" + std::to_string(i) + ".json");
+            fs::path filePath =
+                testDir_ / ("concurrent_" + std::to_string(i) + ".json");
             std::ofstream file(filePath);
             file << "{}";
             file.close();

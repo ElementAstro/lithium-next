@@ -35,6 +35,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 #include "database/cache/cache_manager.hpp"
 
@@ -322,9 +323,12 @@ TEST_F(CacheManagerTest, SpecialCharactersInValue) {
 TEST_F(CacheManagerTest, EmptyKey) {
     auto& cache = CacheManager::getInstance();
 
-    // Empty key is still valid
+    // Empty key is ignored by put() - it returns early without storing
     cache.put("", "empty_key_value");
-    EXPECT_EQ(cache.get("").value(), "empty_key_value");
+
+    // get() with empty key returns nullopt
+    auto result = cache.get("");
+    EXPECT_FALSE(result.has_value());
 }
 
 TEST_F(CacheManagerTest, EmptyValue) {
@@ -414,6 +418,184 @@ TEST_F(CacheManagerTest, RepeatedClear) {
     // Should still work
     cache.put("new_key", "new_value");
     EXPECT_EQ(cache.size(), 1);
+}
+
+TEST_F(CacheManagerTest, SetDefaultTTLNegative) {
+    auto& cache = CacheManager::getInstance();
+
+    // Setting negative TTL should be ignored
+    cache.setDefaultTTL(-1);
+
+    // Put with default TTL (should use previous default, not -1)
+    cache.put("key", "value");
+
+    // Should be available immediately
+    EXPECT_TRUE(cache.get("key").has_value());
+}
+
+TEST_F(CacheManagerTest, SetDefaultTTLZero) {
+    auto& cache = CacheManager::getInstance();
+
+    // Setting zero TTL should be ignored
+    cache.setDefaultTTL(0);
+
+    // Put with default TTL
+    cache.put("key", "value");
+
+    // Should be available immediately
+    EXPECT_TRUE(cache.get("key").has_value());
+}
+
+TEST_F(CacheManagerTest, PutWithZeroTTL) {
+    auto& cache = CacheManager::getInstance();
+
+    // Put with zero TTL should use default TTL
+    cache.put("key", "value", 0);
+
+    // Should be available immediately
+    EXPECT_TRUE(cache.get("key").has_value());
+}
+
+TEST_F(CacheManagerTest, PutWithNegativeTTL) {
+    auto& cache = CacheManager::getInstance();
+
+    // Put with negative TTL should use default TTL
+    cache.put("key", "value", -1);
+
+    // Should be available immediately
+    EXPECT_TRUE(cache.get("key").has_value());
+}
+
+TEST_F(CacheManagerTest, ConcurrentAccess) {
+    auto& cache = CacheManager::getInstance();
+
+    // Simulate concurrent access with multiple threads
+    std::vector<std::thread> threads;
+
+    // Writer threads
+    for (int i = 0; i < 5; ++i) {
+        threads.emplace_back([&cache, i]() {
+            for (int j = 0; j < 20; ++j) {
+                std::string key = "thread_" + std::to_string(i) + "_key_" + std::to_string(j);
+                cache.put(key, "value_" + std::to_string(j));
+            }
+        });
+    }
+
+    // Reader threads
+    for (int i = 0; i < 5; ++i) {
+        threads.emplace_back([&cache, i]() {
+            for (int j = 0; j < 20; ++j) {
+                std::string key = "thread_" + std::to_string(i) + "_key_" + std::to_string(j);
+                cache.get(key);  // May or may not find the key
+            }
+        });
+    }
+
+    // Wait for all threads
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    // Cache should still be functional
+    cache.put("final_key", "final_value");
+    EXPECT_EQ(cache.get("final_key").value(), "final_value");
+}
+
+TEST_F(CacheManagerTest, RemoveNonexistentKeyAfterExpiry) {
+    auto& cache = CacheManager::getInstance();
+
+    // Put with short TTL
+    cache.put("expiring_key", "value", 1);
+
+    // Wait for expiry
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // Remove should return false for expired key
+    bool removed = cache.remove("expiring_key");
+    EXPECT_FALSE(removed);
+}
+
+TEST_F(CacheManagerTest, PurgeExpiredMultipleTimes) {
+    auto& cache = CacheManager::getInstance();
+
+    // Add entries with short TTL
+    cache.put("short1", "value1", 1);
+    cache.put("short2", "value2", 1);
+    cache.put("long", "value3", 100);
+
+    // Wait for short TTL to expire
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // First purge
+    size_t purged1 = cache.purgeExpired();
+    EXPECT_GE(purged1, 2);
+
+    // Second purge should remove nothing
+    size_t purged2 = cache.purgeExpired();
+    EXPECT_EQ(purged2, 0);
+
+    // Long TTL entry should still exist
+    EXPECT_TRUE(cache.get("long").has_value());
+}
+
+TEST_F(CacheManagerTest, SizeAfterExpiry) {
+    auto& cache = CacheManager::getInstance();
+
+    cache.put("key1", "value1", 1);
+    cache.put("key2", "value2", 100);
+
+    EXPECT_EQ(cache.size(), 2);
+
+    // Wait for key1 to expire
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // Size still shows 2 (expired entries are not automatically removed)
+    EXPECT_EQ(cache.size(), 2);
+
+    // After purge, size should be 1
+    cache.purgeExpired();
+    EXPECT_EQ(cache.size(), 1);
+}
+
+TEST_F(CacheManagerTest, UpdateExistingKeyWithNewTTL) {
+    auto& cache = CacheManager::getInstance();
+
+    // Put with short TTL
+    cache.put("key", "value1", 1);
+
+    // Update with longer TTL
+    cache.put("key", "value2", 100);
+
+    // Wait for original TTL to expire
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // Should still be available (new TTL is longer)
+    auto result = cache.get("key");
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), "value2");
+}
+
+TEST_F(CacheManagerTest, VeryLongKey) {
+    auto& cache = CacheManager::getInstance();
+
+    // Create a very long key
+    std::string longKey(1000, 'k');
+    cache.put(longKey, "value");
+
+    EXPECT_EQ(cache.get(longKey).value(), "value");
+}
+
+TEST_F(CacheManagerTest, VeryLongValue) {
+    auto& cache = CacheManager::getInstance();
+
+    // Create a very long value
+    std::string longValue(100000, 'v');
+    cache.put("key", longValue);
+
+    auto result = cache.get("key");
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result.value().length(), 100000);
 }
 
 // ==================== Main ====================

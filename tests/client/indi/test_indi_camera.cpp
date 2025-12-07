@@ -22,7 +22,9 @@ using namespace lithium::client::indi;
 
 class INDICameraTest : public ::testing::Test {
 protected:
-    void SetUp() override { camera_ = std::make_unique<INDICamera>("TestCamera"); }
+    void SetUp() override {
+        camera_ = std::make_unique<INDICamera>("TestCamera");
+    }
 
     void TearDown() override { camera_.reset(); }
 

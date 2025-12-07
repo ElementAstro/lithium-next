@@ -8,7 +8,8 @@
 
 Date: 2024-11-28
 
-Description: INDI Manager Connector Interface - Abstract interface for server connectors
+Description: INDI Manager Connector Interface - Abstract interface for server
+connectors
 
 **************************************************/
 
@@ -116,7 +117,8 @@ public:
      * is a shared pointer to the DeviceContainer.
      */
     virtual auto getRunningDrivers()
-        -> std::unordered_map<std::string, std::shared_ptr<DeviceContainer>> = 0;
+        -> std::unordered_map<std::string,
+                              std::shared_ptr<DeviceContainer>> = 0;
 
     /**
      * @brief Gets a list of INDI devices.

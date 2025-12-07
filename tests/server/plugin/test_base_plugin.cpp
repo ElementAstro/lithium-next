@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
-#include "server/plugin/base_plugin.hpp"
 #include "atom/type/json.hpp"
+#include "server/plugin/base_plugin.hpp"
 
 using namespace lithium::server::plugin;
 using json = nlohmann::json;
@@ -19,15 +19,13 @@ using json = nlohmann::json;
 class MockBasePlugin : public BasePlugin {
 public:
     MockBasePlugin()
-        : BasePlugin(PluginMetadata{
-              .name = "mock_plugin",
-              .version = "1.0.0",
-              .description = "Mock plugin for testing",
-              .author = "Test",
-              .license = "MIT",
-              .dependencies = {},
-              .tags = {"test"}
-          }) {}
+        : BasePlugin(PluginMetadata{.name = "mock_plugin",
+                                    .version = "1.0.0",
+                                    .description = "Mock plugin for testing",
+                                    .author = "Test",
+                                    .license = "MIT",
+                                    .dependencies = {},
+                                    .tags = {"test"}}) {}
 
     bool initializeCalled = false;
     bool shutdownCalled = false;
@@ -43,23 +41,19 @@ protected:
         return true;
     }
 
-    void onShutdown() override {
-        shutdownCalled = true;
-    }
+    void onShutdown() override { shutdownCalled = true; }
 };
 
 class MockCommandPlugin : public BaseCommandPlugin {
 public:
     MockCommandPlugin()
-        : BaseCommandPlugin(PluginMetadata{
-              .name = "mock_command_plugin",
-              .version = "1.0.0",
-              .description = "Mock command plugin",
-              .author = "Test",
-              .license = "MIT",
-              .dependencies = {},
-              .tags = {"command", "test"}
-          }) {}
+        : BaseCommandPlugin(PluginMetadata{.name = "mock_command_plugin",
+                                           .version = "1.0.0",
+                                           .description = "Mock command plugin",
+                                           .author = "Test",
+                                           .license = "MIT",
+                                           .dependencies = {},
+                                           .tags = {"command", "test"}}) {}
 
     bool registerCalled = false;
     bool unregisterCalled = false;
@@ -83,15 +77,13 @@ class MockControllerPlugin : public BaseControllerPlugin {
 public:
     MockControllerPlugin()
         : BaseControllerPlugin(
-              PluginMetadata{
-                  .name = "mock_controller_plugin",
-                  .version = "1.0.0",
-                  .description = "Mock controller plugin",
-                  .author = "Test",
-                  .license = "MIT",
-                  .dependencies = {},
-                  .tags = {"controller", "test"}
-              },
+              PluginMetadata{.name = "mock_controller_plugin",
+                             .version = "1.0.0",
+                             .description = "Mock controller plugin",
+                             .author = "Test",
+                             .license = "MIT",
+                             .dependencies = {},
+                             .tags = {"controller", "test"}},
               "/api/v1/mock") {}
 
     bool registerCalled = false;
@@ -107,17 +99,14 @@ protected:
 class MockFullPlugin : public BaseFullPlugin {
 public:
     MockFullPlugin()
-        : BaseFullPlugin(
-              PluginMetadata{
-                  .name = "mock_full_plugin",
-                  .version = "1.0.0",
-                  .description = "Mock full plugin",
-                  .author = "Test",
-                  .license = "MIT",
-                  .dependencies = {},
-                  .tags = {"full", "test"}
-              },
-              "/api/v1/full") {}
+        : BaseFullPlugin(PluginMetadata{.name = "mock_full_plugin",
+                                        .version = "1.0.0",
+                                        .description = "Mock full plugin",
+                                        .author = "Test",
+                                        .license = "MIT",
+                                        .dependencies = {},
+                                        .tags = {"full", "test"}},
+                         "/api/v1/full") {}
 
     bool commandsRegistered = false;
     bool routesRegistered = false;
@@ -141,9 +130,7 @@ protected:
 
 class BasePluginTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        plugin_ = std::make_unique<MockBasePlugin>();
-    }
+    void SetUp() override { plugin_ = std::make_unique<MockBasePlugin>(); }
 
     std::unique_ptr<MockBasePlugin> plugin_;
 };
@@ -213,9 +200,7 @@ TEST_F(BasePluginTest, ShutdownWithoutInitialize) {
 
 class BaseCommandPluginTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        plugin_ = std::make_unique<MockCommandPlugin>();
-    }
+    void SetUp() override { plugin_ = std::make_unique<MockCommandPlugin>(); }
 
     std::unique_ptr<MockCommandPlugin> plugin_;
 };
@@ -285,9 +270,7 @@ TEST_F(BaseControllerPluginTest, GetRoutePathsEmpty) {
 
 class BaseFullPluginTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        plugin_ = std::make_unique<MockFullPlugin>();
-    }
+    void SetUp() override { plugin_ = std::make_unique<MockFullPlugin>(); }
 
     std::unique_ptr<MockFullPlugin> plugin_;
 };

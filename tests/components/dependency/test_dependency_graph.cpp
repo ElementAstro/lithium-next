@@ -1,5 +1,5 @@
-#include "components/dependency.hpp"
-#include "components/version.hpp"
+#include "components/core/dependency.hpp"
+#include "components/core/version.hpp"
 
 #include <gtest/gtest.h>
 #include <filesystem>

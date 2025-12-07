@@ -45,6 +45,6 @@ add_test(NAME test_device_manager COMMAND test_device_manager)
 
 # Create aggregate test target
 add_custom_target(device_tests
-    DEPENDS test_indi_adapter test_ascom_adapter test_phd2_client test_guider_service test_device_manager test_device_backend
+    DEPENDS test_indi_adapter test_ascom_adapter test_phd2_client test_guider_service test_device_manager test_device_backend test_base_service test_device_types
     COMMENT "Building all device tests"
 )

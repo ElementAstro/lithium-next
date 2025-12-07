@@ -168,9 +168,7 @@ class AdapterResponse:
         return result
 
     @classmethod
-    def success_response(
-        cls, data: Any = None, **metadata
-    ) -> "AdapterResponse":
+    def success_response(cls, data: Any = None, **metadata) -> "AdapterResponse":
         """Create a success response."""
         return cls(success=True, data=data, metadata=metadata)
 
@@ -190,7 +188,9 @@ class AdapterResponse:
         )
 
 
-def _python_type_to_param_type(py_type: Any) -> Tuple[ParameterType, Optional[ParameterType]]:
+def _python_type_to_param_type(
+    py_type: Any,
+) -> Tuple[ParameterType, Optional[ParameterType]]:
     """Convert Python type hint to ParameterType."""
     origin = getattr(py_type, "__origin__", None)
 

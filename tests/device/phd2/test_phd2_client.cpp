@@ -315,6 +315,297 @@ TEST_F(PHD2ConfigTest, ConfigureClient) {
 }
 
 // ============================================================================
+// GuiderState Tests
+// ============================================================================
+
+class GuiderStateTest : public ::testing::Test {};
+
+TEST_F(GuiderStateTest, AllStatesExist) {
+    // Verify all guider states can be used
+    GuiderState state1 = GuiderState::Stopped;
+    GuiderState state2 = GuiderState::Selected;
+    GuiderState state3 = GuiderState::Calibrating;
+    GuiderState state4 = GuiderState::Guiding;
+    GuiderState state5 = GuiderState::LostLock;
+    GuiderState state6 = GuiderState::Paused;
+    GuiderState state7 = GuiderState::Looping;
+
+    EXPECT_NE(state1, state4);
+    EXPECT_NE(state2, state3);
+}
+
+// ============================================================================
+// PHD2Client Connection Edge Cases
+// ============================================================================
+
+class PHD2ClientConnectionTest : public ::testing::Test {
+protected:
+    std::unique_ptr<PHD2Client> client;
+
+    void SetUp() override {
+        client = std::make_unique<PHD2Client>("TestClient");
+        client->initialize();
+    }
+
+    void TearDown() override {
+        client->destroy();
+    }
+};
+
+TEST_F(PHD2ClientConnectionTest, ConnectWithInvalidHost) {
+    // Should not crash when connecting to invalid host
+    bool result = client->connect("invalid.host.that.does.not.exist", 4400, 1000);
+    EXPECT_FALSE(result);
+    EXPECT_FALSE(client->isConnected());
+}
+
+TEST_F(PHD2ClientConnectionTest, ConnectWithInvalidPort) {
+    // Should not crash when connecting to invalid port
+    bool result = client->connect("localhost", 99999, 1000);
+    EXPECT_FALSE(result);
+    EXPECT_FALSE(client->isConnected());
+}
+
+TEST_F(PHD2ClientConnectionTest, DisconnectWhenNotConnected) {
+    // Should not crash when disconnecting without connection
+    EXPECT_FALSE(client->isConnected());
+    bool result = client->disconnect();
+    EXPECT_TRUE(result);  // Disconnect should succeed even if not connected
+}
+
+TEST_F(PHD2ClientConnectionTest, DoubleInitialize) {
+    // Double initialize should not cause issues
+    EXPECT_TRUE(client->initialize());
+    EXPECT_TRUE(client->initialize());
+}
+
+TEST_F(PHD2ClientConnectionTest, DoubleDestroy) {
+    // Double destroy should not cause issues
+    EXPECT_TRUE(client->destroy());
+    EXPECT_TRUE(client->destroy());
+}
+
+// ============================================================================
+// PHD2Client Guiding Operations (Not Connected)
+// ============================================================================
+
+class PHD2ClientGuidingTest : public ::testing::Test {
+protected:
+    std::unique_ptr<PHD2Client> client;
+
+    void SetUp() override {
+        client = std::make_unique<PHD2Client>("TestClient");
+        client->initialize();
+    }
+
+    void TearDown() override {
+        client->destroy();
+    }
+};
+
+TEST_F(PHD2ClientGuidingTest, StartGuidingNotConnected) {
+    // Should not crash when not connected
+    client->startGuiding();
+    EXPECT_FALSE(client->isGuiding());
+}
+
+TEST_F(PHD2ClientGuidingTest, StopGuidingNotConnected) {
+    // Should not crash when not connected
+    client->stopGuiding();
+    EXPECT_FALSE(client->isGuiding());
+}
+
+TEST_F(PHD2ClientGuidingTest, DitherNotConnected) {
+    DitherParams params;
+    params.amount = 5.0;
+    params.raOnly = false;
+
+    // Should not crash when not connected
+    client->dither(params);
+    EXPECT_FALSE(client->isGuiding());
+}
+
+TEST_F(PHD2ClientGuidingTest, SetExposureNotConnected) {
+    // Should not crash when not connected
+    client->setExposure(1000);
+    EXPECT_EQ(client->getExposure(), 0);
+}
+
+TEST_F(PHD2ClientGuidingTest, SetLockPositionNotConnected) {
+    // Should not crash when not connected
+    client->setLockPosition(512.0, 384.0);
+    auto pos = client->getLockPosition();
+    EXPECT_FALSE(pos.has_value());
+}
+
+TEST_F(PHD2ClientGuidingTest, ClearCalibrationNotConnected) {
+    // Should not crash when not connected
+    client->clearCalibration();
+    EXPECT_FALSE(client->isCalibrated());
+}
+
+TEST_F(PHD2ClientGuidingTest, FlipCalibrationNotConnected) {
+    // Should not crash when not connected
+    client->flipCalibration();
+    EXPECT_FALSE(client->isCalibrated());
+}
+
+// ============================================================================
+// PHD2Client Stats (Not Connected)
+// ============================================================================
+
+class PHD2ClientStatsTest : public ::testing::Test {
+protected:
+    std::unique_ptr<PHD2Client> client;
+
+    void SetUp() override {
+        client = std::make_unique<PHD2Client>("TestClient");
+        client->initialize();
+    }
+
+    void TearDown() override {
+        client->destroy();
+    }
+};
+
+TEST_F(PHD2ClientStatsTest, GetStatsNotConnected) {
+    auto stats = client->getStats();
+
+    // Should return default/zero stats when not connected
+    EXPECT_DOUBLE_EQ(stats.rmsRA, 0.0);
+    EXPECT_DOUBLE_EQ(stats.rmsDec, 0.0);
+    EXPECT_DOUBLE_EQ(stats.rmsTotal, 0.0);
+}
+
+TEST_F(PHD2ClientStatsTest, GetAppStateNotConnected) {
+    auto state = client->getAppState();
+    EXPECT_TRUE(state.empty());
+}
+
+// ============================================================================
+// SettleParams Edge Cases
+// ============================================================================
+
+class SettleParamsEdgeCaseTest : public ::testing::Test {};
+
+TEST_F(SettleParamsEdgeCaseTest, ZeroValues) {
+    SettleParams params;
+    params.pixels = 0.0;
+    params.time = 0.0;
+    params.timeout = 0.0;
+
+    EXPECT_DOUBLE_EQ(params.pixels, 0.0);
+    EXPECT_DOUBLE_EQ(params.time, 0.0);
+    EXPECT_DOUBLE_EQ(params.timeout, 0.0);
+}
+
+TEST_F(SettleParamsEdgeCaseTest, NegativeValues) {
+    SettleParams params;
+    params.pixels = -1.0;
+    params.time = -10.0;
+    params.timeout = -60.0;
+
+    // Should accept negative values (validation is elsewhere)
+    EXPECT_DOUBLE_EQ(params.pixels, -1.0);
+    EXPECT_DOUBLE_EQ(params.time, -10.0);
+    EXPECT_DOUBLE_EQ(params.timeout, -60.0);
+}
+
+// ============================================================================
+// DitherParams Edge Cases
+// ============================================================================
+
+class DitherParamsEdgeCaseTest : public ::testing::Test {};
+
+TEST_F(DitherParamsEdgeCaseTest, ZeroAmount) {
+    DitherParams params;
+    params.amount = 0.0;
+
+    EXPECT_DOUBLE_EQ(params.amount, 0.0);
+}
+
+TEST_F(DitherParamsEdgeCaseTest, LargeAmount) {
+    DitherParams params;
+    params.amount = 100.0;
+
+    EXPECT_DOUBLE_EQ(params.amount, 100.0);
+}
+
+TEST_F(DitherParamsEdgeCaseTest, RAOnlyTrue) {
+    DitherParams params;
+    params.raOnly = true;
+
+    EXPECT_TRUE(params.raOnly);
+}
+
+// ============================================================================
+// CalibrationData Edge Cases
+// ============================================================================
+
+class CalibrationDataEdgeCaseTest : public ::testing::Test {};
+
+TEST_F(CalibrationDataEdgeCaseTest, AllFieldsSet) {
+    CalibrationData cal;
+    cal.calibrated = true;
+    cal.raRate = 15.0;
+    cal.decRate = 14.5;
+    cal.raAngle = 90.0;
+    cal.decAngle = 0.0;
+    cal.decFlipped = true;
+    cal.timestamp = "2024-12-07T10:00:00Z";
+
+    EXPECT_TRUE(cal.calibrated);
+    EXPECT_DOUBLE_EQ(cal.raRate, 15.0);
+    EXPECT_DOUBLE_EQ(cal.decRate, 14.5);
+    EXPECT_DOUBLE_EQ(cal.raAngle, 90.0);
+    EXPECT_DOUBLE_EQ(cal.decAngle, 0.0);
+    EXPECT_TRUE(cal.decFlipped);
+    EXPECT_EQ(cal.timestamp, "2024-12-07T10:00:00Z");
+}
+
+TEST_F(CalibrationDataEdgeCaseTest, NegativeRates) {
+    CalibrationData cal;
+    cal.raRate = -15.0;
+    cal.decRate = -14.5;
+
+    EXPECT_DOUBLE_EQ(cal.raRate, -15.0);
+    EXPECT_DOUBLE_EQ(cal.decRate, -14.5);
+}
+
+// ============================================================================
+// GuideStar Edge Cases
+// ============================================================================
+
+class GuideStarEdgeCaseTest : public ::testing::Test {};
+
+TEST_F(GuideStarEdgeCaseTest, NegativeCoordinates) {
+    GuideStar star;
+    star.x = -100.0;
+    star.y = -200.0;
+
+    EXPECT_DOUBLE_EQ(star.x, -100.0);
+    EXPECT_DOUBLE_EQ(star.y, -200.0);
+}
+
+TEST_F(GuideStarEdgeCaseTest, LargeCoordinates) {
+    GuideStar star;
+    star.x = 10000.0;
+    star.y = 10000.0;
+
+    EXPECT_DOUBLE_EQ(star.x, 10000.0);
+    EXPECT_DOUBLE_EQ(star.y, 10000.0);
+}
+
+TEST_F(GuideStarEdgeCaseTest, ZeroSNR) {
+    GuideStar star;
+    star.snr = 0.0;
+    star.valid = false;
+
+    EXPECT_DOUBLE_EQ(star.snr, 0.0);
+    EXPECT_FALSE(star.valid);
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 

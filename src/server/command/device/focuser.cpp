@@ -6,11 +6,11 @@
 
 #include "focuser.hpp"
 
+#include "../command.hpp"
+#include "../response.hpp"
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
-#include "../command.hpp"
 #include "device/service/focuser_service.hpp"
-#include "../response.hpp"
 
 namespace lithium::app {
 
@@ -398,4 +398,3 @@ auto getAutofocusStatus(const std::string& deviceId, const std::string& taskId)
 }
 
 }  // namespace lithium::middleware
-

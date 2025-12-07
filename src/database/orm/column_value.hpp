@@ -25,12 +25,7 @@
 #include <string>
 #include <type_traits>
 
-#include "database/core/statement.hpp"
-
-namespace lithium::database {
-// Bring Statement from core namespace into database namespace
-using core::Statement;
-}  // namespace lithium::database
+#include "column_base.hpp"  // For Statement type alias
 
 namespace lithium::database::orm {
 
@@ -81,8 +76,7 @@ struct ColumnValue {
      * @param index The parameter index to bind at.
      * @param value The value to bind.
      */
-    static void bindToStatement(lithium::database::Statement& stmt, int index,
-                                const T& value);
+    static void bindToStatement(Statement& stmt, int index, const T& value);
 
     /**
      * @brief Reads a value from a statement column.
@@ -91,8 +85,7 @@ struct ColumnValue {
      * @param index The column index to read from.
      * @return The read value.
      */
-    static T readFromStatement(const lithium::database::Statement& stmt,
-                               int index);
+    static T readFromStatement(const Statement& stmt, int index);
 };
 
 // ColumnValue implementation
@@ -126,8 +119,8 @@ T ColumnValue<T>::fromSQLValue(const std::string& value) {
 }
 
 template <typename T>
-void ColumnValue<T>::bindToStatement(lithium::database::Statement& stmt,
-                                     int index, const T& value) {
+void ColumnValue<T>::bindToStatement(Statement& stmt, int index,
+                                     const T& value) {
     if constexpr (std::is_integral_v<T>) {
         stmt.bind(index, static_cast<int64_t>(value));
     } else if constexpr (std::is_floating_point_v<T>) {
@@ -142,8 +135,7 @@ void ColumnValue<T>::bindToStatement(lithium::database::Statement& stmt,
 }
 
 template <typename T>
-T ColumnValue<T>::readFromStatement(const lithium::database::Statement& stmt,
-                                    int index) {
+T ColumnValue<T>::readFromStatement(const Statement& stmt, int index) {
     if constexpr (std::is_integral_v<T>) {
         return static_cast<T>(stmt.getInt64(index));
     } else if constexpr (std::is_floating_point_v<T>) {

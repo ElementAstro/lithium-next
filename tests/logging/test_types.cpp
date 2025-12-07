@@ -15,7 +15,7 @@ Description: Comprehensive tests for logging types
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "logging/types.hpp"
+#include "logging/core/types.hpp"
 
 #include <chrono>
 #include <string>
@@ -114,12 +114,10 @@ TEST_F(LogEntryTest, ToJsonAllLevels) {
 }
 
 TEST_F(LogEntryTest, FromJsonBasic) {
-    nlohmann::json json = {{"logger", "my_logger"},
-                           {"message", "Hello world"},
-                           {"level", "warn"},
-                           {"thread_id", "99999"},
-                           {"source_file", "main.cpp"},
-                           {"source_line", 100}};
+    nlohmann::json json = {
+        {"logger", "my_logger"},     {"message", "Hello world"},
+        {"level", "warn"},           {"thread_id", "99999"},
+        {"source_file", "main.cpp"}, {"source_line", 100}};
 
     auto entry = LogEntry::fromJson(json);
 
@@ -378,12 +376,10 @@ TEST_F(SinkConfigTest, FromJsonConsole) {
 }
 
 TEST_F(SinkConfigTest, FromJsonRotatingFile) {
-    nlohmann::json json = {{"name", "rotating"},
-                           {"type", "rotating_file"},
-                           {"level", "debug"},
-                           {"file_path", "/var/log/app.log"},
-                           {"max_file_size", 5242880},
-                           {"max_files", 10}};
+    nlohmann::json json = {
+        {"name", "rotating"},       {"type", "rotating_file"},
+        {"level", "debug"},         {"file_path", "/var/log/app.log"},
+        {"max_file_size", 5242880}, {"max_files", 10}};
 
     auto config = SinkConfig::fromJson(json);
 
@@ -396,12 +392,10 @@ TEST_F(SinkConfigTest, FromJsonRotatingFile) {
 }
 
 TEST_F(SinkConfigTest, FromJsonDailyFile) {
-    nlohmann::json json = {{"name", "daily"},
-                           {"type", "daily_file"},
-                           {"level", "warn"},
-                           {"file_path", "/var/log/daily.log"},
-                           {"rotation_hour", 2},
-                           {"rotation_minute", 30}};
+    nlohmann::json json = {
+        {"name", "daily"},    {"type", "daily_file"},
+        {"level", "warn"},    {"file_path", "/var/log/daily.log"},
+        {"rotation_hour", 2}, {"rotation_minute", 30}};
 
     auto config = SinkConfig::fromJson(json);
 
@@ -676,8 +670,8 @@ TEST_F(LevelConversionTest, LevelToStringOff) {
 TEST_F(LevelConversionTest, RoundTripConversion) {
     // Test all levels can be converted to string and back
     std::vector<spdlog::level::level_enum> levels = {
-        spdlog::level::trace, spdlog::level::debug,    spdlog::level::info,
-        spdlog::level::warn,  spdlog::level::err,      spdlog::level::critical,
+        spdlog::level::trace, spdlog::level::debug, spdlog::level::info,
+        spdlog::level::warn,  spdlog::level::err,   spdlog::level::critical,
         spdlog::level::off};
 
     for (auto level : levels) {
@@ -706,16 +700,14 @@ TEST_F(LogSearchQueryTest, DefaultConstruction) {
 }
 
 TEST_F(LogSearchQueryTest, FromJsonWithAllFields) {
-    nlohmann::json j = {
-        {"text", "error message"},
-        {"regex", "error.*"},
-        {"min_level", "warn"},
-        {"max_level", "critical"},
-        {"logger", "test_logger"},
-        {"limit", 50},
-        {"offset", 10},
-        {"case_sensitive", true}
-    };
+    nlohmann::json j = {{"text", "error message"},
+                        {"regex", "error.*"},
+                        {"min_level", "warn"},
+                        {"max_level", "critical"},
+                        {"logger", "test_logger"},
+                        {"limit", 50},
+                        {"offset", 10},
+                        {"case_sensitive", true}};
 
     auto query = LogSearchQuery::fromJson(j);
     EXPECT_EQ(query.text_pattern.value(), "error message");

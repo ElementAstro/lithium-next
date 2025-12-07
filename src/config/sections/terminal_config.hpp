@@ -26,7 +26,7 @@ namespace lithium::config {
  * @brief Theme configuration for terminal appearance
  */
 struct ThemeConfig {
-    std::string name{"default"};             ///< Theme name
+    std::string name{"default"};  ///< Theme name
 
     // Colors (ANSI color names)
     std::string promptColor{"bright_cyan"};
@@ -46,47 +46,46 @@ struct ThemeConfig {
     bool useBoldHeaders{true};
 
     // UI characters
-    std::string promptSymbol{">"};           ///< Prompt character (use > for ASCII)
+    std::string promptSymbol{">"};  ///< Prompt character (use > for ASCII)
     std::string successSymbol{"[OK]"};
     std::string errorSymbol{"[ERR]"};
     std::string warningSymbol{"[WARN]"};
     std::string infoSymbol{"[INFO]"};
 
     // Feature flags
-    bool useUnicode{true};                   ///< Use Unicode characters
-    bool useColors{true};                    ///< Enable colored output
+    bool useUnicode{true};  ///< Use Unicode characters
+    bool useColors{true};   ///< Enable colored output
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"name", name},
-            {"promptColor", promptColor},
-            {"promptSymbolColor", promptSymbolColor},
-            {"successColor", successColor},
-            {"errorColor", errorColor},
-            {"warningColor", warningColor},
-            {"infoColor", infoColor},
-            {"debugColor", debugColor},
-            {"headerColor", headerColor},
-            {"borderColor", borderColor},
-            {"highlightColor", highlightColor},
-            {"suggestionColor", suggestionColor},
-            {"historyColor", historyColor},
-            {"useBoldHeaders", useBoldHeaders},
-            {"promptSymbol", promptSymbol},
-            {"successSymbol", successSymbol},
-            {"errorSymbol", errorSymbol},
-            {"warningSymbol", warningSymbol},
-            {"infoSymbol", infoSymbol},
-            {"useUnicode", useUnicode},
-            {"useColors", useColors}
-        };
+        return {{"name", name},
+                {"promptColor", promptColor},
+                {"promptSymbolColor", promptSymbolColor},
+                {"successColor", successColor},
+                {"errorColor", errorColor},
+                {"warningColor", warningColor},
+                {"infoColor", infoColor},
+                {"debugColor", debugColor},
+                {"headerColor", headerColor},
+                {"borderColor", borderColor},
+                {"highlightColor", highlightColor},
+                {"suggestionColor", suggestionColor},
+                {"historyColor", historyColor},
+                {"useBoldHeaders", useBoldHeaders},
+                {"promptSymbol", promptSymbol},
+                {"successSymbol", successSymbol},
+                {"errorSymbol", errorSymbol},
+                {"warningSymbol", warningSymbol},
+                {"infoSymbol", infoSymbol},
+                {"useUnicode", useUnicode},
+                {"useColors", useColors}};
     }
 
     [[nodiscard]] static ThemeConfig fromJson(const json& j) {
         ThemeConfig cfg;
         cfg.name = j.value("name", cfg.name);
         cfg.promptColor = j.value("promptColor", cfg.promptColor);
-        cfg.promptSymbolColor = j.value("promptSymbolColor", cfg.promptSymbolColor);
+        cfg.promptSymbolColor =
+            j.value("promptSymbolColor", cfg.promptSymbolColor);
         cfg.successColor = j.value("successColor", cfg.successColor);
         cfg.errorColor = j.value("errorColor", cfg.errorColor);
         cfg.warningColor = j.value("warningColor", cfg.warningColor);
@@ -113,26 +112,24 @@ struct ThemeConfig {
  * @brief TUI layout configuration
  */
 struct LayoutConfig {
-    bool showStatusBar{true};                ///< Show status bar
-    bool showHistory{false};                 ///< Show history panel
-    bool showSuggestions{true};              ///< Show suggestions panel
-    bool showHelp{false};                    ///< Show help panel
-    bool splitVertical{false};               ///< Split panels vertically
-    int historyPanelWidth{30};               ///< History panel width
-    int suggestionPanelHeight{5};            ///< Suggestion panel height
-    int statusBarHeight{1};                  ///< Status bar height
+    bool showStatusBar{true};      ///< Show status bar
+    bool showHistory{false};       ///< Show history panel
+    bool showSuggestions{true};    ///< Show suggestions panel
+    bool showHelp{false};          ///< Show help panel
+    bool splitVertical{false};     ///< Split panels vertically
+    int historyPanelWidth{30};     ///< History panel width
+    int suggestionPanelHeight{5};  ///< Suggestion panel height
+    int statusBarHeight{1};        ///< Status bar height
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"showStatusBar", showStatusBar},
-            {"showHistory", showHistory},
-            {"showSuggestions", showSuggestions},
-            {"showHelp", showHelp},
-            {"splitVertical", splitVertical},
-            {"historyPanelWidth", historyPanelWidth},
-            {"suggestionPanelHeight", suggestionPanelHeight},
-            {"statusBarHeight", statusBarHeight}
-        };
+        return {{"showStatusBar", showStatusBar},
+                {"showHistory", showHistory},
+                {"showSuggestions", showSuggestions},
+                {"showHelp", showHelp},
+                {"splitVertical", splitVertical},
+                {"historyPanelWidth", historyPanelWidth},
+                {"suggestionPanelHeight", suggestionPanelHeight},
+                {"statusBarHeight", statusBarHeight}};
     }
 
     [[nodiscard]] static LayoutConfig fromJson(const json& j) {
@@ -142,8 +139,10 @@ struct LayoutConfig {
         cfg.showSuggestions = j.value("showSuggestions", cfg.showSuggestions);
         cfg.showHelp = j.value("showHelp", cfg.showHelp);
         cfg.splitVertical = j.value("splitVertical", cfg.splitVertical);
-        cfg.historyPanelWidth = j.value("historyPanelWidth", cfg.historyPanelWidth);
-        cfg.suggestionPanelHeight = j.value("suggestionPanelHeight", cfg.suggestionPanelHeight);
+        cfg.historyPanelWidth =
+            j.value("historyPanelWidth", cfg.historyPanelWidth);
+        cfg.suggestionPanelHeight =
+            j.value("suggestionPanelHeight", cfg.suggestionPanelHeight);
         cfg.statusBarHeight = j.value("statusBarHeight", cfg.statusBarHeight);
         return cfg;
     }
@@ -153,22 +152,20 @@ struct LayoutConfig {
  * @brief History configuration
  */
 struct HistoryConfig {
-    size_t maxSize{1000};                    ///< Maximum history entries
-    std::string historyFile;                 ///< History file path (empty = in-memory only)
-    bool persistOnExit{true};                ///< Save history on exit
-    bool ignoreDuplicates{true};             ///< Don't add consecutive duplicates
-    bool ignoreSpacePrefix{true};            ///< Ignore commands starting with space
-    std::vector<std::string> ignorePatterns; ///< Patterns to ignore
+    size_t maxSize{1000};      ///< Maximum history entries
+    std::string historyFile;   ///< History file path (empty = in-memory only)
+    bool persistOnExit{true};  ///< Save history on exit
+    bool ignoreDuplicates{true};   ///< Don't add consecutive duplicates
+    bool ignoreSpacePrefix{true};  ///< Ignore commands starting with space
+    std::vector<std::string> ignorePatterns;  ///< Patterns to ignore
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"maxSize", maxSize},
-            {"historyFile", historyFile},
-            {"persistOnExit", persistOnExit},
-            {"ignoreDuplicates", ignoreDuplicates},
-            {"ignoreSpacePrefix", ignoreSpacePrefix},
-            {"ignorePatterns", ignorePatterns}
-        };
+        return {{"maxSize", maxSize},
+                {"historyFile", historyFile},
+                {"persistOnExit", persistOnExit},
+                {"ignoreDuplicates", ignoreDuplicates},
+                {"ignoreSpacePrefix", ignoreSpacePrefix},
+                {"ignorePatterns", ignorePatterns}};
     }
 
     [[nodiscard]] static HistoryConfig fromJson(const json& j) {
@@ -176,10 +173,13 @@ struct HistoryConfig {
         cfg.maxSize = j.value("maxSize", cfg.maxSize);
         cfg.historyFile = j.value("historyFile", cfg.historyFile);
         cfg.persistOnExit = j.value("persistOnExit", cfg.persistOnExit);
-        cfg.ignoreDuplicates = j.value("ignoreDuplicates", cfg.ignoreDuplicates);
-        cfg.ignoreSpacePrefix = j.value("ignoreSpacePrefix", cfg.ignoreSpacePrefix);
+        cfg.ignoreDuplicates =
+            j.value("ignoreDuplicates", cfg.ignoreDuplicates);
+        cfg.ignoreSpacePrefix =
+            j.value("ignoreSpacePrefix", cfg.ignoreSpacePrefix);
         if (j.contains("ignorePatterns") && j["ignorePatterns"].is_array()) {
-            cfg.ignorePatterns = j["ignorePatterns"].get<std::vector<std::string>>();
+            cfg.ignorePatterns =
+                j["ignorePatterns"].get<std::vector<std::string>>();
         }
         return cfg;
     }
@@ -189,22 +189,20 @@ struct HistoryConfig {
  * @brief Completion configuration
  */
 struct CompletionConfig {
-    bool enabled{true};                      ///< Enable auto-completion
-    bool caseSensitive{false};               ///< Case-sensitive matching
-    size_t maxSuggestions{10};               ///< Maximum suggestions to show
-    size_t minChars{1};                      ///< Minimum characters before suggestions
-    bool showDescription{true};              ///< Show description in suggestions
-    bool fuzzyMatching{true};                ///< Enable fuzzy matching
+    bool enabled{true};          ///< Enable auto-completion
+    bool caseSensitive{false};   ///< Case-sensitive matching
+    size_t maxSuggestions{10};   ///< Maximum suggestions to show
+    size_t minChars{1};          ///< Minimum characters before suggestions
+    bool showDescription{true};  ///< Show description in suggestions
+    bool fuzzyMatching{true};    ///< Enable fuzzy matching
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"enabled", enabled},
-            {"caseSensitive", caseSensitive},
-            {"maxSuggestions", maxSuggestions},
-            {"minChars", minChars},
-            {"showDescription", showDescription},
-            {"fuzzyMatching", fuzzyMatching}
-        };
+        return {{"enabled", enabled},
+                {"caseSensitive", caseSensitive},
+                {"maxSuggestions", maxSuggestions},
+                {"minChars", minChars},
+                {"showDescription", showDescription},
+                {"fuzzyMatching", fuzzyMatching}};
     }
 
     [[nodiscard]] static CompletionConfig fromJson(const json& j) {
@@ -232,12 +230,12 @@ struct TerminalConfig : ConfigSection<TerminalConfig> {
     // General Settings
     // ========================================================================
 
-    bool enableTui{true};                    ///< Enable full TUI mode
-    bool enableColors{true};                 ///< Enable colored output
-    bool enableUnicode{true};                ///< Enable Unicode characters
-    size_t commandTimeoutMs{5000};           ///< Default command timeout
-    bool enableCommandCheck{true};           ///< Enable command validation
-    std::string configFile;                  ///< Terminal config file path
+    bool enableTui{true};           ///< Enable full TUI mode
+    bool enableColors{true};        ///< Enable colored output
+    bool enableUnicode{true};       ///< Enable Unicode characters
+    size_t commandTimeoutMs{5000};  ///< Default command timeout
+    bool enableCommandCheck{true};  ///< Enable command validation
+    std::string configFile;         ///< Terminal config file path
 
     // ========================================================================
     // Theme
@@ -268,20 +266,18 @@ struct TerminalConfig : ConfigSection<TerminalConfig> {
     // ========================================================================
 
     [[nodiscard]] json serialize() const {
-        return {
-            // General
-            {"enableTui", enableTui},
-            {"enableColors", enableColors},
-            {"enableUnicode", enableUnicode},
-            {"commandTimeoutMs", commandTimeoutMs},
-            {"enableCommandCheck", enableCommandCheck},
-            {"configFile", configFile},
-            // Nested configs
-            {"theme", theme.toJson()},
-            {"layout", layout.toJson()},
-            {"history", history.toJson()},
-            {"completion", completion.toJson()}
-        };
+        return {// General
+                {"enableTui", enableTui},
+                {"enableColors", enableColors},
+                {"enableUnicode", enableUnicode},
+                {"commandTimeoutMs", commandTimeoutMs},
+                {"enableCommandCheck", enableCommandCheck},
+                {"configFile", configFile},
+                // Nested configs
+                {"theme", theme.toJson()},
+                {"layout", layout.toJson()},
+                {"history", history.toJson()},
+                {"completion", completion.toJson()}};
     }
 
     [[nodiscard]] static TerminalConfig deserialize(const json& j) {
@@ -291,8 +287,10 @@ struct TerminalConfig : ConfigSection<TerminalConfig> {
         cfg.enableTui = j.value("enableTui", cfg.enableTui);
         cfg.enableColors = j.value("enableColors", cfg.enableColors);
         cfg.enableUnicode = j.value("enableUnicode", cfg.enableUnicode);
-        cfg.commandTimeoutMs = j.value("commandTimeoutMs", cfg.commandTimeoutMs);
-        cfg.enableCommandCheck = j.value("enableCommandCheck", cfg.enableCommandCheck);
+        cfg.commandTimeoutMs =
+            j.value("commandTimeoutMs", cfg.commandTimeoutMs);
+        cfg.enableCommandCheck =
+            j.value("enableCommandCheck", cfg.enableCommandCheck);
         cfg.configFile = j.value("configFile", cfg.configFile);
 
         // Nested configs
@@ -315,69 +313,88 @@ struct TerminalConfig : ConfigSection<TerminalConfig> {
     [[nodiscard]] static json generateSchema() {
         return {
             {"type", "object"},
-            {"properties", {
-                // General
-                {"enableTui", {{"type", "boolean"}, {"default", true}}},
-                {"enableColors", {{"type", "boolean"}, {"default", true}}},
-                {"enableUnicode", {{"type", "boolean"}, {"default", true}}},
-                {"commandTimeoutMs", {{"type", "integer"}, {"minimum", 0}, {"default", 5000}}},
-                {"enableCommandCheck", {{"type", "boolean"}, {"default", true}}},
-                {"configFile", {{"type", "string"}}},
-                // Theme
-                {"theme", {
-                    {"type", "object"},
-                    {"properties", {
-                        {"name", {{"type", "string"}, {"default", "default"}}},
-                        {"promptColor", {{"type", "string"}}},
-                        {"promptSymbolColor", {{"type", "string"}}},
-                        {"successColor", {{"type", "string"}}},
-                        {"errorColor", {{"type", "string"}}},
-                        {"warningColor", {{"type", "string"}}},
-                        {"infoColor", {{"type", "string"}}},
-                        {"useUnicode", {{"type", "boolean"}, {"default", true}}},
-                        {"useColors", {{"type", "boolean"}, {"default", true}}}
-                    }}
-                }},
-                // Layout
-                {"layout", {
-                    {"type", "object"},
-                    {"properties", {
-                        {"showStatusBar", {{"type", "boolean"}, {"default", true}}},
-                        {"showHistory", {{"type", "boolean"}, {"default", false}}},
-                        {"showSuggestions", {{"type", "boolean"}, {"default", true}}},
-                        {"showHelp", {{"type", "boolean"}, {"default", false}}},
-                        {"splitVertical", {{"type", "boolean"}, {"default", false}}},
-                        {"historyPanelWidth", {{"type", "integer"}, {"minimum", 10}, {"maximum", 100}, {"default", 30}}},
-                        {"suggestionPanelHeight", {{"type", "integer"}, {"minimum", 1}, {"maximum", 20}, {"default", 5}}},
-                        {"statusBarHeight", {{"type", "integer"}, {"minimum", 1}, {"maximum", 5}, {"default", 1}}}
-                    }}
-                }},
-                // History
-                {"history", {
-                    {"type", "object"},
-                    {"properties", {
-                        {"maxSize", {{"type", "integer"}, {"minimum", 0}, {"maximum", 100000}, {"default", 1000}}},
-                        {"historyFile", {{"type", "string"}}},
-                        {"persistOnExit", {{"type", "boolean"}, {"default", true}}},
-                        {"ignoreDuplicates", {{"type", "boolean"}, {"default", true}}},
-                        {"ignoreSpacePrefix", {{"type", "boolean"}, {"default", true}}},
-                        {"ignorePatterns", {{"type", "array"}, {"items", {{"type", "string"}}}}}
-                    }}
-                }},
-                // Completion
-                {"completion", {
-                    {"type", "object"},
-                    {"properties", {
-                        {"enabled", {{"type", "boolean"}, {"default", true}}},
-                        {"caseSensitive", {{"type", "boolean"}, {"default", false}}},
-                        {"maxSuggestions", {{"type", "integer"}, {"minimum", 1}, {"maximum", 100}, {"default", 10}}},
-                        {"minChars", {{"type", "integer"}, {"minimum", 0}, {"maximum", 10}, {"default", 1}}},
-                        {"showDescription", {{"type", "boolean"}, {"default", true}}},
-                        {"fuzzyMatching", {{"type", "boolean"}, {"default", true}}}
-                    }}
-                }}
-            }}
-        };
+            {"properties",
+             {// General
+              {"enableTui", {{"type", "boolean"}, {"default", true}}},
+              {"enableColors", {{"type", "boolean"}, {"default", true}}},
+              {"enableUnicode", {{"type", "boolean"}, {"default", true}}},
+              {"commandTimeoutMs",
+               {{"type", "integer"}, {"minimum", 0}, {"default", 5000}}},
+              {"enableCommandCheck", {{"type", "boolean"}, {"default", true}}},
+              {"configFile", {{"type", "string"}}},
+              // Theme
+              {"theme",
+               {{"type", "object"},
+                {"properties",
+                 {{"name", {{"type", "string"}, {"default", "default"}}},
+                  {"promptColor", {{"type", "string"}}},
+                  {"promptSymbolColor", {{"type", "string"}}},
+                  {"successColor", {{"type", "string"}}},
+                  {"errorColor", {{"type", "string"}}},
+                  {"warningColor", {{"type", "string"}}},
+                  {"infoColor", {{"type", "string"}}},
+                  {"useUnicode", {{"type", "boolean"}, {"default", true}}},
+                  {"useColors", {{"type", "boolean"}, {"default", true}}}}}}},
+              // Layout
+              {"layout",
+               {{"type", "object"},
+                {"properties",
+                 {{"showStatusBar", {{"type", "boolean"}, {"default", true}}},
+                  {"showHistory", {{"type", "boolean"}, {"default", false}}},
+                  {"showSuggestions", {{"type", "boolean"}, {"default", true}}},
+                  {"showHelp", {{"type", "boolean"}, {"default", false}}},
+                  {"splitVertical", {{"type", "boolean"}, {"default", false}}},
+                  {"historyPanelWidth",
+                   {{"type", "integer"},
+                    {"minimum", 10},
+                    {"maximum", 100},
+                    {"default", 30}}},
+                  {"suggestionPanelHeight",
+                   {{"type", "integer"},
+                    {"minimum", 1},
+                    {"maximum", 20},
+                    {"default", 5}}},
+                  {"statusBarHeight",
+                   {{"type", "integer"},
+                    {"minimum", 1},
+                    {"maximum", 5},
+                    {"default", 1}}}}}}},
+              // History
+              {"history",
+               {{"type", "object"},
+                {"properties",
+                 {{"maxSize",
+                   {{"type", "integer"},
+                    {"minimum", 0},
+                    {"maximum", 100000},
+                    {"default", 1000}}},
+                  {"historyFile", {{"type", "string"}}},
+                  {"persistOnExit", {{"type", "boolean"}, {"default", true}}},
+                  {"ignoreDuplicates",
+                   {{"type", "boolean"}, {"default", true}}},
+                  {"ignoreSpacePrefix",
+                   {{"type", "boolean"}, {"default", true}}},
+                  {"ignorePatterns",
+                   {{"type", "array"}, {"items", {{"type", "string"}}}}}}}}},
+              // Completion
+              {"completion",
+               {{"type", "object"},
+                {"properties",
+                 {{"enabled", {{"type", "boolean"}, {"default", true}}},
+                  {"caseSensitive", {{"type", "boolean"}, {"default", false}}},
+                  {"maxSuggestions",
+                   {{"type", "integer"},
+                    {"minimum", 1},
+                    {"maximum", 100},
+                    {"default", 10}}},
+                  {"minChars",
+                   {{"type", "integer"},
+                    {"minimum", 0},
+                    {"maximum", 10},
+                    {"default", 1}}},
+                  {"showDescription", {{"type", "boolean"}, {"default", true}}},
+                  {"fuzzyMatching",
+                   {{"type", "boolean"}, {"default", true}}}}}}}}}};
     }
 };
 

@@ -6,10 +6,10 @@
 
 #include "guider.hpp"
 
-#include "atom/log/spdlog_logger.hpp"
 #include "../command.hpp"
-#include "device/service/guider_service.hpp"
 #include "../response.hpp"
+#include "atom/log/spdlog_logger.hpp"
+#include "device/service/guider_service.hpp"
 
 namespace lithium::middleware {
 
@@ -789,4 +789,3 @@ void registerGuider(std::shared_ptr<CommandDispatcher> dispatcher) {
 }
 
 }  // namespace lithium::app
-

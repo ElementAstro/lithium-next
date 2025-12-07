@@ -271,10 +271,7 @@ TEST_F(ComponentOptionsTest, CompleteOptions) {
     options.priority = 100;
     options.group = "high-priority";
     options.config = {
-        {"setting1", true},
-        {"setting2", "value"},
-        {"setting3", 3.14}
-    };
+        {"setting1", true}, {"setting2", "value"}, {"setting3", 3.14}};
 
     EXPECT_FALSE(options.autoStart);
     EXPECT_TRUE(options.lazy);
@@ -288,16 +285,9 @@ TEST_F(ComponentOptionsTest, CompleteOptions) {
 TEST_F(ComponentOptionsTest, NestedConfig) {
     ComponentOptions options;
     options.config = {
-        {"database", {
-            {"host", "localhost"},
-            {"port", 5432},
-            {"name", "testdb"}
-        }},
-        {"cache", {
-            {"enabled", true},
-            {"ttl", 3600}
-        }}
-    };
+        {"database",
+         {{"host", "localhost"}, {"port", 5432}, {"name", "testdb"}}},
+        {"cache", {{"enabled", true}, {"ttl", 3600}}}};
 
     EXPECT_EQ(options.config["database"]["host"], "localhost");
     EXPECT_EQ(options.config["database"]["port"], 5432);
@@ -308,8 +298,7 @@ TEST_F(ComponentOptionsTest, ArrayConfig) {
     ComponentOptions options;
     options.config = {
         {"endpoints", json::array({"http://api1.com", "http://api2.com"})},
-        {"ports", json::array({8080, 8081, 8082})}
-    };
+        {"ports", json::array({8080, 8081, 8082})}};
 
     EXPECT_EQ(options.config["endpoints"].size(), 2);
     EXPECT_EQ(options.config["ports"].size(), 3);
@@ -375,7 +364,8 @@ TEST_F(ComponentOptionsTest, LargeConfig) {
     ComponentOptions options;
 
     for (int i = 0; i < 100; ++i) {
-        options.config["key_" + std::to_string(i)] = "value_" + std::to_string(i);
+        options.config["key_" + std::to_string(i)] =
+            "value_" + std::to_string(i);
     }
 
     EXPECT_EQ(options.config.size(), 100);

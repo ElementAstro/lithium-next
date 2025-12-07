@@ -20,7 +20,7 @@ from .api import (
     method="GET",
     description="Check if a .NET Framework version is installed",
     tags=["dotnet", "system"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def check_dotnet(version: str) -> dict:
     """
@@ -44,7 +44,7 @@ def check_dotnet(version: str) -> dict:
     method="GET",
     description="List all installed .NET Framework versions",
     tags=["dotnet", "system"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def list_dotnets() -> dict:
     """
@@ -65,7 +65,7 @@ def list_dotnets() -> dict:
     method="POST",
     description="Download a file with optional multi-threading",
     tags=["dotnet", "download"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def download(
     url: str,
@@ -103,7 +103,7 @@ def download(
     method="POST",
     description="Execute a software installer",
     tags=["dotnet", "install"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def install(installer_path: str, quiet: bool = False) -> dict:
     """
@@ -129,7 +129,7 @@ def install(installer_path: str, quiet: bool = False) -> dict:
     description="Check .NET installation (command)",
     priority=5,
     timeout_ms=5000,
-    tags=["dotnet"]
+    tags=["dotnet"],
 )
 def cmd_check_dotnet(version: str) -> dict:
     """Check .NET installation via command dispatcher."""
@@ -141,7 +141,7 @@ def cmd_check_dotnet(version: str) -> dict:
     description="List installed .NET versions (command)",
     priority=5,
     timeout_ms=5000,
-    tags=["dotnet"]
+    tags=["dotnet"],
 )
 def cmd_list_dotnets() -> dict:
     """List .NET versions via command dispatcher."""

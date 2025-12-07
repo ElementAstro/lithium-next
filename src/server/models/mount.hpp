@@ -27,13 +27,7 @@ using json = nlohmann::json;
 /**
  * @brief Mount tracking state
  */
-enum class TrackingState {
-    Off,
-    Sidereal,
-    Lunar,
-    Solar,
-    Custom
-};
+enum class TrackingState { Off, Sidereal, Lunar, Solar, Custom };
 
 /**
  * @brief Convert TrackingState to string
@@ -224,7 +218,8 @@ struct SlewTarget {
  * @brief Mount event for WebSocket broadcast
  */
 struct MountEvent {
-    std::string eventType;  // slew_started, slew_finished, tracking_changed, etc.
+    std::string
+        eventType;  // slew_started, slew_finished, tracking_changed, etc.
     json data;
     int64_t timestamp;
 

@@ -16,8 +16,8 @@ Description: Guider REST API Controller
 #define LITHIUM_SERVER_CONTROLLER_GUIDER_HPP
 
 #include <crow/json.h>
-#include "atom/log/spdlog_logger.hpp"
 #include "../controller.hpp"
+#include "atom/log/spdlog_logger.hpp"
 #include "server/command/device/guider.hpp"
 #include "server/utils/response.hpp"
 
@@ -550,4 +550,3 @@ public:
 }  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_GUIDER_HPP
-

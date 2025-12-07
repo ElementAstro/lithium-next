@@ -33,8 +33,8 @@ INDIDome::~INDIDome() {
 
 // ==================== Connection ====================
 
-auto INDIDome::connect(const std::string& deviceName, int timeout,
-                       int maxRetry) -> bool {
+auto INDIDome::connect(const std::string& deviceName, int timeout, int maxRetry)
+    -> bool {
     if (!INDIDeviceBase::connect(deviceName, timeout, maxRetry)) {
         return false;
     }
@@ -65,8 +65,10 @@ auto INDIDome::setAzimuth(double azimuth) -> bool {
     }
 
     // Normalize azimuth to 0-360
-    while (azimuth < 0) azimuth += 360.0;
-    while (azimuth >= 360) azimuth -= 360.0;
+    while (azimuth < 0)
+        azimuth += 360.0;
+    while (azimuth >= 360)
+        azimuth -= 360.0;
 
     LOG_INFO("Setting dome azimuth to: {:.2f}°", azimuth);
 
@@ -122,9 +124,8 @@ auto INDIDome::waitForMotion(std::chrono::milliseconds timeout) -> bool {
     }
 
     std::unique_lock<std::mutex> lock(positionMutex_);
-    return motionCondition_.wait_for(lock, timeout, [this] {
-        return !isMoving_.load();
-    });
+    return motionCondition_.wait_for(lock, timeout,
+                                     [this] { return !isMoving_.load(); });
 }
 
 auto INDIDome::move(DomeMotion direction) -> bool {
@@ -137,9 +138,8 @@ auto INDIDome::move(DomeMotion direction) -> bool {
         return false;
     }
 
-    std::string elemName = (direction == DomeMotion::Clockwise)
-                               ? "DOME_CW"
-                               : "DOME_CCW";
+    std::string elemName =
+        (direction == DomeMotion::Clockwise) ? "DOME_CW" : "DOME_CCW";
 
     if (!setSwitchProperty("DOME_MOTION", elemName, true)) {
         LOG_ERROR("Failed to start dome motion");
@@ -322,7 +322,8 @@ auto INDIDome::enableTelescopeSync(bool enable) -> bool {
         return false;
     }
 
-    std::string elemName = enable ? "DOME_AUTOSYNC_ENABLE" : "DOME_AUTOSYNC_DISABLE";
+    std::string elemName =
+        enable ? "DOME_AUTOSYNC_ENABLE" : "DOME_AUTOSYNC_DISABLE";
 
     if (!setSwitchProperty("DOME_AUTOSYNC", elemName, true)) {
         LOG_ERROR("Failed to set telescope sync");
@@ -352,9 +353,7 @@ auto INDIDome::syncToTelescope() -> bool {
 
 // ==================== Status ====================
 
-auto INDIDome::getDomeState() const -> DomeState {
-    return domeState_.load();
-}
+auto INDIDome::getDomeState() const -> DomeState { return domeState_.load(); }
 
 auto INDIDome::getStatus() const -> json {
     json status = INDIDeviceBase::getStatus();
@@ -408,7 +407,8 @@ void INDIDome::onPropertyUpdated(const INDIProperty& property) {
         if (property.state == PropertyState::Ok) {
             std::lock_guard<std::mutex> lock(shutterMutex_);
             if (auto open = property.getSwitch("SHUTTER_OPEN")) {
-                shutterInfo_.state = *open ? ShutterState::Open : ShutterState::Closed;
+                shutterInfo_.state =
+                    *open ? ShutterState::Open : ShutterState::Closed;
             }
             domeState_.store(DomeState::Idle);
         }

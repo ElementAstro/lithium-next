@@ -20,8 +20,8 @@
 #ifndef LITHIUM_DATABASE_QUERY_QUERY_BUILDER_HPP
 #define LITHIUM_DATABASE_QUERY_QUERY_BUILDER_HPP
 
-#include <sstream>
 #include <string>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -163,6 +163,37 @@ private:
     int offsetValue = 0;                      ///< The offset for the query.
     std::vector<std::variant<int, double, std::string>>
         paramValues;  ///< Parameter values.
+
+    // Helper to store parameter values
+    template <typename T>
+    void storeParamValue(T&& value) {
+        if constexpr (std::is_integral_v<std::decay_t<T>>) {
+            paramValues.push_back(static_cast<int>(value));
+        } else if constexpr (std::is_floating_point_v<std::decay_t<T>>) {
+            paramValues.push_back(static_cast<double>(value));
+        } else if constexpr (std::is_convertible_v<std::decay_t<T>,
+                                                   std::string>) {
+            paramValues.push_back(std::string(std::forward<T>(value)));
+        }
+    }
+
+public:
+    /**
+     * @brief Gets the stored parameter values.
+     *
+     * @return A const reference to the vector of parameter values.
+     */
+    const std::vector<std::variant<int, double, std::string>>& getParamValues()
+        const {
+        return paramValues;
+    }
+
+    /**
+     * @brief Gets the number of parameter placeholders in the query.
+     *
+     * @return Number of parameters.
+     */
+    size_t getParamCount() const { return paramValues.size(); }
 };
 
 // Template method implementation
@@ -172,19 +203,17 @@ private:
  *
  * @tparam Args Parameter types to bind.
  * @param condition The WHERE condition string.
- * @param paramValues The values to bind to parameters.
+ * @param args The values to bind to parameters.
  * @return A reference to the QueryBuilder instance.
  */
 template <typename... Args>
 QueryBuilder& QueryBuilder::where(const std::string& condition,
-                                  Args&&... paramValues) {
+                                  Args&&... args) {
     if (!condition.empty()) {
         whereConditions.push_back(condition);
         if constexpr (sizeof...(Args) > 0) {
-            // Store parameter values (implementation omitted for brevity)
-            // This would typically involve using fold expressions to process
-            // each argument
-            (void)std::initializer_list<int>{(paramValues, 0)...};
+            // Store parameter values using fold expression
+            (storeParamValue(std::forward<Args>(args)), ...);
         }
     }
     return *this;

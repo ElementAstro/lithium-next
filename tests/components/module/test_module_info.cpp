@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "components/module.hpp"
+#include "components/core/module.hpp"
 
 namespace lithium::test {
 
@@ -226,7 +226,9 @@ TEST_F(ModuleInfoTest, Priority) {
 
 class ModuleStatisticsTest : public ::testing::Test {
 protected:
-    void SetUp() override { stats = std::make_unique<ModuleInfo::Statistics>(); }
+    void SetUp() override {
+        stats = std::make_unique<ModuleInfo::Statistics>();
+    }
 
     void TearDown() override { stats.reset(); }
 

@@ -63,16 +63,16 @@ TimeWindowFilter::~TimeWindowFilter() = default;
 // Window Configuration
 // ========================================================================
 
-void TimeWindowFilter::setPreset(
-    Preset preset,
-    std::chrono::system_clock::time_point date) {
+void TimeWindowFilter::setPreset(Preset preset,
+                                 std::chrono::system_clock::time_point date) {
     auto now = date;
     std::chrono::system_clock::time_point end;
 
     switch (preset) {
         case Preset::Tonight: {
             // Get astronomical twilight times
-            auto [start, twilightEnd] = pImpl_->calculator->getAstronomicalTwilightTimes(now);
+            auto [start, twilightEnd] =
+                pImpl_->calculator->getAstronomicalTwilightTimes(now);
             pImpl_->startTime = start;
             pImpl_->endTime = twilightEnd;
             break;
@@ -150,8 +150,8 @@ std::vector<CelestialObjectModel> TimeWindowFilter::filterInRange(
     std::vector<CelestialObjectModel> result;
     result.reserve(objects.size());
 
-    auto filtered = pImpl_->calculator->filterObservable(
-        objects, start, end, pImpl_->constraints);
+    auto filtered = pImpl_->calculator->filterObservable(objects, start, end,
+                                                         pImpl_->constraints);
 
     for (const auto& [obj, window] : filtered) {
         result.push_back(obj);
@@ -170,13 +170,13 @@ std::vector<CelestialObjectModel> TimeWindowFilter::filterAtTime(
 
     for (const auto& obj : objects) {
         try {
-            if (pImpl_->calculator->isObservableAt(
-                    obj.radJ2000, obj.decDJ2000, time, pImpl_->constraints)) {
+            if (pImpl_->calculator->isObservableAt(obj.radJ2000, obj.decDJ2000,
+                                                   time, pImpl_->constraints)) {
                 result.push_back(obj);
             }
         } catch (const std::exception& e) {
-            SPDLOG_WARN("Error checking observability for {}: {}", obj.identifier,
-                        e.what());
+            SPDLOG_WARN("Error checking observability for {}: {}",
+                        obj.identifier, e.what());
         }
     }
 
@@ -240,14 +240,13 @@ std::vector<CelestialObjectModel> TimeWindowFilter::filterByMoonDistance(
     std::vector<CelestialObjectModel> result;
     result.reserve(objects.size());
 
-    auto midTime = pImpl_->startTime +
-                   (pImpl_->endTime - pImpl_->startTime) / 2;
+    auto midTime =
+        pImpl_->startTime + (pImpl_->endTime - pImpl_->startTime) / 2;
 
     for (const auto& obj : objects) {
         try {
-            double distance =
-                pImpl_->calculator->calculateMoonDistance(
-                    obj.radJ2000, obj.decDJ2000, midTime);
+            double distance = pImpl_->calculator->calculateMoonDistance(
+                obj.radJ2000, obj.decDJ2000, midTime);
 
             if (distance >= minDistance) {
                 result.push_back(obj);
@@ -265,14 +264,16 @@ std::vector<CelestialObjectModel> TimeWindowFilter::filterByMoonDistance(
 // Sequence Optimization
 // ========================================================================
 
-std::vector<std::pair<CelestialObjectModel, std::chrono::system_clock::time_point>>
+std::vector<
+    std::pair<CelestialObjectModel, std::chrono::system_clock::time_point>>
 TimeWindowFilter::optimizeSequence(
     std::span<const CelestialObjectModel> objects,
     std::chrono::system_clock::time_point startTime) {
     return pImpl_->calculator->optimizeSequence(objects, startTime);
 }
 
-std::chrono::system_clock::time_point TimeWindowFilter::getOptimalStartTime() const {
+std::chrono::system_clock::time_point TimeWindowFilter::getOptimalStartTime()
+    const {
     // For tonight observations, start at end of astronomical twilight
     if (pImpl_->currentPreset == Preset::Tonight) {
         return pImpl_->startTime;
@@ -283,12 +284,13 @@ std::chrono::system_clock::time_point TimeWindowFilter::getOptimalStartTime() co
 }
 
 int64_t TimeWindowFilter::getNightDurationSeconds() const {
-    return std::chrono::duration_cast<std::chrono::seconds>(
-               pImpl_->endTime - pImpl_->startTime)
+    return std::chrono::duration_cast<std::chrono::seconds>(pImpl_->endTime -
+                                                            pImpl_->startTime)
         .count();
 }
 
-int64_t TimeWindowFilter::getObjectDurationSeconds(double ra, double dec) const {
+int64_t TimeWindowFilter::getObjectDurationSeconds(double ra,
+                                                   double dec) const {
     try {
         auto window = pImpl_->calculator->calculateWindow(
             ra, dec, pImpl_->startTime, pImpl_->constraints);
@@ -298,16 +300,15 @@ int64_t TimeWindowFilter::getObjectDurationSeconds(double ra, double dec) const 
         }
 
         // Calculate overlap with time window
-        auto riseTime =
-            std::max(window.riseTime, pImpl_->startTime);
+        auto riseTime = std::max(window.riseTime, pImpl_->startTime);
         auto setTime = std::min(window.setTime, pImpl_->endTime);
 
         if (riseTime >= setTime) {
             return 0;
         }
 
-        return std::chrono::duration_cast<std::chrono::seconds>(
-                   setTime - riseTime)
+        return std::chrono::duration_cast<std::chrono::seconds>(setTime -
+                                                                riseTime)
             .count();
     } catch (const std::exception& e) {
         SPDLOG_WARN("Error calculating object duration: {}", e.what());
@@ -324,14 +325,14 @@ size_t TimeWindowFilter::countObservable(
     size_t count = 0;
     for (const auto& obj : objects) {
         try {
-            if (pImpl_->calculator->isObservableAt(
-                    obj.radJ2000, obj.decDJ2000, pImpl_->startTime,
-                    pImpl_->constraints)) {
+            if (pImpl_->calculator->isObservableAt(obj.radJ2000, obj.decDJ2000,
+                                                   pImpl_->startTime,
+                                                   pImpl_->constraints)) {
                 count++;
             }
         } catch (const std::exception& e) {
-            SPDLOG_WARN("Error counting observable object {}: {}", obj.identifier,
-                        e.what());
+            SPDLOG_WARN("Error counting observable object {}: {}",
+                        obj.identifier, e.what());
         }
     }
     return count;
@@ -345,10 +346,8 @@ json TimeWindowFilter::getStatistics(
     stats["observable_now"] = countObservable(objects);
     stats["night_duration_hours"] = getNightDurationSeconds() / 3600.0;
     stats["window_type"] = static_cast<int>(pImpl_->currentPreset);
-    stats["constraints"] = {
-        {"min_altitude", pImpl_->constraints.minAltitude},
-        {"max_altitude", pImpl_->constraints.maxAltitude}
-    };
+    stats["constraints"] = {{"min_altitude", pImpl_->constraints.minAltitude},
+                            {"max_altitude", pImpl_->constraints.maxAltitude}};
 
     // Category counts
     std::map<std::string, size_t> typeCounts;
@@ -358,9 +357,9 @@ json TimeWindowFilter::getStatistics(
         typeCounts[obj.type]++;
 
         try {
-            if (pImpl_->calculator->isObservableAt(
-                    obj.radJ2000, obj.decDJ2000, pImpl_->startTime,
-                    pImpl_->constraints)) {
+            if (pImpl_->calculator->isObservableAt(obj.radJ2000, obj.decDJ2000,
+                                                   pImpl_->startTime,
+                                                   pImpl_->constraints)) {
                 observableCount++;
             }
         } catch (const std::exception& e) {
@@ -382,7 +381,8 @@ json TimeWindowFilter::generateObservingPlan(
     json plan = json::object();
 
     // Get time window info
-    plan["start_time"] = std::chrono::system_clock::to_time_t(pImpl_->startTime);
+    plan["start_time"] =
+        std::chrono::system_clock::to_time_t(pImpl_->startTime);
     plan["end_time"] = std::chrono::system_clock::to_time_t(pImpl_->endTime);
     plan["night_duration_hours"] = getNightDurationSeconds() / 3600.0;
 
@@ -396,41 +396,42 @@ json TimeWindowFilter::generateObservingPlan(
 
     for (size_t i = 0; i < sequence.size(); ++i) {
         const auto& [obj, time] = sequence[i];
-        sequenceJson.push_back({
-            {"index", i},
-            {"name", obj.identifier},
-            {"ra", obj.radJ2000},
-            {"dec", obj.decDJ2000},
-            {"magnitude", obj.visualMagnitudeV},
-            {"suggested_time", std::chrono::system_clock::to_time_t(time)},
-            {"type", obj.type}
-        });
+        sequenceJson.push_back(
+            {{"index", i},
+             {"name", obj.identifier},
+             {"ra", obj.radJ2000},
+             {"dec", obj.decDJ2000},
+             {"magnitude", obj.visualMagnitudeV},
+             {"suggested_time", std::chrono::system_clock::to_time_t(time)},
+             {"type", obj.type}});
     }
 
     plan["observation_sequence"] = sequenceJson;
 
     // Add moon info
-    auto midTime = pImpl_->startTime +
-                   (pImpl_->endTime - pImpl_->startTime) / 2;
+    auto midTime =
+        pImpl_->startTime + (pImpl_->endTime - pImpl_->startTime) / 2;
     auto [moonRa, moonDec, moonPhase] =
         pImpl_->calculator->getMoonInfo(midTime);
     plan["moon"] = {
         {"ra", moonRa},
         {"dec", moonDec},
         {"phase", moonPhase},
-        {"above_horizon", pImpl_->calculator->isMoonAboveHorizon(midTime)}
-    };
+        {"above_horizon", pImpl_->calculator->isMoonAboveHorizon(midTime)}};
 
     // Add sun info
     auto sunTimes = pImpl_->calculator->getSunTimes(pImpl_->startTime);
     plan["sun"] = {
         {"sunset", std::chrono::system_clock::to_time_t(std::get<0>(sunTimes))},
-        {"twilight_end", std::chrono::system_clock::to_time_t(std::get<1>(sunTimes))},
-        {"twilight_start", std::chrono::system_clock::to_time_t(std::get<2>(sunTimes))},
-        {"sunrise", std::chrono::system_clock::to_time_t(std::get<3>(sunTimes))}
-    };
+        {"twilight_end",
+         std::chrono::system_clock::to_time_t(std::get<1>(sunTimes))},
+        {"twilight_start",
+         std::chrono::system_clock::to_time_t(std::get<2>(sunTimes))},
+        {"sunrise",
+         std::chrono::system_clock::to_time_t(std::get<3>(sunTimes))}};
 
-    SPDLOG_INFO("Generated observing plan for {} objects", observableObjects.size());
+    SPDLOG_INFO("Generated observing plan for {} objects",
+                observableObjects.size());
     return plan;
 }
 
@@ -446,7 +447,8 @@ std::chrono::system_clock::time_point TimeWindowFilter::getThisWeekEnd() const {
     return std::chrono::system_clock::now() + std::chrono::hours(24 * 7);
 }
 
-std::chrono::system_clock::time_point TimeWindowFilter::getThisMonthEnd() const {
+std::chrono::system_clock::time_point TimeWindowFilter::getThisMonthEnd()
+    const {
     return std::chrono::system_clock::now() + std::chrono::hours(24 * 30);
 }
 

@@ -1,20 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * Lithium-Next - A modern astrophotography terminal
- * Copyright (C) 2024 Max Qian
+/**
+ * @file io.hpp
+ * @brief Aggregated header for target IO module.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * This is the primary include file for the target IO components.
+ * Include this file to get access to CSV and JSON handlers,
+ * as well as the CSV reader utility.
+ *
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2024 Max Qian
  */
 
 #ifndef LITHIUM_TARGET_IO_MODULE_HPP
 #define LITHIUM_TARGET_IO_MODULE_HPP
 
-// Include all IO-related headers
+// ============================================================================
+// IO Components
+// ============================================================================
+
 #include "csv_handler.hpp"
 #include "json_handler.hpp"
+#include "reader.hpp"
 
 /**
  * @brief Target IO Module
@@ -28,7 +34,8 @@
  *
  * // CSV import
  * CsvHandler csvHandler;
- * auto [objects, stats] = csvHandler.importCelestialObjects("targets.csv").value();
+ * auto [objects, stats] =
+ * csvHandler.importCelestialObjects("targets.csv").value();
  *
  * // JSON export
  * JsonHandler jsonHandler;
@@ -42,17 +49,13 @@ namespace lithium::target::io {
  * @brief Create a CSV handler instance
  * @return CsvHandler instance
  */
-inline auto createCsvHandler() -> CsvHandler {
-    return CsvHandler();
-}
+inline auto createCsvHandler() -> CsvHandler { return CsvHandler(); }
 
 /**
  * @brief Create a JSON handler instance
  * @return JsonHandler instance
  */
-inline auto createJsonHandler() -> JsonHandler {
-    return JsonHandler();
-}
+inline auto createJsonHandler() -> JsonHandler { return JsonHandler(); }
 
 }  // namespace lithium::target::io
 

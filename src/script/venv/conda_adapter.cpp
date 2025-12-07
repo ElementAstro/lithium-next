@@ -18,8 +18,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 namespace lithium::venv {
@@ -38,8 +38,9 @@ struct CommandResult {
 /**
  * @brief Execute a command and capture output
  */
-CommandResult executeCommand(const std::string& command,
-                             std::chrono::seconds timeout = std::chrono::seconds{300}) {
+CommandResult executeCommand(
+    const std::string& command,
+    std::chrono::seconds timeout = std::chrono::seconds{300}) {
     CommandResult result;
 
 #ifdef _WIN32
@@ -91,8 +92,10 @@ CommandResult executeCommand(const std::string& command,
         std::string output;
         std::array<char, 4096> buffer;
         DWORD bytesRead;
-        while (ReadFile(hPipe, buffer.data(), static_cast<DWORD>(buffer.size() - 1),
-                        &bytesRead, nullptr) && bytesRead > 0) {
+        while (ReadFile(hPipe, buffer.data(),
+                        static_cast<DWORD>(buffer.size() - 1), &bytesRead,
+                        nullptr) &&
+               bytesRead > 0) {
             buffer[bytesRead] = '\0';
             output += buffer.data();
         }
@@ -100,10 +103,11 @@ CommandResult executeCommand(const std::string& command,
     };
 
     std::thread stdoutThread([&]() { result.output = readPipe(hStdOutRead); });
-    std::thread stderrThread([&]() { result.errorOutput = readPipe(hStdErrRead); });
+    std::thread stderrThread(
+        [&]() { result.errorOutput = readPipe(hStdErrRead); });
 
-    DWORD waitResult = WaitForSingleObject(pi.hProcess,
-        static_cast<DWORD>(timeout.count() * 1000));
+    DWORD waitResult = WaitForSingleObject(
+        pi.hProcess, static_cast<DWORD>(timeout.count() * 1000));
 
     if (waitResult == WAIT_TIMEOUT) {
         TerminateProcess(pi.hProcess, 1);
@@ -195,9 +199,7 @@ public:
         detectConda();
     }
 
-    ~Impl() {
-        spdlog::info("CondaAdapter destroyed");
-    }
+    ~Impl() { spdlog::info("CondaAdapter destroyed"); }
 
     void detectConda() {
 #ifdef _WIN32
@@ -216,7 +218,8 @@ public:
         }
     }
 
-    VenvResult<VenvInfo> createCondaEnv(const CondaEnvConfig& config, ProgressCallback callback) {
+    VenvResult<VenvInfo> createCondaEnv(const CondaEnvConfig& config,
+                                        ProgressCallback callback) {
         if (!condaAvailable_) {
             return std::unexpected(VenvError::CondaNotFound);
         }
@@ -226,7 +229,8 @@ public:
         }
 
         std::ostringstream cmd;
-        cmd << "\"" << condaPath_.string() << "\" create -n " << config.name << " -y";
+        cmd << "\"" << condaPath_.string() << "\" create -n " << config.name
+            << " -y";
 
         if (!config.pythonVersion.empty()) {
             cmd << " python=" << config.pythonVersion;
@@ -261,8 +265,9 @@ public:
         }
 
         // Get conda env path
-        auto result = executeCommand("\"" + condaPath_.string() + "\" info --envs",
-                                     std::chrono::seconds{30});
+        auto result =
+            executeCommand("\"" + condaPath_.string() + "\" info --envs",
+                           std::chrono::seconds{30});
         if (result.exitCode != 0) {
             return std::unexpected(VenvError::VenvActivationFailed);
         }
@@ -312,7 +317,8 @@ public:
         }
 
         std::ostringstream cmd;
-        cmd << "\"" << condaPath_.string() << "\" env remove -n " << name << " -y";
+        cmd << "\"" << condaPath_.string() << "\" env remove -n " << name
+            << " -y";
 
         auto result = executeCommand(cmd.str(), operationTimeout_);
         if (result.exitCode != 0) {
@@ -329,8 +335,9 @@ public:
             return std::unexpected(VenvError::CondaNotFound);
         }
 
-        auto result = executeCommand("\"" + condaPath_.string() + "\" info --envs",
-                                     std::chrono::seconds{30});
+        auto result =
+            executeCommand("\"" + condaPath_.string() + "\" info --envs",
+                           std::chrono::seconds{30});
         if (result.exitCode != 0) {
             return std::unexpected(VenvError::UnknownError);
         }
@@ -341,7 +348,8 @@ public:
 
         // Skip header lines
         while (std::getline(iss, line)) {
-            if (line.empty() || line[0] == '#') continue;
+            if (line.empty() || line[0] == '#')
+                continue;
 
             // Parse environment line: name  path or *name  path (active)
             std::regex envRegex(R"((\*?)(\S+)\s+(.+))");
@@ -411,9 +419,7 @@ bool CondaAdapter::isCondaAvailable() const {
     return pImpl_->isCondaAvailable();
 }
 
-void CondaAdapter::detectConda() {
-    pImpl_->detectConda();
-}
+void CondaAdapter::detectConda() { pImpl_->detectConda(); }
 
 void CondaAdapter::setCondaPath(const std::filesystem::path& condaPath) {
     pImpl_->setCondaPath(condaPath);
@@ -424,8 +430,8 @@ VenvResult<VenvInfo> CondaAdapter::createCondaEnv(const CondaEnvConfig& config,
     return pImpl_->createCondaEnv(config, std::move(callback));
 }
 
-VenvResult<VenvInfo> CondaAdapter::createCondaEnv(std::string_view name,
-                                                  std::string_view pythonVersion) {
+VenvResult<VenvInfo> CondaAdapter::createCondaEnv(
+    std::string_view name, std::string_view pythonVersion) {
     CondaEnvConfig config;
     config.name = std::string(name);
     if (!pythonVersion.empty()) {
@@ -450,7 +456,8 @@ VenvResult<std::vector<VenvInfo>> CondaAdapter::listCondaEnvs() const {
     return pImpl_->listCondaEnvs();
 }
 
-VenvResult<VenvInfo> CondaAdapter::getCondaEnvInfo(std::string_view name) const {
+VenvResult<VenvInfo> CondaAdapter::getCondaEnvInfo(
+    std::string_view name) const {
     return pImpl_->getCondaEnvInfo(name);
 }
 

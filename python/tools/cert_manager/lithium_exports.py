@@ -15,7 +15,7 @@ from .cert_api import CertificateAPI
     method="POST",
     description="Create a self-signed certificate",
     tags=["certificate", "security"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def create_certificate(
     hostname: str,
@@ -69,7 +69,7 @@ def create_certificate(
     method="POST",
     description="Export certificate to PKCS#12 format",
     tags=["certificate", "security"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def export_to_pkcs12(
     cert_path: str,
@@ -102,7 +102,7 @@ def export_to_pkcs12(
     description="Create a self-signed certificate (command)",
     priority=5,
     timeout_ms=30000,
-    tags=["certificate"]
+    tags=["certificate"],
 )
 def cmd_create_certificate(
     hostname: str,

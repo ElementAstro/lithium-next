@@ -63,9 +63,8 @@ void AsyncSystemCommand::run() {
     }
 
     auto [pid, output] = atom::system::startProcess(
-        !envVars_.empty()
-            ? atom::system::executeCommandWithEnv(cmd_, envVars_)
-            : cmd_);
+        !envVars_.empty() ? atom::system::executeCommandWithEnv(cmd_, envVars_)
+                          : cmd_);
 
     if (pid > 0) {
         pid_ = pid;

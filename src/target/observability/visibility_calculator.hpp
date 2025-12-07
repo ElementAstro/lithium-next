@@ -34,7 +34,8 @@ using Coordinates = lithium::tools::astronomy::Coordinates;
 
 /**
  * @class VisibilityCalculator
- * @brief Calculates astronomical visibility and rise/set times for celestial objects.
+ * @brief Calculates astronomical visibility and rise/set times for celestial
+ * objects.
  *
  * This class provides high-precision astronomical calculations for determining
  * when celestial objects are visible from a specific observer location.
@@ -124,9 +125,8 @@ public:
      * @return Hour angle in hours
      */
     [[nodiscard]] double calculateHourAngle(
-        double ra,
-        std::chrono::system_clock::time_point time =
-            std::chrono::system_clock::now()) const;
+        double ra, std::chrono::system_clock::time_point time =
+                       std::chrono::system_clock::now()) const;
 
     /**
      * @brief Calculate apparent sidereal time for observer location.
@@ -156,8 +156,7 @@ public:
      * @return ObservabilityWindow with rise/transit/set times
      */
     [[nodiscard]] ObservabilityWindow calculateWindow(
-        double ra, double dec,
-        std::chrono::system_clock::time_point date,
+        double ra, double dec, std::chrono::system_clock::time_point date,
         const AltitudeConstraints& constraints = {});
 
     /**
@@ -185,8 +184,7 @@ public:
      * @return true if observable at the specified time
      */
     [[nodiscard]] bool isObservableAt(
-        double ra, double dec,
-        std::chrono::system_clock::time_point time,
+        double ra, double dec, std::chrono::system_clock::time_point time,
         const AltitudeConstraints& constraints = {}) const;
 
     // ========================================================================
@@ -207,11 +205,10 @@ public:
      */
     [[nodiscard]] std::vector<
         std::pair<CelestialObjectModel, ObservabilityWindow>>
-    filterObservable(
-        std::span<const CelestialObjectModel> objects,
-        std::chrono::system_clock::time_point startTime,
-        std::chrono::system_clock::time_point endTime,
-        const AltitudeConstraints& constraints = {});
+    filterObservable(std::span<const CelestialObjectModel> objects,
+                     std::chrono::system_clock::time_point startTime,
+                     std::chrono::system_clock::time_point endTime,
+                     const AltitudeConstraints& constraints = {});
 
     /**
      * @brief Optimize observation sequence to minimize telescope movement.
@@ -224,7 +221,8 @@ public:
      * @param startTime Start of observation
      * @return Optimized sequence with optimal observation times
      */
-    [[nodiscard]] std::vector<std::pair<CelestialObjectModel, std::chrono::system_clock::time_point>>
+    [[nodiscard]] std::vector<
+        std::pair<CelestialObjectModel, std::chrono::system_clock::time_point>>
     optimizeSequence(std::span<const CelestialObjectModel> objects,
                      std::chrono::system_clock::time_point startTime);
 
@@ -236,7 +234,8 @@ public:
      * @brief Get sunrise and sunset times with twilight information.
      *
      * @param date Date for calculation
-     * @return Tuple of (sunset, end_of_twilight_astronomical, start_of_twilight_astronomical, sunrise)
+     * @return Tuple of (sunset, end_of_twilight_astronomical,
+     * start_of_twilight_astronomical, sunrise)
      */
     [[nodiscard]] std::tuple<std::chrono::system_clock::time_point,
                              std::chrono::system_clock::time_point,
@@ -271,7 +270,8 @@ public:
     getNauticalTwilightTimes(std::chrono::system_clock::time_point date) const;
 
     /**
-     * @brief Get astronomical twilight times (sun at -18 degrees below horizon).
+     * @brief Get astronomical twilight times (sun at -18 degrees below
+     * horizon).
      *
      * Astronomical twilight is when the sky is completely dark for
      * astronomical observations.

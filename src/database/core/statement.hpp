@@ -86,13 +86,34 @@ public:
     /**
      * @brief Binds a named parameter.
      *
-     * @param name Parameter name (without the : prefix).
+     * @param name Parameter name (with or without the : prefix).
      * @param value Value to bind.
      * @return Reference to this Statement for chaining.
      * @throws PrepareStatementError if binding fails
      */
     template <typename T>
-    Statement& bindNamed(const std::string& name, const T& value);
+    Statement& bindNamed(const std::string& name, const T& value) {
+        std::string paramName = name;
+        if (!paramName.empty() && paramName[0] != ':') {
+            paramName = ":" + paramName;
+        }
+        int index = sqlite3_bind_parameter_index(stmt.get(), paramName.c_str());
+        if (index == 0) {
+            THROW_PREPARE_STATEMENT_ERROR("Named parameter not found: " + name);
+        }
+        return bind(index, value);
+    }
+
+    /**
+     * @brief Binds a blob value to a parameter.
+     *
+     * @param index Parameter index (1-based).
+     * @param data Pointer to blob data.
+     * @param size Size of blob data in bytes.
+     * @return Reference to this Statement for chaining.
+     * @throws PrepareStatementError if binding fails
+     */
+    Statement& bindBlob(int index, const void* data, size_t size);
 
     /**
      * @brief Executes the statement without returning results.

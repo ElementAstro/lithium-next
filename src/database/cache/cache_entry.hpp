@@ -29,9 +29,8 @@ namespace lithium::database::cache {
  * @brief Represents a single cache entry with a value and expiration time.
  */
 struct CacheEntry {
-    std::string value;  ///< The cached value.
-    std::chrono::steady_clock::time_point
-        expiry;  ///< The expiration time.
+    std::string value;                             ///< The cached value.
+    std::chrono::steady_clock::time_point expiry;  ///< The expiration time.
 };
 
 }  // namespace lithium::database::cache

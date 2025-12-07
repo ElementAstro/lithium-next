@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../celestial_model.hpp"
+#include "../model/celestial_model.hpp"
 
 namespace lithium::target::io {
 
@@ -26,13 +26,13 @@ namespace lithium::target::io {
  * @brief CSV dialect configuration for handling different CSV formats
  */
 struct CsvDialect {
-    char delimiter = ',';                ///< Field separator character
-    char quotechar = '"';                ///< Quote character
-    char escapechar = '\\';              ///< Escape character
-    bool doublequote = true;             ///< Whether to double quote characters
-    bool skipinitialspace = false;       ///< Skip spaces after delimiter
-    std::string lineterminator = "\n";   ///< Line ending string
-    bool strict = false;                 ///< Strict mode validation
+    char delimiter = ',';               ///< Field separator character
+    char quotechar = '"';               ///< Quote character
+    char escapechar = '\\';             ///< Escape character
+    bool doublequote = true;            ///< Whether to double quote characters
+    bool skipinitialspace = false;      ///< Skip spaces after delimiter
+    std::string lineterminator = "\n";  ///< Line ending string
+    bool strict = false;                ///< Strict mode validation
 
     /**
      * @brief Parameterized constructor
@@ -62,11 +62,11 @@ struct CsvDialect {
  * @brief Result statistics for import operations
  */
 struct ImportResult {
-    int totalRecords = 0;                      ///< Total records encountered
-    int successCount = 0;                      ///< Successfully imported
-    int errorCount = 0;                        ///< Records with errors
-    int duplicateCount = 0;                    ///< Duplicate records skipped
-    std::vector<std::string> errors;           ///< Detailed error messages
+    int totalRecords = 0;             ///< Total records encountered
+    int successCount = 0;             ///< Successfully imported
+    int errorCount = 0;               ///< Records with errors
+    int duplicateCount = 0;           ///< Duplicate records skipped
+    std::vector<std::string> errors;  ///< Detailed error messages
 };
 
 /**
@@ -96,9 +96,10 @@ public:
      * @return Expected vector of field dictionaries, or error string
      */
     [[nodiscard]] auto read(const std::string& filename,
-                           const CsvDialect& dialect = {})
-        -> std::expected<std::vector<std::unordered_map<std::string, std::string>>,
-                        std::string>;
+                            const CsvDialect& dialect = {})
+        -> std::expected<
+            std::vector<std::unordered_map<std::string, std::string>>,
+            std::string>;
 
     /**
      * @brief Write raw data to CSV file
@@ -112,8 +113,7 @@ public:
     [[nodiscard]] auto write(
         const std::string& filename,
         const std::vector<std::unordered_map<std::string, std::string>>& data,
-        const std::vector<std::string>& fields,
-        const CsvDialect& dialect = {})
+        const std::vector<std::string>& fields, const CsvDialect& dialect = {})
         -> std::expected<int, std::string>;
 
     /**
@@ -128,7 +128,7 @@ public:
      * string
      */
     [[nodiscard]] auto importCelestialObjects(const std::string& filename,
-                                             const CsvDialect& dialect = {})
+                                              const CsvDialect& dialect = {})
         -> std::expected<
             std::pair<std::vector<CelestialObjectModel>, ImportResult>,
             std::string>;
@@ -161,7 +161,8 @@ private:
      */
     [[nodiscard]] static auto rowToCelestialObject(
         const std::unordered_map<std::string, std::string>& row,
-        ImportResult& result) -> std::expected<CelestialObjectModel, std::string>;
+        ImportResult& result)
+        -> std::expected<CelestialObjectModel, std::string>;
 
     /**
      * @brief Convert CelestialObjectModel to field dictionary

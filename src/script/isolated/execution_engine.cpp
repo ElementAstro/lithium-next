@@ -17,15 +17,14 @@ ExecutionEngine::ExecutionEngine() = default;
 ExecutionEngine::~ExecutionEngine() = default;
 
 ExecutionEngine::ExecutionEngine(ExecutionEngine&&) noexcept = default;
-ExecutionEngine& ExecutionEngine::operator=(ExecutionEngine&&) noexcept = default;
+ExecutionEngine& ExecutionEngine::operator=(ExecutionEngine&&) noexcept =
+    default;
 
 void ExecutionEngine::setConfig(const IsolationConfig& config) {
     config_ = config;
 }
 
-const IsolationConfig& ExecutionEngine::getConfig() const {
-    return config_;
-}
+const IsolationConfig& ExecutionEngine::getConfig() const { return config_; }
 
 void ExecutionEngine::setProgressCallback(ProgressCallback callback) {
     messageHandler_.setProgressCallback(std::move(callback));
@@ -35,16 +34,13 @@ void ExecutionEngine::setLogCallback(LogCallback callback) {
     messageHandler_.setLogCallback(std::move(callback));
 }
 
-ExecutionResult ExecutionEngine::execute(
-    std::string_view scriptContent,
-    const nlohmann::json& args) {
+ExecutionResult ExecutionEngine::execute(std::string_view scriptContent,
+                                         const nlohmann::json& args) {
     return executeInternal(scriptContent, "", "", "", args);
 }
 
 ExecutionResult ExecutionEngine::executeFile(
-    const std::filesystem::path& scriptPath,
-    const nlohmann::json& args) {
-
+    const std::filesystem::path& scriptPath, const nlohmann::json& args) {
     if (!std::filesystem::exists(scriptPath)) {
         ExecutionResult result;
         result.success = false;
@@ -61,43 +57,35 @@ ExecutionResult ExecutionEngine::executeFile(
     return executeInternal(content, scriptPath.string(), "", "", args);
 }
 
-ExecutionResult ExecutionEngine::executeFunction(
-    std::string_view moduleName,
-    std::string_view functionName,
-    const nlohmann::json& args) {
+ExecutionResult ExecutionEngine::executeFunction(std::string_view moduleName,
+                                                 std::string_view functionName,
+                                                 const nlohmann::json& args) {
     return executeInternal("", "", std::string(moduleName),
                            std::string(functionName), args);
 }
 
-bool ExecutionEngine::cancel() {
-    return lifecycle_.cancel();
-}
+bool ExecutionEngine::cancel() { return lifecycle_.cancel(); }
 
-bool ExecutionEngine::isRunning() const {
-    return lifecycle_.isRunning();
-}
+bool ExecutionEngine::isRunning() const { return lifecycle_.isRunning(); }
 
 std::optional<int> ExecutionEngine::getProcessId() const {
-    if (!lifecycle_.isRunning()) return std::nullopt;
+    if (!lifecycle_.isRunning())
+        return std::nullopt;
     return lifecycle_.getProcessId();
 }
 
 std::optional<size_t> ExecutionEngine::getCurrentMemoryUsage() const {
-    if (!lifecycle_.isRunning()) return std::nullopt;
+    if (!lifecycle_.isRunning())
+        return std::nullopt;
     return ResourceMonitor::getMemoryUsage(lifecycle_.getProcessId());
 }
 
-void ExecutionEngine::kill() {
-    lifecycle_.kill();
-}
+void ExecutionEngine::kill() { lifecycle_.kill(); }
 
 ExecutionResult ExecutionEngine::executeInternal(
-    std::string_view scriptContent,
-    const std::string& scriptPath,
-    const std::string& moduleName,
-    const std::string& functionName,
+    std::string_view scriptContent, const std::string& scriptPath,
+    const std::string& moduleName, const std::string& functionName,
     const nlohmann::json& args) {
-
     ExecutionResult result;
     auto startTime = std::chrono::steady_clock::now();
 
@@ -106,15 +94,18 @@ ExecutionResult ExecutionEngine::executeInternal(
     if (!validateResult) {
         result.success = false;
         result.error = validateResult.error();
-        result.exception = std::string(runnerErrorToString(validateResult.error()));
+        result.exception =
+            std::string(runnerErrorToString(validateResult.error()));
         return result;
     }
 
     // Get paths
-    auto pythonPath = config_.pythonExecutable.empty() ?
-        *ConfigDiscovery::findPythonExecutable() : config_.pythonExecutable;
-    auto executorPath = config_.executorScript.empty() ?
-        *ConfigDiscovery::findExecutorScript() : config_.executorScript;
+    auto pythonPath = config_.pythonExecutable.empty()
+                          ? *ConfigDiscovery::findPythonExecutable()
+                          : config_.pythonExecutable;
+    auto executorPath = config_.executorScript.empty()
+                            ? *ConfigDiscovery::findExecutorScript()
+                            : config_.executorScript;
 
     // Create IPC channel
     channel_ = std::make_shared<ipc::BidirectionalChannel>();
@@ -128,7 +119,8 @@ ExecutionResult ExecutionEngine::executeInternal(
 
     // Spawn subprocess
     auto subprocessFds = channel_->getSubprocessFds();
-    auto spawnResult = ProcessSpawner::spawn(pythonPath, executorPath, config_, subprocessFds);
+    auto spawnResult =
+        ProcessSpawner::spawn(pythonPath, executorPath, config_, subprocessFds);
     if (!spawnResult) {
         result.success = false;
         result.error = RunnerError::ProcessSpawnFailed;
@@ -172,7 +164,8 @@ ExecutionResult ExecutionEngine::executeInternal(
         request.workingDirectory = config_.workingDirectory.string();
     }
 
-    auto msg = ipc::Message::create(ipc::MessageType::Execute, request.toJson());
+    auto msg =
+        ipc::Message::create(ipc::MessageType::Execute, request.toJson());
     auto sendResult = channel_->send(msg);
     if (!sendResult) {
         result.success = false;
@@ -201,8 +194,9 @@ ExecutionResult ExecutionEngine::executeInternal(
                 result.success = false;
                 result.error = RunnerError::MemoryLimitExceeded;
                 result.exception = "Memory limit exceeded";
-                result.peakMemoryUsage = ResourceMonitor::getMemoryUsage(
-                    lifecycle_.getProcessId()).value_or(0);
+                result.peakMemoryUsage =
+                    ResourceMonitor::getMemoryUsage(lifecycle_.getProcessId())
+                        .value_or(0);
                 lifecycle_.kill();
                 return result;
             }
@@ -216,7 +210,8 @@ ExecutionResult ExecutionEngine::executeInternal(
             }
             result.success = false;
             result.error = RunnerError::CommunicationError;
-            result.exception = std::string(ipc::ipcErrorToString(msgResult.error()));
+            result.exception =
+                std::string(ipc::ipcErrorToString(msgResult.error()));
             lifecycle_.kill();
             return result;
         }
@@ -231,8 +226,9 @@ ExecutionResult ExecutionEngine::executeInternal(
     }
 
     // Calculate execution time
-    result.executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - startTime);
+    result.executionTime =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime);
 
     // Wait for process to exit
     lifecycle_.waitForExit();

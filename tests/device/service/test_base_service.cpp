@@ -156,6 +156,85 @@ TEST(ErrorCodeTest, ConstantsAreDefined) {
     EXPECT_STREQ(ErrorCode::TIMEOUT, "timeout");
 }
 
+// ========== Device Check Tests ==========
+
+TEST_F(BaseDeviceServiceTest, CheckDeviceConnected_NullDevice) {
+    std::shared_ptr<MockDevice> nullDevice = nullptr;
+    auto error = service_->checkDeviceConnected(nullDevice, "TestDevice");
+
+    ASSERT_TRUE(error.has_value());
+    EXPECT_EQ((*error)["status"], "error");
+    EXPECT_EQ((*error)["error"]["code"], ErrorCode::DEVICE_NOT_FOUND);
+}
+
+TEST_F(BaseDeviceServiceTest, CheckDeviceConnected_Disconnected) {
+    auto device = std::make_shared<MockDevice>("TestDevice");
+    EXPECT_CALL(*device, isConnected()).WillOnce(Return(false));
+
+    auto error = service_->checkDeviceConnected(device, "TestDevice");
+
+    ASSERT_TRUE(error.has_value());
+    EXPECT_EQ((*error)["status"], "error");
+    EXPECT_EQ((*error)["error"]["code"], ErrorCode::DEVICE_NOT_CONNECTED);
+}
+
+TEST_F(BaseDeviceServiceTest, CheckDeviceConnected_Connected) {
+    auto device = std::make_shared<MockDevice>("TestDevice");
+    EXPECT_CALL(*device, isConnected()).WillOnce(Return(true));
+
+    auto error = service_->checkDeviceConnected(device, "TestDevice");
+
+    EXPECT_FALSE(error.has_value());
+}
+
+// ========== Logging Tests ==========
+
+TEST_F(BaseDeviceServiceTest, LogOperationStart_NoThrow) {
+    EXPECT_NO_THROW(service_->logOperationStart("testOperation"));
+}
+
+TEST_F(BaseDeviceServiceTest, LogOperationEnd_NoThrow) {
+    EXPECT_NO_THROW(service_->logOperationEnd("testOperation"));
+}
+
+// ========== State Change Tests ==========
+
+TEST_F(BaseDeviceServiceTest, PublishDeviceStateChange_NoThrow) {
+    // Should not throw even if message bus is not available
+    EXPECT_NO_THROW(service_->publishDeviceStateChange("camera", "cam-001", "connected"));
+}
+
+// ========== Response Format Tests ==========
+
+TEST_F(BaseDeviceServiceTest, SuccessResponse_HasCorrectStructure) {
+    auto response = service_->makeSuccessResponse();
+
+    EXPECT_TRUE(response.is_object());
+    EXPECT_TRUE(response.contains("status"));
+    EXPECT_EQ(response["status"], "success");
+}
+
+TEST_F(BaseDeviceServiceTest, ErrorResponse_HasCorrectStructure) {
+    auto response = service_->makeErrorResponse(
+        ErrorCode::DEVICE_BUSY, "Device is busy");
+
+    EXPECT_TRUE(response.is_object());
+    EXPECT_TRUE(response.contains("status"));
+    EXPECT_TRUE(response.contains("error"));
+    EXPECT_EQ(response["status"], "error");
+    EXPECT_TRUE(response["error"].contains("code"));
+    EXPECT_TRUE(response["error"].contains("message"));
+}
+
+TEST_F(BaseDeviceServiceTest, ExecuteWithErrorHandling_StdException) {
+    auto result = service_->executeWithErrorHandling("testOp", []() -> json {
+        throw std::invalid_argument("Invalid argument");
+    });
+
+    EXPECT_EQ(result["status"], "error");
+    EXPECT_EQ(result["error"]["message"], "Invalid argument");
+}
+
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

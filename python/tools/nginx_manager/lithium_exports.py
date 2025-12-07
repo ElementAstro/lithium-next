@@ -15,7 +15,7 @@ from .manager import NginxManager
     method="GET",
     description="Get Nginx service status",
     tags=["nginx", "service"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_nginx_status() -> dict:
     """
@@ -46,7 +46,7 @@ def get_nginx_status() -> dict:
     method="POST",
     description="Start Nginx service",
     tags=["nginx", "service"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def start_nginx() -> dict:
     """
@@ -75,7 +75,7 @@ def start_nginx() -> dict:
     method="POST",
     description="Stop Nginx service",
     tags=["nginx", "service"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def stop_nginx() -> dict:
     """
@@ -104,7 +104,7 @@ def stop_nginx() -> dict:
     method="POST",
     description="Reload Nginx configuration",
     tags=["nginx", "service"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def reload_nginx() -> dict:
     """
@@ -133,7 +133,7 @@ def reload_nginx() -> dict:
     method="GET",
     description="Check Nginx configuration syntax",
     tags=["nginx", "config"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def check_config() -> dict:
     """
@@ -163,7 +163,7 @@ def check_config() -> dict:
     method="GET",
     description="List virtual hosts",
     tags=["nginx", "vhost"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def list_virtual_hosts() -> dict:
     """
@@ -193,7 +193,7 @@ def list_virtual_hosts() -> dict:
     method="POST",
     description="Create a virtual host",
     tags=["nginx", "vhost"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def create_virtual_host(
     server_name: str,
@@ -238,7 +238,7 @@ def create_virtual_host(
     method="GET",
     description="Perform health check",
     tags=["nginx", "monitoring"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def health_check() -> dict:
     """
@@ -268,7 +268,7 @@ def health_check() -> dict:
     description="Get Nginx status (command)",
     priority=5,
     timeout_ms=10000,
-    tags=["nginx"]
+    tags=["nginx"],
 )
 def cmd_nginx_status() -> dict:
     """Get Nginx status via command dispatcher."""
@@ -280,7 +280,7 @@ def cmd_nginx_status() -> dict:
     description="Reload Nginx (command)",
     priority=5,
     timeout_ms=30000,
-    tags=["nginx"]
+    tags=["nginx"],
 )
 def cmd_nginx_reload() -> dict:
     """Reload Nginx via command dispatcher."""
@@ -292,7 +292,7 @@ def cmd_nginx_reload() -> dict:
     description="Nginx health check (command)",
     priority=5,
     timeout_ms=15000,
-    tags=["nginx"]
+    tags=["nginx"],
 )
 def cmd_nginx_health() -> dict:
     """Nginx health check via command dispatcher."""

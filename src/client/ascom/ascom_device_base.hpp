@@ -43,7 +43,8 @@ enum class DeviceState : uint8_t {
 /**
  * @brief Convert device state to string
  */
-[[nodiscard]] inline auto deviceStateToString(DeviceState state) -> std::string {
+[[nodiscard]] inline auto deviceStateToString(DeviceState state)
+    -> std::string {
     switch (state) {
         case DeviceState::Disconnected:
             return "Disconnected";
@@ -185,9 +186,7 @@ public:
     /**
      * @brief Get device connection state
      */
-    [[nodiscard]] auto getState() const -> DeviceState {
-        return state_.load();
-    }
+    [[nodiscard]] auto getState() const -> DeviceState { return state_.load(); }
 
     // ==================== Device Info ====================
 
@@ -229,8 +228,9 @@ public:
      * @param params Optional query parameters
      * @return Alpaca response
      */
-    auto getProperty(const std::string& property,
-                     const std::unordered_map<std::string, std::string>& params = {})
+    auto getProperty(
+        const std::string& property,
+        const std::unordered_map<std::string, std::string>& params = {})
         -> AlpacaResponse;
 
     /**

@@ -5,10 +5,10 @@
 #include <chrono>
 #include <thread>
 
-#include "task/custom/factory.hpp"
-#include "task/registration.hpp"
-#include "task/sequencer.hpp"
-#include "task/target.hpp"
+#include "task/core/factory.hpp"
+#include "task/core/registration.hpp"
+#include "task/core/sequencer.hpp"
+#include "task/core/target.hpp"
 
 using namespace lithium::task;
 using namespace std::chrono_literals;

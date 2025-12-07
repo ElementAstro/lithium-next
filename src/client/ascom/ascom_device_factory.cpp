@@ -25,9 +25,7 @@ ASCOMDeviceFactory& ASCOMDeviceFactory::getInstance() {
     return instance;
 }
 
-ASCOMDeviceFactory::ASCOMDeviceFactory() {
-    registerDefaultCreators();
-}
+ASCOMDeviceFactory::ASCOMDeviceFactory() { registerDefaultCreators(); }
 
 void ASCOMDeviceFactory::registerDefaultCreators() {
     creators_[ASCOMDeviceType::Camera] = [](const std::string& name, int num) {
@@ -38,11 +36,13 @@ void ASCOMDeviceFactory::registerDefaultCreators() {
         return std::make_shared<ASCOMFocuser>(name, num);
     };
 
-    creators_[ASCOMDeviceType::FilterWheel] = [](const std::string& name, int num) {
+    creators_[ASCOMDeviceType::FilterWheel] = [](const std::string& name,
+                                                 int num) {
         return std::make_shared<ASCOMFilterWheel>(name, num);
     };
 
-    creators_[ASCOMDeviceType::Telescope] = [](const std::string& name, int num) {
+    creators_[ASCOMDeviceType::Telescope] = [](const std::string& name,
+                                               int num) {
         return std::make_shared<ASCOMTelescope>(name, num);
     };
 
@@ -54,13 +54,15 @@ void ASCOMDeviceFactory::registerDefaultCreators() {
         return std::make_shared<ASCOMDome>(name, num);
     };
 
-    creators_[ASCOMDeviceType::ObservingConditions] = [](const std::string& name, int num) {
-        return std::make_shared<ASCOMObservingConditions>(name, num);
-    };
+    creators_[ASCOMDeviceType::ObservingConditions] =
+        [](const std::string& name, int num) {
+            return std::make_shared<ASCOMObservingConditions>(name, num);
+        };
 }
 
-auto ASCOMDeviceFactory::createDevice(ASCOMDeviceType type, const std::string& name,
-                                      int deviceNumber) -> std::shared_ptr<ASCOMDeviceBase> {
+auto ASCOMDeviceFactory::createDevice(ASCOMDeviceType type,
+                                      const std::string& name, int deviceNumber)
+    -> std::shared_ptr<ASCOMDeviceBase> {
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto it = creators_.find(type);
@@ -74,8 +76,9 @@ auto ASCOMDeviceFactory::createDevice(ASCOMDeviceType type, const std::string& n
     return nullptr;
 }
 
-auto ASCOMDeviceFactory::createDevice(const std::string& typeStr, const std::string& name,
-                                      int deviceNumber) -> std::shared_ptr<ASCOMDeviceBase> {
+auto ASCOMDeviceFactory::createDevice(const std::string& typeStr,
+                                      const std::string& name, int deviceNumber)
+    -> std::shared_ptr<ASCOMDeviceBase> {
     return createDevice(stringToDeviceType(typeStr), name, deviceNumber);
 }
 
@@ -84,22 +87,26 @@ auto ASCOMDeviceFactory::createCamera(const std::string& name, int deviceNumber)
     return std::make_shared<ASCOMCamera>(name, deviceNumber);
 }
 
-auto ASCOMDeviceFactory::createFocuser(const std::string& name, int deviceNumber)
+auto ASCOMDeviceFactory::createFocuser(const std::string& name,
+                                       int deviceNumber)
     -> std::shared_ptr<ASCOMFocuser> {
     return std::make_shared<ASCOMFocuser>(name, deviceNumber);
 }
 
-auto ASCOMDeviceFactory::createFilterWheel(const std::string& name, int deviceNumber)
+auto ASCOMDeviceFactory::createFilterWheel(const std::string& name,
+                                           int deviceNumber)
     -> std::shared_ptr<ASCOMFilterWheel> {
     return std::make_shared<ASCOMFilterWheel>(name, deviceNumber);
 }
 
-auto ASCOMDeviceFactory::createTelescope(const std::string& name, int deviceNumber)
+auto ASCOMDeviceFactory::createTelescope(const std::string& name,
+                                         int deviceNumber)
     -> std::shared_ptr<ASCOMTelescope> {
     return std::make_shared<ASCOMTelescope>(name, deviceNumber);
 }
 
-auto ASCOMDeviceFactory::createRotator(const std::string& name, int deviceNumber)
+auto ASCOMDeviceFactory::createRotator(const std::string& name,
+                                       int deviceNumber)
     -> std::shared_ptr<ASCOMRotator> {
     return std::make_shared<ASCOMRotator>(name, deviceNumber);
 }
@@ -109,12 +116,14 @@ auto ASCOMDeviceFactory::createDome(const std::string& name, int deviceNumber)
     return std::make_shared<ASCOMDome>(name, deviceNumber);
 }
 
-auto ASCOMDeviceFactory::createObservingConditions(const std::string& name, int deviceNumber)
+auto ASCOMDeviceFactory::createObservingConditions(const std::string& name,
+                                                   int deviceNumber)
     -> std::shared_ptr<ASCOMObservingConditions> {
     return std::make_shared<ASCOMObservingConditions>(name, deviceNumber);
 }
 
-void ASCOMDeviceFactory::registerCreator(ASCOMDeviceType type, DeviceCreator creator) {
+void ASCOMDeviceFactory::registerCreator(ASCOMDeviceType type,
+                                         DeviceCreator creator) {
     std::lock_guard<std::mutex> lock(mutex_);
     creators_[type] = std::move(creator);
     spdlog::debug("Registered custom creator for ASCOM type: {}",
@@ -126,7 +135,8 @@ auto ASCOMDeviceFactory::isSupported(ASCOMDeviceType type) const -> bool {
     return creators_.find(type) != creators_.end();
 }
 
-auto ASCOMDeviceFactory::getSupportedTypes() const -> std::vector<ASCOMDeviceType> {
+auto ASCOMDeviceFactory::getSupportedTypes() const
+    -> std::vector<ASCOMDeviceType> {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<ASCOMDeviceType> types;
     types.reserve(creators_.size());
@@ -143,8 +153,10 @@ ASCOMDeviceManager::~ASCOMDeviceManager() {
     clear();
 }
 
-auto ASCOMDeviceManager::addDevice(std::shared_ptr<ASCOMDeviceBase> device) -> bool {
-    if (!device) return false;
+auto ASCOMDeviceManager::addDevice(std::shared_ptr<ASCOMDeviceBase> device)
+    -> bool {
+    if (!device)
+        return false;
 
     std::lock_guard<std::mutex> lock(mutex_);
     const auto& name = device->getName();
@@ -212,7 +224,8 @@ auto ASCOMDeviceManager::getDevicesByType(ASCOMDeviceType type) const
     return result;
 }
 
-auto ASCOMDeviceManager::getCameras() const -> std::vector<std::shared_ptr<ASCOMCamera>> {
+auto ASCOMDeviceManager::getCameras() const
+    -> std::vector<std::shared_ptr<ASCOMCamera>> {
     std::lock_guard<std::mutex> lock(mutex_);
 
     std::vector<std::shared_ptr<ASCOMCamera>> result;
@@ -224,7 +237,8 @@ auto ASCOMDeviceManager::getCameras() const -> std::vector<std::shared_ptr<ASCOM
     return result;
 }
 
-auto ASCOMDeviceManager::getFocusers() const -> std::vector<std::shared_ptr<ASCOMFocuser>> {
+auto ASCOMDeviceManager::getFocusers() const
+    -> std::vector<std::shared_ptr<ASCOMFocuser>> {
     std::lock_guard<std::mutex> lock(mutex_);
 
     std::vector<std::shared_ptr<ASCOMFocuser>> result;
@@ -255,14 +269,16 @@ auto ASCOMDeviceManager::getTelescopes() const
 
     std::vector<std::shared_ptr<ASCOMTelescope>> result;
     for (const auto& [_, device] : devices_) {
-        if (auto telescope = std::dynamic_pointer_cast<ASCOMTelescope>(device)) {
+        if (auto telescope =
+                std::dynamic_pointer_cast<ASCOMTelescope>(device)) {
             result.push_back(telescope);
         }
     }
     return result;
 }
 
-auto ASCOMDeviceManager::getRotators() const -> std::vector<std::shared_ptr<ASCOMRotator>> {
+auto ASCOMDeviceManager::getRotators() const
+    -> std::vector<std::shared_ptr<ASCOMRotator>> {
     std::lock_guard<std::mutex> lock(mutex_);
 
     std::vector<std::shared_ptr<ASCOMRotator>> result;
@@ -274,7 +290,8 @@ auto ASCOMDeviceManager::getRotators() const -> std::vector<std::shared_ptr<ASCO
     return result;
 }
 
-auto ASCOMDeviceManager::getDomes() const -> std::vector<std::shared_ptr<ASCOMDome>> {
+auto ASCOMDeviceManager::getDomes() const
+    -> std::vector<std::shared_ptr<ASCOMDome>> {
     std::lock_guard<std::mutex> lock(mutex_);
 
     std::vector<std::shared_ptr<ASCOMDome>> result;
@@ -292,14 +309,16 @@ auto ASCOMDeviceManager::getObservingConditions() const
 
     std::vector<std::shared_ptr<ASCOMObservingConditions>> result;
     for (const auto& [_, device] : devices_) {
-        if (auto oc = std::dynamic_pointer_cast<ASCOMObservingConditions>(device)) {
+        if (auto oc =
+                std::dynamic_pointer_cast<ASCOMObservingConditions>(device)) {
             result.push_back(oc);
         }
     }
     return result;
 }
 
-auto ASCOMDeviceManager::connectAll(std::shared_ptr<AlpacaClient> client) -> int {
+auto ASCOMDeviceManager::connectAll(std::shared_ptr<AlpacaClient> client)
+    -> int {
     std::lock_guard<std::mutex> lock(mutex_);
 
     int connected = 0;
@@ -310,7 +329,8 @@ auto ASCOMDeviceManager::connectAll(std::shared_ptr<AlpacaClient> client) -> int
         }
     }
 
-    spdlog::info("Connected {} of {} ASCOM devices", connected, devices_.size());
+    spdlog::info("Connected {} of {} ASCOM devices", connected,
+                 devices_.size());
     return connected;
 }
 

@@ -207,8 +207,7 @@ TEST_F(JsonResponseParserTest, NedParserFunction) {
 
 TEST_F(JsonResponseParserTest, JplHorizonsParserFunction) {
     JsonResponseParser customParser;
-    customParser.setEphemerisParser(
-        JsonResponseParser::jplHorizonsParser());
+    customParser.setEphemerisParser(JsonResponseParser::jplHorizonsParser());
     auto result = customParser.parseEphemeris(SAMPLE_JPL_JSON);
     ASSERT_TRUE(result.has_value());
     EXPECT_DOUBLE_EQ(result->at(0).ra, 123.45);

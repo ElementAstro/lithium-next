@@ -14,8 +14,8 @@
 #include <memory>
 #include <string>
 #include "atom/log/spdlog_logger.hpp"
-#include "task/sequencer.hpp"
-#include "task/target.hpp"
+#include "task/core/sequencer.hpp"
+#include "task/core/target.hpp"
 
 namespace lithium::server::controller {
 

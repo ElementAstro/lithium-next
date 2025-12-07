@@ -32,6 +32,9 @@ using core::Statement;
 
 namespace lithium::database::orm {
 
+// Bring Statement into orm namespace for use in ORM classes
+using lithium::database::Statement;
+
 class ColumnBase {
 public:
     /**
@@ -83,7 +86,7 @@ public:
      * @param index The parameter index to bind at.
      * @param model A pointer to the model containing the column value.
      */
-    virtual void bindToStatement(lithium::database::Statement& stmt, int index,
+    virtual void bindToStatement(Statement& stmt, int index,
                                  const void* model) const = 0;
 
     /**
@@ -93,8 +96,8 @@ public:
      * @param index The column index to read from.
      * @param model A pointer to the model to set the column value in.
      */
-    virtual void readFromStatement(const lithium::database::Statement& stmt,
-                                   int index, void* model) const = 0;
+    virtual void readFromStatement(const Statement& stmt, int index,
+                                   void* model) const = 0;
 };
 
 }  // namespace lithium::database::orm

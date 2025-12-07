@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: GPL-3.0-or-later
 /*
- * Comprehensive test suite for SearchEngine (main engine with enhanced features)
+ * Comprehensive test suite for SearchEngine (main engine with enhanced
+ * features)
  */
 
 #include <gtest/gtest.h>
@@ -14,12 +15,12 @@ class SearchEngineTest : public ::testing::Test {
 protected:
     void SetUp() override {
         engine_ = std::make_unique<SearchEngine>();
-        
+
         // Add test star objects
         StarObject star1("M31", {"NGC224", "Andromeda Galaxy"}, 100);
         StarObject star2("M42", {"Orion Nebula"}, 50);
         StarObject star3("M45", {"Pleiades", "Seven Sisters"}, 75);
-        
+
         engine_->addStarObject(star1);
         engine_->addStarObject(star2);
         engine_->addStarObject(star3);
@@ -30,14 +31,12 @@ protected:
 
 // ==================== Basic Search Tests ====================
 
-TEST_F(SearchEngineTest, Construction) {
-    EXPECT_NE(engine_, nullptr);
-}
+TEST_F(SearchEngineTest, Construction) { EXPECT_NE(engine_, nullptr); }
 
 TEST_F(SearchEngineTest, AddStarObject) {
     StarObject star("M33", {"Triangulum Galaxy"}, 30);
     engine_->addStarObject(star);
-    
+
     auto results = engine_->searchStarObject("M33");
     EXPECT_EQ(results.size(), 1);
 }
@@ -76,11 +75,11 @@ TEST_F(SearchEngineTest, FilterByType) {
     CelestialObject celestial;
     celestial.Identifier = "M31";
     celestial.Type = "Galaxy";
-    
+
     StarObject star("M31", {}, 0);
     star.setCelestialObject(celestial);
     engine_->addStarObject(star);
-    
+
     auto results = engine_->filterSearch("Galaxy");
     EXPECT_GE(results.size(), 1);
 }
@@ -89,11 +88,11 @@ TEST_F(SearchEngineTest, FilterByMagnitude) {
     CelestialObject celestial;
     celestial.Identifier = "M31";
     celestial.VisualMagnitudeV = 3.44;
-    
+
     StarObject star("M31", {}, 0);
     star.setCelestialObject(celestial);
     engine_->addStarObject(star);
-    
+
     auto results = engine_->filterSearch("", "", 0.0, 5.0);
     EXPECT_GE(results.size(), 1);
 }
@@ -108,14 +107,14 @@ TEST_F(SearchEngineTest, AddUserRating) {
 TEST_F(SearchEngineTest, RecommendItems) {
     engine_->addUserRating("user1", "M31", 5.0);
     engine_->addUserRating("user1", "M42", 4.0);
-    
+
     auto recs = engine_->recommendItems("user1", 5);
     // May or may not have recommendations
 }
 
 TEST_F(SearchEngineTest, HybridRecommendations) {
     engine_->addUserRating("user1", "M31", 5.0);
-    
+
     auto recs = engine_->getHybridRecommendations("user1", 5, 0.5, 0.5);
     // May or may not have recommendations
 }
@@ -123,7 +122,7 @@ TEST_F(SearchEngineTest, HybridRecommendations) {
 // ==================== Cache Tests ====================
 
 TEST_F(SearchEngineTest, ClearCache) {
-    engine_->searchStarObject("M31"); // Populate cache
+    engine_->searchStarObject("M31");  // Populate cache
     engine_->clearCache();
     // Should not throw
 }
@@ -147,15 +146,15 @@ protected:
         if (fs::exists(testDbPath_)) {
             fs::remove(testDbPath_);
         }
-        
+
         EngineConfig config;
         config.databasePath = testDbPath_;
         config.useDatabase = true;
         config.syncOnStartup = false;
-        
+
         engine_ = std::make_unique<SearchEngine>();
         engine_->initializeWithConfig(config);
-        
+
         // Add test data to database
         CelestialObjectModel obj;
         obj.identifier = "M31";
@@ -201,7 +200,7 @@ TEST_F(SearchEngineEnhancedTest, AdvancedSearch) {
     CelestialSearchFilter filter;
     filter.type = "Galaxy";
     filter.limit = 10;
-    
+
     auto results = engine_->advancedSearch(filter);
     EXPECT_GE(results.size(), 1);
 }
@@ -226,7 +225,7 @@ TEST_F(SearchEngineEnhancedTest, UpsertObject) {
     CelestialObjectModel obj;
     obj.identifier = "M42";
     obj.type = "Nebula";
-    
+
     auto id = engine_->upsertObject(obj);
     EXPECT_GT(id, 0);
 }
@@ -239,7 +238,7 @@ TEST_F(SearchEngineEnhancedTest, BatchUpsert) {
         obj.type = "Star";
         objects.push_back(obj);
     }
-    
+
     int count = engine_->batchUpsert(objects);
     EXPECT_EQ(count, 5);
 }
@@ -264,7 +263,7 @@ TEST_F(SearchEngineEnhancedTest, RecordSearch) {
 TEST_F(SearchEngineEnhancedTest, GetPopularSearches) {
     engine_->recordSearch("user1", "M31", "exact", 1);
     engine_->recordSearch("user2", "M31", "exact", 1);
-    
+
     auto popular = engine_->getPopularSearches(10);
     EXPECT_GE(popular.size(), 1);
 }
@@ -272,7 +271,7 @@ TEST_F(SearchEngineEnhancedTest, GetPopularSearches) {
 TEST_F(SearchEngineEnhancedTest, GetMostPopular) {
     engine_->recordClick("M31");
     engine_->recordClick("M31");
-    
+
     auto popular = engine_->getMostPopular(10);
     EXPECT_GE(popular.size(), 1);
 }
@@ -310,28 +309,28 @@ TEST_F(SearchEngineEnhancedTest, GetModelRecommendations) {
 
 TEST_F(SearchEngineEnhancedTest, ImportExportJson) {
     std::string jsonPath = "test_export.json";
-    
+
     int exported = engine_->exportToJsonFromDb(jsonPath);
     EXPECT_GE(exported, 1);
-    
+
     engine_->clearAllData(false);
-    
+
     auto result = engine_->importFromJsonToDb(jsonPath);
     EXPECT_GE(result.successCount, 1);
-    
+
     fs::remove(jsonPath);
 }
 
 TEST_F(SearchEngineEnhancedTest, ImportExportCsv) {
     std::string csvPath = "test_export.csv";
-    
+
     int exported = engine_->exportToCsvFromDb(csvPath);
     EXPECT_GE(exported, 1);
-    
+
     engine_->clearAllData(false);
-    
+
     auto result = engine_->importFromCsvToDb(csvPath);
     EXPECT_GE(result.successCount, 1);
-    
+
     fs::remove(csvPath);
 }

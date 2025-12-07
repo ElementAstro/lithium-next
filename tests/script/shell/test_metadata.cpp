@@ -45,13 +45,9 @@ TEST_F(ScriptMetadataTest, TouchUpdatesTimestamp) {
 
 class MetadataManagerTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        manager_ = std::make_unique<MetadataManager>();
-    }
+    void SetUp() override { manager_ = std::make_unique<MetadataManager>(); }
 
-    void TearDown() override {
-        manager_.reset();
-    }
+    void TearDown() override { manager_.reset(); }
 
     std::unique_ptr<MetadataManager> manager_;
 };

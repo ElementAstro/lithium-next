@@ -13,7 +13,7 @@ set(RECOMMENDATION_SOURCES
     collaborative_filter.cpp
     content_filter.cpp
     hybrid_recommender.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../preference.cpp
+    preference.cpp
 )
 
 set(RECOMMENDATION_HEADERS
@@ -22,8 +22,8 @@ set(RECOMMENDATION_HEADERS
     collaborative_filter.hpp
     content_filter.hpp
     hybrid_recommender.hpp
+    preference.hpp
     recommendation.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../preference.hpp
 )
 
 # Create object library for recommendation module

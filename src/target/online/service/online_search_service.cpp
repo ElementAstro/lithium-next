@@ -16,15 +16,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
+#include <spdlog/spdlog.h>
 
 #include "../client/http_client.hpp"
+#include "../provider/jpl_horizons_provider.hpp"
+#include "../provider/ned_provider.hpp"
+#include "../provider/open_ngc_provider.hpp"
 #include "../provider/simbad_provider.hpp"
 #include "../provider/vizier_provider.hpp"
-#include "../provider/ned_provider.hpp"
-#include "../provider/jpl_horizons_provider.hpp"
-#include "../provider/open_ngc_provider.hpp"
 
 namespace lithium::target::online {
 
@@ -83,7 +83,7 @@ public:
     void initializeRateLimiter(const std::string& provider) {
         if (config_.rateLimits.find(provider) != config_.rateLimits.end()) {
             rateLimiter_->setProviderLimit(provider,
-                                          config_.rateLimits.at(provider));
+                                           config_.rateLimits.at(provider));
         }
     }
 
@@ -94,10 +94,8 @@ public:
         -> std::optional<std::chrono::milliseconds> {
         auto waitTime = rateLimiter_->tryAcquire(provider);
         if (waitTime) {
-            SPDLOG_DEBUG(
-                "Rate limit applied to {}: wait {}ms",
-                provider,
-                waitTime->count());
+            SPDLOG_DEBUG("Rate limit applied to {}: wait {}ms", provider,
+                         waitTime->count());
             std::this_thread::sleep_for(*waitTime);
         }
         return waitTime;
@@ -107,8 +105,8 @@ public:
      * @brief Record query execution statistics
      */
     void recordQueryExecution(const std::string& provider,
-                              std::chrono::milliseconds duration,
-                              bool success, bool fromCache) {
+                              std::chrono::milliseconds duration, bool success,
+                              bool fromCache) {
         std::unique_lock<std::shared_mutex> lock(state_mutex_);
 
         stats_.totalQueries++;
@@ -188,7 +186,8 @@ auto OnlineSearchService::initialize()
                 pImpl_->initializeRateLimiter("SIMBAD");
                 SPDLOG_INFO("SIMBAD provider initialized");
             } catch (const std::exception& e) {
-                SPDLOG_WARN("Failed to initialize SIMBAD provider: {}", e.what());
+                SPDLOG_WARN("Failed to initialize SIMBAD provider: {}",
+                            e.what());
             }
         }
 
@@ -201,7 +200,8 @@ auto OnlineSearchService::initialize()
                 pImpl_->initializeRateLimiter("VizieR");
                 SPDLOG_INFO("VizieR provider initialized");
             } catch (const std::exception& e) {
-                SPDLOG_WARN("Failed to initialize VizieR provider: {}", e.what());
+                SPDLOG_WARN("Failed to initialize VizieR provider: {}",
+                            e.what());
             }
         }
 
@@ -227,9 +227,8 @@ auto OnlineSearchService::initialize()
                 pImpl_->initializeRateLimiter("JPL_Horizons");
                 SPDLOG_INFO("JPL Horizons provider initialized");
             } catch (const std::exception& e) {
-                SPDLOG_WARN(
-                    "Failed to initialize JPL Horizons provider: {}",
-                    e.what());
+                SPDLOG_WARN("Failed to initialize JPL Horizons provider: {}",
+                            e.what());
             }
         }
 
@@ -242,19 +241,18 @@ auto OnlineSearchService::initialize()
                 pImpl_->initializeRateLimiter("OpenNGC");
                 SPDLOG_INFO("OpenNGC provider initialized");
             } catch (const std::exception& e) {
-                SPDLOG_WARN("Failed to initialize OpenNGC provider: {}", e.what());
+                SPDLOG_WARN("Failed to initialize OpenNGC provider: {}",
+                            e.what());
             }
         }
 
         if (pImpl_->providers_.empty()) {
-            return atom::type::unexpected(
-                "No providers could be initialized");
+            return atom::type::unexpected("No providers could be initialized");
         }
 
         pImpl_->initialized_ = true;
-        SPDLOG_INFO(
-            "OnlineSearchService initialized with {} providers",
-            pImpl_->providers_.size());
+        SPDLOG_INFO("OnlineSearchService initialized with {} providers",
+                    pImpl_->providers_.size());
 
         return {};
 
@@ -270,7 +268,7 @@ bool OnlineSearchService::isInitialized() const {
 }
 
 auto OnlineSearchService::queryProvider(const std::string& providerName,
-                                       const OnlineQueryParams& params)
+                                        const OnlineQueryParams& params)
     -> atom::type::Expected<OnlineQueryResult, OnlineQueryError> {
     std::shared_lock<std::shared_mutex> lock(pImpl_->state_mutex_);
 
@@ -304,11 +302,8 @@ auto OnlineSearchService::queryProvider(const std::string& providerName,
     OnlineQueryError lastError;
     for (int attempt = 0; attempt < pImpl_->config_.maxRetries; ++attempt) {
         if (attempt > 0) {
-            SPDLOG_DEBUG(
-                "Retrying {} query (attempt {}/{})",
-                providerName,
-                attempt + 1,
-                pImpl_->config_.maxRetries);
+            SPDLOG_DEBUG("Retrying {} query (attempt {}/{})", providerName,
+                         attempt + 1, pImpl_->config_.maxRetries);
             std::this_thread::sleep_for(pImpl_->config_.retryDelay);
         }
 
@@ -318,8 +313,9 @@ auto OnlineSearchService::queryProvider(const std::string& providerName,
             pImpl_->cache_->put(cacheKey, *result);
 
             auto endTime = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                endTime - startTime);
+            auto duration =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    endTime - startTime);
             pImpl_->recordQueryExecution(providerName, duration, true, false);
             pImpl_->rateLimiter_->recordRequestComplete(providerName, true);
 
@@ -345,8 +341,8 @@ auto OnlineSearchService::queryProvider(const std::string& providerName,
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        endTime - startTime);
     pImpl_->recordQueryExecution(providerName, duration, false, false);
     pImpl_->rateLimiter_->recordRequestComplete(providerName, false);
 
@@ -358,8 +354,9 @@ auto OnlineSearchService::queryAll(const OnlineQueryParams& params)
     -> std::vector<atom::type::Expected<OnlineQueryResult, OnlineQueryError>> {
     std::shared_lock<std::shared_mutex> lock(pImpl_->state_mutex_);
 
-    std::vector<std::future<atom::type::Expected<OnlineQueryResult,
-                                                   OnlineQueryError>>> futures;
+    std::vector<
+        std::future<atom::type::Expected<OnlineQueryResult, OnlineQueryError>>>
+        futures;
     futures.reserve(pImpl_->providers_.size());
 
     SPDLOG_DEBUG("Executing parallel queries to all {} providers",
@@ -478,10 +475,8 @@ auto OnlineSearchService::queryWithFallback(
         lastError = result.error();
         if (!lastError.isRetryable()) {
             // Don't fallback on permanent errors
-            SPDLOG_WARN(
-                "Non-retryable error from {}: {}",
-                provider,
-                lastError.message);
+            SPDLOG_WARN("Non-retryable error from {}: {}", provider,
+                        lastError.message);
             return result;
         }
 
@@ -526,8 +521,7 @@ auto OnlineSearchService::searchByCoordinates(double ra, double dec,
 }
 
 auto OnlineSearchService::getEphemeris(
-    const std::string& target,
-    std::chrono::system_clock::time_point time)
+    const std::string& target, std::chrono::system_clock::time_point time)
     -> atom::type::Expected<EphemerisPoint, OnlineQueryError> {
     OnlineQueryParams params;
     params.type = QueryType::Ephemeris;

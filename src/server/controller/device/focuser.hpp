@@ -182,4 +182,3 @@ public:
 }  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_FOCUSER_HPP
-

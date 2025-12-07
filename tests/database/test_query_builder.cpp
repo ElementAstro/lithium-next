@@ -34,9 +34,11 @@
 
 #include <gtest/gtest.h>
 
+#include "database/core/types.hpp"
 #include "database/query/query_builder.hpp"
 
 using namespace lithium::database::query;
+using namespace lithium::database::core;
 
 // ==================== QueryBuilder Tests ====================
 
@@ -278,12 +280,12 @@ TEST_F(QueryBuilderTest, LimitAndOffset) {
     EXPECT_NE(sql.find("OFFSET 20"), std::string::npos);
 }
 
-TEST_F(QueryBuilderTest, Offset) {
+TEST_F(QueryBuilderTest, OffsetWithoutLimitThrows) {
     QueryBuilder builder("users");
 
-    std::string sql = builder.select({"*"}).offset(5).build();
-
-    EXPECT_NE(sql.find("OFFSET 5"), std::string::npos);
+    // OFFSET without LIMIT should throw ValidationError
+    builder.select({"*"}).offset(5);
+    EXPECT_THROW(builder.build(), ValidationError);
 }
 
 TEST_F(QueryBuilderTest, ComplexQuery) {
@@ -414,11 +416,11 @@ TEST_F(QueryBuilderTest, LimitZero) {
 TEST_F(QueryBuilderTest, NegativeLimit) {
     QueryBuilder builder("users");
 
-    // Negative limit might be handled differently
+    // Negative limit is ignored (not set)
     std::string sql = builder.select({"*"}).limit(-1).build();
 
-    // -1 typically means no limit in SQL
-    EXPECT_NE(sql.find("LIMIT"), std::string::npos);
+    // -1 means no limit - LIMIT should NOT appear in SQL
+    EXPECT_EQ(sql.find("LIMIT"), std::string::npos);
 }
 
 TEST_F(QueryBuilderTest, ComplexWhereConditions) {
@@ -432,6 +434,291 @@ TEST_F(QueryBuilderTest, ComplexWhereConditions) {
 
     EXPECT_NE(sql.find("WHERE"), std::string::npos);
     EXPECT_NE(sql.find("AND"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, WhereWithIntParameter) {
+    QueryBuilder builder("users");
+
+    builder.select({"*"}).where("id > ?", 10);
+
+    EXPECT_EQ(builder.getParamCount(), 1);
+    auto params = builder.getParamValues();
+    EXPECT_EQ(params.size(), 1);
+    EXPECT_EQ(std::get<int>(params[0]), 10);
+}
+
+TEST_F(QueryBuilderTest, WhereWithDoubleParameter) {
+    QueryBuilder builder("products");
+
+    builder.select({"*"}).where("price > ?", 99.99);
+
+    EXPECT_EQ(builder.getParamCount(), 1);
+    auto params = builder.getParamValues();
+    EXPECT_EQ(params.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(params[0]), 99.99);
+}
+
+TEST_F(QueryBuilderTest, WhereWithStringParameter) {
+    QueryBuilder builder("users");
+
+    builder.select({"*"}).where("name = ?", std::string("Alice"));
+
+    EXPECT_EQ(builder.getParamCount(), 1);
+    auto params = builder.getParamValues();
+    EXPECT_EQ(params.size(), 1);
+    EXPECT_EQ(std::get<std::string>(params[0]), "Alice");
+}
+
+TEST_F(QueryBuilderTest, WhereWithMultipleParameters) {
+    QueryBuilder builder("users");
+
+    builder.select({"*"})
+        .where("age > ?", 18)
+        .where("score > ?", 85.5);
+
+    EXPECT_EQ(builder.getParamCount(), 2);
+    auto params = builder.getParamValues();
+    EXPECT_EQ(params.size(), 2);
+    EXPECT_EQ(std::get<int>(params[0]), 18);
+    EXPECT_DOUBLE_EQ(std::get<double>(params[1]), 85.5);
+}
+
+TEST_F(QueryBuilderTest, GetParamCountEmpty) {
+    QueryBuilder builder("users");
+
+    builder.select({"*"});
+
+    EXPECT_EQ(builder.getParamCount(), 0);
+    EXPECT_TRUE(builder.getParamValues().empty());
+}
+
+TEST_F(QueryBuilderTest, AndWhereFirstCondition) {
+    QueryBuilder builder("users");
+
+    // andWhere as first condition should work like where
+    std::string sql = builder.select({"*"}).andWhere("active = 1").build();
+
+    EXPECT_NE(sql.find("WHERE"), std::string::npos);
+    EXPECT_NE(sql.find("active = 1"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, OrWhereFirstCondition) {
+    QueryBuilder builder("users");
+
+    // orWhere as first condition should work like where
+    std::string sql = builder.select({"*"}).orWhere("active = 1").build();
+
+    EXPECT_NE(sql.find("WHERE"), std::string::npos);
+    EXPECT_NE(sql.find("active = 1"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, EmptyWhereConditionIgnored) {
+    QueryBuilder builder("users");
+
+    // Empty condition should be ignored
+    std::string sql = builder.select({"*"}).where("").build();
+
+    EXPECT_EQ(sql.find("WHERE"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, EmptyAndWhereConditionIgnored) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .where("id = 1")
+                          .andWhere("")
+                          .build();
+
+    // Should have WHERE but no extra AND
+    EXPECT_NE(sql.find("WHERE"), std::string::npos);
+    EXPECT_NE(sql.find("id = 1"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, EmptyOrWhereConditionIgnored) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .where("id = 1")
+                          .orWhere("")
+                          .build();
+
+    // Should have WHERE but no extra OR
+    EXPECT_NE(sql.find("WHERE"), std::string::npos);
+    EXPECT_NE(sql.find("id = 1"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, EmptySelectColumns) {
+    QueryBuilder builder("users");
+
+    // Empty columns vector should be ignored (keep default *)
+    std::string sql = builder.select({}).build();
+
+    EXPECT_NE(sql.find("SELECT *"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, JoinWithDefaultType) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .join("orders", "users.id = orders.user_id")
+                          .build();
+
+    // Default join type is INNER
+    EXPECT_NE(sql.find("INNER JOIN"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, FullOuterJoin) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .join("orders", "users.id = orders.user_id", "FULL OUTER")
+                          .build();
+
+    EXPECT_NE(sql.find("FULL OUTER JOIN"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, CrossJoin) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .join("roles", "1=1", "CROSS")
+                          .build();
+
+    EXPECT_NE(sql.find("CROSS JOIN"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, BuildCountWithJoin) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .join("orders", "users.id = orders.user_id")
+                          .where("orders.status = 'active'")
+                          .buildCount();
+
+    EXPECT_NE(sql.find("COUNT"), std::string::npos);
+    EXPECT_NE(sql.find("JOIN"), std::string::npos);
+    EXPECT_NE(sql.find("WHERE"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, OrderByDefaultAscending) {
+    QueryBuilder builder("users");
+
+    // Default is ascending
+    std::string sql = builder.select({"*"}).orderBy("name").build();
+
+    EXPECT_NE(sql.find("ORDER BY"), std::string::npos);
+    EXPECT_NE(sql.find("name ASC"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, GroupByEmpty) {
+    QueryBuilder builder("users");
+
+    // Empty groupBy should not add GROUP BY clause
+    std::string sql = builder.select({"*"}).groupBy({}).build();
+
+    EXPECT_EQ(sql.find("GROUP BY"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, HavingWithoutGroupBy) {
+    QueryBuilder builder("users");
+
+    // Having without GroupBy (unusual but valid SQL)
+    std::string sql = builder.select({"COUNT(*)"})
+                          .having("COUNT(*) > 5")
+                          .build();
+
+    EXPECT_NE(sql.find("HAVING"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, NegativeOffset) {
+    QueryBuilder builder("users");
+
+    // Negative offset should be ignored
+    std::string sql = builder.select({"*"}).limit(10).offset(-5).build();
+
+    EXPECT_NE(sql.find("LIMIT 10"), std::string::npos);
+    EXPECT_EQ(sql.find("OFFSET"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, ZeroOffset) {
+    QueryBuilder builder("users");
+
+    // Zero offset should not add OFFSET clause
+    std::string sql = builder.select({"*"}).limit(10).offset(0).build();
+
+    EXPECT_NE(sql.find("LIMIT 10"), std::string::npos);
+    EXPECT_EQ(sql.find("OFFSET"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, SelectWithAggregates) {
+    QueryBuilder builder("orders");
+
+    std::string sql = builder.select({"user_id", "COUNT(*)", "SUM(total)", "AVG(total)"})
+                          .groupBy({"user_id"})
+                          .build();
+
+    EXPECT_NE(sql.find("COUNT(*)"), std::string::npos);
+    EXPECT_NE(sql.find("SUM(total)"), std::string::npos);
+    EXPECT_NE(sql.find("AVG(total)"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, SelectDistinct) {
+    QueryBuilder builder("users");
+
+    // DISTINCT can be part of column selection
+    std::string sql = builder.select({"DISTINCT name"}).build();
+
+    EXPECT_NE(sql.find("DISTINCT"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, SubqueryInWhere) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .where("id IN (SELECT user_id FROM orders)")
+                          .build();
+
+    EXPECT_NE(sql.find("IN (SELECT"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, LikeCondition) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .where("name LIKE '%test%'")
+                          .build();
+
+    EXPECT_NE(sql.find("LIKE"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, BetweenCondition) {
+    QueryBuilder builder("products");
+
+    std::string sql = builder.select({"*"})
+                          .where("price BETWEEN 10 AND 100")
+                          .build();
+
+    EXPECT_NE(sql.find("BETWEEN"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, IsNullCondition) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .where("deleted_at IS NULL")
+                          .build();
+
+    EXPECT_NE(sql.find("IS NULL"), std::string::npos);
+}
+
+TEST_F(QueryBuilderTest, IsNotNullCondition) {
+    QueryBuilder builder("users");
+
+    std::string sql = builder.select({"*"})
+                          .where("email IS NOT NULL")
+                          .build();
+
+    EXPECT_NE(sql.find("IS NOT NULL"), std::string::npos);
 }
 
 // ==================== Main ====================

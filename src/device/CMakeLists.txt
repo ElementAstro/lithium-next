@@ -38,17 +38,29 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Note: This includes atom library paths for device implementations
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/atom/atom)
 
+# Add common module (error handling, exceptions, result types)
+add_subdirectory(common)
+
 # Add service layer subdirectory
 add_subdirectory(service)
+
+# Add plugin layer subdirectory (plugin interface and loader)
+add_subdirectory(plugin)
+
+# Add bridge layer subdirectory (device-component integration)
+add_subdirectory(bridge)
+
+# Add events layer subdirectory (event bus)
+add_subdirectory(events)
 
 # Add manager subdirectory (modular device manager)
 add_subdirectory(manager)
 
 # Recursively discover and add device implementation subdirectories
-# Note: service and manager are excluded as they were already added above
+# Note: service, manager, common, plugin, bridge, events are excluded as they were already added above
 lithium_message(INFO "Discovering device implementations...")
 lithium_add_subdirectories_recursive(
     ${CMAKE_CURRENT_SOURCE_DIR}
     MESSAGE_PREFIX "  ├─ Device impl"
-    EXCLUDE_DIRS service manager
+    EXCLUDE_DIRS service manager common plugin bridge events
 )

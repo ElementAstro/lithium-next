@@ -19,7 +19,7 @@
 
 #include "atom/type/json.hpp"
 
-#include "../celestial_model.hpp"
+#include "../model/celestial_model.hpp"
 #include "csv_handler.hpp"
 
 using json = nlohmann::json;
@@ -62,7 +62,8 @@ public:
      * @return Expected void, or error string
      */
     [[nodiscard]] auto write(const std::string& filename, const json& data,
-                            int indent = 2) -> std::expected<void, std::string>;
+                             int indent = 2)
+        -> std::expected<void, std::string>;
 
     /**
      * @brief Import single celestial object from JSON file
@@ -99,9 +100,10 @@ public:
      * @param indent Number of spaces for indentation
      * @return Expected void, or error string
      */
-    [[nodiscard]] auto exportCelestialObject(
-        const std::string& filename, const CelestialObjectModel& object,
-        int indent = 2) -> std::expected<void, std::string>;
+    [[nodiscard]] auto exportCelestialObject(const std::string& filename,
+                                             const CelestialObjectModel& object,
+                                             int indent = 2)
+        -> std::expected<void, std::string>;
 
     /**
      * @brief Export multiple celestial objects to JSON file
@@ -155,8 +157,8 @@ private:
      * @param result Statistics to update
      * @return Expected CelestialObjectModel, or error message
      */
-    [[nodiscard]] static auto jsonToCelestialObject(
-        const json& jsonObj, ImportResult& result)
+    [[nodiscard]] static auto jsonToCelestialObject(const json& jsonObj,
+                                                    ImportResult& result)
         -> std::expected<CelestialObjectModel, std::string>;
 
     /**

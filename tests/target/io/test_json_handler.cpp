@@ -40,10 +40,7 @@ TEST_F(JsonHandlerTest, ReadSimpleJson) {
     lithium::target::io::JsonHandler handler;
 
     // Create a simple JSON file
-    json data = {
-        {"name", "test"},
-        {"value", 42}
-    };
+    json data = {{"name", "test"}, {"value", 42}};
 
     auto json_file = test_dir / "simple.json";
     std::ofstream out(json_file);
@@ -61,10 +58,7 @@ TEST_F(JsonHandlerTest, ReadSimpleJson) {
 TEST_F(JsonHandlerTest, WriteJson) {
     lithium::target::io::JsonHandler handler;
 
-    json data = {
-        {"name", "output"},
-        {"items", json::array({1, 2, 3})}
-    };
+    json data = {{"name", "output"}, {"items", json::array({1, 2, 3})}};
 
     auto json_file = test_dir / "output.json";
     auto result = handler.write(json_file.string(), data, 2);
@@ -104,10 +98,7 @@ TEST_F(JsonHandlerTest, ReadJsonArray) {
 TEST_F(JsonHandlerTest, CompactOutput) {
     lithium::target::io::JsonHandler handler;
 
-    json data = {
-        {"name", "compact"},
-        {"nested", {{"value", 123}}}
-    };
+    json data = {{"name", "compact"}, {"nested", {{"value", 123}}}};
 
     auto json_file = test_dir / "compact.json";
     auto result = handler.write(json_file.string(), data, 0);
@@ -140,29 +131,22 @@ TEST_F(JsonHandlerTest, InvalidJsonFile) {
 TEST_F(JsonHandlerTest, NonexistentFile) {
     lithium::target::io::JsonHandler handler;
 
-    auto result =
-        handler.read((test_dir / "nonexistent.json").string());
+    auto result = handler.read((test_dir / "nonexistent.json").string());
     EXPECT_FALSE(result);
 }
 
 TEST_F(JsonHandlerTest, CelestialObjectValidation) {
     // Test validation of celestial object JSON
-    json valid_obj = {
-        {"identifier", "M31"},
-        {"chineseName", "仙女座大星系"},
-        {"type", "Galaxy"}
-    };
+    json valid_obj = {{"identifier", "M31"},
+                      {"chineseName", "仙女座大星系"},
+                      {"type", "Galaxy"}};
 
-    auto result =
-        lithium::target::io::JsonHandler::validateCelestialObjectJson(
-            valid_obj);
+    auto result = lithium::target::io::JsonHandler::validateCelestialObjectJson(
+        valid_obj);
     EXPECT_TRUE(result);
 
     // Test invalid object (missing identifier)
-    json invalid_obj = {
-        {"chineseName", "仙女座大星系"},
-        {"type", "Galaxy"}
-    };
+    json invalid_obj = {{"chineseName", "仙女座大星系"}, {"type", "Galaxy"}};
 
     auto invalid_result =
         lithium::target::io::JsonHandler::validateCelestialObjectJson(

@@ -88,14 +88,16 @@ TEST_F(JSON5Test, RemoveCommentsUnterminatedString) {
     std::string input = R"({"key": "unterminated string)";
     auto result = removeComments(input);
     EXPECT_FALSE(result.has_value());
-    EXPECT_NE(result.error().message.find("Unterminated string"), std::string::npos);
+    EXPECT_NE(result.error().message.find("Unterminated string"),
+              std::string::npos);
 }
 
 TEST_F(JSON5Test, RemoveCommentsUnterminatedMultiLineComment) {
     std::string input = R"({"key": "value" /* unterminated comment)";
     auto result = removeComments(input);
     EXPECT_FALSE(result.has_value());
-    EXPECT_NE(result.error().message.find("Unterminated multi-line comment"), std::string::npos);
+    EXPECT_NE(result.error().message.find("Unterminated multi-line comment"),
+              std::string::npos);
 }
 
 TEST_F(JSON5Test, RemoveCommentsNoComments) {

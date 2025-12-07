@@ -40,11 +40,9 @@ public:
 
 ResourceManager::ResourceManager() : pImpl_(std::make_unique<Impl>()) {}
 
-ResourceManager::ResourceManager(size_t maxMemoryMB,
-                                 int maxCpuPercent,
+ResourceManager::ResourceManager(size_t maxMemoryMB, int maxCpuPercent,
                                  std::chrono::seconds maxExecutionTime,
-                                 size_t maxOutputSize,
-                                 int maxConcurrent)
+                                 size_t maxOutputSize, int maxConcurrent)
     : pImpl_(std::make_unique<Impl>()) {
     pImpl_->maxMemoryMB_ = maxMemoryMB;
     pImpl_->maxCpuPercent_ = maxCpuPercent;
@@ -56,7 +54,8 @@ ResourceManager::ResourceManager(size_t maxMemoryMB,
 ResourceManager::~ResourceManager() = default;
 
 ResourceManager::ResourceManager(ResourceManager&&) noexcept = default;
-ResourceManager& ResourceManager::operator=(ResourceManager&&) noexcept = default;
+ResourceManager& ResourceManager::operator=(ResourceManager&&) noexcept =
+    default;
 
 auto ResourceManager::canExecute() const -> bool {
     auto running = pImpl_->runningCount_.load();
@@ -104,16 +103,15 @@ auto ResourceManager::getUsage() const -> ResourceUsage {
 auto ResourceManager::getUsageMap() const
     -> std::unordered_map<std::string, double> {
     auto usage = getUsage();
-    return {
-        {"running_scripts", static_cast<double>(usage.runningScripts)},
-        {"total_scripts", static_cast<double>(usage.totalScripts)},
-        {"memory_usage_mb", static_cast<double>(usage.currentMemoryMB)},
-        {"memory_usage_percent",
-         (static_cast<double>(usage.currentMemoryMB) /
-          static_cast<double>(pImpl_->maxMemoryMB_.load())) * 100.0},
-        {"cpu_percent", usage.cpuPercent},
-        {"output_size_bytes", static_cast<double>(usage.outputSizeBytes)}
-    };
+    return {{"running_scripts", static_cast<double>(usage.runningScripts)},
+            {"total_scripts", static_cast<double>(usage.totalScripts)},
+            {"memory_usage_mb", static_cast<double>(usage.currentMemoryMB)},
+            {"memory_usage_percent",
+             (static_cast<double>(usage.currentMemoryMB) /
+              static_cast<double>(pImpl_->maxMemoryMB_.load())) *
+                 100.0},
+            {"cpu_percent", usage.cpuPercent},
+            {"output_size_bytes", static_cast<double>(usage.outputSizeBytes)}};
 }
 
 void ResourceManager::setMaxMemory(size_t megabytes) {

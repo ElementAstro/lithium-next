@@ -27,6 +27,7 @@ set(PROJECT_SOURCES
     indi_backend.cpp
     ascom_backend.cpp
     device_factory.cpp
+    device_type_registry.cpp
 )
 
 # ============================================================================
@@ -37,6 +38,7 @@ set(PROJECT_LIBRARIES
     atom
     lithium_config
     lithium_device
+    lithium_device_common
     lithium.client.indi
     lithium.client.ascom
     loguru

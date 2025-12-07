@@ -85,3 +85,9 @@ install(FILES ${ASCOM_HEADERS}
 )
 
 lithium_message(SUCCESS "ASCOM client library configured")
+
+# ============================================================================
+# ASCOM Device Plugin Subdirectory
+# ============================================================================
+
+add_subdirectory(plugin)

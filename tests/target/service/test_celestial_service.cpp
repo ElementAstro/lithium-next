@@ -17,14 +17,14 @@ protected:
         if (fs::exists(testDbPath_)) {
             fs::remove(testDbPath_);
         }
-        
+
         ServiceConfig config;
         config.databasePath = testDbPath_;
         config.useDatabase = true;
-        
+
         service_ = std::make_unique<CelestialService>(config);
         service_->initialize();
-        
+
         // Add test data
         CelestialObjectModel obj;
         obj.identifier = "M31";
@@ -54,7 +54,7 @@ TEST_F(CelestialServiceTest, AddObject) {
     CelestialObjectModel obj;
     obj.identifier = "M42";
     obj.type = "Nebula";
-    
+
     auto id = service_->addObject(obj);
     EXPECT_GT(id, 0);
 }
@@ -68,10 +68,10 @@ TEST_F(CelestialServiceTest, GetObject) {
 TEST_F(CelestialServiceTest, UpdateObject) {
     auto obj = service_->getObject("M31");
     ASSERT_TRUE(obj.has_value());
-    
+
     obj->type = "Spiral Galaxy";
     EXPECT_TRUE(service_->updateObject(*obj));
-    
+
     auto updated = service_->getObject("M31");
     EXPECT_EQ(updated->type, "Spiral Galaxy");
 }
@@ -99,7 +99,7 @@ TEST_F(CelestialServiceTest, SearchByCoordinates) {
 TEST_F(CelestialServiceTest, AdvancedSearch) {
     CelestialSearchFilter filter;
     filter.type = "Galaxy";
-    
+
     auto results = service_->advancedSearch(filter);
     EXPECT_GE(results.size(), 1);
 }

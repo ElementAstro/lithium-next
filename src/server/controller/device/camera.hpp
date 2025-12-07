@@ -363,4 +363,3 @@ public:
 }  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_CAMERA_HPP
-

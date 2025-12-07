@@ -15,8 +15,8 @@ Description: Comprehensive tests for LogStatistics
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "logging/log_statistics.hpp"
-#include "logging/types.hpp"
+#include "logging/core/types.hpp"
+#include "logging/utils/log_statistics.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -483,12 +483,9 @@ TEST_F(LogSearchQueryTest, DefaultConstruction) {
 }
 
 TEST_F(LogSearchQueryTest, FromJsonBasic) {
-    nlohmann::json json = {{"text", "error"},
-                           {"min_level", "warn"},
-                           {"logger", "my_logger"},
-                           {"limit", 50},
-                           {"offset", 10},
-                           {"case_sensitive", true}};
+    nlohmann::json json = {{"text", "error"},       {"min_level", "warn"},
+                           {"logger", "my_logger"}, {"limit", 50},
+                           {"offset", 10},          {"case_sensitive", true}};
 
     auto query = LogSearchQuery::fromJson(json);
 

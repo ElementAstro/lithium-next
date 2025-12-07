@@ -35,8 +35,8 @@ namespace lithium::client::ascom {
 /**
  * @brief Device creator function type
  */
-using DeviceCreator = std::function<std::shared_ptr<ASCOMDeviceBase>(
-    const std::string&, int)>;
+using DeviceCreator =
+    std::function<std::shared_ptr<ASCOMDeviceBase>(const std::string&, int)>;
 
 /**
  * @brief ASCOM Device Factory
@@ -99,7 +99,8 @@ public:
     auto createDome(const std::string& name, int deviceNumber = 0)
         -> std::shared_ptr<ASCOMDome>;
 
-    auto createObservingConditions(const std::string& name, int deviceNumber = 0)
+    auto createObservingConditions(const std::string& name,
+                                   int deviceNumber = 0)
         -> std::shared_ptr<ASCOMObservingConditions>;
 
     // ==================== Custom Registration ====================
@@ -122,7 +123,8 @@ public:
      * @brief Get supported device types
      * @return Vector of supported types
      */
-    [[nodiscard]] auto getSupportedTypes() const -> std::vector<ASCOMDeviceType>;
+    [[nodiscard]] auto getSupportedTypes() const
+        -> std::vector<ASCOMDeviceType>;
 
 private:
     ASCOMDeviceFactory();
@@ -185,7 +187,8 @@ public:
 
     auto getCameras() const -> std::vector<std::shared_ptr<ASCOMCamera>>;
     auto getFocusers() const -> std::vector<std::shared_ptr<ASCOMFocuser>>;
-    auto getFilterWheels() const -> std::vector<std::shared_ptr<ASCOMFilterWheel>>;
+    auto getFilterWheels() const
+        -> std::vector<std::shared_ptr<ASCOMFilterWheel>>;
     auto getTelescopes() const -> std::vector<std::shared_ptr<ASCOMTelescope>>;
     auto getRotators() const -> std::vector<std::shared_ptr<ASCOMRotator>>;
     auto getDomes() const -> std::vector<std::shared_ptr<ASCOMDome>>;

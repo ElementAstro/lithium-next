@@ -6,11 +6,11 @@
 
 #include "script.hpp"
 
+#include "../response.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
 #include "constant/constant.hpp"
-#include "../response.hpp"
 #include "server/command.hpp"
 
 #include "script/script_service.hpp"
@@ -57,22 +57,25 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
             ScriptExecutionConfig config;
             if (payload.contains("mode")) {
                 std::string mode = payload["mode"].get<std::string>();
-                if (mode == "inprocess") config.mode = ExecutionMode::InProcess;
-                else if (mode == "pooled") config.mode = ExecutionMode::Pooled;
-                else if (mode == "isolated") config.mode = ExecutionMode::Isolated;
+                if (mode == "inprocess")
+                    config.mode = ExecutionMode::InProcess;
+                else if (mode == "pooled")
+                    config.mode = ExecutionMode::Pooled;
+                else if (mode == "isolated")
+                    config.mode = ExecutionMode::Isolated;
             }
 
             auto result = service->executePython(code, args, config);
             if (result.success) {
-                payload = CommandResponse::success({
-                    {"result", result.result},
-                    {"stdout", result.stdoutOutput},
-                    {"stderr", result.stderrOutput},
-                    {"executionTime", result.executionTime.count()},
-                    {"mode", static_cast<int>(result.actualMode)}
-                });
+                payload = CommandResponse::success(
+                    {{"result", result.result},
+                     {"stdout", result.stdoutOutput},
+                     {"stderr", result.stderrOutput},
+                     {"executionTime", result.executionTime.count()},
+                     {"mode", static_cast<int>(result.actualMode)}});
             } else {
-                payload = CommandResponse::operationFailed("execute", result.errorMessage);
+                payload = CommandResponse::operationFailed("execute",
+                                                           result.errorMessage);
             }
         } catch (const std::exception& e) {
             LOG_ERROR("script.execute exception: {}", e.what());
@@ -102,14 +105,14 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
 
             auto result = service->executePythonFile(path, args);
             if (result.success) {
-                payload = CommandResponse::success({
-                    {"result", result.result},
-                    {"stdout", result.stdoutOutput},
-                    {"stderr", result.stderrOutput},
-                    {"executionTime", result.executionTime.count()}
-                });
+                payload = CommandResponse::success(
+                    {{"result", result.result},
+                     {"stdout", result.stdoutOutput},
+                     {"stderr", result.stderrOutput},
+                     {"executionTime", result.executionTime.count()}});
             } else {
-                payload = CommandResponse::operationFailed("executeFile", result.errorMessage);
+                payload = CommandResponse::operationFailed("executeFile",
+                                                           result.errorMessage);
             }
         } catch (const std::exception& e) {
             LOG_ERROR("script.executeFile exception: {}", e.what());
@@ -126,7 +129,8 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
                 payload = CommandResponse::missingParameter("module");
                 return;
             }
-            if (!payload.contains("function") || !payload["function"].is_string()) {
+            if (!payload.contains("function") ||
+                !payload["function"].is_string()) {
                 LOG_WARN("script.executeFunction: missing function");
                 payload = CommandResponse::missingParameter("function");
                 return;
@@ -136,29 +140,33 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
             std::string functionName = payload["function"].get<std::string>();
             json args = payload.value("args", json::object());
 
-            LOG_INFO("Executing script.executeFunction: {}.{}", moduleName, functionName);
+            LOG_INFO("Executing script.executeFunction: {}.{}", moduleName,
+                     functionName);
 
             try {
                 auto service = getScriptService();
                 if (!service || !service->isInitialized()) {
-                    payload = CommandResponse::serviceUnavailable("ScriptService");
+                    payload =
+                        CommandResponse::serviceUnavailable("ScriptService");
                     return;
                 }
 
-                auto result = service->executePythonFunction(moduleName, functionName, args);
+                auto result = service->executePythonFunction(
+                    moduleName, functionName, args);
                 if (result.success) {
-                    payload = CommandResponse::success({
-                        {"result", result.result},
-                        {"stdout", result.stdoutOutput},
-                        {"stderr", result.stderrOutput},
-                        {"executionTime", result.executionTime.count()}
-                    });
+                    payload = CommandResponse::success(
+                        {{"result", result.result},
+                         {"stdout", result.stdoutOutput},
+                         {"stderr", result.stderrOutput},
+                         {"executionTime", result.executionTime.count()}});
                 } else {
-                    payload = CommandResponse::operationFailed("executeFunction", result.errorMessage);
+                    payload = CommandResponse::operationFailed(
+                        "executeFunction", result.errorMessage);
                 }
             } catch (const std::exception& e) {
                 LOG_ERROR("script.executeFunction exception: {}", e.what());
-                payload = CommandResponse::operationFailed("executeFunction", e.what());
+                payload = CommandResponse::operationFailed("executeFunction",
+                                                           e.what());
             }
         });
     LOG_INFO("Registered command handler for 'script.executeFunction'");
@@ -266,23 +274,25 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
             try {
                 auto service = getScriptService();
                 if (!service || !service->isInitialized()) {
-                    payload = CommandResponse::serviceUnavailable("ScriptService");
+                    payload =
+                        CommandResponse::serviceUnavailable("ScriptService");
                     return;
                 }
 
                 auto result = service->executeShellScript(name, args, safe);
                 if (result) {
-                    payload = CommandResponse::success({
-                        {"output", result->first},
-                        {"exitCode", result->second}
-                    });
+                    payload = CommandResponse::success(
+                        {{"output", result->first},
+                         {"exitCode", result->second}});
                 } else {
                     payload = CommandResponse::operationFailed(
-                        "shell.execute", "Script not found or execution failed");
+                        "shell.execute",
+                        "Script not found or execution failed");
                 }
             } catch (const std::exception& e) {
                 LOG_ERROR("script.shell.execute exception: {}", e.what());
-                payload = CommandResponse::operationFailed("shell.execute", e.what());
+                payload =
+                    CommandResponse::operationFailed("shell.execute", e.what());
             }
         });
     LOG_INFO("Registered command handler for 'script.shell.execute'");
@@ -365,18 +375,16 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
 
                 json funcs = json::array();
                 for (const auto& func : info->functions) {
-                    funcs.push_back({
-                        {"name", func.name},
-                        {"description", func.description},
-                        {"returnType", func.returnType}
-                    });
+                    funcs.push_back({{"name", func.name},
+                                     {"description", func.description},
+                                     {"returnType", func.returnType}});
                 }
                 toolJson["functions"] = funcs;
 
                 payload = CommandResponse::success(toolJson);
             } else {
                 payload = CommandResponse::error("tool_not_found",
-                                                  "Tool not found: " + toolName);
+                                                 "Tool not found: " + toolName);
             }
         } catch (const std::exception& e) {
             LOG_ERROR("script.tool.info exception: {}", e.what());
@@ -415,7 +423,8 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
             if (result) {
                 payload = CommandResponse::success({{"result", *result}});
             } else {
-                payload = CommandResponse::operationFailed("tool.invoke", "Invocation failed");
+                payload = CommandResponse::operationFailed("tool.invoke",
+                                                           "Invocation failed");
             }
         } catch (const std::exception& e) {
             LOG_ERROR("script.tool.invoke exception: {}", e.what());
@@ -425,27 +434,32 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
     LOG_INFO("Registered command handler for 'script.tool.invoke'");
 
     // script.tool.discover - Discover new tools via ScriptService
-    dispatcher->registerCommand<json>("script.tool.discover", [](json& payload) {
-        LOG_INFO("Executing script.tool.discover");
+    dispatcher->registerCommand<json>(
+        "script.tool.discover", [](json& payload) {
+            LOG_INFO("Executing script.tool.discover");
 
-        try {
-            auto service = getScriptService();
-            if (!service || !service->isInitialized()) {
-                payload = CommandResponse::serviceUnavailable("ScriptService");
-                return;
-            }
+            try {
+                auto service = getScriptService();
+                if (!service || !service->isInitialized()) {
+                    payload =
+                        CommandResponse::serviceUnavailable("ScriptService");
+                    return;
+                }
 
-            auto result = service->discoverTools();
-            if (result) {
-                payload = CommandResponse::success({{"discovered", *result}});
-            } else {
-                payload = CommandResponse::operationFailed("tool.discover", "Discovery failed");
+                auto result = service->discoverTools();
+                if (result) {
+                    payload =
+                        CommandResponse::success({{"discovered", *result}});
+                } else {
+                    payload = CommandResponse::operationFailed(
+                        "tool.discover", "Discovery failed");
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("script.tool.discover exception: {}", e.what());
+                payload =
+                    CommandResponse::operationFailed("tool.discover", e.what());
             }
-        } catch (const std::exception& e) {
-            LOG_ERROR("script.tool.discover exception: {}", e.what());
-            payload = CommandResponse::operationFailed("tool.discover", e.what());
-        }
-    });
+        });
     LOG_INFO("Registered command handler for 'script.tool.discover'");
 
     // =========================================================================
@@ -475,12 +489,12 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
 
             if (condaEnvs) {
                 for (const auto& env : *condaEnvs) {
-                    envList.push_back({
-                        {"name", env.name},
-                        {"path", env.path.string()},
-                        {"pythonVersion", env.pythonVersion},
-                        {"type", env.type == venv::VenvType::Conda ? "conda" : "venv"}
-                    });
+                    envList.push_back(
+                        {{"name", env.name},
+                         {"path", env.path.string()},
+                         {"pythonVersion", env.pythonVersion},
+                         {"type", env.type == venv::VenvType::Conda ? "conda"
+                                                                    : "venv"}});
                 }
             }
 
@@ -516,27 +530,32 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
     LOG_INFO("Registered command handler for 'script.venv.list'");
 
     // script.venv.packages - List packages via ScriptService
-    dispatcher->registerCommand<json>("script.venv.packages", [](json& payload) {
-        LOG_DEBUG("Executing script.venv.packages");
+    dispatcher->registerCommand<json>(
+        "script.venv.packages", [](json& payload) {
+            LOG_DEBUG("Executing script.venv.packages");
 
-        try {
-            auto service = getScriptService();
-            if (!service || !service->isInitialized()) {
-                payload = CommandResponse::serviceUnavailable("ScriptService");
-                return;
-            }
+            try {
+                auto service = getScriptService();
+                if (!service || !service->isInitialized()) {
+                    payload =
+                        CommandResponse::serviceUnavailable("ScriptService");
+                    return;
+                }
 
-            auto packages = service->listPackages();
-            if (packages) {
-                payload = CommandResponse::success({{"packages", *packages}});
-            } else {
-                payload = CommandResponse::operationFailed("venv.packages", "Failed to list packages");
+                auto packages = service->listPackages();
+                if (packages) {
+                    payload =
+                        CommandResponse::success({{"packages", *packages}});
+                } else {
+                    payload = CommandResponse::operationFailed(
+                        "venv.packages", "Failed to list packages");
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("script.venv.packages exception: {}", e.what());
+                payload =
+                    CommandResponse::operationFailed("venv.packages", e.what());
             }
-        } catch (const std::exception& e) {
-            LOG_ERROR("script.venv.packages exception: {}", e.what());
-            payload = CommandResponse::operationFailed("venv.packages", e.what());
-        }
-    });
+        });
     LOG_INFO("Registered command handler for 'script.venv.packages'");
 
     // script.venv.install - Install a package via ScriptService
@@ -561,52 +580,62 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
 
             auto result = service->installPackage(package, upgrade);
             if (result) {
-                payload = CommandResponse::success({{"installed", package}, {"upgrade", upgrade}});
+                payload = CommandResponse::success(
+                    {{"installed", package}, {"upgrade", upgrade}});
             } else {
-                payload = CommandResponse::operationFailed("venv.install", "Installation failed");
+                payload = CommandResponse::operationFailed(
+                    "venv.install", "Installation failed");
             }
         } catch (const std::exception& e) {
             LOG_ERROR("script.venv.install exception: {}", e.what());
-            payload = CommandResponse::operationFailed("venv.install", e.what());
+            payload =
+                CommandResponse::operationFailed("venv.install", e.what());
         }
     });
     LOG_INFO("Registered command handler for 'script.venv.install'");
 
     // script.venv.uninstall - Uninstall a package via ScriptService
-    dispatcher->registerCommand<json>("script.venv.uninstall", [](json& payload) {
-        if (!payload.contains("package") || !payload["package"].is_string()) {
-            LOG_WARN("script.venv.uninstall: missing package");
-            payload = CommandResponse::missingParameter("package");
-            return;
-        }
-
-        std::string package = payload["package"].get<std::string>();
-        LOG_INFO("Executing script.venv.uninstall: {}", package);
-
-        try {
-            auto service = getScriptService();
-            if (!service || !service->isInitialized()) {
-                payload = CommandResponse::serviceUnavailable("ScriptService");
+    dispatcher->registerCommand<json>(
+        "script.venv.uninstall", [](json& payload) {
+            if (!payload.contains("package") ||
+                !payload["package"].is_string()) {
+                LOG_WARN("script.venv.uninstall: missing package");
+                payload = CommandResponse::missingParameter("package");
                 return;
             }
 
-            auto manager = service->getVenvManager();
-            if (!manager) {
-                payload = CommandResponse::serviceUnavailable("VenvManager");
-                return;
-            }
+            std::string package = payload["package"].get<std::string>();
+            LOG_INFO("Executing script.venv.uninstall: {}", package);
 
-            auto result = manager->uninstallPackage(package);
-            if (result) {
-                payload = CommandResponse::success({{"uninstalled", package}});
-            } else {
-                payload = CommandResponse::operationFailed("venv.uninstall", "Uninstallation failed");
+            try {
+                auto service = getScriptService();
+                if (!service || !service->isInitialized()) {
+                    payload =
+                        CommandResponse::serviceUnavailable("ScriptService");
+                    return;
+                }
+
+                auto manager = service->getVenvManager();
+                if (!manager) {
+                    payload =
+                        CommandResponse::serviceUnavailable("VenvManager");
+                    return;
+                }
+
+                auto result = manager->uninstallPackage(package);
+                if (result) {
+                    payload =
+                        CommandResponse::success({{"uninstalled", package}});
+                } else {
+                    payload = CommandResponse::operationFailed(
+                        "venv.uninstall", "Uninstallation failed");
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("script.venv.uninstall exception: {}", e.what());
+                payload = CommandResponse::operationFailed("venv.uninstall",
+                                                           e.what());
             }
-        } catch (const std::exception& e) {
-            LOG_ERROR("script.venv.uninstall exception: {}", e.what());
-            payload = CommandResponse::operationFailed("venv.uninstall", e.what());
-        }
-    });
+        });
     LOG_INFO("Registered command handler for 'script.venv.uninstall'");
 
     // script.venv.create - Create a virtual environment via ScriptService
@@ -633,7 +662,8 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
             if (result) {
                 payload = CommandResponse::success(*result);
             } else {
-                payload = CommandResponse::operationFailed("venv.create", "Creation failed");
+                payload = CommandResponse::operationFailed("venv.create",
+                                                           "Creation failed");
             }
         } catch (const std::exception& e) {
             LOG_ERROR("script.venv.create exception: {}", e.what());
@@ -643,60 +673,68 @@ void registerScript(std::shared_ptr<CommandDispatcher> dispatcher) {
     LOG_INFO("Registered command handler for 'script.venv.create'");
 
     // script.venv.activate - Activate a virtual environment via ScriptService
-    dispatcher->registerCommand<json>("script.venv.activate", [](json& payload) {
-        if (!payload.contains("path") || !payload["path"].is_string()) {
-            LOG_WARN("script.venv.activate: missing path");
-            payload = CommandResponse::missingParameter("path");
-            return;
-        }
-
-        std::string path = payload["path"].get<std::string>();
-        LOG_INFO("Executing script.venv.activate: {}", path);
-
-        try {
-            auto service = getScriptService();
-            if (!service || !service->isInitialized()) {
-                payload = CommandResponse::serviceUnavailable("ScriptService");
+    dispatcher->registerCommand<json>(
+        "script.venv.activate", [](json& payload) {
+            if (!payload.contains("path") || !payload["path"].is_string()) {
+                LOG_WARN("script.venv.activate: missing path");
+                payload = CommandResponse::missingParameter("path");
                 return;
             }
 
-            auto result = service->activateVirtualEnv(path);
-            if (result) {
-                payload = CommandResponse::success({{"path", path}, {"activated", true}});
-            } else {
-                payload = CommandResponse::operationFailed("venv.activate", "Activation failed");
+            std::string path = payload["path"].get<std::string>();
+            LOG_INFO("Executing script.venv.activate: {}", path);
+
+            try {
+                auto service = getScriptService();
+                if (!service || !service->isInitialized()) {
+                    payload =
+                        CommandResponse::serviceUnavailable("ScriptService");
+                    return;
+                }
+
+                auto result = service->activateVirtualEnv(path);
+                if (result) {
+                    payload = CommandResponse::success(
+                        {{"path", path}, {"activated", true}});
+                } else {
+                    payload = CommandResponse::operationFailed(
+                        "venv.activate", "Activation failed");
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("script.venv.activate exception: {}", e.what());
+                payload =
+                    CommandResponse::operationFailed("venv.activate", e.what());
             }
-        } catch (const std::exception& e) {
-            LOG_ERROR("script.venv.activate exception: {}", e.what());
-            payload = CommandResponse::operationFailed("venv.activate", e.what());
-        }
-    });
+        });
     LOG_INFO("Registered command handler for 'script.venv.activate'");
 
     // script.venv.deactivate - Deactivate virtual environment via ScriptService
-    dispatcher->registerCommand<json>("script.venv.deactivate", [](json& payload) {
-        LOG_INFO("Executing script.venv.deactivate");
+    dispatcher->registerCommand<json>(
+        "script.venv.deactivate", [](json& payload) {
+            LOG_INFO("Executing script.venv.deactivate");
 
-        try {
-            auto service = getScriptService();
-            if (!service || !service->isInitialized()) {
-                payload = CommandResponse::serviceUnavailable("ScriptService");
-                return;
-            }
+            try {
+                auto service = getScriptService();
+                if (!service || !service->isInitialized()) {
+                    payload =
+                        CommandResponse::serviceUnavailable("ScriptService");
+                    return;
+                }
 
-            auto result = service->deactivateVirtualEnv();
-            if (result) {
-                payload = CommandResponse::success({{"deactivated", true}});
-            } else {
-                payload = CommandResponse::operationFailed("venv.deactivate", "Deactivation failed");
+                auto result = service->deactivateVirtualEnv();
+                if (result) {
+                    payload = CommandResponse::success({{"deactivated", true}});
+                } else {
+                    payload = CommandResponse::operationFailed(
+                        "venv.deactivate", "Deactivation failed");
+                }
+            } catch (const std::exception& e) {
+                LOG_ERROR("script.venv.deactivate exception: {}", e.what());
+                payload = CommandResponse::operationFailed("venv.deactivate",
+                                                           e.what());
             }
-        } catch (const std::exception& e) {
-            LOG_ERROR("script.venv.deactivate exception: {}", e.what());
-            payload = CommandResponse::operationFailed("venv.deactivate", e.what());
-        }
-    });
+        });
     LOG_INFO("Registered command handler for 'script.venv.deactivate'");
 }
 
 }  // namespace lithium::app
-

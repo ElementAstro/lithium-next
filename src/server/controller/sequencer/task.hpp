@@ -17,19 +17,19 @@
 #include "atom/type/json.hpp"
 
 // Import specific camera task types
-#include "../../task/custom/camera/calibration_tasks.hpp"
-#include "../../task/custom/camera/filter_tasks.hpp"
-#include "../../task/custom/camera/focus_tasks.hpp"
-#include "../../task/custom/camera/guide_tasks.hpp"
-#include "../../task/custom/solver_task.hpp"
-#include "task/custom/camera/basic_exposure.hpp"
+#include "task/components/camera/calibration/calibration_tasks.hpp"
+#include "task/components/camera/exposure/exposure_tasks.hpp"
+#include "task/components/camera/filter/filter_tasks.hpp"
+#include "task/components/camera/focus/focus_tasks.hpp"
+#include "task/components/camera/guiding/guiding_tasks.hpp"
+#include "task/components/solver_task.hpp"
 
 // Asynchronous task manager
 #include "../../task_manager.hpp"
 
 // Task factory for device/script/config/search tasks
-#include "../../task/custom/factory.hpp"
-#include "task/custom/search_task.hpp"
+#include "task/components/search_task.hpp"
+#include "task/core/factory.hpp"
 
 using json = nlohmann::json;
 

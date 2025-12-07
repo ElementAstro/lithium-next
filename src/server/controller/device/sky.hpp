@@ -1,10 +1,10 @@
 #ifndef LITHIUM_SERVER_CONTROLLER_SKY_HPP
 #define LITHIUM_SERVER_CONTROLLER_SKY_HPP
 
+#include "../controller.hpp"
 #include "../utils/response.hpp"
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
-#include "../controller.hpp"
 #include "server/command/solver.hpp"
 
 namespace lithium::server::controller {
@@ -144,4 +144,3 @@ private:
 }  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_SKY_HPP
-

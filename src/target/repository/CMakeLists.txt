@@ -8,7 +8,7 @@
 # ===========================================================================
 
 set(REPOSITORY_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../celestial_repository.cpp
+    celestial_repository.cpp
     repository_interface.cpp
     repository_factory.cpp
     sqlite_repository.cpp
@@ -17,11 +17,12 @@ set(REPOSITORY_SOURCES
 )
 
 set(REPOSITORY_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/../celestial_repository.hpp
+    celestial_repository.hpp
     repository_interface.hpp
     sqlite_repository.hpp
     memory_repository.hpp
     cached_repository.hpp
+    repository.hpp
 )
 
 # Create object library for repository module

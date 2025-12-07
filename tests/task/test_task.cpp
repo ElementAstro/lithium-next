@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "task/task.hpp"
+#include "task/core/task.hpp"
 
 using namespace lithium::task;
 using json = nlohmann::json;

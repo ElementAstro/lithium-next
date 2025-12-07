@@ -36,15 +36,13 @@ TEST_F(IPCSerializerJsonTest, SerializeSimpleObject) {
 }
 
 TEST_F(IPCSerializerJsonTest, SerializeDeserializeRoundTrip) {
-    json original = {
-        {"string", "hello"},
-        {"number", 123},
-        {"float", 3.14},
-        {"bool", true},
-        {"null", nullptr},
-        {"array", {1, 2, 3}},
-        {"nested", {{"a", 1}, {"b", 2}}}
-    };
+    json original = {{"string", "hello"},
+                     {"number", 123},
+                     {"float", 3.14},
+                     {"bool", true},
+                     {"null", nullptr},
+                     {"array", {1, 2, 3}},
+                     {"nested", {{"a", 1}, {"b", 2}}}};
 
     auto serialized = IPCSerializer::serialize(original);
     auto result = IPCSerializer::deserialize(serialized);
@@ -96,7 +94,7 @@ class IPCSerializerStringTest : public ::testing::Test {};
 
 TEST_F(IPCSerializerStringTest, SerializeEmptyString) {
     auto result = IPCSerializer::serializeString("");
-    EXPECT_GE(result.size(), 4); // At least length prefix
+    EXPECT_GE(result.size(), 4);  // At least length prefix
 }
 
 TEST_F(IPCSerializerStringTest, SerializeSimpleString) {
@@ -168,7 +166,7 @@ class IPCSerializerBytesTest : public ::testing::Test {};
 TEST_F(IPCSerializerBytesTest, SerializeEmptyBytes) {
     std::vector<uint8_t> empty;
     auto result = IPCSerializer::serializeBytes(empty);
-    EXPECT_GE(result.size(), 4); // At least header
+    EXPECT_GE(result.size(), 4);  // At least header
 }
 
 TEST_F(IPCSerializerBytesTest, SerializeBinaryData) {
@@ -197,7 +195,7 @@ TEST_F(IPCSerializerChecksumTest, CalculateChecksumEmpty) {
     std::vector<uint8_t> empty;
     auto checksum = IPCSerializer::calculateChecksum(empty);
     // CRC32 of empty data should be a specific value
-    EXPECT_NE(checksum, 0); // Or check specific value
+    EXPECT_NE(checksum, 0);  // Or check specific value
 }
 
 TEST_F(IPCSerializerChecksumTest, CalculateChecksumDeterministic) {
@@ -239,7 +237,7 @@ TEST_F(IPCSerializerCompressionTest, CompressEmptyData) {
 }
 
 TEST_F(IPCSerializerCompressionTest, CompressDecompressRoundTrip) {
-    std::vector<uint8_t> original(1000, 'A'); // Highly compressible
+    std::vector<uint8_t> original(1000, 'A');  // Highly compressible
 
     auto compressed = IPCSerializer::compress(original);
     ASSERT_TRUE(compressed.has_value());

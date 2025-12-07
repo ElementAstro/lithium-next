@@ -57,13 +57,12 @@ ConfigRegistry& ConfigRegistry::instance() {
     return instance;
 }
 
-ConfigRegistry::ConfigRegistry() : impl_(std::make_unique<ConfigRegistryImpl>()) {
+ConfigRegistry::ConfigRegistry()
+    : impl_(std::make_unique<ConfigRegistryImpl>()) {
     LOG_DEBUG("ConfigRegistry initialized");
 }
 
-ConfigRegistry::~ConfigRegistry() {
-    LOG_DEBUG("ConfigRegistry destroyed");
-}
+ConfigRegistry::~ConfigRegistry() { LOG_DEBUG("ConfigRegistry destroyed"); }
 
 // ============================================================================
 // Initialization
@@ -88,7 +87,8 @@ void ConfigRegistry::registerSectionInfo(std::string path, SectionInfo info) {
     std::unique_lock lock(impl_->mutex);
 
     if (impl_->sections.contains(path)) {
-        LOG_WARN("ConfigRegistry: Section '{}' already registered, overwriting", path);
+        LOG_WARN("ConfigRegistry: Section '{}' already registered, overwriting",
+                 path);
     }
 
     impl_->sections[path] = std::move(info);
@@ -109,7 +109,8 @@ void ConfigRegistry::registerComponent(IConfigurable* component) {
     std::unique_lock lock(impl_->mutex);
 
     // Check if already registered
-    auto it = std::find(impl_->components.begin(), impl_->components.end(), component);
+    auto it = std::find(impl_->components.begin(), impl_->components.end(),
+                        component);
     if (it != impl_->components.end()) {
         LOG_WARN("ConfigRegistry: Component '{}' already registered",
                  component->getComponentName());
@@ -121,8 +122,12 @@ void ConfigRegistry::registerComponent(IConfigurable* component) {
     // Register as section
     SectionInfo info;
     info.path = std::string(component->getConfigPath());
-    info.schemaGenerator = [component]() { return component->getConfigSchema(); };
-    info.defaultGenerator = [component]() { return component->getDefaultConfig(); };
+    info.schemaGenerator = [component]() {
+        return component->getConfigSchema();
+    };
+    info.defaultGenerator = [component]() {
+        return component->getDefaultConfig();
+    };
     info.supportsRuntimeReconfig = component->supportsRuntimeReconfig();
 
     impl_->sections[info.path] = std::move(info);
@@ -138,7 +143,8 @@ void ConfigRegistry::unregisterComponent(IConfigurable* component) {
 
     std::unique_lock lock(impl_->mutex);
 
-    auto it = std::find(impl_->components.begin(), impl_->components.end(), component);
+    auto it = std::find(impl_->components.begin(), impl_->components.end(),
+                        component);
     if (it != impl_->components.end()) {
         impl_->components.erase(it);
         impl_->sections.erase(std::string(component->getConfigPath()));
@@ -170,7 +176,8 @@ void ConfigRegistry::applyDefaults() {
     std::unique_lock lock(impl_->mutex);
 
     if (!impl_->configManager) {
-        LOG_ERROR("ConfigRegistry: ConfigManager not set, cannot apply defaults");
+        LOG_ERROR(
+            "ConfigRegistry: ConfigManager not set, cannot apply defaults");
         return;
     }
 
@@ -187,7 +194,7 @@ void ConfigRegistry::applyDefaults() {
 }
 
 bool ConfigRegistry::loadFromFile(const fs::path& path,
-                                   const ConfigLoadOptions& options) {
+                                  const ConfigLoadOptions& options) {
     if (!fs::exists(path)) {
         LOG_ERROR("ConfigRegistry: File not found: {}", path.string());
         return false;
@@ -232,10 +239,11 @@ bool ConfigRegistry::loadFromFile(const fs::path& path,
             data = json::parse(content);
         }
     } catch (const json::exception& e) {
-        LOG_ERROR("ConfigRegistry: Failed to parse {}: {}", path.string(), e.what());
+        LOG_ERROR("ConfigRegistry: Failed to parse {}: {}", path.string(),
+                  e.what());
         if (options.strict) {
-            throw ConfigValidationException(
-                ConfigValidationResult{{false, {{path.string(), e.what(), "parse"}}}});
+            throw ConfigValidationException(ConfigValidationResult{
+                {false, {{path.string(), e.what(), "parse"}}}});
         }
         return false;
     }
@@ -286,7 +294,7 @@ bool ConfigRegistry::loadFromFile(const fs::path& path,
 }
 
 size_t ConfigRegistry::loadFromFiles(const std::vector<fs::path>& paths,
-                                      const ConfigLoadOptions& options) {
+                                     const ConfigLoadOptions& options) {
     size_t loaded = 0;
     for (const auto& path : paths) {
         if (loadFromFile(path, options)) {
@@ -296,8 +304,9 @@ size_t ConfigRegistry::loadFromFiles(const std::vector<fs::path>& paths,
     return loaded;
 }
 
-size_t ConfigRegistry::loadFromDirectory(const fs::path& dirPath, bool recursive,
-                                          const ConfigLoadOptions& options) {
+size_t ConfigRegistry::loadFromDirectory(const fs::path& dirPath,
+                                         bool recursive,
+                                         const ConfigLoadOptions& options) {
     if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) {
         LOG_ERROR("ConfigRegistry: Directory not found: {}", dirPath.string());
         return 0;
@@ -308,7 +317,8 @@ size_t ConfigRegistry::loadFromDirectory(const fs::path& dirPath, bool recursive
     auto addFile = [&](const fs::path& p) {
         auto ext = p.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-        if (ext == ".json" || ext == ".json5" || ext == ".yaml" || ext == ".yml") {
+        if (ext == ".json" || ext == ".json5" || ext == ".yaml" ||
+            ext == ".yml") {
             configFiles.push_back(p);
         }
     };
@@ -333,7 +343,8 @@ size_t ConfigRegistry::loadFromDirectory(const fs::path& dirPath, bool recursive
     return loadFromFiles(configFiles, options);
 }
 
-bool ConfigRegistry::saveToFile(const fs::path& path, ConfigFormat format) const {
+bool ConfigRegistry::saveToFile(const fs::path& path,
+                                ConfigFormat format) const {
     std::shared_lock lock(impl_->mutex);
 
     if (!impl_->configManager) {
@@ -410,7 +421,7 @@ std::optional<json> ConfigRegistry::getValue(std::string_view path) const {
 // ============================================================================
 
 ConfigValidationResult ConfigRegistry::updateSectionJson(std::string_view path,
-                                                          const json& value) {
+                                                         const json& value) {
     ConfigValidationResult result;
 
     std::unique_lock lock(impl_->mutex);
@@ -428,8 +439,8 @@ ConfigValidationResult ConfigRegistry::updateSectionJson(std::string_view path,
     if (sectionIt != impl_->sections.end() && sectionIt->second.validator) {
         result = sectionIt->second.validator(value);
         if (!result.isValid()) {
-            LOG_WARN("ConfigRegistry: Validation failed for '{}': {}",
-                     path, result.errors[0].message);
+            LOG_WARN("ConfigRegistry: Validation failed for '{}': {}", path,
+                     result.errors[0].message);
             return result;
         }
     }
@@ -447,7 +458,8 @@ ConfigValidationResult ConfigRegistry::updateSectionJson(std::string_view path,
     // Notify components
     for (auto* component : impl_->components) {
         if (component->getConfigPath() == path ||
-            std::string(path).starts_with(std::string(component->getConfigPath()))) {
+            std::string(path).starts_with(
+                std::string(component->getConfigPath()))) {
             component->onConfigChanged(path, value);
         }
     }
@@ -457,7 +469,7 @@ ConfigValidationResult ConfigRegistry::updateSectionJson(std::string_view path,
 }
 
 ConfigValidationResult ConfigRegistry::updateValue(std::string_view path,
-                                                    const json& value) {
+                                                   const json& value) {
     return updateSectionJson(path, value);
 }
 
@@ -489,7 +501,8 @@ size_t ConfigRegistry::subscribe(
     std::unique_lock lock(impl_->mutex);
 
     size_t id = impl_->nextSubscriptionId++;
-    impl_->subscriptions.push_back({id, std::string(path), std::move(callback)});
+    impl_->subscriptions.push_back(
+        {id, std::string(path), std::move(callback)});
 
     LOG_DEBUG("ConfigRegistry: Added subscription {} for '{}'", id, path);
     return id;
@@ -498,10 +511,9 @@ size_t ConfigRegistry::subscribe(
 bool ConfigRegistry::unsubscribe(size_t subscriptionId) {
     std::unique_lock lock(impl_->mutex);
 
-    auto it = std::find_if(impl_->subscriptions.begin(), impl_->subscriptions.end(),
-                           [subscriptionId](const auto& sub) {
-                               return sub.id == subscriptionId;
-                           });
+    auto it = std::find_if(
+        impl_->subscriptions.begin(), impl_->subscriptions.end(),
+        [subscriptionId](const auto& sub) { return sub.id == subscriptionId; });
 
     if (it != impl_->subscriptions.end()) {
         impl_->subscriptions.erase(it);
@@ -515,16 +527,15 @@ void ConfigRegistry::unsubscribeAll(std::string_view path) {
     std::unique_lock lock(impl_->mutex);
 
     impl_->subscriptions.erase(
-        std::remove_if(impl_->subscriptions.begin(), impl_->subscriptions.end(),
-                       [path](const auto& sub) {
-                           return sub.pathPattern == path;
-                       }),
+        std::remove_if(
+            impl_->subscriptions.begin(), impl_->subscriptions.end(),
+            [path](const auto& sub) { return sub.pathPattern == path; }),
         impl_->subscriptions.end());
 }
 
 void ConfigRegistry::notifySubscribers(std::string_view path,
-                                        const json& oldValue,
-                                        const json& newValue) {
+                                       const json& oldValue,
+                                       const json& newValue) {
     std::vector<std::function<void(const json&, const json&)>> callbacks;
 
     {
@@ -533,7 +544,8 @@ void ConfigRegistry::notifySubscribers(std::string_view path,
             // Check if path matches (simple prefix match or wildcard)
             bool matches = false;
             if (sub.pathPattern.ends_with("*")) {
-                std::string prefix = sub.pathPattern.substr(0, sub.pathPattern.size() - 1);
+                std::string prefix =
+                    sub.pathPattern.substr(0, sub.pathPattern.size() - 1);
                 matches = std::string(path).starts_with(prefix);
             } else {
                 matches = (sub.pathPattern == path);
@@ -550,7 +562,8 @@ void ConfigRegistry::notifySubscribers(std::string_view path,
         try {
             cb(oldValue, newValue);
         } catch (const std::exception& e) {
-            LOG_ERROR("ConfigRegistry: Subscription callback error: {}", e.what());
+            LOG_ERROR("ConfigRegistry: Subscription callback error: {}",
+                      e.what());
         }
     }
 }
@@ -559,14 +572,16 @@ void ConfigRegistry::notifySubscribers(std::string_view path,
 // Validation
 // ============================================================================
 
-ConfigValidationResult ConfigRegistry::validateSection(std::string_view path) const {
+ConfigValidationResult ConfigRegistry::validateSection(
+    std::string_view path) const {
     std::shared_lock lock(impl_->mutex);
 
     ConfigValidationResult result;
 
     auto sectionIt = impl_->sections.find(std::string(path));
     if (sectionIt == impl_->sections.end()) {
-        result.addError(std::string(path), "Section not registered", "registry");
+        result.addError(std::string(path), "Section not registered",
+                        "registry");
         return result;
     }
 
@@ -577,7 +592,8 @@ ConfigValidationResult ConfigRegistry::validateSection(std::string_view path) co
 
     auto value = impl_->configManager->get(path);
     if (!value) {
-        result.addError(std::string(path), "Section not found in config", "missing");
+        result.addError(std::string(path), "Section not found in config",
+                        "missing");
         return result;
     }
 
@@ -648,7 +664,8 @@ json ConfigRegistry::generateFullSchema() const {
             json* current = &schema["properties"];
             for (size_t i = 0; i < parts.size() - 1; ++i) {
                 if (!current->contains(parts[i])) {
-                    (*current)[parts[i]] = {{"type", "object"}, {"properties", json::object()}};
+                    (*current)[parts[i]] = {{"type", "object"},
+                                            {"properties", json::object()}};
                 }
                 current = &(*current)[parts[i]]["properties"];
             }
@@ -706,7 +723,8 @@ json ConfigRegistry::exportAll() const {
     return result;
 }
 
-ConfigValidationResult ConfigRegistry::importAll(const json& config, bool validate) {
+ConfigValidationResult ConfigRegistry::importAll(const json& config,
+                                                 bool validate) {
     ConfigValidationResult result;
 
     if (validate) {
@@ -776,12 +794,10 @@ void ConfigRegistry::clear() {
 json ConfigRegistry::getStats() const {
     std::shared_lock lock(impl_->mutex);
 
-    return {
-        {"registeredSections", impl_->sections.size()},
-        {"registeredComponents", impl_->components.size()},
-        {"activeSubscriptions", impl_->subscriptions.size()},
-        {"loadedFiles", impl_->loadedFiles.size()}
-    };
+    return {{"registeredSections", impl_->sections.size()},
+            {"registeredComponents", impl_->components.size()},
+            {"activeSubscriptions", impl_->subscriptions.size()},
+            {"loadedFiles", impl_->loadedFiles.size()}};
 }
 
 }  // namespace lithium::config

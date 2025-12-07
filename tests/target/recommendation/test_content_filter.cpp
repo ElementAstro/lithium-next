@@ -12,12 +12,16 @@ class ContentFilterTest : public ::testing::Test {
 protected:
     void SetUp() override {
         filter_ = std::make_unique<ContentFilter>();
-        
+
         // Add items with features
-        filter_->addItem("M31", {{"type", "Galaxy"}, {"constellation", "Andromeda"}});
-        filter_->addItem("M42", {{"type", "Nebula"}, {"constellation", "Orion"}});
-        filter_->addItem("M45", {{"type", "Cluster"}, {"constellation", "Taurus"}});
-        filter_->addItem("NGC224", {{"type", "Galaxy"}, {"constellation", "Andromeda"}});
+        filter_->addItem("M31",
+                         {{"type", "Galaxy"}, {"constellation", "Andromeda"}});
+        filter_->addItem("M42",
+                         {{"type", "Nebula"}, {"constellation", "Orion"}});
+        filter_->addItem("M45",
+                         {{"type", "Cluster"}, {"constellation", "Taurus"}});
+        filter_->addItem("NGC224",
+                         {{"type", "Galaxy"}, {"constellation", "Andromeda"}});
     }
 
     std::unique_ptr<ContentFilter> filter_;
@@ -36,12 +40,12 @@ TEST_F(ContentFilterTest, GetItemFeatures) {
 
 TEST_F(ContentFilterTest, ItemSimilarity) {
     double sim = filter_->similarity("M31", "NGC224");
-    EXPECT_GT(sim, 0.5); // Same type and constellation
+    EXPECT_GT(sim, 0.5);  // Same type and constellation
 }
 
 TEST_F(ContentFilterTest, DifferentTypesSimilarity) {
     double sim = filter_->similarity("M31", "M42");
-    EXPECT_LT(sim, 0.5); // Different type
+    EXPECT_LT(sim, 0.5);  // Different type
 }
 
 TEST_F(ContentFilterTest, GetSimilarItems) {

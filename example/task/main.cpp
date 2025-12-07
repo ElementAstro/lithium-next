@@ -1,7 +1,7 @@
 #include <iostream>
 #include <thread>
-#include "task/sequencer.hpp"
-#include "task/target.hpp"
+#include "task/core/sequencer.hpp"
+#include "task/core/target.hpp"
 
 using namespace lithium::task;
 

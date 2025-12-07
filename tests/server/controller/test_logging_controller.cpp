@@ -15,7 +15,7 @@ Description: Tests for Logging Controller HTTP API
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "components/system/logging/logging_manager.hpp"
+#include "logging/core/logging_manager.hpp"
 #include "server/controller/logging.hpp"
 
 #include <chrono>

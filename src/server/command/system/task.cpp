@@ -92,7 +92,8 @@ void registerTaskCommands(
     std::shared_ptr<CommandDispatcher> dispatcher,
     std::shared_ptr<lithium::server::TaskManager> task_manager) {
     if (!dispatcher || !task_manager) {
-        spdlog::error("registerTaskCommands: dispatcher or task_manager is null");
+        spdlog::error(
+            "registerTaskCommands: dispatcher or task_manager is null");
         return;
     }
 
@@ -112,8 +113,9 @@ void registerTaskCommands(
                     tasks = task_manager->listTasksByStatus(*status);
                 } else {
                     return {{"status", "error"},
-                            {"error", {{"code", "invalid_status"},
-                                       {"message", "Invalid status filter"}}}};
+                            {"error",
+                             {{"code", "invalid_status"},
+                              {"message", "Invalid status filter"}}}};
                 }
             } else if (payload.contains("type")) {
                 tasks = task_manager->listTasksByType(payload["type"]);
@@ -141,8 +143,9 @@ void registerTaskCommands(
         [task_manager](const nlohmann::json& payload) -> nlohmann::json {
             if (!payload.contains("taskId")) {
                 return {{"status", "error"},
-                        {"error", {{"code", "missing_parameter"},
-                                   {"message", "taskId is required"}}}};
+                        {"error",
+                         {{"code", "missing_parameter"},
+                          {"message", "taskId is required"}}}};
             }
 
             std::string task_id = payload["taskId"];
@@ -150,8 +153,9 @@ void registerTaskCommands(
 
             if (!task) {
                 return {{"status", "error"},
-                        {"error", {{"code", "not_found"},
-                                   {"message", "Task not found: " + task_id}}}};
+                        {"error",
+                         {{"code", "not_found"},
+                          {"message", "Task not found: " + task_id}}}};
             }
 
             return {{"status", "success"},
@@ -165,8 +169,9 @@ void registerTaskCommands(
         [task_manager](const nlohmann::json& payload) -> nlohmann::json {
             if (!payload.contains("taskId")) {
                 return {{"status", "error"},
-                        {"error", {{"code", "missing_parameter"},
-                                   {"message", "taskId is required"}}}};
+                        {"error",
+                         {{"code", "missing_parameter"},
+                          {"message", "taskId is required"}}}};
             }
 
             std::string task_id = payload["taskId"];
@@ -174,8 +179,9 @@ void registerTaskCommands(
 
             if (!cancelled) {
                 return {{"status", "error"},
-                        {"error", {{"code", "not_found"},
-                                   {"message", "Task not found: " + task_id}}}};
+                        {"error",
+                         {{"code", "not_found"},
+                          {"message", "Task not found: " + task_id}}}};
             }
 
             return {{"status", "success"},
@@ -200,10 +206,10 @@ void registerTaskCommands(
             size_t removed = task_manager->cleanupOldTasks(
                 std::chrono::seconds(max_age_seconds));
 
-            return {{"status", "success"},
-                    {"data",
-                     {{"removed", removed},
-                      {"maxAgeSeconds", max_age_seconds}}}};
+            return {
+                {"status", "success"},
+                {"data",
+                 {{"removed", removed}, {"maxAgeSeconds", max_age_seconds}}}};
         });
     spdlog::info("Registered command: task.cleanup");
 
@@ -212,10 +218,10 @@ void registerTaskCommands(
         "task.progress",
         [task_manager](const nlohmann::json& payload) -> nlohmann::json {
             if (!payload.contains("taskId") || !payload.contains("progress")) {
-                return {
-                    {"status", "error"},
-                    {"error", {{"code", "missing_parameter"},
-                               {"message", "taskId and progress are required"}}}};
+                return {{"status", "error"},
+                        {"error",
+                         {{"code", "missing_parameter"},
+                          {"message", "taskId and progress are required"}}}};
             }
 
             std::string task_id = payload["taskId"];
@@ -227,8 +233,9 @@ void registerTaskCommands(
 
             if (!updated) {
                 return {{"status", "error"},
-                        {"error", {{"code", "not_found"},
-                                   {"message", "Task not found: " + task_id}}}};
+                        {"error",
+                         {{"code", "not_found"},
+                          {"message", "Task not found: " + task_id}}}};
             }
 
             return {{"status", "success"},
@@ -243,4 +250,3 @@ void registerTaskCommands(
 }
 
 }  // namespace lithium::app
-

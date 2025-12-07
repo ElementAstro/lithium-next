@@ -3,8 +3,8 @@
 #ifndef LITHIUM_SERVER_CONTROLLER_MODULE_CONTROLLER_HPP
 #define LITHIUM_SERVER_CONTROLLER_MODULE_CONTROLLER_HPP
 
-#include "../utils/response.hpp"
 #include "../controller.hpp"
+#include "../utils/response.hpp"
 
 #include <functional>
 #include <memory>
@@ -12,7 +12,7 @@
 
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/spdlog_logger.hpp"
-#include "components/loader.hpp"
+#include "components/core/loader.hpp"
 #include "constant/constant.hpp"
 
 namespace lithium::server::controller {

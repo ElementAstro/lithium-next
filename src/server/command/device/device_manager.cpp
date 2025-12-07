@@ -6,13 +6,13 @@
 
 #include "device_manager.hpp"
 
+#include "../command.hpp"
+#include "../response.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
-#include "../command.hpp"
 #include "constant/constant.hpp"
 #include "device/manager.hpp"
-#include "../response.hpp"
 #include "server/models/device.hpp"
 
 namespace lithium::app {
@@ -65,7 +65,8 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
                 }
             }
 
-            payload = CommandResponse::success(makeDeviceListResponse(summaries));
+            payload =
+                CommandResponse::success(makeDeviceListResponse(summaries));
         } catch (const std::exception& e) {
             LOG_ERROR("device.list exception: {}", e.what());
             payload = CommandResponse::operationFailed("list", e.what());
@@ -105,8 +106,8 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
                 auto future =
                     getDeviceManager().connectDeviceAsync(name, timeout);
                 // For async, return immediately with pending status
-                payload = CommandResponse::success(
-                    makeConnectionResult(name, true, "Connection initiated asynchronously"));
+                payload = CommandResponse::success(makeConnectionResult(
+                    name, true, "Connection initiated asynchronously"));
             } else {
                 getDeviceManager().connectDeviceByName(name);
                 payload = CommandResponse::success(
@@ -138,8 +139,8 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
                     name, true, "Disconnection initiated asynchronously"));
             } else {
                 getDeviceManager().disconnectDeviceByName(name);
-                payload = CommandResponse::success(
-                    makeConnectionResult(name, true, "Disconnected successfully"));
+                payload = CommandResponse::success(makeConnectionResult(
+                    name, true, "Disconnected successfully"));
             }
         } catch (const std::exception& e) {
             LOG_ERROR("device.disconnect exception for {}: {}", name, e.what());
@@ -149,94 +150,104 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
     LOG_INFO("Registered command handler for 'device.disconnect'");
 
     // Device: connect batch
-    dispatcher->registerCommand<json>("device.connect_batch", [](json& payload) {
-        if (!payload.contains("names") || !payload["names"].is_array()) {
-            LOG_WARN("device.connect_batch: missing names array");
-            payload = CommandResponse::missingParameter("names");
-            return;
-        }
-
-        std::vector<std::string> names;
-        for (const auto& name : payload["names"]) {
-            if (name.is_string()) {
-                names.push_back(name.get<std::string>());
-            }
-        }
-
-        if (names.empty()) {
-            payload = CommandResponse::invalidParameter("names", "must contain at least one device name");
-            return;
-        }
-
-        int timeout = payload.value("timeout", 5000);
-
-        LOG_INFO("Executing device.connect_batch for {} devices", names.size());
-
-        try {
-            auto results = getDeviceManager().connectDevicesBatch(names, timeout);
-            json resultJson = json::array();
-            int successCount = 0;
-            for (const auto& [name, success] : results) {
-                json item;
-                item["name"] = name;
-                item["success"] = success;
-                resultJson.push_back(item);
-                if (success) successCount++;
+    dispatcher->registerCommand<json>(
+        "device.connect_batch", [](json& payload) {
+            if (!payload.contains("names") || !payload["names"].is_array()) {
+                LOG_WARN("device.connect_batch: missing names array");
+                payload = CommandResponse::missingParameter("names");
+                return;
             }
 
-            json response;
-            response["results"] = resultJson;
-            response["totalDevices"] = names.size();
-            response["successCount"] = successCount;
-            response["failureCount"] = names.size() - successCount;
-            payload = CommandResponse::success(response);
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.connect_batch exception: {}", e.what());
-            payload = CommandResponse::operationFailed("connect_batch", e.what());
-        }
-    });
+            std::vector<std::string> names;
+            for (const auto& name : payload["names"]) {
+                if (name.is_string()) {
+                    names.push_back(name.get<std::string>());
+                }
+            }
+
+            if (names.empty()) {
+                payload = CommandResponse::invalidParameter(
+                    "names", "must contain at least one device name");
+                return;
+            }
+
+            int timeout = payload.value("timeout", 5000);
+
+            LOG_INFO("Executing device.connect_batch for {} devices",
+                     names.size());
+
+            try {
+                auto results =
+                    getDeviceManager().connectDevicesBatch(names, timeout);
+                json resultJson = json::array();
+                int successCount = 0;
+                for (const auto& [name, success] : results) {
+                    json item;
+                    item["name"] = name;
+                    item["success"] = success;
+                    resultJson.push_back(item);
+                    if (success)
+                        successCount++;
+                }
+
+                json response;
+                response["results"] = resultJson;
+                response["totalDevices"] = names.size();
+                response["successCount"] = successCount;
+                response["failureCount"] = names.size() - successCount;
+                payload = CommandResponse::success(response);
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.connect_batch exception: {}", e.what());
+                payload =
+                    CommandResponse::operationFailed("connect_batch", e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.connect_batch'");
 
     // Device: disconnect batch
-    dispatcher->registerCommand<json>("device.disconnect_batch", [](json& payload) {
-        if (!payload.contains("names") || !payload["names"].is_array()) {
-            LOG_WARN("device.disconnect_batch: missing names array");
-            payload = CommandResponse::missingParameter("names");
-            return;
-        }
-
-        std::vector<std::string> names;
-        for (const auto& name : payload["names"]) {
-            if (name.is_string()) {
-                names.push_back(name.get<std::string>());
-            }
-        }
-
-        LOG_INFO("Executing device.disconnect_batch for {} devices", names.size());
-
-        try {
-            auto results = getDeviceManager().disconnectDevicesBatch(names);
-            json resultJson = json::array();
-            int successCount = 0;
-            for (const auto& [name, success] : results) {
-                json item;
-                item["name"] = name;
-                item["success"] = success;
-                resultJson.push_back(item);
-                if (success) successCount++;
+    dispatcher->registerCommand<json>(
+        "device.disconnect_batch", [](json& payload) {
+            if (!payload.contains("names") || !payload["names"].is_array()) {
+                LOG_WARN("device.disconnect_batch: missing names array");
+                payload = CommandResponse::missingParameter("names");
+                return;
             }
 
-            json response;
-            response["results"] = resultJson;
-            response["totalDevices"] = names.size();
-            response["successCount"] = successCount;
-            response["failureCount"] = names.size() - successCount;
-            payload = CommandResponse::success(response);
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.disconnect_batch exception: {}", e.what());
-            payload = CommandResponse::operationFailed("disconnect_batch", e.what());
-        }
-    });
+            std::vector<std::string> names;
+            for (const auto& name : payload["names"]) {
+                if (name.is_string()) {
+                    names.push_back(name.get<std::string>());
+                }
+            }
+
+            LOG_INFO("Executing device.disconnect_batch for {} devices",
+                     names.size());
+
+            try {
+                auto results = getDeviceManager().disconnectDevicesBatch(names);
+                json resultJson = json::array();
+                int successCount = 0;
+                for (const auto& [name, success] : results) {
+                    json item;
+                    item["name"] = name;
+                    item["success"] = success;
+                    resultJson.push_back(item);
+                    if (success)
+                        successCount++;
+                }
+
+                json response;
+                response["results"] = resultJson;
+                response["totalDevices"] = names.size();
+                response["successCount"] = successCount;
+                response["failureCount"] = names.size() - successCount;
+                payload = CommandResponse::success(response);
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.disconnect_batch exception: {}", e.what());
+                payload = CommandResponse::operationFailed("disconnect_batch",
+                                                           e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.disconnect_batch'");
 
     // Device: get health
@@ -304,87 +315,98 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
     LOG_INFO("Registered command handler for 'device.statistics'");
 
     // Device: reset statistics
-    dispatcher->registerCommand<json>("device.reset_statistics", [](json& payload) {
-        LOG_INFO("Executing device.reset_statistics");
+    dispatcher->registerCommand<json>(
+        "device.reset_statistics", [](json& payload) {
+            LOG_INFO("Executing device.reset_statistics");
 
-        try {
-            getDeviceManager().resetStatistics();
-            payload = CommandResponse::success("Statistics reset successfully");
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.reset_statistics exception: {}", e.what());
-            payload = CommandResponse::operationFailed("reset_statistics", e.what());
-        }
-    });
+            try {
+                getDeviceManager().resetStatistics();
+                payload =
+                    CommandResponse::success("Statistics reset successfully");
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.reset_statistics exception: {}", e.what());
+                payload = CommandResponse::operationFailed("reset_statistics",
+                                                           e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.reset_statistics'");
 
     // Device: set retry config
-    dispatcher->registerCommand<json>("device.set_retry_config", [](json& payload) {
-        if (!payload.contains("name") || !payload["name"].is_string()) {
-            LOG_WARN("device.set_retry_config: missing name");
-            payload = CommandResponse::missingParameter("name");
-            return;
-        }
-        std::string name = payload["name"].get<std::string>();
-
-        LOG_INFO("Executing device.set_retry_config for: {}", name);
-
-        try {
-            lithium::DeviceRetryConfig config;
-
-            if (payload.contains("strategy")) {
-                int strategyInt = payload["strategy"].get<int>();
-                config.strategy = static_cast<lithium::DeviceRetryConfig::Strategy>(strategyInt);
+    dispatcher->registerCommand<json>(
+        "device.set_retry_config", [](json& payload) {
+            if (!payload.contains("name") || !payload["name"].is_string()) {
+                LOG_WARN("device.set_retry_config: missing name");
+                payload = CommandResponse::missingParameter("name");
+                return;
             }
-            if (payload.contains("maxRetries")) {
-                config.maxRetries = payload["maxRetries"].get<int>();
-            }
-            if (payload.contains("initialDelayMs")) {
-                config.initialDelay = std::chrono::milliseconds(
-                    payload["initialDelayMs"].get<int>());
-            }
-            if (payload.contains("maxDelayMs")) {
-                config.maxDelay = std::chrono::milliseconds(
-                    payload["maxDelayMs"].get<int>());
-            }
-            if (payload.contains("multiplier")) {
-                config.multiplier = payload["multiplier"].get<float>();
-            }
+            std::string name = payload["name"].get<std::string>();
 
-            getDeviceManager().setDeviceRetryConfig(name, config);
+            LOG_INFO("Executing device.set_retry_config for: {}", name);
 
-            json result;
-            result["device"] = name;
-            result["config"] = config.toJson();
-            payload = CommandResponse::success(result);
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.set_retry_config exception for {}: {}", name, e.what());
-            payload = CommandResponse::operationFailed("set_retry_config", e.what());
-        }
-    });
+            try {
+                lithium::DeviceRetryConfig config;
+
+                if (payload.contains("strategy")) {
+                    int strategyInt = payload["strategy"].get<int>();
+                    config.strategy =
+                        static_cast<lithium::DeviceRetryConfig::Strategy>(
+                            strategyInt);
+                }
+                if (payload.contains("maxRetries")) {
+                    config.maxRetries = payload["maxRetries"].get<int>();
+                }
+                if (payload.contains("initialDelayMs")) {
+                    config.initialDelay = std::chrono::milliseconds(
+                        payload["initialDelayMs"].get<int>());
+                }
+                if (payload.contains("maxDelayMs")) {
+                    config.maxDelay = std::chrono::milliseconds(
+                        payload["maxDelayMs"].get<int>());
+                }
+                if (payload.contains("multiplier")) {
+                    config.multiplier = payload["multiplier"].get<float>();
+                }
+
+                getDeviceManager().setDeviceRetryConfig(name, config);
+
+                json result;
+                result["device"] = name;
+                result["config"] = config.toJson();
+                payload = CommandResponse::success(result);
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.set_retry_config exception for {}: {}", name,
+                          e.what());
+                payload = CommandResponse::operationFailed("set_retry_config",
+                                                           e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.set_retry_config'");
 
     // Device: get retry config
-    dispatcher->registerCommand<json>("device.get_retry_config", [](json& payload) {
-        if (!payload.contains("name") || !payload["name"].is_string()) {
-            LOG_WARN("device.get_retry_config: missing name");
-            payload = CommandResponse::missingParameter("name");
-            return;
-        }
-        std::string name = payload["name"].get<std::string>();
+    dispatcher->registerCommand<json>(
+        "device.get_retry_config", [](json& payload) {
+            if (!payload.contains("name") || !payload["name"].is_string()) {
+                LOG_WARN("device.get_retry_config: missing name");
+                payload = CommandResponse::missingParameter("name");
+                return;
+            }
+            std::string name = payload["name"].get<std::string>();
 
-        LOG_DEBUG("Executing device.get_retry_config for: {}", name);
+            LOG_DEBUG("Executing device.get_retry_config for: {}", name);
 
-        try {
-            auto config = getDeviceManager().getDeviceRetryConfig(name);
-            json result;
-            result["device"] = name;
-            result["config"] = config.toJson();
-            payload = CommandResponse::success(result);
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.get_retry_config exception for {}: {}", name, e.what());
-            payload = CommandResponse::operationFailed("get_retry_config", e.what());
-        }
-    });
+            try {
+                auto config = getDeviceManager().getDeviceRetryConfig(name);
+                json result;
+                result["device"] = name;
+                result["config"] = config.toJson();
+                payload = CommandResponse::success(result);
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.get_retry_config exception for {}: {}", name,
+                          e.what());
+                payload = CommandResponse::operationFailed("get_retry_config",
+                                                           e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.get_retry_config'");
 
     // Device: reset device
@@ -412,36 +434,43 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
     LOG_INFO("Registered command handler for 'device.reset'");
 
     // Device: start health monitor
-    dispatcher->registerCommand<json>("device.start_health_monitor", [](json& payload) {
-        int intervalSeconds = payload.value("interval", 30);
+    dispatcher->registerCommand<json>(
+        "device.start_health_monitor", [](json& payload) {
+            int intervalSeconds = payload.value("interval", 30);
 
-        LOG_INFO("Executing device.start_health_monitor with interval {}s", intervalSeconds);
+            LOG_INFO("Executing device.start_health_monitor with interval {}s",
+                     intervalSeconds);
 
-        try {
-            getDeviceManager().startHealthMonitor(std::chrono::seconds(intervalSeconds));
-            json result;
-            result["message"] = "Health monitor started";
-            result["interval"] = intervalSeconds;
-            payload = CommandResponse::success(result);
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.start_health_monitor exception: {}", e.what());
-            payload = CommandResponse::operationFailed("start_health_monitor", e.what());
-        }
-    });
+            try {
+                getDeviceManager().startHealthMonitor(
+                    std::chrono::seconds(intervalSeconds));
+                json result;
+                result["message"] = "Health monitor started";
+                result["interval"] = intervalSeconds;
+                payload = CommandResponse::success(result);
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.start_health_monitor exception: {}",
+                          e.what());
+                payload = CommandResponse::operationFailed(
+                    "start_health_monitor", e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.start_health_monitor'");
 
     // Device: stop health monitor
-    dispatcher->registerCommand<json>("device.stop_health_monitor", [](json& payload) {
-        LOG_INFO("Executing device.stop_health_monitor");
+    dispatcher->registerCommand<json>(
+        "device.stop_health_monitor", [](json& payload) {
+            LOG_INFO("Executing device.stop_health_monitor");
 
-        try {
-            getDeviceManager().stopHealthMonitor();
-            payload = CommandResponse::success("Health monitor stopped");
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.stop_health_monitor exception: {}", e.what());
-            payload = CommandResponse::operationFailed("stop_health_monitor", e.what());
-        }
-    });
+            try {
+                getDeviceManager().stopHealthMonitor();
+                payload = CommandResponse::success("Health monitor stopped");
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.stop_health_monitor exception: {}", e.what());
+                payload = CommandResponse::operationFailed(
+                    "stop_health_monitor", e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.stop_health_monitor'");
 
     // Device: get pending events
@@ -473,43 +502,49 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
             payload = CommandResponse::success("Events cleared");
         } catch (const std::exception& e) {
             LOG_ERROR("device.clear_events exception: {}", e.what());
-            payload = CommandResponse::operationFailed("clear_events", e.what());
+            payload =
+                CommandResponse::operationFailed("clear_events", e.what());
         }
     });
     LOG_INFO("Registered command handler for 'device.clear_events'");
 
     // Device: export configuration
-    dispatcher->registerCommand<json>("device.export_config", [](json& payload) {
-        LOG_DEBUG("Executing device.export_config");
+    dispatcher->registerCommand<json>(
+        "device.export_config", [](json& payload) {
+            LOG_DEBUG("Executing device.export_config");
 
-        try {
-            auto config = getDeviceManager().exportConfiguration();
-            payload = CommandResponse::success(config);
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.export_config exception: {}", e.what());
-            payload = CommandResponse::operationFailed("export_config", e.what());
-        }
-    });
+            try {
+                auto config = getDeviceManager().exportConfiguration();
+                payload = CommandResponse::success(config);
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.export_config exception: {}", e.what());
+                payload =
+                    CommandResponse::operationFailed("export_config", e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.export_config'");
 
     // Device: import configuration
-    dispatcher->registerCommand<json>("device.import_config", [](json& payload) {
-        if (!payload.contains("config") || !payload["config"].is_object()) {
-            LOG_WARN("device.import_config: missing config object");
-            payload = CommandResponse::missingParameter("config");
-            return;
-        }
+    dispatcher->registerCommand<json>(
+        "device.import_config", [](json& payload) {
+            if (!payload.contains("config") || !payload["config"].is_object()) {
+                LOG_WARN("device.import_config: missing config object");
+                payload = CommandResponse::missingParameter("config");
+                return;
+            }
 
-        LOG_INFO("Executing device.import_config");
+            LOG_INFO("Executing device.import_config");
 
-        try {
-            getDeviceManager().importConfiguration(payload["config"]);
-            payload = CommandResponse::success("Configuration imported successfully");
-        } catch (const std::exception& e) {
-            LOG_ERROR("device.import_config exception: {}", e.what());
-            payload = CommandResponse::operationFailed("import_config", e.what());
-        }
-    });
+            try {
+                getDeviceManager().importConfiguration(payload["config"]);
+                payload = CommandResponse::success(
+                    "Configuration imported successfully");
+            } catch (const std::exception& e) {
+                LOG_ERROR("device.import_config exception: {}", e.what());
+                payload =
+                    CommandResponse::operationFailed("import_config", e.what());
+            }
+        });
     LOG_INFO("Registered command handler for 'device.import_config'");
 
     // Device: refresh devices
@@ -529,4 +564,3 @@ void registerDeviceManager(std::shared_ptr<CommandDispatcher> dispatcher) {
 }
 
 }  // namespace lithium::app
-

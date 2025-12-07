@@ -62,7 +62,8 @@ auto ASCOMFocuser::moveTo(int position) -> bool {
         return false;
     }
 
-    auto response = setProperty("move", {{"Position", std::to_string(position)}});
+    auto response =
+        setProperty("move", {{"Position", std::to_string(position)}});
     if (!response.isSuccess()) {
         setError("Failed to move focuser: " + response.errorMessage);
         return false;
@@ -86,7 +87,8 @@ auto ASCOMFocuser::moveRelative(int steps) -> bool {
 }
 
 auto ASCOMFocuser::halt() -> bool {
-    if (!isConnected()) return false;
+    if (!isConnected())
+        return false;
 
     if (!capabilities_.canHalt) {
         return false;
@@ -168,7 +170,8 @@ void ASCOMFocuser::refreshCapabilities() {
     capabilities_.absolute = getBoolProperty("absolute").value_or(false);
     capabilities_.canHalt = getBoolProperty("canhalt").value_or(false);
     capabilities_.tempComp = getBoolProperty("tempcomp").value_or(false);
-    capabilities_.tempCompAvailable = getBoolProperty("tempcompavailable").value_or(false);
+    capabilities_.tempCompAvailable =
+        getBoolProperty("tempcompavailable").value_or(false);
 
     positionInfo_.maxStep = getMaxStep();
     positionInfo_.maxIncrement = getMaxIncrement();

@@ -15,7 +15,7 @@ Description: Tests for WebSocket Log Streaming
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "components/system/logging/logging_manager.hpp"
+#include "logging/core/logging_manager.hpp"
 #include "server/websocket/log_stream.hpp"
 
 #include <atomic>

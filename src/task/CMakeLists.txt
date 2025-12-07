@@ -4,7 +4,7 @@
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: Lithium-Task
-# Description: Task sequencing and generation module
+# Description: Task sequencing and generation module with split architecture
 # Author: Max Qian
 # License: GPL3
 # ============================================================================
@@ -15,34 +15,53 @@ lithium_component_begin(lithium_task 1.0.0)
 # Source Files
 # ============================================================================
 
-# Gather all custom task sources
-file(GLOB_RECURSE CUSTOM_SRC
-    "${CMAKE_CURRENT_SOURCE_DIR}/custom/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/custom/*.hpp"
+# Gather all component task sources
+file(GLOB_RECURSE COMPONENTS_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/components/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/components/*.hpp"
 )
 
 set(PROJECT_SOURCES
-    generator.cpp
-    sequencer.cpp
-    target.cpp
-    task.cpp
-    imagepath.cpp
-    registration.cpp
-    integration_utils.cpp
-    api_adapter.cpp
+    # Core module
+    core/task.cpp
+    core/target.cpp
+    core/sequencer.cpp
+    core/generator.cpp
+    core/factory.cpp
+    core/registration.cpp
+    # Utils module
+    utils/imagepath.cpp
+    utils/integration_utils.cpp
+    # Adapters module
+    adapters/api_adapter.cpp
 )
 
 set(PROJECT_HEADERS
-    lithium_task.hpp
-    generator.hpp
-    sequencer.hpp
-    target.hpp
+    # Main entry point
     task.hpp
-    imagepath.hpp
-    registration.hpp
-    integration_utils.hpp
-    api_adapter.hpp
-    ${CUSTOM_SRC}
+    # Core module
+    core/task.hpp
+    core/target.hpp
+    core/sequencer.hpp
+    core/generator.hpp
+    core/factory.hpp
+    core/registration.hpp
+    core/exception.hpp
+    core/types.hpp
+    # Components module
+    components/components.hpp
+    components/common/task_base.hpp
+    components/common/types.hpp
+    components/common/validation.hpp
+    # Utils module
+    utils/imagepath.hpp
+    utils/integration_utils.hpp
+    utils/utils.hpp
+    # Adapters module
+    adapters/api_adapter.hpp
+    adapters/adapters.hpp
+    # All component sources
+    ${COMPONENTS_SRC}
 )
 
 # ============================================================================
@@ -69,7 +88,7 @@ lithium_add_library(
     LIBRARIES ${PROJECT_LIBRARIES}
     VERSION ${PROJECT_VERSION}
     TYPE STATIC
-    DESCRIPTION "Task sequencing and generation"
+    DESCRIPTION "Task sequencing and generation module"
     PUBLIC_HEADERS
 )
 

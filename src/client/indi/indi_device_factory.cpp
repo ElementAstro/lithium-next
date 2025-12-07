@@ -87,8 +87,8 @@ auto INDIDeviceFactory::createDevice(DeviceType type, const std::string& name)
     -> std::shared_ptr<INDIDeviceBase> {
     auto it = creators_.find(type);
     if (it != creators_.end()) {
-        LOG_DEBUG("Creating device: type={}, name={}",
-                  deviceTypeToString(type), name);
+        LOG_DEBUG("Creating device: type={}, name={}", deviceTypeToString(type),
+                  name);
         return it->second(name);
     }
     LOG_ERROR("Unknown device type: {}", static_cast<int>(type));
@@ -158,8 +158,8 @@ void INDIDeviceFactory::registerCreator(const std::string& typeStr,
     auto type = deviceTypeFromString(typeStr);
     if (type == DeviceType::Unknown) {
         // Create a new type mapping
-        type = static_cast<DeviceType>(
-            static_cast<int>(DeviceType::Unknown) + typeMap_.size() + 1);
+        type = static_cast<DeviceType>(static_cast<int>(DeviceType::Unknown) +
+                                       typeMap_.size() + 1);
         typeMap_[typeStr] = type;
     }
     registerCreator(type, std::move(creator));
@@ -427,8 +427,6 @@ void INDIDeviceManager::destroyAll() {
     devices_.clear();
 }
 
-void INDIDeviceManager::clear() {
-    destroyAll();
-}
+void INDIDeviceManager::clear() { destroyAll(); }
 
 }  // namespace lithium::client::indi

@@ -190,6 +190,94 @@ auto ComponentManager::getLastError() -> std::string {
 
 void ComponentManager::clearErrors() { impl_->lastError_.clear(); }
 
+auto ComponentManager::getComponentCount() const -> size_t {
+    return impl_->components_.size();
+}
+
+auto ComponentManager::hasLoadedComponents() const -> bool {
+    return !impl_->components_.empty();
+}
+
+auto ComponentManager::getComponentsByState(ComponentState state) const
+    -> std::vector<std::string> {
+    std::vector<std::string> result;
+    for (const auto& [name, compState] : impl_->componentStates_) {
+        if (compState == state) {
+            result.push_back(name);
+        }
+    }
+    return result;
+}
+
+auto ComponentManager::restartComponent(const std::string& name) -> bool {
+    if (!stopComponent(name)) {
+        return false;
+    }
+    return startComponent(name);
+}
+
+auto ComponentManager::enableComponent(const std::string& name) -> bool {
+    if (getComponentState(name) == ComponentState::Disabled) {
+        updateComponentState(name, ComponentState::Created);
+        notifyListeners(name, ComponentEvent::StateChanged);
+        return true;
+    }
+    return false;
+}
+
+auto ComponentManager::disableComponent(const std::string& name) -> bool {
+    if (auto comp = getComponent(name)) {
+        stopComponent(name);
+        updateComponentState(name, ComponentState::Disabled);
+        notifyListeners(name, ComponentEvent::StateChanged);
+        return true;
+    }
+    return false;
+}
+
+auto ComponentManager::isComponentEnabled(const std::string& name) const
+    -> bool {
+    if (impl_->componentStates_.contains(name)) {
+        return impl_->componentStates_.at(name) != ComponentState::Disabled;
+    }
+    return false;
+}
+
+auto ComponentManager::getGroups() const -> std::vector<std::string> {
+    std::vector<std::string> groups;
+    groups.reserve(componentGroups_.size());
+    for (const auto& [group, _] : componentGroups_) {
+        groups.push_back(group);
+    }
+    return groups;
+}
+
+auto ComponentManager::startGroup(const std::string& group) -> bool {
+    auto components = getGroupComponents(group);
+    if (components.empty()) {
+        return false;
+    }
+
+    bool success = true;
+    for (const auto& name : components) {
+        success &= startComponent(name);
+    }
+    return success;
+}
+
+auto ComponentManager::stopGroup(const std::string& group) -> bool {
+    auto components = getGroupComponents(group);
+    if (components.empty()) {
+        return false;
+    }
+
+    bool success = true;
+    for (const auto& name : components) {
+        success &= stopComponent(name);
+    }
+    return success;
+}
+
 void ComponentManager::notifyListeners(const std::string& component,
                                        ComponentEvent event, const json& data) {
     impl_->notifyListeners(component, event, data);

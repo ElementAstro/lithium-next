@@ -28,8 +28,8 @@ public:
      * @brief Similarity metric type
      */
     enum class SimilarityMetric {
-        COSINE,    ///< Cosine similarity
-        PEARSON,   ///< Pearson correlation
+        COSINE,   ///< Cosine similarity
+        PEARSON,  ///< Pearson correlation
     };
 
     /**
@@ -57,10 +57,10 @@ public:
 
     // Rating Management
     void addRating(const std::string& userId, const std::string& itemId,
-                  double rating) override;
+                   double rating) override;
 
     void addImplicitFeedback(const std::string& userId,
-                            const std::string& itemId) override;
+                             const std::string& itemId) override;
 
     void addRatings(
         const std::vector<std::tuple<std::string, std::string, double>>&
@@ -68,10 +68,10 @@ public:
 
     // Item Features (not used in pure collaborative filtering)
     void addItem(const std::string& itemId,
-                const std::vector<std::string>& features) override;
+                 const std::vector<std::string>& features) override;
 
-    void addItemFeature(const std::string& itemId,
-                       const std::string& featureId, double value) override;
+    void addItemFeature(const std::string& itemId, const std::string& featureId,
+                        double value) override;
 
     void addItems(
         const std::vector<std::pair<std::string, std::vector<std::string>>>&
@@ -84,7 +84,7 @@ public:
         -> std::vector<std::pair<std::string, double>> override;
 
     [[nodiscard]] auto predictRating(const std::string& userId,
-                                    const std::string& itemId)
+                                     const std::string& itemId)
         -> double override;
 
     // Model Persistence

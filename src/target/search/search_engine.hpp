@@ -19,8 +19,8 @@
 
 #include "atom/type/expected.hpp"
 
-#include "celestial_repository.hpp"
 #include "celestial_model.hpp"
+#include "celestial_repository.hpp"
 #include "index/fuzzy_matcher.hpp"
 #include "index/spatial_index.hpp"
 #include "index/trie_index.hpp"
@@ -97,8 +97,7 @@ public:
      *
      * @return Success or error message
      */
-    [[nodiscard]] auto initialize()
-        -> atom::type::Expected<void, std::string>;
+    [[nodiscard]] auto initialize() -> atom::type::Expected<void, std::string>;
 
     /**
      * @brief Check if search engine is initialized
@@ -117,9 +116,9 @@ public:
      * @param options Search options configuration
      * @return Vector of search results, sorted by relevance
      */
-    [[nodiscard]] auto search(
-        const std::string& query,
-        const SearchOptions& options = {}) -> std::vector<CelestialObjectModel>;
+    [[nodiscard]] auto search(const std::string& query,
+                              const SearchOptions& options = {})
+        -> std::vector<CelestialObjectModel>;
 
     /**
      * @brief Exact name search
@@ -130,9 +129,8 @@ public:
      * @param limit Maximum results to return
      * @return Vector of matched results
      */
-    [[nodiscard]] auto exactSearch(
-        const std::string& query,
-        int limit = 50) -> std::vector<CelestialObjectModel>;
+    [[nodiscard]] auto exactSearch(const std::string& query, int limit = 50)
+        -> std::vector<CelestialObjectModel>;
 
     /**
      * @brief Fuzzy search with edit distance tolerance
@@ -145,10 +143,9 @@ public:
      * @param limit Maximum results to return
      * @return Vector of fuzzy matched results, sorted by distance
      */
-    [[nodiscard]] auto fuzzySearch(
-        const std::string& query,
-        int tolerance = 2,
-        int limit = 50) -> std::vector<CelestialObjectModel>;
+    [[nodiscard]] auto fuzzySearch(const std::string& query, int tolerance = 2,
+                                   int limit = 50)
+        -> std::vector<CelestialObjectModel>;
 
     /**
      * @brief Search by celestial coordinates
@@ -162,11 +159,9 @@ public:
      * @param limit Maximum results to return
      * @return Vector of nearby objects, sorted by distance
      */
-    [[nodiscard]] auto searchByCoordinates(
-        double ra,
-        double dec,
-        double radius,
-        int limit = 50) -> std::vector<CelestialObjectModel>;
+    [[nodiscard]] auto searchByCoordinates(double ra, double dec, double radius,
+                                           int limit = 50)
+        -> std::vector<CelestialObjectModel>;
 
     /**
      * @brief Autocomplete suggestions from prefix
@@ -178,9 +173,8 @@ public:
      * @param limit Maximum suggestions to return
      * @return Vector of completion suggestions
      */
-    [[nodiscard]] auto autocomplete(
-        const std::string& prefix,
-        int limit = 10) -> std::vector<std::string>;
+    [[nodiscard]] auto autocomplete(const std::string& prefix, int limit = 10)
+        -> std::vector<std::string>;
 
     /**
      * @brief Advanced search with complex filter criteria
@@ -191,9 +185,8 @@ public:
      * @param filter Search filter with constraints
      * @return Vector of matching celestial objects
      */
-    [[nodiscard]] auto advancedSearch(
-        const CelestialSearchFilter& filter) ->
-        std::vector<CelestialObjectModel>;
+    [[nodiscard]] auto advancedSearch(const CelestialSearchFilter& filter)
+        -> std::vector<CelestialObjectModel>;
 
     /**
      * @brief Rebuild all index structures

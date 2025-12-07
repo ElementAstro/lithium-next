@@ -15,7 +15,7 @@ Description: Comprehensive tests for LoggingManager
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "logging/logging_manager.hpp"
+#include "logging/core/logging_manager.hpp"
 
 #include <atomic>
 #include <chrono>

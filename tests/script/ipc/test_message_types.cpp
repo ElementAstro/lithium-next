@@ -25,7 +25,8 @@ TEST_F(IPCErrorTest, ErrorToStringSuccess) {
 }
 
 TEST_F(IPCErrorTest, ErrorToStringConnectionFailed) {
-    EXPECT_EQ(ipcErrorToString(IPCError::ConnectionFailed), "Connection failed");
+    EXPECT_EQ(ipcErrorToString(IPCError::ConnectionFailed),
+              "Connection failed");
 }
 
 TEST_F(IPCErrorTest, ErrorToStringMessageTooLarge) {
@@ -33,11 +34,13 @@ TEST_F(IPCErrorTest, ErrorToStringMessageTooLarge) {
 }
 
 TEST_F(IPCErrorTest, ErrorToStringSerializationFailed) {
-    EXPECT_EQ(ipcErrorToString(IPCError::SerializationFailed), "Serialization failed");
+    EXPECT_EQ(ipcErrorToString(IPCError::SerializationFailed),
+              "Serialization failed");
 }
 
 TEST_F(IPCErrorTest, ErrorToStringDeserializationFailed) {
-    EXPECT_EQ(ipcErrorToString(IPCError::DeserializationFailed), "Deserialization failed");
+    EXPECT_EQ(ipcErrorToString(IPCError::DeserializationFailed),
+              "Deserialization failed");
 }
 
 TEST_F(IPCErrorTest, ErrorToStringTimeout) {
@@ -57,7 +60,8 @@ TEST_F(IPCErrorTest, ErrorToStringChannelClosed) {
 }
 
 TEST_F(IPCErrorTest, ErrorToStringProcessNotRunning) {
-    EXPECT_EQ(ipcErrorToString(IPCError::ProcessNotRunning), "Process not running");
+    EXPECT_EQ(ipcErrorToString(IPCError::ProcessNotRunning),
+              "Process not running");
 }
 
 TEST_F(IPCErrorTest, ErrorToStringUnknownError) {

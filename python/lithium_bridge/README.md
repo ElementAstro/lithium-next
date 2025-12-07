@@ -25,7 +25,7 @@ from lithium_bridge import expose_controller, expose_command
 )
 def calculate(x: int, y: int, operation: str = "add") -> dict:
     """Perform a mathematical operation.
-    
+
     :param x: First operand
     :param y: Second operand
     :param operation: Operation to perform
@@ -45,7 +45,7 @@ def calculate(x: int, y: int, operation: str = "add") -> dict:
 )
 def process_data(data: dict) -> dict:
     """Process input data.
-    
+
     :param data: Input data
     :return: Processed data
     """

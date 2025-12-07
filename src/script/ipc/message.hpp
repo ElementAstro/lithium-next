@@ -49,13 +49,13 @@ struct MessageHeader {
     static constexpr uint8_t VERSION = 1;
     static constexpr size_t SIZE = 16;
 
-    uint32_t magic{MAGIC};      ///< Magic number for validation
-    uint8_t version{VERSION};   ///< Protocol version
-    MessageType type;           ///< Message type
-    uint32_t payloadSize{0};    ///< Size of payload in bytes
-    uint32_t sequenceId{0};     ///< Message sequence number
-    uint8_t flags{0};           ///< Message flags
-    uint8_t reserved{0};        ///< Reserved for future use
+    uint32_t magic{MAGIC};     ///< Magic number for validation
+    uint8_t version{VERSION};  ///< Protocol version
+    MessageType type;          ///< Message type
+    uint32_t payloadSize{0};   ///< Size of payload in bytes
+    uint32_t sequenceId{0};    ///< Message sequence number
+    uint8_t flags{0};          ///< Message flags
+    uint8_t reserved{0};       ///< Reserved for future use
 
     /**
      * @brief Serialize header to bytes
@@ -96,7 +96,7 @@ struct Message {
      * @return Constructed message
      */
     [[nodiscard]] static Message create(MessageType type, const json& payload,
-                                         uint32_t sequenceId = 0);
+                                        uint32_t sequenceId = 0);
 
     /**
      * @brief Create a message with binary payload
@@ -106,8 +106,8 @@ struct Message {
      * @return Constructed message
      */
     [[nodiscard]] static Message create(MessageType type,
-                                         std::vector<uint8_t> payload,
-                                         uint32_t sequenceId = 0);
+                                        std::vector<uint8_t> payload,
+                                        uint32_t sequenceId = 0);
 
     /**
      * @brief Get payload as JSON
@@ -137,14 +137,14 @@ struct Message {
  * in an isolated subprocess.
  */
 struct ExecuteRequest {
-    std::string scriptContent;             ///< Script content to execute
-    std::string scriptPath;                ///< Optional script file path
-    std::string functionName;              ///< Function to call (if any)
-    json arguments;                        ///< Arguments as JSON
-    std::chrono::seconds timeout{300};     ///< Execution timeout
-    bool captureOutput{true};              ///< Capture stdout/stderr
+    std::string scriptContent;                ///< Script content to execute
+    std::string scriptPath;                   ///< Optional script file path
+    std::string functionName;                 ///< Function to call (if any)
+    json arguments;                           ///< Arguments as JSON
+    std::chrono::seconds timeout{300};        ///< Execution timeout
+    bool captureOutput{true};                 ///< Capture stdout/stderr
     std::vector<std::string> allowedImports;  ///< Allowed module imports
-    std::string workingDirectory;          ///< Working directory
+    std::string workingDirectory;             ///< Working directory
 
     /**
      * @brief Convert to JSON representation
@@ -167,15 +167,15 @@ struct ExecuteRequest {
  * error information, and performance metrics.
  */
 struct ExecuteResult {
-    bool success{false};                 ///< Whether execution succeeded
-    json result;                         ///< Result data
-    std::string output;                  ///< Captured stdout
-    std::string errorOutput;             ///< Captured stderr
-    std::string exception;               ///< Exception message if any
-    std::string exceptionType;           ///< Exception type
-    std::string traceback;               ///< Python traceback
-    int64_t executionTimeMs{0};          ///< Execution time in milliseconds
-    size_t peakMemoryBytes{0};           ///< Peak memory usage
+    bool success{false};         ///< Whether execution succeeded
+    json result;                 ///< Result data
+    std::string output;          ///< Captured stdout
+    std::string errorOutput;     ///< Captured stderr
+    std::string exception;       ///< Exception message if any
+    std::string exceptionType;   ///< Exception type
+    std::string traceback;       ///< Python traceback
+    int64_t executionTimeMs{0};  ///< Execution time in milliseconds
+    size_t peakMemoryBytes{0};   ///< Peak memory usage
 
     /**
      * @brief Convert to JSON representation
@@ -197,10 +197,10 @@ struct ExecuteResult {
  * Provides progress information during long-running script execution.
  */
 struct ProgressUpdate {
-    float percentage{0.0f};              ///< Progress 0.0 to 1.0
-    std::string message;                 ///< Status message
-    std::string currentStep;             ///< Current step description
-    int64_t elapsedMs{0};                ///< Elapsed time in milliseconds
+    float percentage{0.0f};   ///< Progress 0.0 to 1.0
+    std::string message;      ///< Status message
+    std::string currentStep;  ///< Current step description
+    int64_t elapsedMs{0};     ///< Elapsed time in milliseconds
     std::optional<int64_t> estimatedRemainingMs;  ///< Estimated remaining time
 
     /**
@@ -224,10 +224,10 @@ struct ProgressUpdate {
  * the initial handshake between parent and child processes.
  */
 struct HandshakePayload {
-    std::string version;                 ///< Protocol version
-    std::string pythonVersion;           ///< Python version
+    std::string version;                    ///< Protocol version
+    std::string pythonVersion;              ///< Python version
     std::vector<std::string> capabilities;  ///< Supported capabilities
-    uint32_t pid{0};                     ///< Process ID
+    uint32_t pid{0};                        ///< Process ID
 
     /**
      * @brief Convert to JSON representation

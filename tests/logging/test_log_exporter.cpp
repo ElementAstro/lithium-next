@@ -15,7 +15,7 @@ Description: Comprehensive tests for LogExporter
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "logging/log_exporter.hpp"
+#include "logging/utils/log_exporter.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -30,7 +30,8 @@ class LogExporterTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Create test directory
-        test_dir_ = std::filesystem::temp_directory_path() / "log_exporter_test";
+        test_dir_ =
+            std::filesystem::temp_directory_path() / "log_exporter_test";
         std::filesystem::create_directories(test_dir_);
     }
 
@@ -705,9 +706,8 @@ TEST_F(LogExporterTest, ExportStreamingJsonl) {
 
     std::vector<std::string> chunks;
     auto result = LogExporter::exportStreaming(
-        entries, options, [&chunks](const std::string& chunk) {
-            chunks.push_back(chunk);
-        });
+        entries, options,
+        [&chunks](const std::string& chunk) { chunks.push_back(chunk); });
 
     EXPECT_TRUE(result.success);
     EXPECT_EQ(chunks.size(), 3);  // One chunk per entry
@@ -721,9 +721,8 @@ TEST_F(LogExporterTest, ExportStreamingCsv) {
 
     std::vector<std::string> chunks;
     auto result = LogExporter::exportStreaming(
-        entries, options, [&chunks](const std::string& chunk) {
-            chunks.push_back(chunk);
-        });
+        entries, options,
+        [&chunks](const std::string& chunk) { chunks.push_back(chunk); });
 
     EXPECT_TRUE(result.success);
     EXPECT_EQ(chunks.size(), 3);  // Header + 2 entries
@@ -737,9 +736,8 @@ TEST_F(LogExporterTest, ExportStreamingCsvNoHeader) {
 
     std::vector<std::string> chunks;
     auto result = LogExporter::exportStreaming(
-        entries, options, [&chunks](const std::string& chunk) {
-            chunks.push_back(chunk);
-        });
+        entries, options,
+        [&chunks](const std::string& chunk) { chunks.push_back(chunk); });
 
     EXPECT_TRUE(result.success);
     EXPECT_EQ(chunks.size(), 2);  // Just entries, no header
@@ -752,9 +750,8 @@ TEST_F(LogExporterTest, ExportStreamingOtherFormats) {
 
     std::vector<std::string> chunks;
     auto result = LogExporter::exportStreaming(
-        entries, options, [&chunks](const std::string& chunk) {
-            chunks.push_back(chunk);
-        });
+        entries, options,
+        [&chunks](const std::string& chunk) { chunks.push_back(chunk); });
 
     EXPECT_TRUE(result.success);
     EXPECT_EQ(chunks.size(), 1);  // All at once

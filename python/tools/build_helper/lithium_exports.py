@@ -15,7 +15,7 @@ from lithium_bridge import expose_command, expose_controller
     method="POST",
     description="Configure a CMake project",
     tags=["build", "cmake"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def cmake_configure(
     source_dir: str,
@@ -66,7 +66,7 @@ def cmake_configure(
     method="POST",
     description="Build a CMake project",
     tags=["build", "cmake"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def cmake_build(
     build_dir: str,
@@ -107,7 +107,7 @@ def cmake_build(
     method="POST",
     description="Setup a Meson project",
     tags=["build", "meson"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def meson_setup(
     source_dir: str,
@@ -155,7 +155,7 @@ def meson_setup(
     method="POST",
     description="Compile a Meson project",
     tags=["build", "meson"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def meson_compile(
     build_dir: str,
@@ -196,7 +196,7 @@ def meson_compile(
     description="Configure CMake project (command)",
     priority=5,
     timeout_ms=120000,
-    tags=["build", "cmake"]
+    tags=["build", "cmake"],
 )
 def cmd_cmake_configure(source_dir: str, build_dir: str) -> dict:
     """Configure CMake project via command dispatcher."""
@@ -208,7 +208,7 @@ def cmd_cmake_configure(source_dir: str, build_dir: str) -> dict:
     description="Build CMake project (command)",
     priority=5,
     timeout_ms=300000,
-    tags=["build", "cmake"]
+    tags=["build", "cmake"],
 )
 def cmd_cmake_build(build_dir: str) -> dict:
     """Build CMake project via command dispatcher."""

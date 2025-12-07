@@ -42,8 +42,7 @@ std::optional<double> getDouble(const nlohmann::json& json,
 /**
  * @brief Helper to safely extract a string from JSON
  */
-std::string getString(const nlohmann::json& json,
-                     const std::string& key) {
+std::string getString(const nlohmann::json& json, const std::string& key) {
     try {
         if (json.contains(key)) {
             auto val = json[key];
@@ -77,8 +76,7 @@ std::chrono::system_clock::time_point parseTimestamp(
 /**
  * @brief Navigate JSON path (dot-separated)
  */
-nlohmann::json getByPath(const nlohmann::json& json,
-                        const std::string& path) {
+nlohmann::json getByPath(const nlohmann::json& json, const std::string& path) {
     std::istringstream iss(path);
     std::string segment;
     nlohmann::json current = json;
@@ -181,8 +179,7 @@ public:
 
             // Extract timestamp
             if (json.contains("timestamp")) {
-                point.time =
-                    parseTimestamp(getString(json, "timestamp"));
+                point.time = parseTimestamp(getString(json, "timestamp"));
             } else if (json.contains("jd")) {
                 // Julian day - would need to convert
                 point.time = std::chrono::system_clock::now();
@@ -233,13 +230,11 @@ public:
 
 // Public interface implementation
 
-JsonResponseParser::JsonResponseParser()
-    : pImpl_(std::make_unique<Impl>()) {}
+JsonResponseParser::JsonResponseParser() : pImpl_(std::make_unique<Impl>()) {}
 
 JsonResponseParser::~JsonResponseParser() = default;
 
-JsonResponseParser::JsonResponseParser(JsonResponseParser&&) noexcept =
-    default;
+JsonResponseParser::JsonResponseParser(JsonResponseParser&&) noexcept = default;
 
 JsonResponseParser& JsonResponseParser::operator=(
     JsonResponseParser&&) noexcept = default;
@@ -248,8 +243,7 @@ void JsonResponseParser::setObjectParser(const ParserFunc& parser) {
     pImpl_->objectParser = parser;
 }
 
-void JsonResponseParser::setEphemerisParser(
-    const EphemerisParserFunc& parser) {
+void JsonResponseParser::setEphemerisParser(const EphemerisParserFunc& parser) {
     pImpl_->ephemerisParser = parser;
 }
 
@@ -267,8 +261,7 @@ JsonResponseParser::ParserFunc JsonResponseParser::nedParser() {
             obj.identifier = getString(json, "Name");
 
             // Coordinates from Preferred if available
-            if (json.contains("Preferred") &&
-                json["Preferred"].is_object()) {
+            if (json.contains("Preferred") && json["Preferred"].is_object()) {
                 auto pref = json["Preferred"];
 
                 if (pref.contains("Coordinates") &&
@@ -327,8 +320,7 @@ JsonResponseParser::jplHorizonsParser() {
 
             // Extract time
             if (json.contains("datetime")) {
-                point.time =
-                    parseTimestamp(getString(json, "datetime"));
+                point.time = parseTimestamp(getString(json, "datetime"));
             }
 
             // RA/Dec might be in degrees or separate fields
@@ -414,8 +406,7 @@ JsonResponseParser::ParserFunc JsonResponseParser::gaiaParser() {
 }
 
 auto JsonResponseParser::parse(std::string_view content)
-    -> atom::type::Expected<std::vector<CelestialObjectModel>,
-                           ParseError> {
+    -> atom::type::Expected<std::vector<CelestialObjectModel>, ParseError> {
     std::vector<CelestialObjectModel> results;
 
     try {
@@ -424,11 +415,10 @@ auto JsonResponseParser::parse(std::string_view content)
         try {
             json = nlohmann::json::parse(content);
         } catch (const nlohmann::json::parse_error& e) {
-            return atom::type::unexpected(ParseError{
-                std::string("JSON parse error: ") + e.what(),
-                std::make_optional(e.byte),
-                std::nullopt,
-                "Invalid JSON structure"});
+            return atom::type::unexpected(
+                ParseError{std::string("JSON parse error: ") + e.what(),
+                           std::make_optional(e.byte), std::nullopt,
+                           "Invalid JSON structure"});
         }
 
         // Get objects array
@@ -453,8 +443,7 @@ auto JsonResponseParser::parse(std::string_view content)
                     continue;
                 }
             }
-        } else if (objectsArray.is_object() &&
-                   !pImpl_->objectsPath.empty()) {
+        } else if (objectsArray.is_object() && !pImpl_->objectsPath.empty()) {
             // Single object response
             try {
                 auto obj = pImpl_->objectParser(objectsArray);
@@ -485,21 +474,17 @@ auto JsonResponseParser::parse(std::string_view content)
             } catch (...) {
             }
         } else {
-            return atom::type::unexpected(ParseError{
-                "JSON is neither array nor object",
-                std::nullopt,
-                std::nullopt,
-                "Unexpected JSON structure"});
+            return atom::type::unexpected(
+                ParseError{"JSON is neither array nor object", std::nullopt,
+                           std::nullopt, "Unexpected JSON structure"});
         }
 
         return results;
 
     } catch (const std::exception& e) {
         return atom::type::unexpected(ParseError{
-            std::string("JSON parsing exception: ") + e.what(),
-            std::nullopt,
-            std::nullopt,
-            "Unexpected error during parsing"});
+            std::string("JSON parsing exception: ") + e.what(), std::nullopt,
+            std::nullopt, "Unexpected error during parsing"});
     }
 }
 
@@ -513,11 +498,10 @@ auto JsonResponseParser::parseEphemeris(std::string_view content)
         try {
             json = nlohmann::json::parse(content);
         } catch (const nlohmann::json::parse_error& e) {
-            return atom::type::unexpected(ParseError{
-                std::string("JSON parse error: ") + e.what(),
-                std::make_optional(e.byte),
-                std::nullopt,
-                "Invalid JSON structure"});
+            return atom::type::unexpected(
+                ParseError{std::string("JSON parse error: ") + e.what(),
+                           std::make_optional(e.byte), std::nullopt,
+                           "Invalid JSON structure"});
         }
 
         // Get ephemeris array
@@ -552,10 +536,8 @@ auto JsonResponseParser::parseEphemeris(std::string_view content)
             }
         } else {
             return atom::type::unexpected(ParseError{
-                "Ephemeris data not found in expected format",
-                std::nullopt,
-                std::nullopt,
-                "Unable to locate ephemeris array"});
+                "Ephemeris data not found in expected format", std::nullopt,
+                std::nullopt, "Unable to locate ephemeris array"});
         }
 
         return results;
@@ -563,9 +545,7 @@ auto JsonResponseParser::parseEphemeris(std::string_view content)
     } catch (const std::exception& e) {
         return atom::type::unexpected(ParseError{
             std::string("Ephemeris parsing exception: ") + e.what(),
-            std::nullopt,
-            std::nullopt,
-            "Unexpected error during parsing"});
+            std::nullopt, std::nullopt, "Unexpected error during parsing"});
     }
 }
 

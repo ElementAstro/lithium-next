@@ -96,7 +96,8 @@ struct ServiceStats {
 /**
  * @brief Unified service facade for celestial object management
  *
- * Provides a comprehensive interface to all target module functionality including:
+ * Provides a comprehensive interface to all target module functionality
+ * including:
  * - Search operations (exact, fuzzy, coordinate-based, advanced)
  * - Object management (CRUD operations)
  * - Observability calculations (visibility, rise/set times)
@@ -158,8 +159,7 @@ public:
      *
      * @return Expected with void on success or error message on failure
      */
-    [[nodiscard]] auto initialize()
-        -> atom::type::Expected<void, std::string>;
+    [[nodiscard]] auto initialize() -> atom::type::Expected<void, std::string>;
 
     /**
      * @brief Check if service is initialized and ready
@@ -195,8 +195,8 @@ public:
      * @param limit Maximum number of results
      * @return Vector of nearby objects sorted by distance
      */
-    [[nodiscard]] auto searchByCoordinates(
-        double ra, double dec, double radius, int limit = 50)
+    [[nodiscard]] auto searchByCoordinates(double ra, double dec, double radius,
+                                           int limit = 50)
         -> std::vector<model::ScoredSearchResult>;
 
     /**
@@ -283,9 +283,9 @@ public:
      * @param limit Maximum number of results
      * @return Vector of observable objects with visibility windows
      */
-    [[nodiscard]] auto getObservableNow(int limit = 50) -> std::vector<
-        std::pair<model::CelestialObjectModel,
-                  observability::ObservabilityWindow>>;
+    [[nodiscard]] auto getObservableNow(int limit = 50)
+        -> std::vector<std::pair<model::CelestialObjectModel,
+                                 observability::ObservabilityWindow>>;
 
     /**
      * @brief Get observable objects within time window
@@ -301,7 +301,7 @@ public:
         std::chrono::system_clock::time_point start,
         std::chrono::system_clock::time_point end, int limit = 100)
         -> std::vector<std::pair<model::CelestialObjectModel,
-                                  observability::ObservabilityWindow>>;
+                                 observability::ObservabilityWindow>>;
 
     /**
      * @brief Calculate visibility window for object
@@ -317,8 +317,7 @@ public:
      *
      * @param location Observer location with coordinates and elevation
      */
-    void setObserverLocation(
-        const observability::ObserverLocation& location);
+    void setObserverLocation(const observability::ObserverLocation& location);
 
     /**
      * @brief Set observer timezone
@@ -338,8 +337,8 @@ public:
      * @param objectId Object identifier
      * @param rating Rating value (typically 0-5)
      */
-    void addUserRating(const std::string& userId,
-                       const std::string& objectId, double rating);
+    void addUserRating(const std::string& userId, const std::string& objectId,
+                       double rating);
 
     /**
      * @brief Record implicit user feedback (view, interaction, etc.)
@@ -399,9 +398,9 @@ public:
      * @param filter Optional filter to select objects to export
      * @return Expected with count of exported objects, or error message
      */
-    [[nodiscard]] auto exportToJson(
-        const std::string& path,
-        const model::CelestialSearchFilter& filter = model::CelestialSearchFilter())
+    [[nodiscard]] auto exportToJson(const std::string& path,
+                                    const model::CelestialSearchFilter& filter =
+                                        model::CelestialSearchFilter())
         -> atom::type::Expected<int, std::string>;
 
     /**
@@ -411,9 +410,9 @@ public:
      * @param filter Optional filter to select objects to export
      * @return Expected with count of exported objects, or error message
      */
-    [[nodiscard]] auto exportToCsv(
-        const std::string& path,
-        const model::CelestialSearchFilter& filter = model::CelestialSearchFilter())
+    [[nodiscard]] auto exportToCsv(const std::string& path,
+                                   const model::CelestialSearchFilter& filter =
+                                       model::CelestialSearchFilter())
         -> atom::type::Expected<int, std::string>;
 
     // ========================================================================
@@ -551,8 +550,9 @@ public:
      * @param limit Maximum number of results
      * @return Vector of search results
      */
-    [[nodiscard]] auto searchOnlineByCoordinates(
-        double ra, double dec, double radiusDeg, int limit = 100)
+    [[nodiscard]] auto searchOnlineByCoordinates(double ra, double dec,
+                                                 double radiusDeg,
+                                                 int limit = 100)
         -> std::vector<model::ScoredSearchResult>;
 
     /**
@@ -564,7 +564,8 @@ public:
      */
     [[nodiscard]] auto getOnlineEphemeris(
         const std::string& objectName,
-        std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
+        std::chrono::system_clock::time_point time =
+            std::chrono::system_clock::now())
         -> std::optional<online::EphemerisPoint>;
 
     /**

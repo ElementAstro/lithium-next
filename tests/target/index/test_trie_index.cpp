@@ -8,9 +8,7 @@ class TrieIndexTest : public ::testing::Test {
 protected:
     TrieIndex& index = TrieIndex::instance();
 
-    void SetUp() override {
-        index.clear();
-    }
+    void SetUp() override { index.clear(); }
 };
 
 TEST_F(TrieIndexTest, SingleInsertion) {

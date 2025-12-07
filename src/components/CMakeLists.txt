@@ -16,13 +16,37 @@ lithium_component_begin(lithium_components 1.0.0)
 # ============================================================================
 
 set(PROJECT_SOURCES
-    dependency.cpp
-    loader.cpp
-    tracker.cpp
-    version.cpp
+    # Core module
+    core/dependency.cpp
+    core/loader.cpp
+    core/tracker.cpp
+    core/version.cpp
+    # Debug module
     debug/dump.cpp
     debug/dynamic.cpp
     debug/elf.cpp
+)
+
+set(PROJECT_HEADERS
+    # Main entry point
+    components.hpp
+    # Core module
+    core/core.hpp
+    core/types.hpp
+    core/dependency.hpp
+    core/loader.hpp
+    core/module.hpp
+    core/tracker.hpp
+    core/version.hpp
+    # Manager module (aggregated header)
+    manager/manager_module.hpp
+    # Debug module
+    debug/debug.hpp
+    debug/dump.hpp
+    debug/dynamic.hpp
+    debug/elf.hpp
+    # System module
+    system/system.hpp
 )
 
 # ============================================================================
@@ -41,6 +65,8 @@ set(PROJECT_LIBRARIES
 # Add subdirectories
 # ============================================================================
 
+add_subdirectory(core)
+add_subdirectory(debug)
 add_subdirectory(manager)
 add_subdirectory(system)
 
@@ -50,11 +76,12 @@ add_subdirectory(system)
 
 lithium_add_library(
     NAME ${PROJECT_NAME}
-    SOURCES ${PROJECT_SOURCES}
-    LIBRARIES ${PROJECT_LIBRARIES} lithium_components_manager lithium_system_dependency
+    SOURCES ${PROJECT_SOURCES} ${PROJECT_HEADERS}
+    LIBRARIES ${PROJECT_LIBRARIES} lithium_core lithium_debug lithium_components_manager lithium_system_dependency
     VERSION ${PROJECT_VERSION}
     TYPE STATIC
     DESCRIPTION "Component management and dependency tracking"
+    PUBLIC_HEADERS
 )
 
 # Apply standard compiler flags

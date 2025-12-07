@@ -6,18 +6,18 @@
 
 #include "jpl_horizons_provider.hpp"
 
-#include <chrono>
-#include <sstream>
-#include <thread>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
+#include <cmath>
+#include <future>
 #include <iomanip>
 #include <optional>
-#include <future>
-#include <cmath>
+#include <sstream>
+#include <thread>
 
-#include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
+#include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -56,7 +56,8 @@ auto urlEncode(const std::string& input) -> std::string {
  * @param result Output query result
  * @return True on success
  */
-auto parseJsonResponse(const std::string& jsonStr, OnlineQueryResult& result) -> bool {
+auto parseJsonResponse(const std::string& jsonStr, OnlineQueryResult& result)
+    -> bool {
     try {
         auto jsonData = json::parse(jsonStr);
 
@@ -148,12 +149,14 @@ auto parseJsonResponse(const std::string& jsonStr, OnlineQueryResult& result) ->
                 }
             }
 
-            spdlog::debug("Parsed {} ephemeris points", result.ephemerisData.size());
+            spdlog::debug("Parsed {} ephemeris points",
+                          result.ephemerisData.size());
         }
 
         return true;
     } catch (const json::exception& e) {
-        spdlog::error("JSON parsing error in JPL Horizons response: {}", e.what());
+        spdlog::error("JSON parsing error in JPL Horizons response: {}",
+                      e.what());
         return false;
     } catch (const std::exception& e) {
         spdlog::error("Error parsing JPL Horizons response: {}", e.what());
@@ -169,7 +172,8 @@ auto parseJsonResponse(const std::string& jsonStr, OnlineQueryResult& result) ->
  * @param tp Time point to format
  * @return Formatted time string
  */
-auto formatHorizonsTime(std::chrono::system_clock::time_point tp) -> std::string {
+auto formatHorizonsTime(std::chrono::system_clock::time_point tp)
+    -> std::string {
     auto time_t = std::chrono::system_clock::to_time_t(tp);
     auto tm = std::gmtime(&time_t);
 
@@ -184,13 +188,12 @@ auto formatHorizonsTime(std::chrono::system_clock::time_point tp) -> std::string
  * @param observer Observer location
  * @return Location string for API
  */
-auto formatObserverLocation(const OnlineQueryParams::ObserverLocation& observer) -> std::string {
+auto formatObserverLocation(const OnlineQueryParams::ObserverLocation& observer)
+    -> std::string {
     // Horizons accepts observer as "latitude,longitude,elevation"
     std::ostringstream oss;
-    oss << std::fixed << std::setprecision(4)
-        << observer.latitude << ","
-        << observer.longitude << ","
-        << observer.elevation;
+    oss << std::fixed << std::setprecision(4) << observer.latitude << ","
+        << observer.longitude << "," << observer.elevation;
     return oss.str();
 }
 
@@ -223,7 +226,7 @@ JplHorizonsProvider::JplHorizonsProvider(
     std::shared_ptr<ApiRateLimiter> rateLimiter,
     const JplHorizonsProviderConfig& config)
     : pImpl_(std::make_unique<Impl>(std::move(httpClient), std::move(cache),
-                                   std::move(rateLimiter), config)) {
+                                    std::move(rateLimiter), config)) {
     spdlog::info("Initializing JPL Horizons provider");
 }
 
@@ -231,10 +234,12 @@ JplHorizonsProvider::JplHorizonsProvider(
 JplHorizonsProvider::~JplHorizonsProvider() = default;
 
 // Move constructor
-JplHorizonsProvider::JplHorizonsProvider(JplHorizonsProvider&&) noexcept = default;
+JplHorizonsProvider::JplHorizonsProvider(JplHorizonsProvider&&) noexcept =
+    default;
 
 // Move assignment operator
-JplHorizonsProvider& JplHorizonsProvider::operator=(JplHorizonsProvider&&) noexcept = default;
+JplHorizonsProvider& JplHorizonsProvider::operator=(
+    JplHorizonsProvider&&) noexcept = default;
 
 auto JplHorizonsProvider::isAvailable() const -> bool {
     if (!pImpl_ || !pImpl_->httpClient_) {
@@ -245,17 +250,19 @@ auto JplHorizonsProvider::isAvailable() const -> bool {
     try {
         // Perform a simple health check with a known object (Moon)
         HttpRequest request;
-        request.url = std::string(BASE_URL) +
-                      "?format=json&COMMAND='301'&EPHEM_TYPE='observer'" +
-                      "&CENTER='@399'&MAKE_EPHEM='YES'&START_TIME='2024-01-01'" +
-                      "&STOP_TIME='2024-01-02'&STEP_SIZE='1 h'";
+        request.url =
+            std::string(BASE_URL) +
+            "?format=json&COMMAND='301'&EPHEM_TYPE='observer'" +
+            "&CENTER='@399'&MAKE_EPHEM='YES'&START_TIME='2024-01-01'" +
+            "&STOP_TIME='2024-01-02'&STEP_SIZE='1 h'";
         request.method = "GET";
         request.timeout = std::chrono::milliseconds{5000};
 
         auto response = pImpl_->httpClient_->request(request);
 
         if (!response) {
-            spdlog::warn("JPL Horizons health check failed: {}", response.error());
+            spdlog::warn("JPL Horizons health check failed: {}",
+                         response.error());
             return false;
         }
 
@@ -270,16 +277,16 @@ auto JplHorizonsProvider::query(const OnlineQueryParams& params)
     -> atom::type::Expected<OnlineQueryResult, OnlineQueryError> {
     try {
         if (!pImpl_ || !pImpl_->httpClient_) {
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::ServiceUnavailable,
-                "JPL Horizons provider not properly initialized",
-                std::string(PROVIDER_NAME)
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::ServiceUnavailable,
+                 "JPL Horizons provider not properly initialized",
+                 std::string(PROVIDER_NAME)});
         }
 
         // Check cache first
         if (pImpl_->cache_ && pImpl_->config_.useCache) {
-            auto cacheKey = QueryCache::generateKey(std::string(PROVIDER_NAME), params);
+            auto cacheKey =
+                QueryCache::generateKey(std::string(PROVIDER_NAME), params);
 
             if (auto cached = pImpl_->cache_->get(cacheKey)) {
                 spdlog::debug("JPL Horizons query cache hit");
@@ -292,12 +299,9 @@ auto JplHorizonsProvider::query(const OnlineQueryParams& params)
         if (pImpl_->rateLimiter_) {
             if (!pImpl_->rateLimiter_->allowRequest()) {
                 spdlog::warn("JPL Horizons query rate limited");
-                return atom::type::Error<OnlineQueryError>({
-                    OnlineQueryError::Code::RateLimited,
-                    "Rate limit exceeded",
-                    std::string(PROVIDER_NAME),
-                    std::chrono::seconds{5}
-                });
+                return atom::type::Error<OnlineQueryError>(
+                    {OnlineQueryError::Code::RateLimited, "Rate limit exceeded",
+                     std::string(PROVIDER_NAME), std::chrono::seconds{5}});
             }
         }
 
@@ -310,70 +314,72 @@ auto JplHorizonsProvider::query(const OnlineQueryParams& params)
         request.timeout = pImpl_->config_.timeout;
 
         switch (params.type) {
-        case QueryType::ByName: {
-            // Object name lookup query
-            if (params.query.empty()) {
-                return atom::type::Error<OnlineQueryError>({
-                    OnlineQueryError::Code::InvalidQuery,
-                    "Query string required for ByName search",
-                    std::string(PROVIDER_NAME)
-                });
+            case QueryType::ByName: {
+                // Object name lookup query
+                if (params.query.empty()) {
+                    return atom::type::Error<OnlineQueryError>(
+                        {OnlineQueryError::Code::InvalidQuery,
+                         "Query string required for ByName search",
+                         std::string(PROVIDER_NAME)});
+                }
+
+                request.url = std::string(BASE_URL) + "?format=json&COMMAND='" +
+                              urlEncode(params.query) + "'";
+                break;
             }
 
-            request.url = std::string(BASE_URL) +
-                         "?format=json&COMMAND='" + urlEncode(params.query) + "'";
-            break;
-        }
+            case QueryType::Ephemeris: {
+                // Ephemeris query
+                if (params.query.empty()) {
+                    return atom::type::Error<OnlineQueryError>(
+                        {OnlineQueryError::Code::InvalidQuery,
+                         "Target identifier required for ephemeris query",
+                         std::string(PROVIDER_NAME)});
+                }
 
-        case QueryType::Ephemeris: {
-            // Ephemeris query
-            if (params.query.empty()) {
-                return atom::type::Error<OnlineQueryError>({
-                    OnlineQueryError::Code::InvalidQuery,
-                    "Target identifier required for ephemeris query",
-                    std::string(PROVIDER_NAME)
-                });
+                std::ostringstream urlBuilder;
+                urlBuilder << std::string(BASE_URL) << "?format=json&COMMAND='"
+                           << params.query << "'";
+                urlBuilder << "&EPHEM_TYPE='observer'";
+                urlBuilder << "&CENTER='@399'";  // Earth
+                urlBuilder << "&MAKE_EPHEM='YES'";
+                urlBuilder << "&START_TIME='"
+                           << formatHorizonsTime(params.epoch) << "'";
+                urlBuilder << "&STOP_TIME='"
+                           << formatHorizonsTime(
+                                  std::chrono::system_clock::now() +
+                                  std::chrono::days(1))
+                           << "'";
+                urlBuilder << "&STEP_SIZE='1 h'";
+
+                if (pImpl_->config_.includeMagnitude) {
+                    urlBuilder << "&QUANTITIES='1,2,14,19'";  // RA, Dec, Mag,
+                                                              // Phase angle
+                }
+
+                request.url = urlBuilder.str();
+                break;
             }
 
-            std::ostringstream urlBuilder;
-            urlBuilder << std::string(BASE_URL) << "?format=json&COMMAND='"
-                      << params.query << "'";
-            urlBuilder << "&EPHEM_TYPE='observer'";
-            urlBuilder << "&CENTER='@399'";  // Earth
-            urlBuilder << "&MAKE_EPHEM='YES'";
-            urlBuilder << "&START_TIME='" << formatHorizonsTime(params.epoch) << "'";
-            urlBuilder << "&STOP_TIME='" << formatHorizonsTime(
-                std::chrono::system_clock::now() + std::chrono::days(1)) << "'";
-            urlBuilder << "&STEP_SIZE='1 h'";
-
-            if (pImpl_->config_.includeMagnitude) {
-                urlBuilder << "&QUANTITIES='1,2,14,19'";  // RA, Dec, Mag, Phase angle
-            }
-
-            request.url = urlBuilder.str();
-            break;
+            default:
+                return atom::type::Error<OnlineQueryError>(
+                    {OnlineQueryError::Code::InvalidQuery,
+                     "Query type not supported by JPL Horizons provider",
+                     std::string(PROVIDER_NAME)});
         }
 
-        default:
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::InvalidQuery,
-                "Query type not supported by JPL Horizons provider",
-                std::string(PROVIDER_NAME)
-            });
-        }
-
-        spdlog::info("Sending JPL Horizons query to: {}...", request.url.substr(0, 100));
+        spdlog::info("Sending JPL Horizons query to: {}...",
+                     request.url.substr(0, 100));
 
         // Execute request
         auto response = pImpl_->httpClient_->request(request);
 
         if (!response) {
-            spdlog::error("JPL Horizons HTTP request failed: {}", response.error());
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::NetworkError,
-                response.error(),
-                std::string(PROVIDER_NAME)
-            });
+            spdlog::error("JPL Horizons HTTP request failed: {}",
+                          response.error());
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::NetworkError, response.error(),
+                 std::string(PROVIDER_NAME)});
         }
 
         const auto& httpResp = response.value();
@@ -382,7 +388,8 @@ auto JplHorizonsProvider::query(const OnlineQueryParams& params)
         if (httpResp.statusCode != 200) {
             std::string errMsg = "HTTP " + std::to_string(httpResp.statusCode);
 
-            OnlineQueryError::Code errCode = OnlineQueryError::Code::NetworkError;
+            OnlineQueryError::Code errCode =
+                OnlineQueryError::Code::NetworkError;
             if (httpResp.statusCode >= 400 && httpResp.statusCode < 500) {
                 errCode = OnlineQueryError::Code::InvalidQuery;
             } else if (httpResp.statusCode == 429) {
@@ -392,15 +399,11 @@ auto JplHorizonsProvider::query(const OnlineQueryParams& params)
             }
 
             spdlog::error("JPL Horizons query failed with status {}: {}",
-                         httpResp.statusCode, httpResp.body.substr(0, 200));
+                          httpResp.statusCode, httpResp.body.substr(0, 200));
 
-            return atom::type::Error<OnlineQueryError>({
-                errCode,
-                errMsg,
-                std::string(PROVIDER_NAME),
-                std::nullopt,
-                httpResp.body
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {errCode, errMsg, std::string(PROVIDER_NAME), std::nullopt,
+                 httpResp.body});
         }
 
         // Parse JSON response
@@ -409,78 +412,70 @@ auto JplHorizonsProvider::query(const OnlineQueryParams& params)
 
         if (!parseJsonResponse(httpResp.body, result)) {
             spdlog::error("Failed to parse JPL Horizons JSON response");
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::ParseError,
-                "Failed to parse JSON response",
-                std::string(PROVIDER_NAME),
-                std::nullopt,
-                httpResp.body
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::ParseError,
+                 "Failed to parse JSON response", std::string(PROVIDER_NAME),
+                 std::nullopt, httpResp.body});
         }
 
         spdlog::info("JPL Horizons query successful, found {} ephemeris points",
-                    result.ephemerisData.size());
+                     result.ephemerisData.size());
 
         // Cache result
         if (pImpl_->cache_ && pImpl_->config_.useCache) {
-            auto cacheKey = QueryCache::generateKey(std::string(PROVIDER_NAME), params);
+            auto cacheKey =
+                QueryCache::generateKey(std::string(PROVIDER_NAME), params);
             pImpl_->cache_->put(cacheKey, result, pImpl_->config_.cacheTTL);
         }
 
         return result;
     } catch (const std::exception& e) {
         spdlog::error("JPL Horizons query error: {}", e.what());
-        return atom::type::Error<OnlineQueryError>({
-            OnlineQueryError::Code::Unknown,
-            e.what(),
-            std::string(PROVIDER_NAME)
-        });
+        return atom::type::Error<OnlineQueryError>(
+            {OnlineQueryError::Code::Unknown, e.what(),
+             std::string(PROVIDER_NAME)});
     }
 }
 
 auto JplHorizonsProvider::queryAsync(const OnlineQueryParams& params)
     -> std::future<atom::type::Expected<OnlineQueryResult, OnlineQueryError>> {
-    return std::async(std::launch::async, [this, params]() {
-        return this->query(params);
-    });
+    return std::async(std::launch::async,
+                      [this, params]() { return this->query(params); });
 }
 
 auto JplHorizonsProvider::getEphemeris(
-    const std::string& target,
-    std::chrono::system_clock::time_point startTime,
+    const std::string& target, std::chrono::system_clock::time_point startTime,
     std::chrono::system_clock::time_point endTime,
     std::chrono::minutes stepSize,
     const std::optional<OnlineQueryParams::ObserverLocation>& observer)
     -> atom::type::Expected<std::vector<EphemerisPoint>, OnlineQueryError> {
     try {
         if (!pImpl_ || !pImpl_->httpClient_) {
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::ServiceUnavailable,
-                "JPL Horizons provider not properly initialized",
-                std::string(PROVIDER_NAME)
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::ServiceUnavailable,
+                 "JPL Horizons provider not properly initialized",
+                 std::string(PROVIDER_NAME)});
         }
 
         // Check rate limiting
         if (pImpl_->rateLimiter_) {
             if (!pImpl_->rateLimiter_->allowRequest()) {
                 spdlog::warn("JPL Horizons ephemeris request rate limited");
-                return atom::type::Error<OnlineQueryError>({
-                    OnlineQueryError::Code::RateLimited,
-                    "Rate limit exceeded",
-                    std::string(PROVIDER_NAME),
-                    std::chrono::seconds{5}
-                });
+                return atom::type::Error<OnlineQueryError>(
+                    {OnlineQueryError::Code::RateLimited, "Rate limit exceeded",
+                     std::string(PROVIDER_NAME), std::chrono::seconds{5}});
             }
         }
 
         // Build ephemeris request
         std::ostringstream urlBuilder;
-        urlBuilder << std::string(BASE_URL) << "?format=json&COMMAND='" << target << "'";
+        urlBuilder << std::string(BASE_URL) << "?format=json&COMMAND='"
+                   << target << "'";
         urlBuilder << "&EPHEM_TYPE='observer'";
 
         if (observer.has_value()) {
-            urlBuilder << "&SITE_COORD='" << formatObserverLocation(observer.value()) << "'";
+            urlBuilder << "&SITE_COORD='"
+                       << formatObserverLocation(observer.value()) << "'";
         } else {
             urlBuilder << "&CENTER='@399'";  // Default to Earth center
         }
@@ -504,19 +499,19 @@ auto JplHorizonsProvider::getEphemeris(
         auto response = pImpl_->httpClient_->request(request);
 
         if (!response) {
-            spdlog::error("JPL Horizons ephemeris request failed: {}", response.error());
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::NetworkError,
-                response.error(),
-                std::string(PROVIDER_NAME)
-            });
+            spdlog::error("JPL Horizons ephemeris request failed: {}",
+                          response.error());
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::NetworkError, response.error(),
+                 std::string(PROVIDER_NAME)});
         }
 
         const auto& httpResp = response.value();
 
         // Check HTTP status
         if (httpResp.statusCode != 200) {
-            OnlineQueryError::Code errCode = OnlineQueryError::Code::NetworkError;
+            OnlineQueryError::Code errCode =
+                OnlineQueryError::Code::NetworkError;
             if (httpResp.statusCode >= 400 && httpResp.statusCode < 500) {
                 errCode = OnlineQueryError::Code::InvalidQuery;
             } else if (httpResp.statusCode == 429) {
@@ -525,42 +520,34 @@ auto JplHorizonsProvider::getEphemeris(
                 errCode = OnlineQueryError::Code::ServiceUnavailable;
             }
 
-            spdlog::error("JPL Horizons ephemeris request failed with status {}",
-                         httpResp.statusCode);
+            spdlog::error(
+                "JPL Horizons ephemeris request failed with status {}",
+                httpResp.statusCode);
 
-            return atom::type::Error<OnlineQueryError>({
-                errCode,
-                "HTTP " + std::to_string(httpResp.statusCode),
-                std::string(PROVIDER_NAME),
-                std::nullopt,
-                httpResp.body
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {errCode, "HTTP " + std::to_string(httpResp.statusCode),
+                 std::string(PROVIDER_NAME), std::nullopt, httpResp.body});
         }
 
         // Parse response
         OnlineQueryResult result;
         if (!parseJsonResponse(httpResp.body, result)) {
             spdlog::error("Failed to parse JPL Horizons ephemeris response");
-            return atom::type::Error<OnlineQueryError>({
-                OnlineQueryError::Code::ParseError,
-                "Failed to parse ephemeris response",
-                std::string(PROVIDER_NAME),
-                std::nullopt,
-                httpResp.body
-            });
+            return atom::type::Error<OnlineQueryError>(
+                {OnlineQueryError::Code::ParseError,
+                 "Failed to parse ephemeris response",
+                 std::string(PROVIDER_NAME), std::nullopt, httpResp.body});
         }
 
         spdlog::info("JPL Horizons ephemeris request successful, {} points",
-                    result.ephemerisData.size());
+                     result.ephemerisData.size());
 
         return result.ephemerisData;
     } catch (const std::exception& e) {
         spdlog::error("JPL Horizons ephemeris error: {}", e.what());
-        return atom::type::Error<OnlineQueryError>({
-            OnlineQueryError::Code::Unknown,
-            e.what(),
-            std::string(PROVIDER_NAME)
-        });
+        return atom::type::Error<OnlineQueryError>(
+            {OnlineQueryError::Code::Unknown, e.what(),
+             std::string(PROVIDER_NAME)});
     }
 }
 
@@ -571,7 +558,8 @@ void JplHorizonsProvider::setConfig(const JplHorizonsProviderConfig& config) {
     }
 }
 
-auto JplHorizonsProvider::getConfig() const -> const JplHorizonsProviderConfig& {
+auto JplHorizonsProvider::getConfig() const
+    -> const JplHorizonsProviderConfig& {
     static const JplHorizonsProviderConfig defaultConfig;
     return pImpl_ ? pImpl_->config_ : defaultConfig;
 }

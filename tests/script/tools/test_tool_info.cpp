@@ -44,13 +44,11 @@ TEST_F(ToolParameterInfoTest, ToJson) {
 }
 
 TEST_F(ToolParameterInfoTest, FromJson) {
-    nlohmann::json j = {
-        {"name", "output"},
-        {"type", "integer"},
-        {"description", "Output value"},
-        {"required", false},
-        {"defaultValue", 42}
-    };
+    nlohmann::json j = {{"name", "output"},
+                        {"type", "integer"},
+                        {"description", "Output value"},
+                        {"required", false},
+                        {"defaultValue", 42}};
 
     auto result = ToolParameterInfo::fromJson(j);
     ASSERT_TRUE(result.has_value());
@@ -90,12 +88,10 @@ TEST_F(ToolFunctionInfoTest, ToJson) {
 }
 
 TEST_F(ToolFunctionInfoTest, FromJson) {
-    nlohmann::json j = {
-        {"name", "calculate"},
-        {"description", "Calculate result"},
-        {"returnType", "float"},
-        {"parameters", nlohmann::json::array()}
-    };
+    nlohmann::json j = {{"name", "calculate"},
+                        {"description", "Calculate result"},
+                        {"returnType", "float"},
+                        {"parameters", nlohmann::json::array()}};
 
     auto result = ToolFunctionInfo::fromJson(j);
     ASSERT_TRUE(result.has_value());
@@ -140,15 +136,13 @@ TEST_F(ToolInfoTest, ToJson) {
 }
 
 TEST_F(ToolInfoTest, FromJson) {
-    nlohmann::json j = {
-        {"name", "string_tool"},
-        {"description", "String operations"},
-        {"version", "2.0.0"},
-        {"author", "Author"},
-        {"category", "string"},
-        {"enabled", false},
-        {"functions", nlohmann::json::array()}
-    };
+    nlohmann::json j = {{"name", "string_tool"},
+                        {"description", "String operations"},
+                        {"version", "2.0.0"},
+                        {"author", "Author"},
+                        {"category", "string"},
+                        {"enabled", false},
+                        {"functions", nlohmann::json::array()}};
 
     auto result = ToolInfo::fromJson(j);
     ASSERT_TRUE(result.has_value());
@@ -211,11 +205,9 @@ TEST_F(ToolRegistryConfigTest, ToJson) {
 }
 
 TEST_F(ToolRegistryConfigTest, FromJson) {
-    nlohmann::json j = {
-        {"toolsDirectory", "/custom/path"},
-        {"autoDiscover", true},
-        {"enableHotReload", true}
-    };
+    nlohmann::json j = {{"toolsDirectory", "/custom/path"},
+                        {"autoDiscover", true},
+                        {"enableHotReload", true}};
 
     auto result = ToolRegistryConfig::fromJson(j);
     ASSERT_TRUE(result.has_value());

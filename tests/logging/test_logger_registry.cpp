@@ -15,7 +15,7 @@ Description: Comprehensive tests for LoggerRegistry
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "logging/logger_registry.hpp"
+#include "logging/core/logger_registry.hpp"
 
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -158,10 +158,9 @@ TEST_F(LoggerRegistryTest, ListContainsCorrectLevels) {
 
     auto loggers = registry_.list();
 
-    auto it = std::find_if(loggers.begin(), loggers.end(),
-                           [](const LoggerInfo& info) {
-                               return info.name == "level_test";
-                           });
+    auto it = std::find_if(
+        loggers.begin(), loggers.end(),
+        [](const LoggerInfo& info) { return info.name == "level_test"; });
 
     ASSERT_NE(it, loggers.end());
     EXPECT_EQ(it->level, spdlog::level::warn);
@@ -174,10 +173,9 @@ TEST_F(LoggerRegistryTest, ListContainsPatterns) {
 
     auto loggers = registry_.list();
 
-    auto it = std::find_if(loggers.begin(), loggers.end(),
-                           [](const LoggerInfo& info) {
-                               return info.name == "pattern_test";
-                           });
+    auto it = std::find_if(
+        loggers.begin(), loggers.end(),
+        [](const LoggerInfo& info) { return info.name == "pattern_test"; });
 
     ASSERT_NE(it, loggers.end());
     EXPECT_EQ(it->pattern, "[%Y-%m-%d] %v");
@@ -217,8 +215,8 @@ TEST_F(LoggerRegistryTest, SetLevelAllValues) {
         registry_.getOrCreate("all_levels", sinks, spdlog::level::info, "%v");
 
     std::vector<spdlog::level::level_enum> levels = {
-        spdlog::level::trace, spdlog::level::debug,    spdlog::level::info,
-        spdlog::level::warn,  spdlog::level::err,      spdlog::level::critical,
+        spdlog::level::trace, spdlog::level::debug, spdlog::level::info,
+        spdlog::level::warn,  spdlog::level::err,   spdlog::level::critical,
         spdlog::level::off};
 
     for (auto level : levels) {
@@ -555,8 +553,8 @@ TEST_F(LoggerRegistryTest, UnicodeLoggerName) {
 
 TEST_F(LoggerRegistryTest, EmptySinksList) {
     std::vector<spdlog::sink_ptr> empty_sinks;
-    auto logger =
-        registry_.getOrCreate("no_sinks", empty_sinks, spdlog::level::info, "%v");
+    auto logger = registry_.getOrCreate("no_sinks", empty_sinks,
+                                        spdlog::level::info, "%v");
 
     EXPECT_NE(logger, nullptr);
     EXPECT_TRUE(logger->sinks().empty());

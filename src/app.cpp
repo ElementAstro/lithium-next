@@ -5,19 +5,19 @@
 
 #include "crow/compression.h"
 
-#include "components/loader.hpp"
-#include "components/manager.hpp"
+#include "components/core/loader.hpp"
+#include "components/manager/manager.hpp"
 
 #include "device/manager.hpp"
 
 #include "script/check.hpp"
 #include "script/interpreter_pool.hpp"
+#include "script/isolated/runner.hpp"
 #include "script/python_caller.hpp"
 #include "script/script_service.hpp"
 #include "script/shell/script_manager.hpp"
 #include "script/tools/tool_registry.hpp"
 #include "script/venv/venv_manager.hpp"
-#include "script/isolated/runner.hpp"
 
 #include "config/config.hpp"
 #include "config/core/config_registry.hpp"
@@ -47,8 +47,8 @@
 #include "server/controller/device/mount.hpp"
 
 // Script Controllers
-#include "server/controller/script/python.hpp"
 #include "server/controller/script/isolated.hpp"
+#include "server/controller/script/python.hpp"
 #include "server/controller/script/shell.hpp"
 #include "server/controller/script/tool_registry.hpp"
 #include "server/controller/script/venv.hpp"
@@ -61,9 +61,9 @@ using namespace std::string_literals;
 namespace fs = std::filesystem;
 
 void registerControllers(
-    crow::SimpleApp &app,
-    const std::vector<std::shared_ptr<Controller>> &controllers) {
-    for (const auto &controller : controllers) {
+    crow::SimpleApp& app,
+    const std::vector<std::shared_ptr<Controller>>& controllers) {
+    for (const auto& controller : controllers) {
         controller->registerRoutes(app);
     }
 }
@@ -72,7 +72,8 @@ void registerControllers(
  * @brief Initialize logging system from unified configuration
  * @param loggingConfig Unified logging configuration
  */
-void setupLoggingFromConfig(const lithium::config::LoggingConfig& loggingConfig) {
+void setupLoggingFromConfig(
+    const lithium::config::LoggingConfig& loggingConfig) {
     lithium::log::LogConfig config;
     config.log_dir = loggingConfig.logDir;
     config.log_filename = loggingConfig.logFilename;
@@ -81,12 +82,18 @@ void setupLoggingFromConfig(const lithium::config::LoggingConfig& loggingConfig)
 
     // Convert string levels to enum
     auto parseLevel = [](const std::string& level) -> lithium::log::Level {
-        if (level == "trace") return lithium::log::Level::Trace;
-        if (level == "debug") return lithium::log::Level::Debug;
-        if (level == "info") return lithium::log::Level::Info;
-        if (level == "warn" || level == "warning") return lithium::log::Level::Warn;
-        if (level == "error" || level == "err") return lithium::log::Level::Error;
-        if (level == "critical" || level == "fatal") return lithium::log::Level::Critical;
+        if (level == "trace")
+            return lithium::log::Level::Trace;
+        if (level == "debug")
+            return lithium::log::Level::Debug;
+        if (level == "info")
+            return lithium::log::Level::Info;
+        if (level == "warn" || level == "warning")
+            return lithium::log::Level::Warn;
+        if (level == "error" || level == "err")
+            return lithium::log::Level::Error;
+        if (level == "critical" || level == "fatal")
+            return lithium::log::Level::Critical;
         return lithium::log::Level::Info;
     };
 
@@ -156,14 +163,16 @@ void injectPtr() {
 
     lithium::ScriptServiceConfig scriptConfig;
     scriptConfig.analysisConfigPath = scriptAnalysisPath.empty()
-        ? "./config/script/analysis.json"s : scriptAnalysisPath;
-    scriptConfig.toolsDirectory = toolsDir.empty()
-        ? "./python/tools"s : toolsDir;
+                                          ? "./config/script/analysis.json"s
+                                          : scriptAnalysisPath;
+    scriptConfig.toolsDirectory =
+        toolsDir.empty() ? "./python/tools"s : toolsDir;
     scriptConfig.poolSize = 4;
     scriptConfig.autoDiscoverTools = true;
     scriptConfig.enableSecurityAnalysis = true;
 
-    auto scriptService = atom::memory::makeShared<lithium::ScriptService>(scriptConfig);
+    auto scriptService =
+        atom::memory::makeShared<lithium::ScriptService>(scriptConfig);
     auto initResult = scriptService->initialize();
     if (!initResult) {
         LOG_ERROR("Failed to initialize ScriptService: {}",
@@ -172,32 +181,25 @@ void injectPtr() {
     AddPtr<lithium::ScriptService>(Constants::SCRIPT_SERVICE, scriptService);
 
     // Also expose individual components for backward compatibility
-    AddPtr<lithium::PythonWrapper>(
-        Constants::PYTHON_WRAPPER,
-        scriptService->getPythonWrapper());
-    AddPtr<lithium::shell::ScriptManager>(
-        Constants::SCRIPT_MANAGER,
-        scriptService->getScriptManager());
-    AddPtr<lithium::ScriptAnalyzer>(
-        Constants::SCRIPT_ANALYZER,
-        scriptService->getScriptAnalyzer());
-    AddPtr<lithium::InterpreterPool>(
-        Constants::INTERPRETER_POOL,
-        scriptService->getInterpreterPool());
+    AddPtr<lithium::PythonWrapper>(Constants::PYTHON_WRAPPER,
+                                   scriptService->getPythonWrapper());
+    AddPtr<lithium::shell::ScriptManager>(Constants::SCRIPT_MANAGER,
+                                          scriptService->getScriptManager());
+    AddPtr<lithium::ScriptAnalyzer>(Constants::SCRIPT_ANALYZER,
+                                    scriptService->getScriptAnalyzer());
+    AddPtr<lithium::InterpreterPool>(Constants::INTERPRETER_POOL,
+                                     scriptService->getInterpreterPool());
     AddPtr<lithium::tools::PythonToolRegistry>(
-        Constants::PYTHON_TOOL_REGISTRY,
-        scriptService->getToolRegistry());
-    AddPtr<lithium::venv::VenvManager>(
-        Constants::VENV_MANAGER,
-        scriptService->getVenvManager());
-    AddPtr<lithium::isolated::PythonRunner>(
-        Constants::ISOLATED_PYTHON_RUNNER,
-        scriptService->getIsolatedRunner());
+        Constants::PYTHON_TOOL_REGISTRY, scriptService->getToolRegistry());
+    AddPtr<lithium::venv::VenvManager>(Constants::VENV_MANAGER,
+                                       scriptService->getVenvManager());
+    AddPtr<lithium::isolated::PythonRunner>(Constants::ISOLATED_PYTHON_RUNNER,
+                                            scriptService->getIsolatedRunner());
 
     LOG_INFO("Global pointers injected.");
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 #if LITHIUM_ENABLE_CPPTRACE
     cpptrace::init();
 #endif
@@ -233,9 +235,9 @@ int main(int argc, char *argv[]) {
                         true, "Enable web panel", {"w"});
     program.addArgument("debug", atom::utils::ArgumentParser::ArgType::BOOLEAN,
                         false, false, "Enable debug mode", {"d"});
-    program.addArgument("log-level",
-                        atom::utils::ArgumentParser::ArgType::STRING, false,
-                        "info"s, "Log level (trace/debug/info/warn/error)", {"l"});
+    program.addArgument(
+        "log-level", atom::utils::ArgumentParser::ArgType::STRING, false,
+        "info"s, "Log level (trace/debug/info/warn/error)", {"l"});
 
     program.addDescription("Lithium Command Line Interface:");
     program.addEpilog("End.");
@@ -263,12 +265,8 @@ int main(int argc, char *argv[]) {
 
         // Try multiple config file locations
         std::vector<fs::path> configPaths = {
-            configPath,
-            "config.json",
-            "config.yaml",
-            "config/config.yaml",
-            "config/config.json"
-        };
+            configPath, "config.json", "config.yaml", "config/config.yaml",
+            "config/config.json"};
 
         bool configLoaded = false;
         for (const auto& path : configPaths) {
@@ -315,12 +313,14 @@ int main(int argc, char *argv[]) {
             registry.updateValue("/lithium/server/port", *cmdPort);
             LOG_DEBUG("CLI override: server port = {}", *cmdPort);
         }
-        if (cmdModulePath && !cmdModulePath->empty() && *cmdModulePath != "modules") {
+        if (cmdModulePath && !cmdModulePath->empty() &&
+            *cmdModulePath != "modules") {
             registry.updateValue("/lithium/module/path", *cmdModulePath);
             LOG_DEBUG("CLI override: module path = {}", *cmdModulePath);
         }
         if (cmdWebPanel.has_value()) {
-            registry.updateValue("/lithium/server/enableWebPanel", *cmdWebPanel);
+            registry.updateValue("/lithium/server/enableWebPanel",
+                                 *cmdWebPanel);
             LOG_DEBUG("CLI override: web panel = {}", *cmdWebPanel);
         }
         if (cmdDebug.has_value() && *cmdDebug) {
@@ -332,14 +332,15 @@ int main(int argc, char *argv[]) {
             LOG_DEBUG("CLI override: log level = {}", *cmdLogLevel);
         }
 
-    } catch (const std::bad_any_cast &e) {
+    } catch (const std::bad_any_cast& e) {
         LOG_ERROR("Invalid args format! Error: {}", e.what());
         atom::system::saveCrashLog(e.what());
         return 1;
     }
 
     // Step 8: Reinitialize logging with configuration (if changed)
-    auto loggingConfig = registry.getSectionOrDefault<lithium::config::LoggingConfig>();
+    auto loggingConfig =
+        registry.getSectionOrDefault<lithium::config::LoggingConfig>();
     lithium::log::shutdown();
     setupLoggingFromConfig(loggingConfig);
     LOG_INFO("Logging system initialized with configuration");
@@ -348,7 +349,8 @@ int main(int argc, char *argv[]) {
     injectPtr();
 
     // Step 10: Get server configuration
-    auto serverConfig = registry.getSectionOrDefault<lithium::config::ServerConfig>();
+    auto serverConfig =
+        registry.getSectionOrDefault<lithium::config::ServerConfig>();
 
     crow::SimpleApp app;
 
@@ -374,7 +376,8 @@ int main(int argc, char *argv[]) {
     std::thread serverThread([&app, &controllers, &serverConfig]() {
         registerControllers(app, controllers);
 
-        LOG_INFO("Server starting on {}:{}", serverConfig.host, serverConfig.port);
+        LOG_INFO("Server starting on {}:{}", serverConfig.host,
+                 serverConfig.port);
         app.port(serverConfig.port).multithreaded().run();
     });
 
@@ -385,7 +388,7 @@ int main(int argc, char *argv[]) {
         {});
     ws_server.start();
 
-    std::thread *debugTerminalThread = nullptr;
+    std::thread* debugTerminalThread = nullptr;
     if (program.get<bool>("debug").value_or(false)) {
         LOG_INFO("Debug mode enabled, starting debug terminal...");
         debugTerminalThread = new std::thread([]() {

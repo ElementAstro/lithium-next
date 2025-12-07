@@ -191,9 +191,9 @@ public:
  * @param oldValue Previous value (nullopt if newly added)
  * @param newValue New value (nullopt if deleted)
  */
-using ConfigChangeCallback =
-    std::function<void(std::string_view path, const std::optional<json>& oldValue,
-                       const std::optional<json>& newValue)>;
+using ConfigChangeCallback = std::function<void(
+    std::string_view path, const std::optional<json>& oldValue,
+    const std::optional<json>& newValue)>;
 
 /**
  * @brief Configuration validation result
@@ -208,8 +208,8 @@ struct ConfigValidationError {
  * @brief Result of configuration validation
  */
 struct ConfigValidationResult {
-    bool valid{true};                          ///< Whether validation passed
-    std::vector<ConfigValidationError> errors; ///< List of validation errors
+    bool valid{true};                           ///< Whether validation passed
+    std::vector<ConfigValidationError> errors;  ///< List of validation errors
 
     [[nodiscard]] bool isValid() const noexcept { return valid; }
 

@@ -16,9 +16,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "plugin_interface.hpp"
-#include "components/loader.hpp"
 #include "atom/type/json.hpp"
+#include "components/core/loader.hpp"
+#include "plugin_interface.hpp"
 
 namespace lithium::server::plugin {
 
@@ -39,7 +39,8 @@ enum class PluginLoadError {
 /**
  * @brief Convert error to string
  */
-[[nodiscard]] auto pluginLoadErrorToString(PluginLoadError error) -> std::string;
+[[nodiscard]] auto pluginLoadErrorToString(PluginLoadError error)
+    -> std::string;
 
 /**
  * @brief Result type for plugin operations
@@ -51,14 +52,14 @@ using PluginResult = std::expected<T, PluginLoadError>;
  * @brief Loaded plugin information
  */
 struct LoadedPluginInfo {
-    std::string name;                      ///< Plugin name
-    std::string path;                      ///< File path
-    std::shared_ptr<IPlugin> instance;     ///< Plugin instance
-    PluginState state;                     ///< Current state
+    std::string name;                                ///< Plugin name
+    std::string path;                                ///< File path
+    std::shared_ptr<IPlugin> instance;               ///< Plugin instance
+    PluginState state;                               ///< Current state
     std::chrono::system_clock::time_point loadTime;  ///< Load timestamp
-    json config;                           ///< Plugin configuration
-    std::string group;                     ///< Plugin group
-    PluginStatistics statistics;           ///< Runtime statistics
+    json config;                                     ///< Plugin configuration
+    std::string group;                               ///< Plugin group
+    PluginStatistics statistics;                     ///< Runtime statistics
 
     enum class Type {
         Command,
@@ -82,8 +83,7 @@ struct LoadedPluginInfo {
     /**
      * @brief Get as full plugin (may return nullptr)
      */
-    [[nodiscard]] auto asFullPlugin() const
-        -> std::shared_ptr<IFullPlugin>;
+    [[nodiscard]] auto asFullPlugin() const -> std::shared_ptr<IFullPlugin>;
 
     /**
      * @brief Convert to JSON
@@ -216,7 +216,8 @@ public:
      * @param name Plugin name
      * @return true if all dependencies are satisfied
      */
-    [[nodiscard]] auto validateDependencies(std::string_view name) const -> bool;
+    [[nodiscard]] auto validateDependencies(std::string_view name) const
+        -> bool;
 
     /**
      * @brief Get plugin load order based on dependencies
@@ -258,8 +259,8 @@ public:
      * @return Action result
      */
     auto executePluginAction(std::string_view pluginName,
-                             const std::string& action,
-                             const json& params) -> json;
+                             const std::string& action, const json& params)
+        -> json;
 
     /**
      * @brief Execute a command directly on a command plugin
@@ -269,8 +270,8 @@ public:
      * @return Command result
      */
     auto executePluginCommand(std::string_view pluginName,
-                              const std::string& commandId,
-                              const json& params) -> json;
+                              const std::string& commandId, const json& params)
+        -> json;
 
     /**
      * @brief Get plugin statistics
@@ -285,8 +286,8 @@ public:
      * @param capability Capability to filter by
      * @return List of plugins with the capability
      */
-    [[nodiscard]] auto getPluginsByCapability(const std::string& capability) const
-        -> std::vector<LoadedPluginInfo>;
+    [[nodiscard]] auto getPluginsByCapability(
+        const std::string& capability) const -> std::vector<LoadedPluginInfo>;
 
     /**
      * @brief Get all plugins with a specific tag
@@ -443,8 +444,8 @@ auto PluginLoader::getPluginFunction(std::string_view pluginName,
     }
 
     // Delegate to ModuleLoader
-    auto result = moduleLoader_->getFunction<T>(
-        toStdString(pluginName), toStdString(functionName));
+    auto result = moduleLoader_->getFunction<T>(toStdString(pluginName),
+                                                toStdString(functionName));
 
     if (!result) {
         return std::unexpected(PluginLoadError::SymbolNotFound);

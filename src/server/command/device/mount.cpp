@@ -2,10 +2,10 @@
 
 #include "atom/log/spdlog_logger.hpp"
 
-#include "atom/type/json.hpp"
 #include "../command.hpp"
-#include "device/service/mount_service.hpp"
 #include "../response.hpp"
+#include "atom/type/json.hpp"
+#include "device/service/mount_service.hpp"
 
 namespace lithium::app {
 
@@ -453,4 +453,3 @@ auto meridianFlip(const std::string& deviceId) -> json {
 }
 
 }  // namespace lithium::middleware
-

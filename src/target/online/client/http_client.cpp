@@ -8,10 +8,10 @@
 
 #include <algorithm>
 #include <chrono>
-#include <thread>
-#include <queue>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 #include <spdlog/spdlog.h>
 #include "atom/web/curl.hpp"
@@ -29,7 +29,8 @@ public:
 
     ~TimingGuard() {
         auto end = std::chrono::high_resolution_clock::now();
-        out_ = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_);
+        out_ =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start_);
     }
 
 private:
@@ -61,8 +62,9 @@ public:
 
             // Don't retry on last attempt
             if (attempt < config_.maxRetries) {
-                spdlog::warn("HTTP request failed, retrying (attempt {}/{}): {}",
-                             attempt + 1, config_.maxRetries, result.error());
+                spdlog::warn(
+                    "HTTP request failed, retrying (attempt {}/{}): {}",
+                    attempt + 1, config_.maxRetries, result.error());
 
                 // Exponential backoff: delay * 2^attempt
                 auto delay = config_.retryDelay;
@@ -74,8 +76,8 @@ public:
         }
 
         return atom::type::Error<std::string>(
-            "HTTP request failed after " + std::to_string(config_.maxRetries + 1) +
-            " attempts");
+            "HTTP request failed after " +
+            std::to_string(config_.maxRetries + 1) + " attempts");
     }
 
 private:
@@ -97,7 +99,8 @@ private:
             // Configure curl
             curl.setUrl(request.url);
             curl.setRequestMethod(request.method);
-            curl.setTimeout(request.timeout.count() / 1000);  // Convert to seconds
+            curl.setTimeout(request.timeout.count() /
+                            1000);  // Convert to seconds
             curl.setFollowLocation(request.followRedirects);
             curl.setSSLOptions(request.verifySSL, request.verifySSL);
 
@@ -154,13 +157,14 @@ AsyncHttpClient& AsyncHttpClient::operator=(AsyncHttpClient&& other) noexcept {
 
 auto AsyncHttpClient::requestAsync(const HttpRequest& request)
     -> std::future<atom::type::Expected<HttpResponse, std::string>> {
-    return std::async(
-        std::launch::async,
-        [this, request]() { return pImpl_->executeRequest(request); });
+    return std::async(std::launch::async, [this, request]() {
+        return pImpl_->executeRequest(request);
+    });
 }
 
 auto AsyncHttpClient::requestBatch(const std::vector<HttpRequest>& requests)
-    -> std::vector<std::future<atom::type::Expected<HttpResponse, std::string>>> {
+    -> std::vector<
+        std::future<atom::type::Expected<HttpResponse, std::string>>> {
     std::vector<std::future<atom::type::Expected<HttpResponse, std::string>>>
         futures;
     futures.reserve(requests.size());

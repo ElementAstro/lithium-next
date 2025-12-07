@@ -35,13 +35,13 @@ TEST_F(CachedRepositoryTest, CacheHit) {
     CelestialObjectModel obj;
     obj.identifier = "M31";
     obj.type = "Galaxy";
-    
+
     int64_t id = repository_->insert(obj);
-    
+
     // First access - cache miss
     auto found1 = repository_->findById(id);
     ASSERT_TRUE(found1.has_value());
-    
+
     // Second access - should be cache hit
     auto found2 = repository_->findById(id);
     ASSERT_TRUE(found2.has_value());
@@ -52,15 +52,15 @@ TEST_F(CachedRepositoryTest, CacheInvalidationOnUpdate) {
     CelestialObjectModel obj;
     obj.identifier = "M42";
     obj.type = "Nebula";
-    
+
     int64_t id = repository_->insert(obj);
     auto found = repository_->findById(id);
-    
+
     // Update should invalidate cache
     obj.id = id;
     obj.type = "Emission Nebula";
     repository_->update(obj);
-    
+
     auto updated = repository_->findById(id);
     ASSERT_TRUE(updated.has_value());
     EXPECT_EQ(updated->type, "Emission Nebula");
@@ -69,12 +69,12 @@ TEST_F(CachedRepositoryTest, CacheInvalidationOnUpdate) {
 TEST_F(CachedRepositoryTest, CacheInvalidationOnDelete) {
     CelestialObjectModel obj;
     obj.identifier = "M45";
-    
+
     int64_t id = repository_->insert(obj);
-    repository_->findById(id); // Populate cache
-    
+    repository_->findById(id);  // Populate cache
+
     repository_->remove(id);
-    
+
     auto found = repository_->findById(id);
     EXPECT_FALSE(found.has_value());
 }
@@ -82,12 +82,12 @@ TEST_F(CachedRepositoryTest, CacheInvalidationOnDelete) {
 TEST_F(CachedRepositoryTest, ClearCache) {
     CelestialObjectModel obj;
     obj.identifier = "M31";
-    
+
     repository_->insert(obj);
-    repository_->findByIdentifier("M31"); // Populate cache
-    
+    repository_->findByIdentifier("M31");  // Populate cache
+
     repository_->clearCache();
-    
+
     // Should still work after cache clear
     auto found = repository_->findByIdentifier("M31");
     ASSERT_TRUE(found.has_value());
@@ -100,7 +100,7 @@ TEST_F(CachedRepositoryTest, CacheSize) {
         obj.identifier = "OBJ" + std::to_string(i);
         repository_->insert(obj);
     }
-    
+
     // Cache should evict old entries
     auto stats = repository_->getCacheStats();
     EXPECT_FALSE(stats.empty());

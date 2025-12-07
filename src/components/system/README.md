@@ -7,16 +7,15 @@
 ```
 system/
 ├── dependency_exception.hpp     # 异常和错误类型定义
-├── dependency_types.hpp         # 基础数据类型定义
+├── dependency_types.hpp         # 基础数据类型定义（含版本解析工具）
 ├── dependency_types.cpp         # 数据类型实现
 ├── dependency_manager.hpp       # 主要依赖管理器接口
 ├── dependency_manager.cpp       # 依赖管理器实现
 ├── platform_detector.hpp        # 平台检测器接口
 ├── platform_detector.cpp        # 平台检测器实现
-├── package_manager.hpp          # 包管理器注册表接口
+├── package_manager.hpp          # 包管理器注册表接口（线程安全）
 ├── package_manager.cpp          # 包管理器注册表实现
-├── lru_cache.hpp                # LRU缓存模板类
-├── dependency_system.hpp        # 统一包含头文件
+├── system.hpp                   # 统一包含头文件（推荐使用）
 └── README.md                    # 本文件
 ```
 
@@ -43,30 +42,44 @@ system/
 
 ### 工具类
 
-1. **LRUCache** - 通用LRU缓存实现
-
-## 向后兼容性
-
-根目录下的 `system_dependency.hpp` 和 `system_dependency.cpp` 提供了向后兼容的包装，
-使用类型别名将原来的 `lithium` 命名空间映射到新的 `lithium::system` 命名空间。
+1. **版本解析工具** - `parseVersion()`, `versionToString()`, `isValidVersion()` 等
+2. **平台工具** - `distroTypeToString()`, `getDefaultPackageManagerForDistro()` 等
 
 ## 使用方法
 
-### 新代码
+### 推荐方式
 ```cpp
-#include "system/dependency_system.hpp"
+#include "components/system/system.hpp"
 using namespace lithium::system;
 
-DependencyManager manager;
-manager.addDependency({"cmake", {3, 20, 0}, "apt"});
+// 使用工厂函数创建实例
+auto manager = createDependencyManager();
+
+// 或直接使用快捷函数
+bool installed = isDependencyInstalled("cmake");
+std::string platform = getCurrentPlatform();
 ```
 
-### 兼容旧代码
+### 完整示例
 ```cpp
-#include "system_dependency.hpp"
-using namespace lithium;
+#include "components/system/system.hpp"
+using namespace lithium::system;
 
-DependencyManager manager;  // 自动映射到 lithium::system::DependencyManager
+DependencyManager manager("./config/package_managers.json");
+
+// 添加依赖（自动使用默认包管理器）
+DependencyInfo dep;
+dep.name = "cmake";
+dep.version = {3, 20, 0, ""};
+manager.addDependency(dep);
+
+// 检查是否已安装
+if (manager.isDependencyInstalled("cmake")) {
+    auto version = manager.getInstalledVersion("cmake");
+    if (version) {
+        std::cout << "cmake v" << versionToString(*version) << std::endl;
+    }
+}
 ```
 
 ## 编译说明

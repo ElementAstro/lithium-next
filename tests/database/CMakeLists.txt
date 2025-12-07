@@ -58,6 +58,7 @@ add_database_test(test_statement test_statement.cpp)
 add_database_test(test_transaction test_transaction.cpp)
 add_database_test(test_query_builder test_query_builder.cpp)
 add_database_test(test_cache_manager test_cache_manager.cpp)
+add_database_test(test_orm test_orm.cpp)
 
 # Create aggregate test target
 add_custom_target(database_tests
@@ -67,12 +68,13 @@ add_custom_target(database_tests
         test_transaction
         test_query_builder
         test_cache_manager
+        test_orm
     COMMENT "Building all database module tests"
 )
 
 # Optional: Create a target to run all database tests
 add_custom_target(run_database_tests
-    COMMAND ctest -V --output-on-failure -R "test_database|test_statement|test_transaction|test_query_builder|test_cache_manager"
+    COMMAND ctest -V --output-on-failure -R "test_database|test_statement|test_transaction|test_query_builder|test_cache_manager|test_orm"
     DEPENDS database_tests
     COMMENT "Running all database module tests"
 )

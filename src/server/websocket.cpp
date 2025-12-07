@@ -403,7 +403,8 @@ void WebSocketServer::setEventLoop(
         // Note: This requires the WebSocketServer to be managed by shared_ptr
         lithium::app::registerServerCommands(
             command_dispatcher_,
-            std::weak_ptr<WebSocketServer>(),  // Will be set properly from MainServer
+            std::weak_ptr<WebSocketServer>(),  // Will be set properly from
+                                               // MainServer
             task_manager_, event_loop_);
         spdlog::info("Server status commands registered with WebSocket");
     }

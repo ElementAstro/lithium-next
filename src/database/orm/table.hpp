@@ -30,10 +30,10 @@
 
 #include <spdlog/spdlog.h>
 
-#include "column.hpp"
 #include "../core/database.hpp"
 #include "../core/statement.hpp"
 #include "../core/transaction.hpp"
+#include "column.hpp"
 
 namespace lithium::database::orm {
 
@@ -125,10 +125,9 @@ public:
      * @param chunkSize The maximum number of updates per transaction.
      * @throws SQLExecutionError if batch update fails
      */
-    void batchUpdate(
-        const std::vector<T>& models,
-        std::function<std::string(const T&)> conditionBuilder,
-        size_t chunkSize = 100);
+    void batchUpdate(const std::vector<T>& models,
+                     std::function<std::string(const T&)> conditionBuilder,
+                     size_t chunkSize = 100);
 
     /**
      * @brief Creates an index on the table.
@@ -171,8 +170,7 @@ public:
     static std::string tableName();
 
 private:
-    lithium::database::Database&
-        db;  ///< A reference to the Database instance.
+    lithium::database::Database& db;  ///< A reference to the Database instance.
 
     /**
      * @brief Validates a model before insertion or update.
@@ -319,23 +317,26 @@ void Table<T>::batchInsert(const std::vector<T>& models, size_t chunkSize) {
     }
 
     spdlog::info("Starting batch insert of {} records", models.size());
-    auto transaction = db.beginTransaction();
-    try {
-        for (size_t i = 0; i < models.size(); i += chunkSize) {
+
+    // Process in chunks, each chunk in its own transaction
+    for (size_t i = 0; i < models.size(); i += chunkSize) {
+        auto transaction = db.beginTransaction();
+        try {
             auto end = std::min(models.size(), i + chunkSize);
             for (size_t j = i; j < end; ++j) {
-                insert(models[j]);
+                validateModel(models[j]);
+                auto stmt = prepareInsert(models[j]);
+                stmt->execute();
             }
             transaction->commit();
-            transaction = db.beginTransaction();
+            spdlog::debug("Batch insert chunk {}-{} committed", i, end - 1);
+        } catch (const std::exception& e) {
+            spdlog::error("Batch insert failed at index {}: {}", i, e.what());
+            transaction->rollback();
+            throw;
         }
-        transaction->commit();
-        spdlog::info("Batch insert completed successfully");
-    } catch (const std::exception& e) {
-        spdlog::error("Batch insert failed: {}", e.what());
-        transaction->rollback();
-        throw;
     }
+    spdlog::info("Batch insert completed successfully");
 }
 
 template <typename T>
@@ -348,23 +349,27 @@ void Table<T>::batchUpdate(
     }
 
     spdlog::info("Starting batch update of {} records", models.size());
-    auto transaction = db.beginTransaction();
-    try {
-        for (size_t i = 0; i < models.size(); i += chunkSize) {
+
+    // Process in chunks, each chunk in its own transaction
+    for (size_t i = 0; i < models.size(); i += chunkSize) {
+        auto transaction = db.beginTransaction();
+        try {
             auto end = std::min(models.size(), i + chunkSize);
             for (size_t j = i; j < end; ++j) {
-                update(models[j], conditionBuilder(models[j]));
+                validateModel(models[j]);
+                auto stmt =
+                    prepareUpdate(models[j], conditionBuilder(models[j]));
+                stmt->execute();
             }
             transaction->commit();
-            transaction = db.beginTransaction();
+            spdlog::debug("Batch update chunk {}-{} committed", i, end - 1);
+        } catch (const std::exception& e) {
+            spdlog::error("Batch update failed at index {}: {}", i, e.what());
+            transaction->rollback();
+            throw;
         }
-        transaction->commit();
-        spdlog::info("Batch update completed successfully");
-    } catch (const std::exception& e) {
-        spdlog::error("Batch update failed: {}", e.what());
-        transaction->rollback();
-        throw;
     }
+    spdlog::info("Batch update completed successfully");
 }
 
 template <typename T>
@@ -495,14 +500,7 @@ T Table<T>::modelFromStatement(lithium::database::Statement& stmt) const {
 
 template <typename T>
 void Table<T>::execute(const std::string& sql) {
-    char* errMsg = nullptr;
-    if (sqlite3_exec(db.get(), sql.c_str(), nullptr, nullptr, &errMsg) !=
-        SQLITE_OK) {
-        std::string error = "SQL Error: " + std::string(errMsg);
-        spdlog::error("{}", error);
-        sqlite3_free(errMsg);
-        THROW_SQL_EXECUTION_ERROR(error);
-    }
+    db.execute(sql);
 }
 
 template <typename T>

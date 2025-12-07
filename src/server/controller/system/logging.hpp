@@ -15,11 +15,11 @@ Description: Logging Management Controller - HTTP API for log management
 #ifndef LITHIUM_SERVER_CONTROLLER_LOGGING_HPP
 #define LITHIUM_SERVER_CONTROLLER_LOGGING_HPP
 
+#include "../controller.hpp"
 #include "../utils/response.hpp"
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
-#include "../controller.hpp"
-#include "logging/logging_manager.hpp"
+#include "logging/core/logging_manager.hpp"
 
 #include <chrono>
 #include <string>

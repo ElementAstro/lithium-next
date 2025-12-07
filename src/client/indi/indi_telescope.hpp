@@ -32,7 +32,13 @@ enum class PierSide : uint8_t { East, West, Unknown };
 /**
  * @brief Park options enumeration
  */
-enum class ParkOption : uint8_t { Current, Default, WriteData, PurgeData, None };
+enum class ParkOption : uint8_t {
+    Current,
+    Default,
+    WriteData,
+    PurgeData,
+    None
+};
 
 /**
  * @brief Slew rate enumeration
@@ -187,8 +193,9 @@ public:
 
     // ==================== Connection ====================
 
-    auto connect(const std::string& deviceName, int timeout = DEFAULT_TIMEOUT_MS,
-                 int maxRetry = 3) -> bool override;
+    auto connect(const std::string& deviceName,
+                 int timeout = DEFAULT_TIMEOUT_MS, int maxRetry = 3)
+        -> bool override;
 
     auto disconnect() -> bool override;
 
@@ -226,7 +233,8 @@ public:
      * @brief Get target RA/DEC
      * @return Target coordinates, or nullopt if not available
      */
-    [[nodiscard]] auto getTargetRADEC() const -> std::optional<EquatorialCoords>;
+    [[nodiscard]] auto getTargetRADEC() const
+        -> std::optional<EquatorialCoords>;
 
     /**
      * @brief Set target RA/DEC
@@ -294,8 +302,8 @@ public:
      * @param timeout Timeout in milliseconds
      * @return true if slew completed
      */
-    auto waitForSlew(std::chrono::milliseconds timeout =
-                         std::chrono::minutes(5)) -> bool;
+    auto waitForSlew(
+        std::chrono::milliseconds timeout = std::chrono::minutes(5)) -> bool;
 
     // ==================== Tracking ====================
 
@@ -371,7 +379,8 @@ public:
      * @brief Get park position
      * @return Park position, or nullopt if not available
      */
-    [[nodiscard]] auto getParkPosition() const -> std::optional<EquatorialCoords>;
+    [[nodiscard]] auto getParkPosition() const
+        -> std::optional<EquatorialCoords>;
 
     /**
      * @brief Set park option

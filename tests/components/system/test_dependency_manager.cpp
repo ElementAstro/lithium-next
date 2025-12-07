@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "components/system/dependency_system.hpp"
+#include "components/system/system.hpp"
 
 using namespace lithium::system;
 

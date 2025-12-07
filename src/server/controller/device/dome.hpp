@@ -1,9 +1,9 @@
 #ifndef LITHIUM_SERVER_CONTROLLER_DOME_HPP
 #define LITHIUM_SERVER_CONTROLLER_DOME_HPP
 
+#include "../controller.hpp"
 #include "atom/log/spdlog_logger.hpp"
 #include "atom/type/json.hpp"
-#include "../controller.hpp"
 #include "server/command/device/dome.hpp"
 #include "server/utils/response.hpp"
 
@@ -127,4 +127,3 @@ private:
 }  // namespace lithium::server::controller
 
 #endif  // LITHIUM_SERVER_CONTROLLER_DOME_HPP
-

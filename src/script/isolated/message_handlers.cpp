@@ -19,9 +19,7 @@ void MessageHandler::setLogCallback(LogCallback callback) {
 }
 
 MessageHandlerResult MessageHandler::processMessage(
-    const ipc::Message& message,
-    ExecutionResult& currentResult) {
-
+    const ipc::Message& message, ExecutionResult& currentResult) {
     auto payloadResult = message.getPayloadAsJson();
     if (!payloadResult) {
         MessageHandlerResult result;
@@ -53,10 +51,8 @@ MessageHandlerResult MessageHandler::processMessage(
     }
 }
 
-MessageHandlerResult MessageHandler::handleResult(
-    const nlohmann::json& payload,
-    ExecutionResult& result) {
-
+MessageHandlerResult MessageHandler::handleResult(const nlohmann::json& payload,
+                                                  ExecutionResult& result) {
     auto execResult = ipc::ExecuteResult::fromJson(payload);
     if (execResult) {
         result.success = execResult->success;
@@ -78,12 +74,10 @@ MessageHandlerResult MessageHandler::handleResult(
 
 MessageHandlerResult MessageHandler::handleProgress(
     const nlohmann::json& payload) {
-
     if (progressCallback_) {
         auto progress = ipc::ProgressUpdate::fromJson(payload);
         if (progress) {
-            progressCallback_(progress->percentage,
-                              progress->message,
+            progressCallback_(progress->percentage, progress->message,
                               progress->currentStep);
         }
     }
@@ -93,9 +87,7 @@ MessageHandlerResult MessageHandler::handleProgress(
     return result;
 }
 
-MessageHandlerResult MessageHandler::handleLog(
-    const nlohmann::json& payload) {
-
+MessageHandlerResult MessageHandler::handleLog(const nlohmann::json& payload) {
     if (logCallback_) {
         std::string level = payload.value("level", "info");
         std::string message = payload.value("message", "");
@@ -107,10 +99,8 @@ MessageHandlerResult MessageHandler::handleLog(
     return result;
 }
 
-MessageHandlerResult MessageHandler::handleError(
-    const nlohmann::json& payload,
-    ExecutionResult& result) {
-
+MessageHandlerResult MessageHandler::handleError(const nlohmann::json& payload,
+                                                 ExecutionResult& result) {
     result.success = false;
     result.exception = payload.value("message", "Unknown error");
     result.error = RunnerError::ExecutionFailed;

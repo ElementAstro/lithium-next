@@ -93,6 +93,19 @@ Statement& Statement::bindNull(int index) {
     return *this;
 }
 
+Statement& Statement::bindBlob(int index, const void* data, size_t size) {
+    validateIndex(index, true);
+    int result = sqlite3_bind_blob(stmt.get(), index, data,
+                                   static_cast<int>(size), SQLITE_TRANSIENT);
+    if (result != SQLITE_OK) {
+        std::string error = "Failed to bind blob parameter: ";
+        error += sqlite3_errmsg(db.get());
+        spdlog::error("{}", error);
+        THROW_PREPARE_STATEMENT_ERROR(error);
+    }
+    return *this;
+}
+
 bool Statement::execute() {
     int result = sqlite3_step(stmt.get());
     if (result != SQLITE_DONE && result != SQLITE_ROW) {

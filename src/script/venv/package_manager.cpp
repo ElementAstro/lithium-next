@@ -27,9 +27,11 @@ std::vector<InstalledPackage> parsePipListJson(const std::string& jsonOutput) {
 
     // Simple JSON parsing for pip list --format=json output
     // Format: [{"name": "package", "version": "1.0.0"}, ...]
-    std::regex packageRegex(R"delim(\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"version"\s*:\s*"([^"]+)"\s*\})delim");
+    std::regex packageRegex(
+        R"delim(\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"version"\s*:\s*"([^"]+)"\s*\})delim");
 
-    auto begin = std::sregex_iterator(jsonOutput.begin(), jsonOutput.end(), packageRegex);
+    auto begin = std::sregex_iterator(jsonOutput.begin(), jsonOutput.end(),
+                                      packageRegex);
     auto end = std::sregex_iterator();
 
     for (auto it = begin; it != end; ++it) {
@@ -47,13 +49,9 @@ std::vector<InstalledPackage> parsePipListJson(const std::string& jsonOutput) {
 // Implementation class
 class PackageManager::Impl {
 public:
-    Impl() {
-        spdlog::info("PackageManager initialized");
-    }
+    Impl() { spdlog::info("PackageManager initialized"); }
 
-    ~Impl() {
-        spdlog::info("PackageManager destroyed");
-    }
+    ~Impl() { spdlog::info("PackageManager destroyed"); }
 
     void setPipExecutable(const std::filesystem::path& pipPath) {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -83,7 +81,8 @@ public:
 
         auto result = executeCommand(cmd.str(), operationTimeout_);
         if (result.exitCode != 0) {
-            spdlog::error("Failed to install package {}: {}", package, result.errorOutput);
+            spdlog::error("Failed to install package {}: {}", package,
+                          result.errorOutput);
             return std::unexpected(VenvError::PackageInstallFailed);
         }
 
@@ -133,10 +132,12 @@ public:
         return {};
     }
 
-    VenvResult<void> installFromRequirements(const std::filesystem::path& requirementsFile,
-                                             bool upgrade, ProgressCallback callback) {
+    VenvResult<void> installFromRequirements(
+        const std::filesystem::path& requirementsFile, bool upgrade,
+        ProgressCallback callback) {
         if (!std::filesystem::exists(requirementsFile)) {
-            spdlog::error("Requirements file not found: {}", requirementsFile.string());
+            spdlog::error("Requirements file not found: {}",
+                          requirementsFile.string());
             return std::unexpected(VenvError::RequirementsNotFound);
         }
 
@@ -158,7 +159,8 @@ public:
 
         auto result = executeCommand(cmd.str(), operationTimeout_);
         if (result.exitCode != 0) {
-            spdlog::error("Failed to install from requirements: {}", result.errorOutput);
+            spdlog::error("Failed to install from requirements: {}",
+                          result.errorOutput);
             return std::unexpected(VenvError::PackageInstallFailed);
         }
 
@@ -180,7 +182,8 @@ public:
 
         auto result = executeCommand(cmd.str(), operationTimeout_);
         if (result.exitCode != 0) {
-            spdlog::error("Failed to uninstall package {}: {}", package, result.errorOutput);
+            spdlog::error("Failed to uninstall package {}: {}", package,
+                          result.errorOutput);
             return std::unexpected(VenvError::PackageUninstallFailed);
         }
 
@@ -194,17 +197,20 @@ public:
             return std::unexpected(VenvError::InvalidPath);
         }
 
-        auto result = executeCommand("\"" + pipPath_.string() + "\" list --format=json",
-                                     std::chrono::seconds{60});
+        auto result =
+            executeCommand("\"" + pipPath_.string() + "\" list --format=json",
+                           std::chrono::seconds{60});
         if (result.exitCode != 0) {
-            spdlog::error("Failed to list installed packages: {}", result.errorOutput);
+            spdlog::error("Failed to list installed packages: {}",
+                          result.errorOutput);
             return std::unexpected(VenvError::UnknownError);
         }
 
         return parsePipListJson(result.output);
     }
 
-    VenvResult<InstalledPackage> getPackageInfo(std::string_view package) const {
+    VenvResult<InstalledPackage> getPackageInfo(
+        std::string_view package) const {
         if (pipPath_.empty()) {
             spdlog::error("Pip executable path not set");
             return std::unexpected(VenvError::InvalidPath);
@@ -215,7 +221,8 @@ public:
 
         auto result = executeCommand(cmd.str(), std::chrono::seconds{30});
         if (result.exitCode != 0) {
-            spdlog::warn("Failed to get package info for {}: {}", package, result.errorOutput);
+            spdlog::warn("Failed to get package info for {}: {}", package,
+                         result.errorOutput);
             return std::unexpected(VenvError::UnknownError);
         }
 
@@ -256,7 +263,8 @@ public:
 
     VenvResult<void> upgradePip(const std::filesystem::path& pythonPath) {
         if (!std::filesystem::exists(pythonPath)) {
-            spdlog::error("Python executable not found: {}", pythonPath.string());
+            spdlog::error("Python executable not found: {}",
+                          pythonPath.string());
             return std::unexpected(VenvError::InvalidPath);
         }
 
@@ -285,13 +293,15 @@ public:
 
         auto result = executeCommand(cmd.str(), std::chrono::seconds{60});
         if (result.exitCode != 0) {
-            spdlog::error("Failed to export requirements: {}", result.errorOutput);
+            spdlog::error("Failed to export requirements: {}",
+                          result.errorOutput);
             return std::unexpected(VenvError::UnknownError);
         }
 
         std::ofstream file(outputFile);
         if (!file) {
-            spdlog::error("Failed to open output file: {}", outputFile.string());
+            spdlog::error("Failed to open output file: {}",
+                          outputFile.string());
             return std::unexpected(VenvError::PermissionDenied);
         }
 
@@ -310,7 +320,8 @@ public:
             }
         }
 
-        spdlog::info("Successfully exported requirements to: {}", outputFile.string());
+        spdlog::info("Successfully exported requirements to: {}",
+                     outputFile.string());
         return {};
     }
 
@@ -335,30 +346,36 @@ void PackageManager::setPipExecutable(const std::filesystem::path& pipPath) {
     pImpl_->setPipExecutable(pipPath);
 }
 
-VenvResult<void> PackageManager::installPackage(std::string_view package, bool upgrade,
+VenvResult<void> PackageManager::installPackage(std::string_view package,
+                                                bool upgrade,
                                                 ProgressCallback callback) {
     return pImpl_->installPackage(package, upgrade, std::move(callback));
 }
 
-VenvResult<void> PackageManager::installPackages(const std::vector<std::string>& packages,
-                                                 bool upgrade, ProgressCallback callback) {
+VenvResult<void> PackageManager::installPackages(
+    const std::vector<std::string>& packages, bool upgrade,
+    ProgressCallback callback) {
     return pImpl_->installPackages(packages, upgrade, std::move(callback));
 }
 
 VenvResult<void> PackageManager::installFromRequirements(
-    const std::filesystem::path& requirementsFile, bool upgrade, ProgressCallback callback) {
-    return pImpl_->installFromRequirements(requirementsFile, upgrade, std::move(callback));
+    const std::filesystem::path& requirementsFile, bool upgrade,
+    ProgressCallback callback) {
+    return pImpl_->installFromRequirements(requirementsFile, upgrade,
+                                           std::move(callback));
 }
 
 VenvResult<void> PackageManager::uninstallPackage(std::string_view package) {
     return pImpl_->uninstallPackage(package);
 }
 
-VenvResult<std::vector<InstalledPackage>> PackageManager::listInstalledPackages() const {
+VenvResult<std::vector<InstalledPackage>>
+PackageManager::listInstalledPackages() const {
     return pImpl_->listInstalledPackages();
 }
 
-VenvResult<InstalledPackage> PackageManager::getPackageInfo(std::string_view package) const {
+VenvResult<InstalledPackage> PackageManager::getPackageInfo(
+    std::string_view package) const {
     return pImpl_->getPackageInfo(package);
 }
 
@@ -366,12 +383,13 @@ bool PackageManager::isPackageInstalled(std::string_view package) const {
     return pImpl_->isPackageInstalled(package);
 }
 
-VenvResult<void> PackageManager::upgradePip(const std::filesystem::path& pythonPath) {
+VenvResult<void> PackageManager::upgradePip(
+    const std::filesystem::path& pythonPath) {
     return pImpl_->upgradePip(pythonPath);
 }
 
-VenvResult<void> PackageManager::exportRequirements(const std::filesystem::path& outputFile,
-                                                    bool includeVersions) const {
+VenvResult<void> PackageManager::exportRequirements(
+    const std::filesystem::path& outputFile, bool includeVersions) const {
     return pImpl_->exportRequirements(outputFile, includeVersions);
 }
 

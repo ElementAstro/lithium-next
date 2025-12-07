@@ -13,7 +13,7 @@
 #include <gtest/gtest.h>
 #include "script/check.hpp"
 #include "script/sheller.hpp"
-#include "task/custom/script_task.hpp"
+#include "task/components/script_task.hpp"
 
 #include <chrono>
 #include <filesystem>

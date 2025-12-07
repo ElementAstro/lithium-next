@@ -101,85 +101,79 @@ public:
         // ===== HEALTH CHECK =====
 
         // Simple health check endpoint
-        CROW_ROUTE(app, "/api/v1/health")
-            .methods("GET"_method)([]() {
-                nlohmann::json result = {{"status", "healthy"},
-                                         {"timestamp", getCurrentTimestamp()}};
-                return ResponseBuilder::success(result);
-            });
+        CROW_ROUTE(app, "/api/v1/health").methods("GET"_method)([]() {
+            nlohmann::json result = {{"status", "healthy"},
+                                     {"timestamp", getCurrentTimestamp()}};
+            return ResponseBuilder::success(result);
+        });
 
         // Detailed health check with component status
-        CROW_ROUTE(app, "/api/v1/health/detailed")
-            .methods("GET"_method)([]() {
-                nlohmann::json result;
-                result["status"] = "healthy";
-                result["timestamp"] = getCurrentTimestamp();
-                result["uptime_seconds"] = getUptimeSeconds();
+        CROW_ROUTE(app, "/api/v1/health/detailed").methods("GET"_method)([]() {
+            nlohmann::json result;
+            result["status"] = "healthy";
+            result["timestamp"] = getCurrentTimestamp();
+            result["uptime_seconds"] = getUptimeSeconds();
 
-                // Check WebSocket server
-                nlohmann::json ws_status;
-                if (auto ws = websocket_server_.lock()) {
-                    ws_status["available"] = true;
-                    ws_status["running"] = ws->is_running();
-                    ws_status["active_connections"] = ws->get_active_connections();
-                } else {
-                    ws_status["available"] = false;
-                }
-                result["websocket"] = ws_status;
+            // Check WebSocket server
+            nlohmann::json ws_status;
+            if (auto ws = websocket_server_.lock()) {
+                ws_status["available"] = true;
+                ws_status["running"] = ws->is_running();
+                ws_status["active_connections"] = ws->get_active_connections();
+            } else {
+                ws_status["available"] = false;
+            }
+            result["websocket"] = ws_status;
 
-                // Check TaskManager
-                nlohmann::json tm_status;
-                if (auto tm = task_manager_.lock()) {
-                    tm_status["available"] = true;
-                    auto stats = tm->getStats();
-                    tm_status["active_tasks"] =
-                        stats["pending"].get<size_t>() +
-                        stats["running"].get<size_t>();
-                } else {
-                    tm_status["available"] = false;
-                }
-                result["task_manager"] = tm_status;
+            // Check TaskManager
+            nlohmann::json tm_status;
+            if (auto tm = task_manager_.lock()) {
+                tm_status["available"] = true;
+                auto stats = tm->getStats();
+                tm_status["active_tasks"] = stats["pending"].get<size_t>() +
+                                            stats["running"].get<size_t>();
+            } else {
+                tm_status["available"] = false;
+            }
+            result["task_manager"] = tm_status;
 
-                // Check EventLoop
-                nlohmann::json el_status;
-                if (auto el = event_loop_.lock()) {
-                    el_status["available"] = true;
-                } else {
-                    el_status["available"] = false;
-                }
-                result["event_loop"] = el_status;
+            // Check EventLoop
+            nlohmann::json el_status;
+            if (auto el = event_loop_.lock()) {
+                el_status["available"] = true;
+            } else {
+                el_status["available"] = false;
+            }
+            result["event_loop"] = el_status;
 
-                return ResponseBuilder::success(result);
-            });
+            return ResponseBuilder::success(result);
+        });
 
         // ===== SERVER UPTIME =====
 
-        CROW_ROUTE(app, "/api/v1/server/uptime")
-            .methods("GET"_method)([]() {
-                auto uptime = getUptimeSeconds();
-                nlohmann::json result = {
-                    {"uptime_seconds", uptime},
-                    {"uptime_formatted", formatUptime(uptime)},
-                    {"start_time", getStartTimeISO()}};
-                return ResponseBuilder::success(result);
-            });
+        CROW_ROUTE(app, "/api/v1/server/uptime").methods("GET"_method)([]() {
+            auto uptime = getUptimeSeconds();
+            nlohmann::json result = {{"uptime_seconds", uptime},
+                                     {"uptime_formatted", formatUptime(uptime)},
+                                     {"start_time", getStartTimeISO()}};
+            return ResponseBuilder::success(result);
+        });
 
         // ===== WEBSOCKET STATISTICS =====
 
-        CROW_ROUTE(app, "/api/v1/websocket/stats")
-            .methods("GET"_method)([]() {
-                auto ws = websocket_server_.lock();
-                if (!ws) {
-                    return ResponseBuilder::serviceUnavailable(
-                        "WebSocket server not available");
-                }
+        CROW_ROUTE(app, "/api/v1/websocket/stats").methods("GET"_method)([]() {
+            auto ws = websocket_server_.lock();
+            if (!ws) {
+                return ResponseBuilder::serviceUnavailable(
+                    "WebSocket server not available");
+            }
 
-                nlohmann::json result = ws->get_stats();
-                result["running"] = ws->is_running();
-                result["subscribed_topics"] = ws->get_subscribed_topics();
+            nlohmann::json result = ws->get_stats();
+            result["running"] = ws->is_running();
+            result["subscribed_topics"] = ws->get_subscribed_topics();
 
-                return ResponseBuilder::success(result);
-            });
+            return ResponseBuilder::success(result);
+        });
 
         CROW_ROUTE(app, "/api/v1/websocket/connections")
             .methods("GET"_method)([]() {
@@ -198,16 +192,15 @@ public:
 
         // ===== TASK MANAGER STATISTICS =====
 
-        CROW_ROUTE(app, "/api/v1/tasks/stats")
-            .methods("GET"_method)([]() {
-                auto tm = task_manager_.lock();
-                if (!tm) {
-                    return ResponseBuilder::serviceUnavailable(
-                        "TaskManager not available");
-                }
+        CROW_ROUTE(app, "/api/v1/tasks/stats").methods("GET"_method)([]() {
+            auto tm = task_manager_.lock();
+            if (!tm) {
+                return ResponseBuilder::serviceUnavailable(
+                    "TaskManager not available");
+            }
 
-                return ResponseBuilder::success(tm->getStats());
-            });
+            return ResponseBuilder::success(tm->getStats());
+        });
 
         // List all tasks with pagination
         CROW_ROUTE(app, "/api/v1/tasks")
@@ -383,7 +376,7 @@ private:
     static auto getUptimeSeconds() -> int64_t {
         auto now = std::chrono::steady_clock::now();
         return std::chrono::duration_cast<std::chrono::seconds>(now -
-                                                                 start_time_)
+                                                                start_time_)
             .count();
     }
 
@@ -425,7 +418,8 @@ private:
     }
 
     // Convert TaskManager::TaskInfo to TaskSummary model
-    static auto toTaskSummary(const std::shared_ptr<TaskManager::TaskInfo>& task)
+    static auto toTaskSummary(
+        const std::shared_ptr<TaskManager::TaskInfo>& task)
         -> models::task::TaskSummary {
         auto toMs = [](auto tp) {
             return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -448,15 +442,14 @@ private:
         return summary;
     }
 
-    static auto taskToJson(
-        const std::shared_ptr<TaskManager::TaskInfo>& task) -> nlohmann::json {
+    static auto taskToJson(const std::shared_ptr<TaskManager::TaskInfo>& task)
+        -> nlohmann::json {
         return toTaskSummary(task).toJson();
     }
 };
 
 // Static member definitions (in header for simplicity, should be in .cpp)
-inline std::weak_ptr<WebSocketServer>
-    ServerStatusController::websocket_server_;
+inline std::weak_ptr<WebSocketServer> ServerStatusController::websocket_server_;
 inline std::weak_ptr<TaskManager> ServerStatusController::task_manager_;
 inline std::weak_ptr<app::EventLoop> ServerStatusController::event_loop_;
 inline std::chrono::steady_clock::time_point

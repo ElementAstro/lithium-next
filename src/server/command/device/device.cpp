@@ -23,4 +23,3 @@ void registerDeviceCommands(std::shared_ptr<CommandDispatcher> dispatcher) {
 }
 
 }  // namespace lithium::app
-

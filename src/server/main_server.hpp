@@ -22,6 +22,7 @@
 
 // Device Controllers
 #include "controller/device/camera.hpp"
+#include "controller/device/device_plugin.hpp"
 #include "controller/device/dome.hpp"
 #include "controller/device/filterwheel.hpp"
 #include "controller/device/focuser.hpp"
@@ -40,9 +41,9 @@
 #include "controller/system/server_status.hpp"
 
 // Script Controllers
+#include "controller/script/isolated.hpp"
 #include "controller/script/python.hpp"
 #include "controller/script/shell.hpp"
-#include "controller/script/isolated.hpp"
 #include "controller/script/tool_registry.hpp"
 #include "controller/script/venv.hpp"
 
@@ -64,7 +65,10 @@
 #include "websocket/log_stream.hpp"
 
 // Sequencer core
-#include "task/sequencer.hpp"
+#include "task/core/sequencer.hpp"
+
+// Device subsystem
+#include "device/device.hpp"
 
 namespace lithium::server {
 
@@ -96,6 +100,11 @@ public:
         plugin::PluginManagerConfig plugin_config;
         bool enable_plugins = true;
         bool auto_load_plugins = true;
+
+        // Device subsystem configuration
+        nlohmann::json device_config;
+        bool enable_device_plugins = true;
+        bool auto_load_device_plugins = true;
     };
 
     /**
@@ -108,9 +117,11 @@ public:
           exposure_sequence_(
               std::make_shared<lithium::task::ExposureSequence>()),
           task_manager_(std::make_shared<TaskManager>(event_loop_)),
-          plugin_manager_(plugin::PluginManager::createShared(config.plugin_config)) {
+          plugin_manager_(
+              plugin::PluginManager::createShared(config.plugin_config)) {
         LOG_INFO("Initializing Lithium Server v1.0.0");
         initializeLogging();
+        initializeDeviceSubsystem();
         initializeMiddleware();
         initializeControllers();
         initializeWebSocket();
@@ -138,7 +149,8 @@ public:
             websocket_server_->start();
         }
 
-        // Schedule periodic task cleanup (every 5 minutes, remove tasks older than 1 hour)
+        // Schedule periodic task cleanup (every 5 minutes, remove tasks older
+        // than 1 hour)
         if (task_manager_) {
             cleanup_task_id_ = task_manager_->schedulePeriodicTask(
                 "TaskCleanup", std::chrono::minutes(5), [this]() {
@@ -184,6 +196,9 @@ public:
 
         event_loop_->stop();
         app_.stop();
+
+        // Shutdown device subsystem
+        lithium::shutdownDeviceSubsystem();
 
         // Shutdown logging last to capture all shutdown messages
         logging::LoggingManager::getInstance().shutdown();
@@ -271,6 +286,53 @@ private:
     }
 
     /**
+     * @brief Initialize device subsystem
+     */
+    void initializeDeviceSubsystem() {
+        LOG_INFO("Initializing device subsystem...");
+
+        // Initialize the device subsystem with configuration
+        if (!lithium::initializeDeviceSubsystem(config_.device_config)) {
+            LOG_ERROR("Failed to initialize device subsystem");
+            return;
+        }
+
+        // Set up MessageBus integration for device events
+        auto message_bus =
+            atom::async::MessageBus::createShared(message_bus_io_);
+        device::DeviceEventBus::getInstance().setMessageBus(message_bus);
+
+        // Auto-load device plugins if configured
+        if (config_.enable_device_plugins && config_.auto_load_device_plugins) {
+            auto& loader = device::DevicePluginLoader::getInstance();
+            size_t loaded = loader.loadAllPlugins();
+            LOG_INFO("Auto-loaded {} device plugins", loaded);
+        }
+
+        // Subscribe to device events for logging
+        device::DeviceEventBus::getInstance().subscribe(
+            device::DeviceEventType::PluginLoaded,
+            [](const device::DeviceEvent& event) {
+                LOG_INFO("Device plugin loaded: {}", event.deviceName);
+            });
+
+        device::DeviceEventBus::getInstance().subscribe(
+            device::DeviceEventType::PluginUnloaded,
+            [](const device::DeviceEvent& event) {
+                LOG_INFO("Device plugin unloaded: {}", event.deviceName);
+            });
+
+        device::DeviceEventBus::getInstance().subscribe(
+            device::DeviceEventType::Error,
+            [](const device::DeviceEvent& event) {
+                LOG_ERROR("Device error on {}: {}", event.deviceName,
+                          event.message);
+            });
+
+        LOG_INFO("Device subsystem initialized");
+    }
+
+    /**
      * @brief Initialize middleware components
      */
     void initializeMiddleware() {
@@ -325,7 +387,10 @@ private:
                         "domes": "/api/v1/domes",
                         "system": "/api/v1/system",
                         "filesystem": "/api/v1/filesystem",
-                        "sky": "/api/v1/sky"
+                        "sky": "/api/v1/sky",
+                        "device-plugins": "/api/v1/device-plugins",
+                        "device-types": "/api/v1/device-types",
+                        "device-events": "/api/v1/device-events"
                     }
                 })");
         });
@@ -377,8 +442,11 @@ private:
             std::make_unique<controller::IsolatedController>());
         controllers_.push_back(
             std::make_unique<controller::ToolRegistryController>());
+        controllers_.push_back(std::make_unique<controller::VenvController>());
+
+        // Device plugin controller
         controllers_.push_back(
-            std::make_unique<controller::VenvController>());
+            std::make_unique<controller::DevicePluginController>());
 
         // Register all controller routes
         for (auto& controller : controllers_) {
@@ -542,27 +610,27 @@ private:
         }
 
         // Subscribe to plugin events for logging
-        plugin_manager_->subscribeToEvents(
-            [](plugin::PluginEvent event, const std::string& name,
-               const nlohmann::json& data) {
-                switch (event) {
-                    case plugin::PluginEvent::Loaded:
-                        LOG_INFO("Plugin loaded: {}", name);
-                        break;
-                    case plugin::PluginEvent::Unloaded:
-                        LOG_INFO("Plugin unloaded: {}", name);
-                        break;
-                    case plugin::PluginEvent::Reloaded:
-                        LOG_INFO("Plugin reloaded: {}", name);
-                        break;
-                    case plugin::PluginEvent::Error:
-                        LOG_ERROR("Plugin error: {} - {}",
-                                  name, data.value("error", "unknown"));
-                        break;
-                    default:
-                        break;
-                }
-            });
+        plugin_manager_->subscribeToEvents([](plugin::PluginEvent event,
+                                              const std::string& name,
+                                              const nlohmann::json& data) {
+            switch (event) {
+                case plugin::PluginEvent::Loaded:
+                    LOG_INFO("Plugin loaded: {}", name);
+                    break;
+                case plugin::PluginEvent::Unloaded:
+                    LOG_INFO("Plugin unloaded: {}", name);
+                    break;
+                case plugin::PluginEvent::Reloaded:
+                    LOG_INFO("Plugin reloaded: {}", name);
+                    break;
+                case plugin::PluginEvent::Error:
+                    LOG_ERROR("Plugin error: {} - {}", name,
+                              data.value("error", "unknown"));
+                    break;
+                default:
+                    break;
+            }
+        });
 
         LOG_INFO("Plugin system initialized");
     }

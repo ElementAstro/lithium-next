@@ -46,8 +46,8 @@ enum class DomeMotion : uint8_t { Clockwise, CounterClockwise, None };
  * @brief Dome position information
  */
 struct DomePosition {
-    double azimuth{0.0};       // Current azimuth in degrees
-    double targetAzimuth{0.0}; // Target azimuth
+    double azimuth{0.0};        // Current azimuth in degrees
+    double targetAzimuth{0.0};  // Target azimuth
     double minAzimuth{0.0};
     double maxAzimuth{360.0};
 
@@ -118,8 +118,9 @@ public:
 
     // ==================== Connection ====================
 
-    auto connect(const std::string& deviceName, int timeout = DEFAULT_TIMEOUT_MS,
-                 int maxRetry = 3) -> bool override;
+    auto connect(const std::string& deviceName,
+                 int timeout = DEFAULT_TIMEOUT_MS, int maxRetry = 3)
+        -> bool override;
 
     auto disconnect() -> bool override;
 
@@ -161,8 +162,8 @@ public:
      * @param timeout Timeout in milliseconds
      * @return true if motion completed
      */
-    auto waitForMotion(std::chrono::milliseconds timeout =
-                           std::chrono::minutes(5)) -> bool;
+    auto waitForMotion(
+        std::chrono::milliseconds timeout = std::chrono::minutes(5)) -> bool;
 
     /**
      * @brief Move dome in specified direction

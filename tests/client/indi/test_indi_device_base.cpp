@@ -66,7 +66,8 @@ TEST_F(INDIDeviceBaseTest, InitializeSucceeds) {
 
 TEST_F(INDIDeviceBaseTest, InitializeTwiceSucceeds) {
     EXPECT_TRUE(device_->initialize());
-    EXPECT_TRUE(device_->initialize());  // Should return true (already initialized)
+    EXPECT_TRUE(
+        device_->initialize());  // Should return true (already initialized)
 }
 
 TEST_F(INDIDeviceBaseTest, DestroySucceeds) {
@@ -148,9 +149,8 @@ TEST_F(INDIDeviceBaseTest, RegisterEventCallback) {
 
 TEST_F(INDIDeviceBaseTest, UnregisterEventCallback) {
     bool callbackCalled = false;
-    device_->registerEventCallback([&](const DeviceEvent&) {
-        callbackCalled = true;
-    });
+    device_->registerEventCallback(
+        [&](const DeviceEvent&) { callbackCalled = true; });
 
     device_->unregisterEventCallback();
     device_->initialize();
@@ -161,9 +161,8 @@ TEST_F(INDIDeviceBaseTest, UnregisterEventCallback) {
 
 TEST_F(INDIDeviceBaseTest, WatchPropertyRegistersCallback) {
     bool callbackCalled = false;
-    device_->watchProperty("TEST_PROP", [&](const INDIProperty&) {
-        callbackCalled = true;
-    });
+    device_->watchProperty("TEST_PROP",
+                           [&](const INDIProperty&) { callbackCalled = true; });
 
     // Callback should be registered but not called yet
     EXPECT_FALSE(callbackCalled);

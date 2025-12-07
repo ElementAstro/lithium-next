@@ -278,6 +278,147 @@ TEST_F(DatabaseCoreTest, ConcurrentPreparedStatements) {
     EXPECT_EQ(stmt3->getInt(0), 2);
 }
 
+TEST_F(DatabaseCoreTest, DirectCommitMethod) {
+    // Test Database::commit() direct method
+    db->execute("CREATE TABLE commit_test (id INTEGER PRIMARY KEY, value TEXT)");
+
+    // Begin transaction manually
+    db->execute("BEGIN TRANSACTION;");
+    db->execute("INSERT INTO commit_test (value) VALUES ('test')");
+
+    // Use direct commit method
+    EXPECT_NO_THROW(db->commit());
+
+    // Verify data was committed
+    auto stmt = db->prepare("SELECT COUNT(*) FROM commit_test");
+    stmt->step();
+    EXPECT_EQ(stmt->getInt(0), 1);
+}
+
+TEST_F(DatabaseCoreTest, DirectRollbackMethod) {
+    // Test Database::rollback() direct method
+    db->execute("CREATE TABLE rollback_test (id INTEGER PRIMARY KEY, value TEXT)");
+    db->execute("INSERT INTO rollback_test (value) VALUES ('initial')");
+
+    // Begin transaction manually
+    db->execute("BEGIN TRANSACTION;");
+    db->execute("INSERT INTO rollback_test (value) VALUES ('should_be_rolled_back')");
+
+    // Use direct rollback method
+    EXPECT_NO_THROW(db->rollback());
+
+    // Verify only initial data exists
+    auto stmt = db->prepare("SELECT COUNT(*) FROM rollback_test");
+    stmt->step();
+    EXPECT_EQ(stmt->getInt(0), 1);
+}
+
+TEST_F(DatabaseCoreTest, DatabaseOpenErrorExceptionType) {
+    // Test that DatabaseOpenError is thrown for invalid paths
+    EXPECT_THROW(
+        Database("/invalid/path/that/does/not/exist/db.sqlite"),
+        DatabaseOpenError);
+}
+
+TEST_F(DatabaseCoreTest, SqlExecutionErrorExceptionType) {
+    // Test that SqlExecutionError is thrown for invalid SQL
+    EXPECT_THROW(db->execute("INVALID SQL SYNTAX"), SqlExecutionError);
+}
+
+TEST_F(DatabaseCoreTest, StatementPrepareErrorExceptionType) {
+    // Test that StatementPrepareError is thrown for invalid prepare
+    EXPECT_THROW(db->prepare("INVALID SQL SYNTAX"), StatementPrepareError);
+}
+
+TEST_F(DatabaseCoreTest, ValidationErrorOnInvalidDatabase) {
+    // Create and move database to make it invalid
+    Database db1(":memory:");
+    Database db2(std::move(db1));
+
+    // db1 is now invalid, operations should throw ValidationError
+    EXPECT_THROW(db1.get(), ValidationError);
+    EXPECT_THROW(db1.prepare("SELECT 1"), ValidationError);
+    EXPECT_THROW(db1.execute("SELECT 1"), ValidationError);
+    EXPECT_THROW(db1.beginTransaction(), ValidationError);
+}
+
+TEST_F(DatabaseCoreTest, ConfigureEmptyPragmas) {
+    // Test configure with empty pragmas map
+    std::unordered_map<std::string, std::string> emptyPragmas;
+    EXPECT_NO_THROW(db->configure(emptyPragmas));
+    EXPECT_TRUE(db->isValid());
+}
+
+TEST_F(DatabaseCoreTest, ConfigureMultiplePragmas) {
+    // Test configure with multiple pragmas
+    std::unordered_map<std::string, std::string> pragmas = {
+        {"synchronous", "OFF"},
+        {"cache_size", "10000"},
+        {"temp_store", "MEMORY"},
+        {"mmap_size", "268435456"}
+    };
+    EXPECT_NO_THROW(db->configure(pragmas));
+    EXPECT_TRUE(db->isValid());
+}
+
+TEST_F(DatabaseCoreTest, CustomOpenFlags) {
+    // Test opening database with custom flags
+    Database readOnlyDb(":memory:", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+    EXPECT_TRUE(readOnlyDb.isValid());
+}
+
+TEST_F(DatabaseCoreTest, TransactionWithPreparedStatementExecution) {
+    // Test transaction with prepared statement execution
+    db->execute("CREATE TABLE txn_test (id INTEGER PRIMARY KEY, value INTEGER)");
+
+    auto txn = db->beginTransaction();
+    auto stmt = db->prepare("INSERT INTO txn_test (value) VALUES (?)");
+
+    for (int i = 1; i <= 5; ++i) {
+        stmt->bind(1, i * 100);
+        stmt->execute();
+        stmt->reset();
+    }
+
+    txn->commit();
+
+    // Verify all inserts
+    auto countStmt = db->prepare("SELECT COUNT(*) FROM txn_test");
+    countStmt->step();
+    EXPECT_EQ(countStmt->getInt(0), 5);
+
+    auto sumStmt = db->prepare("SELECT SUM(value) FROM txn_test");
+    sumStmt->step();
+    EXPECT_EQ(sumStmt->getInt(0), 1500);  // 100+200+300+400+500
+}
+
+TEST_F(DatabaseCoreTest, MoveConstructorInvalidatesSource) {
+    Database db1(":memory:");
+    EXPECT_TRUE(db1.isValid());
+
+    Database db2(std::move(db1));
+
+    // db1 should be invalid after move
+    EXPECT_FALSE(db1.isValid());
+    // db2 should be valid
+    EXPECT_TRUE(db2.isValid());
+}
+
+TEST_F(DatabaseCoreTest, MoveAssignmentInvalidatesSource) {
+    Database db1(":memory:");
+    Database db2(":memory:");
+
+    EXPECT_TRUE(db1.isValid());
+    EXPECT_TRUE(db2.isValid());
+
+    db2 = std::move(db1);
+
+    // db1 should be invalid after move
+    EXPECT_FALSE(db1.isValid());
+    // db2 should be valid
+    EXPECT_TRUE(db2.isValid());
+}
+
 // ==================== Main ====================
 
 int main(int argc, char** argv) {

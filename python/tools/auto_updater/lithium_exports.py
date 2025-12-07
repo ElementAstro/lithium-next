@@ -15,7 +15,7 @@ from .core import AutoUpdater
     method="GET",
     description="Check for available updates",
     tags=["updater", "system"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def check_updates(
     current_version: str,
@@ -55,7 +55,7 @@ def check_updates(
     method="POST",
     description="Download an update",
     tags=["updater", "system"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def download_update(
     download_url: str,
@@ -98,7 +98,7 @@ def download_update(
     description="Check for updates (command)",
     priority=3,
     timeout_ms=30000,
-    tags=["updater"]
+    tags=["updater"],
 )
 def cmd_check_updates(current_version: str) -> dict:
     """Check for updates via command dispatcher."""

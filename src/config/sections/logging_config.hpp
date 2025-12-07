@@ -8,7 +8,8 @@
 
 Date: 2024-11-30
 
-Description: Unified logging configuration (merges lithium::log and lithium::logging)
+Description: Unified logging configuration (merges lithium::log and
+lithium::logging)
 
 **************************************************/
 
@@ -25,28 +26,27 @@ namespace lithium::config {
 /**
  * @brief Log level enumeration
  */
-enum class LogLevel {
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-    Critical,
-    Off
-};
+enum class LogLevel { Trace, Debug, Info, Warn, Error, Critical, Off };
 
 /**
  * @brief Convert LogLevel to string
  */
 [[nodiscard]] inline std::string logLevelToString(LogLevel level) {
     switch (level) {
-        case LogLevel::Trace: return "trace";
-        case LogLevel::Debug: return "debug";
-        case LogLevel::Info: return "info";
-        case LogLevel::Warn: return "warn";
-        case LogLevel::Error: return "error";
-        case LogLevel::Critical: return "critical";
-        case LogLevel::Off: return "off";
+        case LogLevel::Trace:
+            return "trace";
+        case LogLevel::Debug:
+            return "debug";
+        case LogLevel::Info:
+            return "info";
+        case LogLevel::Warn:
+            return "warn";
+        case LogLevel::Error:
+            return "error";
+        case LogLevel::Critical:
+            return "critical";
+        case LogLevel::Off:
+            return "off";
     }
     return "info";
 }
@@ -55,13 +55,20 @@ enum class LogLevel {
  * @brief Convert string to LogLevel
  */
 [[nodiscard]] inline LogLevel logLevelFromString(const std::string& str) {
-    if (str == "trace") return LogLevel::Trace;
-    if (str == "debug") return LogLevel::Debug;
-    if (str == "info") return LogLevel::Info;
-    if (str == "warn" || str == "warning") return LogLevel::Warn;
-    if (str == "error" || str == "err") return LogLevel::Error;
-    if (str == "critical" || str == "fatal") return LogLevel::Critical;
-    if (str == "off" || str == "none") return LogLevel::Off;
+    if (str == "trace")
+        return LogLevel::Trace;
+    if (str == "debug")
+        return LogLevel::Debug;
+    if (str == "info")
+        return LogLevel::Info;
+    if (str == "warn" || str == "warning")
+        return LogLevel::Warn;
+    if (str == "error" || str == "err")
+        return LogLevel::Error;
+    if (str == "critical" || str == "fatal")
+        return LogLevel::Critical;
+    if (str == "off" || str == "none")
+        return LogLevel::Off;
     return LogLevel::Info;
 }
 
@@ -69,32 +76,31 @@ enum class LogLevel {
  * @brief Sink configuration for additional log sinks
  */
 struct LogSinkConfig {
-    std::string name;       ///< Sink identifier
-    std::string type;       ///< Type: "console", "file", "rotating_file", "daily_file"
-    std::string level;      ///< Log level for this sink
-    std::string pattern;    ///< Log pattern (optional, uses default if empty)
+    std::string name;  ///< Sink identifier
+    std::string
+        type;  ///< Type: "console", "file", "rotating_file", "daily_file"
+    std::string level;    ///< Log level for this sink
+    std::string pattern;  ///< Log pattern (optional, uses default if empty)
 
     // File sink options
-    std::string filePath;        ///< File path (for file sinks)
+    std::string filePath;                  ///< File path (for file sinks)
     size_t maxFileSize{10 * 1024 * 1024};  ///< Max file size for rotation
-    size_t maxFiles{5};          ///< Max number of rotated files
+    size_t maxFiles{5};                    ///< Max number of rotated files
 
     // Daily file options
-    int rotationHour{0};         ///< Hour for daily rotation
-    int rotationMinute{0};       ///< Minute for daily rotation
+    int rotationHour{0};    ///< Hour for daily rotation
+    int rotationMinute{0};  ///< Minute for daily rotation
 
     [[nodiscard]] json toJson() const {
-        return {
-            {"name", name},
-            {"type", type},
-            {"level", level},
-            {"pattern", pattern},
-            {"filePath", filePath},
-            {"maxFileSize", maxFileSize},
-            {"maxFiles", maxFiles},
-            {"rotationHour", rotationHour},
-            {"rotationMinute", rotationMinute}
-        };
+        return {{"name", name},
+                {"type", type},
+                {"level", level},
+                {"pattern", pattern},
+                {"filePath", filePath},
+                {"maxFileSize", maxFileSize},
+                {"maxFiles", maxFiles},
+                {"rotationHour", rotationHour},
+                {"rotationMinute", rotationMinute}};
     }
 
     [[nodiscard]] static LogSinkConfig fromJson(const json& j) {
@@ -168,11 +174,12 @@ struct LoggingConfig : ConfigSection<LoggingConfig> {
     // Rotation Settings
     // ========================================================================
 
-    size_t maxFileSize{10 * 1024 * 1024};  ///< Max file size before rotation (10 MB)
-    size_t maxFiles{5};                     ///< Max number of rotated files
-    bool useDailyRotation{false};           ///< Use daily rotation instead of size-based
-    int rotationHour{0};                    ///< Hour for daily rotation (0-23)
-    int rotationMinute{0};                  ///< Minute for daily rotation (0-59)
+    size_t maxFileSize{10 * 1024 *
+                       1024};      ///< Max file size before rotation (10 MB)
+    size_t maxFiles{5};            ///< Max number of rotated files
+    bool useDailyRotation{false};  ///< Use daily rotation instead of size-based
+    int rotationHour{0};           ///< Hour for daily rotation (0-23)
+    int rotationMinute{0};         ///< Minute for daily rotation (0-59)
 
     // ========================================================================
     // Format Settings
@@ -188,9 +195,9 @@ struct LoggingConfig : ConfigSection<LoggingConfig> {
     // Async Settings
     // ========================================================================
 
-    bool asyncMode{true};             ///< Enable async logging
-    size_t asyncQueueSize{8192};      ///< Async queue size
-    size_t asyncThreadCount{1};       ///< Number of async worker threads
+    bool asyncMode{true};         ///< Enable async logging
+    size_t asyncQueueSize{8192};  ///< Async queue size
+    size_t asyncThreadCount{1};   ///< Number of async worker threads
 
     /// Overflow policy: "block" or "discard"
     std::string overflowPolicy{"block"};
@@ -199,14 +206,15 @@ struct LoggingConfig : ConfigSection<LoggingConfig> {
     // Ring Buffer (for in-memory logging)
     // ========================================================================
 
-    bool enableRingBuffer{false};    ///< Enable ring buffer sink
-    size_t ringBufferSize{1000};     ///< Ring buffer capacity
+    bool enableRingBuffer{false};  ///< Enable ring buffer sink
+    size_t ringBufferSize{1000};   ///< Ring buffer capacity
 
     // ========================================================================
     // Additional Sinks
     // ========================================================================
 
-    std::vector<LogSinkConfig> additionalSinks;  ///< Extra sinks for LoggingManager
+    std::vector<LogSinkConfig>
+        additionalSinks;  ///< Extra sinks for LoggingManager
 
     // ========================================================================
     // Thread Naming
@@ -227,36 +235,34 @@ struct LoggingConfig : ConfigSection<LoggingConfig> {
             sinksArray.push_back(sink.toJson());
         }
 
-        return {
-            // Console
-            {"enableConsole", enableConsole},
-            {"consoleLevel", consoleLevel},
-            {"consoleColor", consoleColor},
-            // File
-            {"enableFile", enableFile},
-            {"logDir", logDir},
-            {"logFilename", logFilename},
-            {"fileLevel", fileLevel},
-            // Rotation
-            {"maxFileSize", maxFileSize},
-            {"maxFiles", maxFiles},
-            {"useDailyRotation", useDailyRotation},
-            {"rotationHour", rotationHour},
-            {"rotationMinute", rotationMinute},
-            // Format
-            {"pattern", pattern},
-            // Async
-            {"asyncMode", asyncMode},
-            {"asyncQueueSize", asyncQueueSize},
-            {"asyncThreadCount", asyncThreadCount},
-            {"overflowPolicy", overflowPolicy},
-            // Ring buffer
-            {"enableRingBuffer", enableRingBuffer},
-            {"ringBufferSize", ringBufferSize},
-            // Additional
-            {"additionalSinks", sinksArray},
-            {"mainThreadName", mainThreadName}
-        };
+        return {// Console
+                {"enableConsole", enableConsole},
+                {"consoleLevel", consoleLevel},
+                {"consoleColor", consoleColor},
+                // File
+                {"enableFile", enableFile},
+                {"logDir", logDir},
+                {"logFilename", logFilename},
+                {"fileLevel", fileLevel},
+                // Rotation
+                {"maxFileSize", maxFileSize},
+                {"maxFiles", maxFiles},
+                {"useDailyRotation", useDailyRotation},
+                {"rotationHour", rotationHour},
+                {"rotationMinute", rotationMinute},
+                // Format
+                {"pattern", pattern},
+                // Async
+                {"asyncMode", asyncMode},
+                {"asyncQueueSize", asyncQueueSize},
+                {"asyncThreadCount", asyncThreadCount},
+                {"overflowPolicy", overflowPolicy},
+                // Ring buffer
+                {"enableRingBuffer", enableRingBuffer},
+                {"ringBufferSize", ringBufferSize},
+                // Additional
+                {"additionalSinks", sinksArray},
+                {"mainThreadName", mainThreadName}};
     }
 
     /**
@@ -279,7 +285,8 @@ struct LoggingConfig : ConfigSection<LoggingConfig> {
         // Rotation
         cfg.maxFileSize = j.value("maxFileSize", cfg.maxFileSize);
         cfg.maxFiles = j.value("maxFiles", cfg.maxFiles);
-        cfg.useDailyRotation = j.value("useDailyRotation", cfg.useDailyRotation);
+        cfg.useDailyRotation =
+            j.value("useDailyRotation", cfg.useDailyRotation);
         cfg.rotationHour = j.value("rotationHour", cfg.rotationHour);
         cfg.rotationMinute = j.value("rotationMinute", cfg.rotationMinute);
 
@@ -289,17 +296,20 @@ struct LoggingConfig : ConfigSection<LoggingConfig> {
         // Async
         cfg.asyncMode = j.value("asyncMode", cfg.asyncMode);
         cfg.asyncQueueSize = j.value("asyncQueueSize", cfg.asyncQueueSize);
-        cfg.asyncThreadCount = j.value("asyncThreadCount", cfg.asyncThreadCount);
+        cfg.asyncThreadCount =
+            j.value("asyncThreadCount", cfg.asyncThreadCount);
         cfg.overflowPolicy = j.value("overflowPolicy", cfg.overflowPolicy);
 
         // Ring buffer
-        cfg.enableRingBuffer = j.value("enableRingBuffer", cfg.enableRingBuffer);
+        cfg.enableRingBuffer =
+            j.value("enableRingBuffer", cfg.enableRingBuffer);
         cfg.ringBufferSize = j.value("ringBufferSize", cfg.ringBufferSize);
 
         // Additional sinks
         if (j.contains("additionalSinks") && j["additionalSinks"].is_array()) {
             for (const auto& sinkJson : j["additionalSinks"]) {
-                cfg.additionalSinks.push_back(LogSinkConfig::fromJson(sinkJson));
+                cfg.additionalSinks.push_back(
+                    LogSinkConfig::fromJson(sinkJson));
             }
         }
 
@@ -314,84 +324,76 @@ struct LoggingConfig : ConfigSection<LoggingConfig> {
     [[nodiscard]] static json generateSchema() {
         return {
             {"type", "object"},
-            {"properties", {
-                // Console
-                {"enableConsole", {{"type", "boolean"}, {"default", true}}},
-                {"consoleLevel", {
-                    {"type", "string"},
-                    {"enum", {"trace", "debug", "info", "warn", "error", "critical", "off"}},
-                    {"default", "info"}
-                }},
-                {"consoleColor", {{"type", "boolean"}, {"default", true}}},
-                // File
-                {"enableFile", {{"type", "boolean"}, {"default", true}}},
-                {"logDir", {{"type", "string"}, {"default", "logs"}}},
-                {"logFilename", {{"type", "string"}, {"default", "lithium"}}},
-                {"fileLevel", {
-                    {"type", "string"},
-                    {"enum", {"trace", "debug", "info", "warn", "error", "critical", "off"}},
-                    {"default", "trace"}
-                }},
-                // Rotation
-                {"maxFileSize", {
-                    {"type", "integer"},
-                    {"minimum", 1024},
-                    {"maximum", 1073741824},  // 1 GB
-                    {"default", 10485760}
-                }},
-                {"maxFiles", {
-                    {"type", "integer"},
-                    {"minimum", 1},
-                    {"maximum", 100},
-                    {"default", 5}
-                }},
-                {"useDailyRotation", {{"type", "boolean"}, {"default", false}}},
-                {"rotationHour", {
-                    {"type", "integer"},
-                    {"minimum", 0},
-                    {"maximum", 23},
-                    {"default", 0}
-                }},
-                {"rotationMinute", {
-                    {"type", "integer"},
-                    {"minimum", 0},
-                    {"maximum", 59},
-                    {"default", 0}
-                }},
-                // Format
-                {"pattern", {{"type", "string"}}},
-                // Async
-                {"asyncMode", {{"type", "boolean"}, {"default", true}}},
-                {"asyncQueueSize", {
-                    {"type", "integer"},
-                    {"minimum", 128},
-                    {"maximum", 1048576},
-                    {"default", 8192}
-                }},
-                {"asyncThreadCount", {
-                    {"type", "integer"},
-                    {"minimum", 1},
-                    {"maximum", 16},
-                    {"default", 1}
-                }},
-                {"overflowPolicy", {
-                    {"type", "string"},
-                    {"enum", {"block", "discard"}},
-                    {"default", "block"}
-                }},
-                // Ring buffer
-                {"enableRingBuffer", {{"type", "boolean"}, {"default", false}}},
-                {"ringBufferSize", {
-                    {"type", "integer"},
-                    {"minimum", 10},
-                    {"maximum", 100000},
-                    {"default", 1000}
-                }},
-                // Additional
-                {"additionalSinks", {{"type", "array"}}},
-                {"mainThreadName", {{"type", "string"}, {"default", "main"}}}
-            }}
-        };
+            {"properties",
+             {// Console
+              {"enableConsole", {{"type", "boolean"}, {"default", true}}},
+              {"consoleLevel",
+               {{"type", "string"},
+                {"enum",
+                 {"trace", "debug", "info", "warn", "error", "critical",
+                  "off"}},
+                {"default", "info"}}},
+              {"consoleColor", {{"type", "boolean"}, {"default", true}}},
+              // File
+              {"enableFile", {{"type", "boolean"}, {"default", true}}},
+              {"logDir", {{"type", "string"}, {"default", "logs"}}},
+              {"logFilename", {{"type", "string"}, {"default", "lithium"}}},
+              {"fileLevel",
+               {{"type", "string"},
+                {"enum",
+                 {"trace", "debug", "info", "warn", "error", "critical",
+                  "off"}},
+                {"default", "trace"}}},
+              // Rotation
+              {"maxFileSize",
+               {{"type", "integer"},
+                {"minimum", 1024},
+                {"maximum", 1073741824},  // 1 GB
+                {"default", 10485760}}},
+              {"maxFiles",
+               {{"type", "integer"},
+                {"minimum", 1},
+                {"maximum", 100},
+                {"default", 5}}},
+              {"useDailyRotation", {{"type", "boolean"}, {"default", false}}},
+              {"rotationHour",
+               {{"type", "integer"},
+                {"minimum", 0},
+                {"maximum", 23},
+                {"default", 0}}},
+              {"rotationMinute",
+               {{"type", "integer"},
+                {"minimum", 0},
+                {"maximum", 59},
+                {"default", 0}}},
+              // Format
+              {"pattern", {{"type", "string"}}},
+              // Async
+              {"asyncMode", {{"type", "boolean"}, {"default", true}}},
+              {"asyncQueueSize",
+               {{"type", "integer"},
+                {"minimum", 128},
+                {"maximum", 1048576},
+                {"default", 8192}}},
+              {"asyncThreadCount",
+               {{"type", "integer"},
+                {"minimum", 1},
+                {"maximum", 16},
+                {"default", 1}}},
+              {"overflowPolicy",
+               {{"type", "string"},
+                {"enum", {"block", "discard"}},
+                {"default", "block"}}},
+              // Ring buffer
+              {"enableRingBuffer", {{"type", "boolean"}, {"default", false}}},
+              {"ringBufferSize",
+               {{"type", "integer"},
+                {"minimum", 10},
+                {"maximum", 100000},
+                {"default", 1000}}},
+              // Additional
+              {"additionalSinks", {{"type", "array"}}},
+              {"mainThreadName", {{"type", "string"}, {"default", "main"}}}}}};
     }
 };
 

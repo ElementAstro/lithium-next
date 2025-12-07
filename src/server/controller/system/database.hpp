@@ -4,8 +4,8 @@
 #include <memory>
 #include <string>
 
-#include "atom/function/global_ptr.hpp"
 #include "../controller.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "database/database.hpp"
 #include "spdlog/spdlog.h"
 

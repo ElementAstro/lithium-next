@@ -1,76 +1,35 @@
 #include "package_manager.hpp"
+
 #include <spdlog/spdlog.h>
-#include "atom/system/platform.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <thread>
 #include <unordered_map>
-#include <unordered_set>
+
+#include "atom/system/platform.hpp"
+#include "atom/type/json.hpp"
 
 #if defined(_WIN32)
 // clang-format off
 #include <windows.h>
 #include <tlhelp32.h>
 // clang-format on
-#elif defined(__APPLE__)
-#include <signal.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#elif defined(__linux__)
+#elif defined(__APPLE__) || defined(__linux__)
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
-
-#include "atom/type/json.hpp"
 
 namespace lithium::system {
 
 using json = nlohmann::json;
 
 namespace {
-
-bool commandExists(const std::string& command) {
-    std::string testCmd;
-#if defined(_WIN32)
-    testCmd = "where " + command + " >nul 2>nul";
-#else
-    testCmd = "which " + command + " >/dev/null 2>&1";
-#endif
-    return std::system(testCmd.c_str()) == 0;
-}
-
-std::string executeCommand(const std::string& command) {
-    std::string result;
-    result.reserve(1024);
-    char buffer[256];
-
-#if defined(_WIN32)
-    FILE* pipe = _popen(command.c_str(), "r");
-#else
-    FILE* pipe = popen(command.c_str(), "r");
-#endif
-
-    if (!pipe) {
-        spdlog::error("Failed to execute command: {}", command);
-        return result;
-    }
-
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-        result += buffer;
-    }
-
-#if defined(_WIN32)
-    _pclose(pipe);
-#else
-    pclose(pipe);
-#endif
-
-    return result;
-}
 
 void killProcessByName(const std::string& processName) {
 #if defined(_WIN32)
@@ -178,12 +137,61 @@ const std::unordered_map<std::string, std::vector<std::string>>
 
 }  // namespace
 
+// ============================================================================
+// Static Methods
+// ============================================================================
+
+bool PackageManagerRegistry::commandExists(const std::string& command) {
+    std::string testCmd;
+#if defined(_WIN32)
+    testCmd = "where " + command + " >nul 2>nul";
+#else
+    testCmd = "which " + command + " >/dev/null 2>&1";
+#endif
+    return std::system(testCmd.c_str()) == 0;
+}
+
+std::string PackageManagerRegistry::executeCommand(const std::string& command) {
+    std::string result;
+    result.reserve(1024);
+    char buffer[256];
+
+#if defined(_WIN32)
+    FILE* pipe = _popen(command.c_str(), "r");
+#else
+    FILE* pipe = popen(command.c_str(), "r");
+#endif
+
+    if (!pipe) {
+        spdlog::error("Failed to execute command: {}", command);
+        return result;
+    }
+
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result += buffer;
+    }
+
+#if defined(_WIN32)
+    _pclose(pipe);
+#else
+    pclose(pipe);
+#endif
+
+    return result;
+}
+
+// ============================================================================
+// Constructor
+// ============================================================================
+
 PackageManagerRegistry::PackageManagerRegistry(const PlatformDetector& detector)
     : platformDetector_(detector) {
     configurePackageManagers();
 }
 
 void PackageManagerRegistry::loadSystemPackageManagers() {
+    std::unique_lock lock(mutex_);
+
     spdlog::info("Loading system package managers for platform: {}",
                  ATOM_PLATFORM);
 
@@ -276,6 +284,14 @@ void PackageManagerRegistry::loadSystemPackageManagers() {
 
 void PackageManagerRegistry::loadPackageManagerConfig(
     const std::string& configPath) {
+    std::unique_lock lock(mutex_);
+
+    // Skip if already loaded
+    if (loadedConfigs_.count(configPath) > 0) {
+        spdlog::debug("Config already loaded: {}", configPath);
+        return;
+    }
+
     try {
         if (!std::filesystem::exists(configPath)) {
             spdlog::warn("Package manager config file does not exist: {}",
@@ -368,6 +384,7 @@ void PackageManagerRegistry::loadPackageManagerConfig(
             }
         }
 
+        loadedConfigs_.insert(configPath);
         spdlog::info("Loaded package manager configuration from: {}",
                      configPath);
     } catch (const std::exception& e) {
@@ -377,6 +394,8 @@ void PackageManagerRegistry::loadPackageManagerConfig(
 
 auto PackageManagerRegistry::getPackageManager(const std::string& name) const
     -> std::optional<PackageManagerInfo> {
+    std::shared_lock lock(mutex_);
+
     auto it = std::ranges::find_if(
         packageManagers_,
         [&](const PackageManagerInfo& pm) { return pm.name == name; });
@@ -384,9 +403,29 @@ auto PackageManagerRegistry::getPackageManager(const std::string& name) const
                                           : std::nullopt;
 }
 
+auto PackageManagerRegistry::getDefaultPackageManager() const
+    -> std::optional<PackageManagerInfo> {
+    std::string defaultName = platformDetector_.getDefaultPackageManager();
+    return getPackageManager(defaultName);
+}
+
 auto PackageManagerRegistry::getPackageManagers() const
     -> std::vector<PackageManagerInfo> {
+    std::shared_lock lock(mutex_);
     return packageManagers_;
+}
+
+auto PackageManagerRegistry::getPackageManagerCount() const -> size_t {
+    std::shared_lock lock(mutex_);
+    return packageManagers_.size();
+}
+
+auto PackageManagerRegistry::hasPackageManager(const std::string& name) const
+    -> bool {
+    std::shared_lock lock(mutex_);
+    return std::ranges::any_of(
+        packageManagers_,
+        [&](const PackageManagerInfo& pm) { return pm.name == name; });
 }
 
 auto PackageManagerRegistry::searchDependency(const std::string& depName)
@@ -394,9 +433,17 @@ auto PackageManagerRegistry::searchDependency(const std::string& depName)
     std::vector<std::string> results;
     std::unordered_set<std::string> uniqueResults;
 
+    // Copy package managers under lock to avoid holding lock during command
+    // execution
+    std::vector<PackageManagerInfo> pkgMgrsCopy;
+    {
+        std::shared_lock lock(mutex_);
+        pkgMgrsCopy = packageManagers_;
+    }
+
     spdlog::info("Searching for dependency: {}", depName);
 
-    for (const auto& pkgMgr : packageManagers_) {
+    for (const auto& pkgMgr : pkgMgrsCopy) {
         try {
             std::string searchCmd = pkgMgr.getSearchCommand(depName);
             spdlog::debug("Searching with {}: {}", pkgMgr.name, searchCmd);
@@ -654,6 +701,50 @@ std::vector<std::string> PackageManagerRegistry::parseSearchOutput(
     }
 
     return results;
+}
+
+auto PackageManagerRegistry::registerPackageManager(
+    const PackageManagerInfo& info) -> bool {
+    std::unique_lock lock(mutex_);
+
+    // Check if already exists
+    auto it = std::ranges::find_if(
+        packageManagers_,
+        [&](const PackageManagerInfo& pm) { return pm.name == info.name; });
+
+    if (it != packageManagers_.end()) {
+        spdlog::warn("Package manager '{}' already registered", info.name);
+        return false;
+    }
+
+    packageManagers_.push_back(info);
+    spdlog::info("Registered package manager: {}", info.name);
+    return true;
+}
+
+auto PackageManagerRegistry::unregisterPackageManager(const std::string& name)
+    -> bool {
+    std::unique_lock lock(mutex_);
+
+    auto it = std::ranges::find_if(
+        packageManagers_,
+        [&](const PackageManagerInfo& pm) { return pm.name == name; });
+
+    if (it == packageManagers_.end()) {
+        spdlog::warn("Package manager '{}' not found", name);
+        return false;
+    }
+
+    packageManagers_.erase(it);
+    spdlog::info("Unregistered package manager: {}", name);
+    return true;
+}
+
+void PackageManagerRegistry::clearPackageManagers() {
+    std::unique_lock lock(mutex_);
+    packageManagers_.clear();
+    loadedConfigs_.clear();
+    spdlog::info("Cleared all package managers");
 }
 
 }  // namespace lithium::system

@@ -63,10 +63,37 @@ class ConfigIOException : public BadConfigException {
     throw lithium::config::ConfigIOException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                              ATOM_FUNC_NAME, __VA_ARGS__)
 
+/**
+ * @brief Exception for configuration validation failure
+ */
+class ConfigValidationException : public BadConfigException {
+    using BadConfigException::BadConfigException;
+};
+
+#define THROW_CONFIG_VALIDATION_EXCEPTION(...)        \
+    throw lithium::config::ConfigValidationException( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
+
+/**
+ * @brief Exception for configuration serialization errors
+ */
+class ConfigSerializationException : public BadConfigException {
+    using BadConfigException::BadConfigException;
+};
+
+#define THROW_CONFIG_SERIALIZATION_EXCEPTION(...)        \
+    throw lithium::config::ConfigSerializationException( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
+
+// Convenience type aliases within namespace
+using ConfigError = BadConfigException;
+
 }  // namespace lithium::config
 
 // Backward compatibility aliases in global namespace
 using BadConfigException = lithium::config::BadConfigException;
 using InvalidConfigException = lithium::config::InvalidConfigException;
+using ConfigNotFoundException = lithium::config::ConfigNotFoundException;
+using ConfigIOException = lithium::config::ConfigIOException;
 
 #endif  // LITHIUM_CONFIG_CORE_EXCEPTION_HPP

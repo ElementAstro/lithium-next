@@ -5,16 +5,16 @@
 
 namespace lithium::database::core {
 
-// Exception classes
-class FailedToOpenDatabase : public atom::error::Exception {
+// Exception classes - all follow the XxxError naming convention
+class DatabaseOpenError : public atom::error::Exception {
     using Exception::Exception;
 };
 
-class SQLExecutionError : public atom::error::Exception {
+class SqlExecutionError : public atom::error::Exception {
     using Exception::Exception;
 };
 
-class PrepareStatementError : public atom::error::Exception {
+class StatementPrepareError : public atom::error::Exception {
     using Exception::Exception;
 };
 
@@ -26,26 +26,37 @@ class ValidationError : public atom::error::Exception {
     using Exception::Exception;
 };
 
-// Exception macros
-#define THROW_FAILED_TO_OPEN_DATABASE(...)         \
-    throw lithium::database::core::FailedToOpenDatabase( \
+// Backward compatibility aliases
+using FailedToOpenDatabase = DatabaseOpenError;
+using SQLExecutionError = SqlExecutionError;
+using PrepareStatementError = StatementPrepareError;
+
+// Exception macros - standardized naming
+#define THROW_DATABASE_OPEN_ERROR(...)                \
+    throw lithium::database::core::DatabaseOpenError( \
         ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
 
-#define THROW_SQL_EXECUTION_ERROR(...)                                         \
-    throw lithium::database::core::SQLExecutionError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
-                                               ATOM_FUNC_NAME, __VA_ARGS__)
-
-#define THROW_PREPARE_STATEMENT_ERROR(...)          \
-    throw lithium::database::core::PrepareStatementError( \
+#define THROW_SQL_EXECUTION_ERROR(...)                \
+    throw lithium::database::core::SqlExecutionError( \
         ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
 
-#define THROW_TRANSACTION_ERROR(...)                                          \
-    throw lithium::database::core::TransactionError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
-                                              ATOM_FUNC_NAME, __VA_ARGS__)
+#define THROW_STATEMENT_PREPARE_ERROR(...)                \
+    throw lithium::database::core::StatementPrepareError( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
 
-#define THROW_VALIDATION_ERROR(...)                                          \
-    throw lithium::database::core::ValidationError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
-                                             ATOM_FUNC_NAME, __VA_ARGS__)
+#define THROW_TRANSACTION_ERROR(...)                 \
+    throw lithium::database::core::TransactionError( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
+
+#define THROW_VALIDATION_ERROR(...)                 \
+    throw lithium::database::core::ValidationError( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
+
+// Backward compatibility macros
+#define THROW_FAILED_TO_OPEN_DATABASE(...) \
+    THROW_DATABASE_OPEN_ERROR(__VA_ARGS__)
+#define THROW_PREPARE_STATEMENT_ERROR(...) \
+    THROW_STATEMENT_PREPARE_ERROR(__VA_ARGS__)
 
 }  // namespace lithium::database::core
 

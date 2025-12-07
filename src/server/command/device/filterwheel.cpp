@@ -8,10 +8,10 @@
 
 #include "atom/log/spdlog_logger.hpp"
 
-#include "atom/type/json.hpp"
 #include "../command.hpp"
-#include "device/service/filterwheel_service.hpp"
 #include "../response.hpp"
+#include "atom/type/json.hpp"
+#include "device/service/filterwheel_service.hpp"
 
 namespace lithium::app {
 
@@ -324,7 +324,9 @@ auto& getFilterWheelServiceInstance() {
 }
 }  // namespace
 
-auto listFilterWheels() -> json { return getFilterWheelServiceInstance().list(); }
+auto listFilterWheels() -> json {
+    return getFilterWheelServiceInstance().list();
+}
 
 auto getFilterWheelStatus(const std::string& deviceId) -> json {
     return getFilterWheelServiceInstance().getStatus(deviceId);
@@ -370,4 +372,3 @@ auto calibrateFilterWheel(const std::string& deviceId) -> json {
 }
 
 }  // namespace lithium::middleware
-

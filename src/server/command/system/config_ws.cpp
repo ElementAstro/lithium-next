@@ -693,4 +693,3 @@ void cleanupConfigNotificationHooks(size_t hookId) {
 }
 
 }  // namespace lithium::server::config
-

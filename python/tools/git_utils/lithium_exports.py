@@ -15,7 +15,7 @@ from .git_utils import GitUtils
     method="POST",
     description="Clone a Git repository",
     tags=["git", "repository"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def clone_repository(
     url: str,
@@ -62,7 +62,7 @@ def clone_repository(
     method="POST",
     description="Pull latest changes from remote",
     tags=["git", "repository"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def pull_changes(
     repo_dir: str,
@@ -101,7 +101,7 @@ def pull_changes(
     method="POST",
     description="Push changes to remote",
     tags=["git", "repository"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def push_changes(
     repo_dir: str,
@@ -142,7 +142,7 @@ def push_changes(
     method="POST",
     description="Commit changes",
     tags=["git", "changes"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def commit_changes(
     repo_dir: str,
@@ -183,7 +183,7 @@ def commit_changes(
     method="GET",
     description="Get repository status",
     tags=["git", "info"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def get_status(repo_dir: str) -> dict:
     """
@@ -216,7 +216,7 @@ def get_status(repo_dir: str) -> dict:
     method="GET",
     description="List branches",
     tags=["git", "branch"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def list_branches(repo_dir: str, all_branches: bool = False) -> dict:
     """
@@ -251,7 +251,7 @@ def list_branches(repo_dir: str, all_branches: bool = False) -> dict:
     method="POST",
     description="Create a new branch",
     tags=["git", "branch"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def create_branch(
     repo_dir: str,
@@ -291,7 +291,7 @@ def create_branch(
     method="POST",
     description="Switch to a branch",
     tags=["git", "branch"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def switch_branch(repo_dir: str, branch_name: str) -> dict:
     """
@@ -326,7 +326,7 @@ def switch_branch(repo_dir: str, branch_name: str) -> dict:
     method="GET",
     description="View commit log",
     tags=["git", "info"],
-    version="1.0.0"
+    version="1.0.0",
 )
 def view_log(
     repo_dir: str,
@@ -366,7 +366,7 @@ def view_log(
     description="Clone repository (command)",
     priority=5,
     timeout_ms=300000,
-    tags=["git"]
+    tags=["git"],
 )
 def cmd_clone(url: str, destination: str) -> dict:
     """Clone repository via command dispatcher."""
@@ -378,7 +378,7 @@ def cmd_clone(url: str, destination: str) -> dict:
     description="Pull changes (command)",
     priority=5,
     timeout_ms=60000,
-    tags=["git"]
+    tags=["git"],
 )
 def cmd_pull(repo_dir: str) -> dict:
     """Pull changes via command dispatcher."""
@@ -390,7 +390,7 @@ def cmd_pull(repo_dir: str) -> dict:
     description="Commit changes (command)",
     priority=5,
     timeout_ms=30000,
-    tags=["git"]
+    tags=["git"],
 )
 def cmd_commit(repo_dir: str, message: str) -> dict:
     """Commit changes via command dispatcher."""
@@ -402,7 +402,7 @@ def cmd_commit(repo_dir: str, message: str) -> dict:
     description="Get status (command)",
     priority=5,
     timeout_ms=10000,
-    tags=["git"]
+    tags=["git"],
 )
 def cmd_status(repo_dir: str) -> dict:
     """Get status via command dispatcher."""

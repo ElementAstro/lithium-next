@@ -120,10 +120,10 @@ public:
      * @param timeoutMs Execution timeout
      * @return Execution result (output, exit code)
      */
-    auto runScript(std::string_view name,
-                   const std::unordered_map<std::string, std::string>& args = {},
-                   bool safe = true,
-                   std::optional<int> timeoutMs = std::nullopt)
+    auto runScript(
+        std::string_view name,
+        const std::unordered_map<std::string, std::string>& args = {},
+        bool safe = true, std::optional<int> timeoutMs = std::nullopt)
         -> std::optional<std::pair<std::string, int>>;
 
     /**
@@ -151,8 +151,8 @@ public:
         std::string_view name,
         const std::unordered_map<std::string, std::string>& args = {},
         const RetryConfig& retryConfig = {},
-        const std::optional<ScriptResourceLimits>& resourceLimits = std::nullopt)
-        -> ScriptExecutionResult;
+        const std::optional<ScriptResourceLimits>& resourceLimits =
+            std::nullopt) -> ScriptExecutionResult;
 
     /**
      * @brief Execute multiple scripts sequentially
@@ -162,7 +162,8 @@ public:
      */
     auto runScriptsSequentially(
         const std::vector<std::pair<
-            std::string, std::unordered_map<std::string, std::string>>>& scripts,
+            std::string, std::unordered_map<std::string, std::string>>>&
+            scripts,
         bool safe = true)
         -> std::vector<std::optional<std::pair<std::string, int>>>;
 
@@ -174,7 +175,8 @@ public:
      */
     auto runScriptsConcurrently(
         const std::vector<std::pair<
-            std::string, std::unordered_map<std::string, std::string>>>& scripts,
+            std::string, std::unordered_map<std::string, std::string>>>&
+            scripts,
         bool safe = true)
         -> std::vector<std::optional<std::pair<std::string, int>>>;
 
@@ -261,7 +263,8 @@ public:
      * @param name Script identifier
      * @param metadata Metadata to set
      */
-    void setScriptMetadata(std::string_view name, const ScriptMetadata& metadata);
+    void setScriptMetadata(std::string_view name,
+                           const ScriptMetadata& metadata);
 
     // =========================================================================
     // Resources
@@ -298,7 +301,8 @@ public:
      * @return Number of scripts loaded
      */
     auto discoverScripts(const std::filesystem::path& directory,
-                         const std::vector<std::string>& extensions = {".py", ".sh"},
+                         const std::vector<std::string>& extensions = {".py",
+                                                                       ".sh"},
                          bool recursive = true) -> size_t;
 
     /**

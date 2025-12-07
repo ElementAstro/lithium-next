@@ -40,7 +40,8 @@ protected:
         }
     }
 
-    void createTestScript(const std::string& filename, const std::string& content) {
+    void createTestScript(const std::string& filename,
+                          const std::string& content) {
         std::ofstream file(testDir_ / filename);
         file << content;
         file.close();
@@ -120,9 +121,10 @@ TEST_F(PythonRunnerTest, SetExecutorScript) {
 
 TEST_F(PythonRunnerTest, SetProgressCallback) {
     bool callbackCalled = false;
-    runner_->setProgressCallback([&](float progress, const std::string& message) {
-        callbackCalled = true;
-    });
+    runner_->setProgressCallback(
+        [&](float progress, const std::string& message) {
+            callbackCalled = true;
+        });
     // Callback should be set without error
     SUCCEED();
 }

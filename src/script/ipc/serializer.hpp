@@ -45,12 +45,14 @@ public:
     /**
      * @brief Deserialize binary to JSON
      */
-    [[nodiscard]] static IPCResult<json> deserialize(std::span<const uint8_t> data);
+    [[nodiscard]] static IPCResult<json> deserialize(
+        std::span<const uint8_t> data);
 
     /**
      * @brief Serialize a string with length prefix
      */
-    [[nodiscard]] static std::vector<uint8_t> serializeString(std::string_view str);
+    [[nodiscard]] static std::vector<uint8_t> serializeString(
+        std::string_view str);
 
     /**
      * @brief Deserialize a length-prefixed string
@@ -61,12 +63,14 @@ public:
     /**
      * @brief Serialize raw bytes with header
      */
-    [[nodiscard]] static std::vector<uint8_t> serializeBytes(std::span<const uint8_t> data);
+    [[nodiscard]] static std::vector<uint8_t> serializeBytes(
+        std::span<const uint8_t> data);
 
     /**
      * @brief Calculate CRC32 checksum
      */
-    [[nodiscard]] static uint32_t calculateChecksum(std::span<const uint8_t> data);
+    [[nodiscard]] static uint32_t calculateChecksum(
+        std::span<const uint8_t> data);
 
     /**
      * @brief Compress data using zlib

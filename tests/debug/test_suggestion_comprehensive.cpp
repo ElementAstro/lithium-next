@@ -149,8 +149,8 @@ TEST_F(SuggestionStatsTest, DefaultConstruction) {
 class SuggestionEngineBasicTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        dataset = {"apple", "banana", "grape", "orange", "watermelon",
-                   "help", "hello", "history", "exit", "clear"};
+        dataset = {"apple", "banana", "grape",   "orange", "watermelon",
+                   "help",  "hello",  "history", "exit",   "clear"};
         engine = std::make_unique<SuggestionEngine>(dataset);
     }
 
@@ -465,8 +465,7 @@ TEST_F(SuggestionEngineFilterTest, MultipleFilters) {
         return item[0] != 'd';  // No items starting with 'd'
     });
 
-    auto suggestions =
-        engine->suggest("", SuggestionEngine::MatchType::Prefix);
+    auto suggestions = engine->suggest("", SuggestionEngine::MatchType::Prefix);
     // Should have: apple, banana, cherry (date filtered by both)
 }
 
@@ -620,8 +619,8 @@ protected:
 };
 
 TEST_F(SuggestionEngineDetailTest, GetSuggestionDetails) {
-    auto details =
-        engine->getSuggestionDetails("hel", SuggestionEngine::MatchType::Prefix);
+    auto details = engine->getSuggestionDetails(
+        "hel", SuggestionEngine::MatchType::Prefix);
 
     EXPECT_FALSE(details.empty());
     for (const auto& detail : details) {
@@ -632,8 +631,8 @@ TEST_F(SuggestionEngineDetailTest, GetSuggestionDetails) {
 }
 
 TEST_F(SuggestionEngineDetailTest, DetailsContainMatchType) {
-    auto details =
-        engine->getSuggestionDetails("hel", SuggestionEngine::MatchType::Prefix);
+    auto details = engine->getSuggestionDetails(
+        "hel", SuggestionEngine::MatchType::Prefix);
 
     for (const auto& detail : details) {
         EXPECT_FALSE(detail.matchType.empty());

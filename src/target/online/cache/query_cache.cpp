@@ -6,9 +6,9 @@
 
 #include "query_cache.hpp"
 
-#include <sstream>
-#include <iomanip>
 #include <cstring>
+#include <iomanip>
+#include <sstream>
 
 #include <spdlog/spdlog.h>
 #include "atom/search/ttl.hpp"
@@ -158,8 +158,8 @@ public:
 
     auto contains(const std::string& cacheKey) const -> bool {
         // TTLCache::get() returns optional, we can't check existence without
-        // accessing. This is a limitation of the current TTLCache implementation.
-        // For now, we'll return whether the cache size is > 0
+        // accessing. This is a limitation of the current TTLCache
+        // implementation. For now, we'll return whether the cache size is > 0
         return ttlCache_.size() > 0;
     }
 
@@ -179,8 +179,8 @@ private:
 
     void updateHitRate() {
         if (stats_.hits + stats_.misses > 0) {
-            stats_.hitRate =
-                static_cast<double>(stats_.hits) / (stats_.hits + stats_.misses);
+            stats_.hitRate = static_cast<double>(stats_.hits) /
+                             (stats_.hits + stats_.misses);
         }
     }
 };

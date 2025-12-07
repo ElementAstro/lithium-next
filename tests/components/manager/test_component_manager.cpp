@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <memory>
-#include "components/manager.hpp"
+#include "components/manager/manager.hpp"
 
 namespace lithium::test {
 

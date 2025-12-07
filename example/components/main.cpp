@@ -1,5 +1,5 @@
 #include <iostream>
-#include "components/manager.hpp"
+#include "components/manager/manager.hpp"
 
 using namespace lithium;
 

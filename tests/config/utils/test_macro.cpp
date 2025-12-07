@@ -6,8 +6,8 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "config/utils/macro.hpp"
 #include "config/core/manager.hpp"
+#include "config/utils/macro.hpp"
 
 using namespace lithium::config;
 
@@ -20,9 +20,7 @@ protected:
         setupTestConfig();
     }
 
-    void TearDown() override {
-        manager_.reset();
-    }
+    void TearDown() override { manager_.reset(); }
 
     void setupTestConfig() {
         manager_->set("test/int_value", 42);
@@ -60,30 +58,25 @@ TEST_F(ConfigMacroTest, GetConfigValueBool) {
 }
 
 TEST_F(ConfigMacroTest, GetConfigValueString) {
-    std::string value = GetConfigValue<std::string>(manager_, "test/string_value");
+    std::string value =
+        GetConfigValue<std::string>(manager_, "test/string_value");
     EXPECT_EQ(value, "hello");
 }
 
 TEST_F(ConfigMacroTest, GetConfigValueNullManager) {
     std::shared_ptr<ConfigManager> nullManager;
-    EXPECT_THROW(
-        GetConfigValue<int>(nullManager, "test/int_value"),
-        std::runtime_error
-    );
+    EXPECT_THROW(GetConfigValue<int>(nullManager, "test/int_value"),
+                 std::runtime_error);
 }
 
 TEST_F(ConfigMacroTest, GetConfigValueNotFound) {
-    EXPECT_THROW(
-        GetConfigValue<int>(manager_, "nonexistent/path"),
-        std::runtime_error
-    );
+    EXPECT_THROW(GetConfigValue<int>(manager_, "nonexistent/path"),
+                 std::runtime_error);
 }
 
 TEST_F(ConfigMacroTest, GetConfigValueWrongType) {
-    EXPECT_THROW(
-        GetConfigValue<int>(manager_, "test/string_value"),
-        std::runtime_error
-    );
+    EXPECT_THROW(GetConfigValue<int>(manager_, "test/string_value"),
+                 std::runtime_error);
 }
 
 // ============================================================================
@@ -91,23 +84,28 @@ TEST_F(ConfigMacroTest, GetConfigValueWrongType) {
 // ============================================================================
 
 TEST_F(ConfigMacroTest, ConfigurationTypeInt) {
-    static_assert(ConfigurationType<int>, "int should satisfy ConfigurationType");
+    static_assert(ConfigurationType<int>,
+                  "int should satisfy ConfigurationType");
 }
 
 TEST_F(ConfigMacroTest, ConfigurationTypeFloat) {
-    static_assert(ConfigurationType<float>, "float should satisfy ConfigurationType");
+    static_assert(ConfigurationType<float>,
+                  "float should satisfy ConfigurationType");
 }
 
 TEST_F(ConfigMacroTest, ConfigurationTypeDouble) {
-    static_assert(ConfigurationType<double>, "double should satisfy ConfigurationType");
+    static_assert(ConfigurationType<double>,
+                  "double should satisfy ConfigurationType");
 }
 
 TEST_F(ConfigMacroTest, ConfigurationTypeBool) {
-    static_assert(ConfigurationType<bool>, "bool should satisfy ConfigurationType");
+    static_assert(ConfigurationType<bool>,
+                  "bool should satisfy ConfigurationType");
 }
 
 TEST_F(ConfigMacroTest, ConfigurationTypeString) {
-    static_assert(ConfigurationType<std::string>, "std::string should satisfy ConfigurationType");
+    static_assert(ConfigurationType<std::string>,
+                  "std::string should satisfy ConfigurationType");
 }
 
 // ============================================================================
@@ -126,11 +124,8 @@ TEST_F(ConfigMacroTest, GetConfigValueMacroString) {
 
 TEST_F(ConfigMacroTest, GetConfigValueMacroNotFound) {
     EXPECT_THROW(
-        {
-            GET_CONFIG_VALUE(manager_, "nonexistent/path", int, result);
-        },
-        BadConfigException
-    );
+        { GET_CONFIG_VALUE(manager_, "nonexistent/path", int, result); },
+        BadConfigException);
 }
 
 // ============================================================================
@@ -168,7 +163,8 @@ TEST_F(ConfigMacroTest, LithiumNamespaceGetConfigValue) {
 }
 
 TEST_F(ConfigMacroTest, LithiumNamespaceConfigurationType) {
-    static_assert(lithium::ConfigurationType<int>, "int should satisfy lithium::ConfigurationType");
+    static_assert(lithium::ConfigurationType<int>,
+                  "int should satisfy lithium::ConfigurationType");
 }
 
 // ============================================================================
@@ -176,10 +172,7 @@ TEST_F(ConfigMacroTest, LithiumNamespaceConfigurationType) {
 // ============================================================================
 
 TEST_F(ConfigMacroTest, GetConfigValueEmptyPath) {
-    EXPECT_THROW(
-        GetConfigValue<int>(manager_, ""),
-        std::runtime_error
-    );
+    EXPECT_THROW(GetConfigValue<int>(manager_, ""), std::runtime_error);
 }
 
 TEST_F(ConfigMacroTest, GetConfigValueNestedPath) {
@@ -217,7 +210,8 @@ TEST_F(ConfigMacroTest, BoolToIntConversionFails) {
 
 TEST_F(ConfigMacroTest, MultipleGetOperations) {
     int intVal = GetConfigValue<int>(manager_, "test/int_value");
-    std::string strVal = GetConfigValue<std::string>(manager_, "test/string_value");
+    std::string strVal =
+        GetConfigValue<std::string>(manager_, "test/string_value");
     bool boolVal = GetConfigValue<bool>(manager_, "test/bool_value");
 
     EXPECT_EQ(intVal, 42);

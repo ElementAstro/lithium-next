@@ -8,11 +8,12 @@
 # ===========================================================================
 
 set(MODEL_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../celestial_model.cpp
+    celestial_model.cpp
 )
 
 set(MODEL_HEADERS
     # Core data models
+    celestial_model.hpp
     celestial_object.hpp
     star_object.hpp
 

@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include "atom/type/json.hpp"
-#include "task/imagepath.hpp"
+#include "task/utils/imagepath.hpp"
 
 namespace lithium::test {
 

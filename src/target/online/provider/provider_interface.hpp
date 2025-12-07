@@ -22,8 +22,8 @@
 #include <string_view>
 #include <vector>
 
-#include "atom/type/expected.hpp"
 #include "../celestial_model.hpp"
+#include "atom/type/expected.hpp"
 
 namespace lithium::target::online {
 
@@ -37,11 +37,11 @@ class IOnlineProvider;
  * online celestial databases and services.
  */
 enum class QueryType {
-    ByName,          ///< Search by object name/identifier
-    ByCoordinates,   ///< Cone search by RA/Dec coordinates
-    ByConstellation, ///< Search within constellation boundaries
-    Ephemeris,       ///< Solar system object ephemeris (JPL only)
-    Catalog          ///< Catalog-specific queries
+    ByName,           ///< Search by object name/identifier
+    ByCoordinates,    ///< Cone search by RA/Dec coordinates
+    ByConstellation,  ///< Search within constellation boundaries
+    Ephemeris,        ///< Solar system object ephemeris (JPL only)
+    Catalog           ///< Catalog-specific queries
 };
 
 /**
@@ -52,17 +52,17 @@ enum class QueryType {
  */
 struct OnlineQueryParams {
     QueryType type = QueryType::ByName;
-    std::string query;                         ///< Search term or object name
-    std::optional<double> ra;                  ///< RA in degrees (0-360)
-    std::optional<double> dec;                 ///< Dec in degrees (-90 to +90)
-    std::optional<double> radius;              ///< Search radius in degrees
-    std::optional<std::string> catalog;        ///< Specific catalog to query
-    std::optional<double> minMagnitude;        ///< Minimum visual magnitude
-    std::optional<double> maxMagnitude;        ///< Maximum visual magnitude
-    std::optional<std::string> objectType;     ///< Filter by object type
-    int limit = 100;                           ///< Maximum results to return
+    std::string query;                      ///< Search term or object name
+    std::optional<double> ra;               ///< RA in degrees (0-360)
+    std::optional<double> dec;              ///< Dec in degrees (-90 to +90)
+    std::optional<double> radius;           ///< Search radius in degrees
+    std::optional<std::string> catalog;     ///< Specific catalog to query
+    std::optional<double> minMagnitude;     ///< Minimum visual magnitude
+    std::optional<double> maxMagnitude;     ///< Maximum visual magnitude
+    std::optional<std::string> objectType;  ///< Filter by object type
+    int limit = 100;                        ///< Maximum results to return
     std::chrono::system_clock::time_point epoch =
-        std::chrono::system_clock::now();      ///< Epoch for ephemeris queries
+        std::chrono::system_clock::now();  ///< Epoch for ephemeris queries
 
     /**
      * @brief Observer location for ephemeris calculations
@@ -87,14 +87,14 @@ struct OnlineQueryParams {
  */
 struct EphemerisPoint {
     std::chrono::system_clock::time_point time;
-    double ra = 0.0;           ///< Right ascension (degrees)
-    double dec = 0.0;          ///< Declination (degrees)
-    double distance = 0.0;     ///< Distance (AU)
-    double magnitude = 0.0;    ///< Visual magnitude
-    double elongation = 0.0;   ///< Solar elongation (degrees)
-    double phaseAngle = 0.0;   ///< Phase angle (degrees)
-    double azimuth = 0.0;      ///< Azimuth (degrees, if observer set)
-    double altitude = 0.0;     ///< Altitude (degrees, if observer set)
+    double ra = 0.0;          ///< Right ascension (degrees)
+    double dec = 0.0;         ///< Declination (degrees)
+    double distance = 0.0;    ///< Distance (AU)
+    double magnitude = 0.0;   ///< Visual magnitude
+    double elongation = 0.0;  ///< Solar elongation (degrees)
+    double phaseAngle = 0.0;  ///< Phase angle (degrees)
+    double azimuth = 0.0;     ///< Azimuth (degrees, if observer set)
+    double altitude = 0.0;    ///< Altitude (degrees, if observer set)
 };
 
 /**
@@ -134,10 +134,8 @@ struct OnlineQueryError {
      * @return True if the query should be retried
      */
     [[nodiscard]] auto isRetryable() const noexcept -> bool {
-        return code == Code::NetworkError ||
-               code == Code::Timeout ||
-               code == Code::RateLimited ||
-               code == Code::ServiceUnavailable;
+        return code == Code::NetworkError || code == Code::Timeout ||
+               code == Code::RateLimited || code == Code::ServiceUnavailable;
     }
 };
 
@@ -170,17 +168,11 @@ template <typename T>
 concept OnlineProvider = requires(T provider, const OnlineQueryParams& params) {
     {
         provider.query(params)
-    } -> std::same_as<atom::type::Expected<OnlineQueryResult,
-                                           OnlineQueryError>>;
-    {
-        provider.name()
-    } -> std::convertible_to<std::string_view>;
-    {
-        provider.isAvailable()
-    } -> std::same_as<bool>;
-    {
-        provider.supportedQueryTypes()
-    } -> std::same_as<std::vector<QueryType>>;
+    }
+    -> std::same_as<atom::type::Expected<OnlineQueryResult, OnlineQueryError>>;
+    { provider.name() } -> std::convertible_to<std::string_view>;
+    { provider.isAvailable() } -> std::same_as<bool>;
+    { provider.supportedQueryTypes() } -> std::same_as<std::vector<QueryType>>;
 };
 
 /**
@@ -237,8 +229,8 @@ public:
      * @note The future's shared state is thread-safe
      */
     [[nodiscard]] virtual auto queryAsync(const OnlineQueryParams& params)
-        -> std::future<atom::type::Expected<OnlineQueryResult,
-                                            OnlineQueryError>> = 0;
+        -> std::future<
+            atom::type::Expected<OnlineQueryResult, OnlineQueryError>> = 0;
 
     /**
      * @brief Get the provider's name
@@ -282,8 +274,7 @@ public:
      *
      * @return Base URL of the service
      */
-    [[nodiscard]] virtual auto baseUrl() const noexcept
-        -> std::string_view = 0;
+    [[nodiscard]] virtual auto baseUrl() const noexcept -> std::string_view = 0;
 
     /**
      * @brief Check if a specific query type is supported
@@ -295,8 +286,7 @@ public:
      */
     [[nodiscard]] auto supportsQueryType(QueryType type) const -> bool {
         auto types = supportedQueryTypes();
-        return std::find(types.begin(), types.end(), type) !=
-               types.end();
+        return std::find(types.begin(), types.end(), type) != types.end();
     }
 
 protected:

@@ -26,7 +26,7 @@ Description: WebSocket Log Streaming Handler for real-time log delivery
 
 #include "atom/type/json.hpp"
 #include "crow.h"
-#include "logging/logging_manager.hpp"
+#include "logging/core/logging_manager.hpp"
 
 namespace lithium::server {
 

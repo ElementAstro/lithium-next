@@ -122,8 +122,7 @@ inline auto stringToDeviceType(const std::string& str) -> DeviceType {
         {"CoverCalibrator", DeviceType::CoverCalibrator},
         {"ObservingConditions", DeviceType::ObservingConditions},
         {"Video", DeviceType::Video},
-        {"video", DeviceType::Video}
-    };
+        {"video", DeviceType::Video}};
 
     auto it = typeMap.find(str);
     if (it != typeMap.end()) {
@@ -136,23 +135,21 @@ inline auto stringToDeviceType(const std::string& str) -> DeviceType {
  * @brief Get all supported device types
  */
 inline auto getAllDeviceTypes() -> std::vector<DeviceType> {
-    return {
-        DeviceType::Camera,
-        DeviceType::Telescope,
-        DeviceType::Focuser,
-        DeviceType::FilterWheel,
-        DeviceType::Dome,
-        DeviceType::Rotator,
-        DeviceType::Weather,
-        DeviceType::GPS,
-        DeviceType::Guider,
-        DeviceType::AuxiliaryDevice,
-        DeviceType::SafetyMonitor,
-        DeviceType::Switch,
-        DeviceType::CoverCalibrator,
-        DeviceType::ObservingConditions,
-        DeviceType::Video
-    };
+    return {DeviceType::Camera,
+            DeviceType::Telescope,
+            DeviceType::Focuser,
+            DeviceType::FilterWheel,
+            DeviceType::Dome,
+            DeviceType::Rotator,
+            DeviceType::Weather,
+            DeviceType::GPS,
+            DeviceType::Guider,
+            DeviceType::AuxiliaryDevice,
+            DeviceType::SafetyMonitor,
+            DeviceType::Switch,
+            DeviceType::CoverCalibrator,
+            DeviceType::ObservingConditions,
+            DeviceType::Video};
 }
 
 /**
@@ -165,7 +162,8 @@ inline auto isDeviceTypeSupported(DeviceType type) -> bool {
 /**
  * @brief INDI interface flags to device types mapping
  */
-inline auto indiInterfaceToDeviceTypes(uint32_t interfaces) -> std::vector<DeviceType> {
+inline auto indiInterfaceToDeviceTypes(uint32_t interfaces)
+    -> std::vector<DeviceType> {
     std::vector<DeviceType> types;
 
     // INDI interface flags (from indicom.h)
@@ -185,18 +183,30 @@ inline auto indiInterfaceToDeviceTypes(uint32_t interfaces) -> std::vector<Devic
     constexpr uint32_t INDI_SPECTROGRAPH = 1 << 13;
     constexpr uint32_t INDI_AUX = 1 << 15;
 
-    if (interfaces & INDI_TELESCOPE) types.push_back(DeviceType::Telescope);
-    if (interfaces & INDI_CCD) types.push_back(DeviceType::Camera);
-    if (interfaces & INDI_GUIDER) types.push_back(DeviceType::Guider);
-    if (interfaces & INDI_FOCUSER) types.push_back(DeviceType::Focuser);
-    if (interfaces & INDI_FILTER) types.push_back(DeviceType::FilterWheel);
-    if (interfaces & INDI_DOME) types.push_back(DeviceType::Dome);
-    if (interfaces & INDI_GPS) types.push_back(DeviceType::GPS);
-    if (interfaces & INDI_WEATHER) types.push_back(DeviceType::Weather);
-    if (interfaces & INDI_DUSTCAP) types.push_back(DeviceType::CoverCalibrator);
-    if (interfaces & INDI_LIGHTBOX) types.push_back(DeviceType::CoverCalibrator);
-    if (interfaces & INDI_ROTATOR) types.push_back(DeviceType::Rotator);
-    if (interfaces & INDI_AUX) types.push_back(DeviceType::AuxiliaryDevice);
+    if (interfaces & INDI_TELESCOPE)
+        types.push_back(DeviceType::Telescope);
+    if (interfaces & INDI_CCD)
+        types.push_back(DeviceType::Camera);
+    if (interfaces & INDI_GUIDER)
+        types.push_back(DeviceType::Guider);
+    if (interfaces & INDI_FOCUSER)
+        types.push_back(DeviceType::Focuser);
+    if (interfaces & INDI_FILTER)
+        types.push_back(DeviceType::FilterWheel);
+    if (interfaces & INDI_DOME)
+        types.push_back(DeviceType::Dome);
+    if (interfaces & INDI_GPS)
+        types.push_back(DeviceType::GPS);
+    if (interfaces & INDI_WEATHER)
+        types.push_back(DeviceType::Weather);
+    if (interfaces & INDI_DUSTCAP)
+        types.push_back(DeviceType::CoverCalibrator);
+    if (interfaces & INDI_LIGHTBOX)
+        types.push_back(DeviceType::CoverCalibrator);
+    if (interfaces & INDI_ROTATOR)
+        types.push_back(DeviceType::Rotator);
+    if (interfaces & INDI_AUX)
+        types.push_back(DeviceType::AuxiliaryDevice);
 
     return types;
 }
@@ -204,7 +214,8 @@ inline auto indiInterfaceToDeviceTypes(uint32_t interfaces) -> std::vector<Devic
 /**
  * @brief ASCOM device type string to DeviceType mapping
  */
-inline auto ascomDeviceTypeToDeviceType(const std::string& ascomType) -> DeviceType {
+inline auto ascomDeviceTypeToDeviceType(const std::string& ascomType)
+    -> DeviceType {
     static const std::unordered_map<std::string, DeviceType> typeMap = {
         {"Camera", DeviceType::Camera},
         {"Telescope", DeviceType::Telescope},
@@ -216,8 +227,7 @@ inline auto ascomDeviceTypeToDeviceType(const std::string& ascomType) -> DeviceT
         {"Switch", DeviceType::Switch},
         {"CoverCalibrator", DeviceType::CoverCalibrator},
         {"ObservingConditions", DeviceType::ObservingConditions},
-        {"Video", DeviceType::Video}
-    };
+        {"Video", DeviceType::Video}};
 
     auto it = typeMap.find(ascomType);
     if (it != typeMap.end()) {

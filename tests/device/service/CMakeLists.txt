@@ -38,3 +38,10 @@ lithium_add_test(
     SOURCES test_device_backend.cpp
     LIBS lithium_device_service lithium.client.indi lithium.client.ascom atom
 )
+
+# Test for Device Types
+lithium_add_test(
+    NAME test_device_types
+    SOURCES test_device_types.cpp
+    LIBS lithium_device_service atom
+)

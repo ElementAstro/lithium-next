@@ -13,8 +13,7 @@ from .exporter import get_export_manifest
 
 
 def discover_export_modules(
-    base_path: Optional[Path] = None,
-    pattern: str = "lithium_exports.py"
+    base_path: Optional[Path] = None, pattern: str = "lithium_exports.py"
 ) -> List[Tuple[str, Path]]:
     """
     Discover all modules containing lithium exports.
@@ -64,9 +63,7 @@ def load_export_module(module_name: str) -> Optional[Dict[str, Any]]:
         return {"error": str(e), "module": module_name}
 
 
-def load_all_exports(
-    base_path: Optional[Path] = None
-) -> Dict[str, Dict[str, Any]]:
+def load_all_exports(base_path: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
     """
     Load all export modules and return their manifests.
 
@@ -87,9 +84,7 @@ def load_all_exports(
     return results
 
 
-def get_all_endpoints(
-    base_path: Optional[Path] = None
-) -> List[Dict[str, Any]]:
+def get_all_endpoints(base_path: Optional[Path] = None) -> List[Dict[str, Any]]:
     """
     Get all controller endpoints from all export modules.
 
@@ -114,9 +109,7 @@ def get_all_endpoints(
     return endpoints
 
 
-def get_all_commands(
-    base_path: Optional[Path] = None
-) -> List[Dict[str, Any]]:
+def get_all_commands(base_path: Optional[Path] = None) -> List[Dict[str, Any]]:
     """
     Get all commands from all export modules.
 
@@ -142,8 +135,7 @@ def get_all_commands(
 
 
 def get_endpoint_handler(
-    endpoint: str,
-    base_path: Optional[Path] = None
+    endpoint: str, base_path: Optional[Path] = None
 ) -> Optional[Callable]:
     """
     Get the handler function for a specific endpoint.
@@ -172,8 +164,7 @@ def get_endpoint_handler(
 
 
 def get_command_handler(
-    command_id: str,
-    base_path: Optional[Path] = None
+    command_id: str, base_path: Optional[Path] = None
 ) -> Optional[Callable]:
     """
     Get the handler function for a specific command.
@@ -274,7 +265,9 @@ def generate_openapi_spec(
                                     for p in params
                                 },
                                 "required": [
-                                    p.get("name") for p in params if p.get("required", True)
+                                    p.get("name")
+                                    for p in params
+                                    if p.get("required", True)
                                 ],
                             }
                         }

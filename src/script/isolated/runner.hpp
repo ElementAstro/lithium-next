@@ -125,8 +125,7 @@ public:
      * @return Execution result
      */
     [[nodiscard]] ExecutionResult executeFunction(
-        std::string_view moduleName,
-        std::string_view functionName,
+        std::string_view moduleName, std::string_view functionName,
         const nlohmann::json& args = nlohmann::json::object());
 
     /**
@@ -147,8 +146,7 @@ public:
      * @brief Executes a Python function asynchronously
      */
     [[nodiscard]] std::future<ExecutionResult> executeFunctionAsync(
-        std::string_view moduleName,
-        std::string_view functionName,
+        std::string_view moduleName, std::string_view functionName,
         const nlohmann::json& args = nlohmann::json::object());
 
     // =========================================================================
@@ -199,12 +197,14 @@ public:
     /**
      * @brief Finds the default executor script path
      */
-    [[nodiscard]] static std::optional<std::filesystem::path> findExecutorScript();
+    [[nodiscard]] static std::optional<std::filesystem::path>
+    findExecutorScript();
 
     /**
      * @brief Finds Python interpreter
      */
-    [[nodiscard]] static std::optional<std::filesystem::path> findPythonExecutable();
+    [[nodiscard]] static std::optional<std::filesystem::path>
+    findPythonExecutable();
 
     /**
      * @brief Gets the Python version of the configured interpreter

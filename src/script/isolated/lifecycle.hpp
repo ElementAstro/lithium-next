@@ -7,8 +7,8 @@
 #ifndef LITHIUM_SCRIPT_ISOLATED_LIFECYCLE_HPP
 #define LITHIUM_SCRIPT_ISOLATED_LIFECYCLE_HPP
 
-#include "types.hpp"
 #include "../ipc/channel.hpp"
+#include "types.hpp"
 
 #include <atomic>
 #include <memory>
