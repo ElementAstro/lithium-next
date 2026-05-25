@@ -3,6 +3,7 @@
 """
 Build Manager for handling compilation and linking of C++ projects.
 """
+
 import os
 import time
 import re

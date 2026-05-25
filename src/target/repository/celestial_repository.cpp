@@ -383,7 +383,7 @@ public:
             }
 
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE identifier LIKE ? OR chinese_name LIKE ? OR aliases LIKE ?
                 ORDER BY click_count DESC
                 LIMIT ?
@@ -512,8 +512,8 @@ public:
         std::vector<std::string> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT DISTINCT identifier FROM celestial_objects 
-                WHERE identifier LIKE ? 
+                SELECT DISTINCT identifier FROM celestial_objects
+                WHERE identifier LIKE ?
                 ORDER BY click_count DESC, identifier ASC
                 LIMIT ?
             )");
@@ -542,7 +542,7 @@ public:
             double decMax = dec + radius;
 
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE rad_j2000 BETWEEN ? AND ?
                   AND dec_d_j2000 BETWEEN ? AND ?
                 LIMIT ?
@@ -578,7 +578,7 @@ public:
         std::vector<CelestialObjectModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE type = ?
                 ORDER BY click_count DESC
                 LIMIT ?
@@ -602,7 +602,7 @@ public:
         std::vector<CelestialObjectModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 WHERE visual_magnitude_v BETWEEN ? AND ?
                 ORDER BY visual_magnitude_v ASC
                 LIMIT ?
@@ -1100,7 +1100,7 @@ public:
         std::vector<UserRatingModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT id, user_id, object_id, rating, timestamp 
+                SELECT id, user_id, object_id, rating, timestamp
                 FROM user_ratings WHERE user_id = ?
                 ORDER BY timestamp DESC LIMIT ?
             )");
@@ -1242,7 +1242,7 @@ public:
     bool incrementClickCount(const std::string& identifier) {
         try {
             auto stmt = db_->prepare(R"(
-                UPDATE celestial_objects 
+                UPDATE celestial_objects
                 SET click_count = click_count + 1, updated_at = strftime('%s', 'now')
                 WHERE identifier = ?
             )");
@@ -1259,7 +1259,7 @@ public:
         std::vector<CelestialObjectModel> results;
         try {
             auto stmt = db_->prepare(R"(
-                SELECT * FROM celestial_objects 
+                SELECT * FROM celestial_objects
                 ORDER BY click_count DESC LIMIT ?
             )");
             stmt->bind(1, limit);

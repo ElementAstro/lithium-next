@@ -3,6 +3,7 @@
 """
 Utility functions for the compiler helper module.
 """
+
 import json
 from pathlib import Path
 from typing import Dict, Any
