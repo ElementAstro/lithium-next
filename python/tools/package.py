@@ -1280,10 +1280,8 @@ Examples:
     try:
         if args.check:
             if pm.is_package_installed(args.check):
-                print(
-                    f"Package '{args.check}' is installed, version: {
-                      pm.get_installed_version(args.check)}"
-                )
+                print(f"Package '{args.check}' is installed, version: {
+                      pm.get_installed_version(args.check)}")
             else:
                 print(f"Package '{args.check}' is not installed.")
 
