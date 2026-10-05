@@ -3,6 +3,7 @@
 """
 Compiler class implementation for the compiler helper module.
 """
+
 from dataclasses import dataclass, field
 import os
 import platform

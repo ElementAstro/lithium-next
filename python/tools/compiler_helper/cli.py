@@ -3,6 +3,7 @@
 """
 Command-line interface for the compiler helper module.
 """
+
 import sys
 import argparse
 from pathlib import Path

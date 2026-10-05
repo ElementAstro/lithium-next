@@ -11,7 +11,6 @@ from typing import Optional
 from .exporter import expose_controller, expose_command
 from .module_info import ModuleRegistry, ModuleCategory, PlatformSupport
 
-
 # Global registry instance
 _registry: Optional[ModuleRegistry] = None
 
