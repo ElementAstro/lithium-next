@@ -20,7 +20,6 @@ from io import StringIO
 from typing import Any, Dict, List, Optional, Callable
 import contextlib
 
-
 # IPC Constants
 MAGIC = 0x4C495448  # "LITH"
 VERSION = 1
