@@ -3,6 +3,7 @@
 """
 High-level API for the compiler helper module.
 """
+
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -16,7 +17,6 @@ from .core_types import (
 from .compiler_manager import CompilerManager
 from .compiler import Compiler
 from .build_manager import BuildManager
-
 
 # Create a singleton compiler manager for global use
 compiler_manager = CompilerManager()

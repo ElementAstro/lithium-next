@@ -29,7 +29,6 @@ from termcolor import colored
 import sys
 from functools import partial
 
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
